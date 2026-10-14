@@ -46,6 +46,11 @@ function spinnerDotStyle(index: number): string {
   const rotate = index * 30
   return `transform: rotate(${rotate}deg) translate(0, -40%); opacity: ${(1 - index / 12).toFixed(2)};`
 }
+
+/** dots / wave 的阶梯延迟（Lynx 不支持 :nth-child，用索引内联） */
+function staggerDelay(index: number, step: number): string {
+  return `animation-delay: ${(index * step).toFixed(2)}s;`
+}
 </script>
 
 <template>
@@ -61,11 +66,11 @@ function spinnerDotStyle(index: number): string {
         />
       </view>
       <view v-else-if="type === 'dots'" class="wd-loading__spinner-wraper">
-        <view v-for="i in 3" :key="i" class="wd-loading__spinner-dot" />
+        <view v-for="i in 3" :key="i" class="wd-loading__spinner-dot" :style="staggerDelay(i, 0.15)" />
       </view>
       <view v-else-if="type === 'wave'" class="wd-loading__spinner-wraper">
         <view v-for="i in 4" :key="i" class="wd-loading__spinner-wave-bar">
-          <view class="wd-loading__spinner-wave-bar-inner" />
+          <view class="wd-loading__spinner-wave-bar-inner" :style="staggerDelay(i, 0.1)" />
         </view>
       </view>
     </view>
