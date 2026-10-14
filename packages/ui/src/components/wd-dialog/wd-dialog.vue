@@ -414,6 +414,7 @@ watch(
   }
 )
 
+/* BISECT-DISABLED
 // 声明式用法（v-model + props）：props 变化同步进 dialogState。
 //
 // Lynx/vue-lynx 适配要点：wd-dialog 必须自行声明 modelValue prop 并消费。
@@ -425,7 +426,8 @@ watch(
 //
 // 注册顺序须在 messageOption 的 watch 之后：immediate 时 props 覆盖命令式
 // 默认值；命令式 useDialog 用法下 props 不变化，不会干扰 reset() 的状态应用。
-const __SKIP_PROPS_WATCH__ = [
+watch(
+  () => [
     props.modelValue,
     props.title,
     props.msg,
@@ -461,6 +463,7 @@ const __SKIP_PROPS_WATCH__ = [
   { immediate: true }
 )
 
+*/
 watch(
   () => dialogState.show,
   (newValue) => {
