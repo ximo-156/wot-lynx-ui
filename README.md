@@ -1,17 +1,17 @@
 # wot-lynx-ui
 
-> 基于 [Vue Lynx](https://vue.lynxjs.org) 的 [wot-ui](https://wot-ui.cn/) 适配组件库 —— 原生性能、API 兼容，视觉按小米 HyperOS 4 设计美学重建。
+> 基于 [Vue Lynx](https://vue.lynxjs.org) 的 [wot-ui](https://wot-ui.cn/) API 兼容组件库 —— 原生性能、API 兼容，视觉与设计令牌全新设计。
 
-`wot-lynx-ui` 将 wot-ui（uni-app 生态最流行的 Vue3 组件库之一）移植到 **Vue Lynx** 框架：使用 Lynx 的双线程架构与原生渲染管线，在 iOS / Android / HarmonyOS / Web 四端获得接近原生的性能。设计令牌沿用 wot-ui 的 `--wot-*` 体系，取值按小米 HyperOS 4（澎湃OS）美学重建：品牌蓝 `#3482FF`、大圆角、更舒展的字号字重与柔和投影。
+`wot-lynx-ui` 参照 wot-ui（uni-app 生态最流行的 Vue3 组件库之一）的 **API 与交互**，为 **Vue Lynx** 框架从零重写的组件库：使用 Lynx 的双线程架构与原生渲染管线，在 iOS / Android / HarmonyOS / Web 四端获得接近原生的性能。组件名、props、slots、events、BEM 类名与 wot-ui 对齐，迁移成本低；设计令牌为全新的 `--wd-*` 三层体系（色阶 → 语义 → 组件），亮/暗双主题开箱即用。
 
 ## 特性
 
-- **🎨 HyperOS 4 设计** — 完整保留 wot-ui 的 `--wot-*` 设计令牌体系（颜色/字体/圆角/间距/描边/阴影），取值按小米 HyperOS 4 美学重建；BEM 类名与 wot-ui 一致，换肤只需覆盖 CSS 变量
+- **🎨 全新设计系统** — `--wd-*` 三层令牌体系（原始色阶/间距/圆角 → 亮暗语义令牌 → 组件令牌），indigo 品牌蓝 + 冷灰中性色，大圆角现代质感；换肤只需覆盖 CSS 变量
 - **⚡ 原生性能** — Lynx 双线程架构：Vue 运行在后台线程，渲染在主线程；拖动/滑动等高频交互在后台线程以响应式实现，跟手时段禁用 CSS transition、落位时恢复；细线边框使用 `1ppx` 物理像素；图标使用原生 SVG 渲染
 - **🧩 API 兼容** — `wd-*` 组件名、props、slots、events 与 wot-ui 对齐，迁移成本低
 - **📦 开箱即用** — 发布预编译 CSS，消费者无需安装 Sass 工具链；组件以源码分发，由 Rspeedy 直接编译，天然支持 Tree-shaking
 - **🌗 主题系统** — CSS 变量驱动的亮色/暗色主题，`wd-config-provider` 全局配置
-- **🧪 可测试** — 130+ 个单元测试基于 `@lynx-js/testing-environment` 真实双线程渲染环境（含 101 个组件全量渲染冒烟测试）
+- **🧪 可测试** — 基于 @lynx-js/testing-environment 的 Vue Lynx 双线程测试环境，组件测试与真实渲染行为一致
 
 ## 快速开始
 
@@ -53,7 +53,7 @@ export default defineConfig({
 ```ts
 // main.ts
 import { createApp } from 'vue-lynx'
-import 'wot-lynx-ui/theme' // --wot-* 主题变量
+import 'wot-lynx-ui/theme' // --wd-* 设计令牌
 import App from './App.vue'
 
 createApp(App).mount()
@@ -116,7 +116,7 @@ createApp(App).use(wotLynxUI)
 
 - [组件文档](./docs/)（VitePress）
 - [Demo 应用](./packages/demo/)（`pnpm dev:demo`）
-- [移植规范](./CONVENTIONS.md)（向 Lynx 适配的完整约定）
+- [重写规范](./CONVENTIONS.md)（为 Lynx 重写的完整约定）
 
 ## 真机测试
 
@@ -158,8 +158,8 @@ wot-lynx-ui/
 │   │   └── vitest.config.ts
 │   └── demo/                     # Vue Lynx Demo 应用（Rspeedy，双端构建）
 ├── docs/                         # VitePress 文档站（102 个组件文档）
-├── scripts/                      # 图标生成 / CSS 编译 / 移植脚本
-├── CONVENTIONS.md                # Lynx 适配移植规范
+├── scripts/                      # CSS 编译
+├── CONVENTIONS.md                # Lynx 重写规范
 └── README.md
 ```
 

@@ -1,16 +1,8 @@
-@use './base/index.scss'as *;
-@use './light.scss'as light;
-@use './dark.scss'as dark;
-
-page,
-.wot-theme-dark,
-.wot-theme-dark .wd-root-portal {
-  @include dark.dark-theme-vars;
-}
-
-
-page,
-.wot-theme-light,
-.wot-theme-light .wd-root-portal {
-  @include light.light-theme-vars;
-}
+/**
+ * 主题入口 — 编译产物为 styles/theme/index.css（经 `wot-lynx-ui/theme` 引入）。
+ *
+ * 消费者只需：import 'wot-lynx-ui/theme'
+ * 即可获得全部原始刻度 + 亮/暗语义令牌。
+ */
+@use '../tokens/primitive';
+@use '../tokens/semantic';

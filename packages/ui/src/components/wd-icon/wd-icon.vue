@@ -1,53 +1,36 @@
 /*
  * wd-icon — 图标
  *
- * Lynx 适配说明：
- * - wot-ui 基于 iconfont 字体渲染，Lynx 无稳定的跨端字体加载方案，
- *   因此内置图标改为由 wd-icons 图标字体提取的 SVG path，通过 Lynx 原生 svg 元素渲染，
- *   颜色由 fill 属性实时控制，无需加载字体文件，性能与保真度兼得。
- * - svg / image 子元素的尺寸必须显式声明（px）：Lynx 的 svg 元素不解析 em
- *   相对单位，依赖 1em 会导致图标放大到默认尺寸（见 vue-lynx examples/elk）。
- * - svg content 内的 fill 颜色必须显式指定，不能依赖 currentColor 跨原生边界继承。
+ * Lynx 实现说明：
+ * - 内置图标（302 个，icons/data.ts）经原生 <svg :content> 渲染，
+ *   content 标记过 sanitizeSvgContent 安全网（SVG 元素白名单，见 CONVENTIONS §8）；
+ * - svg content 不继承 CSS 变量/currentColor，未传 color 时按主题取
+ *   --wd-icon-1 的对应值（common/theme.ts 镜像常量）；
+ * - name 含 '/' 按图片渲染 <image>；cssIcon 走 CSS 类名模式。
  */
-<script setup lang="ts">
+<script lang="ts" setup>
 import './index.css'
 
-import { computed } from 'vue-lynx'
+import { computed, normalizeClass } from 'vue-lynx'
 import { iconProps } from './types'
-import { iconPaths, ICON_VIEW_BOX } from '../../icons/data'
-import { styleToObject, addUnit, isDef, objToStyle, sanitizeSvgContent, type CSSProperties } from '../../common/util'
-
-/** 默认图标颜色，对应主题变量 --wot-icon-main (coolgrey-10) */
-const DEFAULT_ICON_COLOR = '#191A1F'
-/** 默认图标尺寸（px），对应主题变量 --wot-icon-font-size / 正文字号 */
-const DEFAULT_ICON_SIZE = 14
+import { addUnit, isDef, objToStyle, sanitizeSvgContent } from '../../common/util'
+import { ICON_VIEW_BOX, iconPaths } from '../../icons/data'
+import { GRAY, THEME_ICON_COLOR } from '../../common/theme'
+import { useGlobalConfig } from '../../composables/useGlobalConfig'
 
 const props = defineProps(iconProps)
 const emit = defineEmits(['click', 'touch'])
+
+const globalConfig = useGlobalConfig()
+
+const DEFAULT_ICON_SIZE = 20
 
 const isImage = computed(() => {
   return !props.cssIcon && isDef(props.name) && props.name.includes('/')
 })
 
-const pathData = computed(() => {
-  if (props.cssIcon || isImage.value) return ''
-  return iconPaths[props.name] || ''
-})
-
-const svgContent = computed(() => {
-  if (!pathData.value) return ''
-  const color = props.color || DEFAULT_ICON_COLOR
-  // sanitizeSvgContent：白名单外元素会触发真机 insertNode 致命异常（9902），过一道安全网
-  return sanitizeSvgContent(`<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="${ICON_VIEW_BOX}"><path d="${pathData.value}" fill="${color}"/></svg>`)
-})
-
-/** 图标盒尺寸（px）：svg / image 子元素显式定尺，避免 em 单位在 Lynx 失效 */
-const boxSize = computed(() => {
-  return isDef(props.size) ? addUnit(props.size) : `${DEFAULT_ICON_SIZE}px`
-})
-
-const boxStyle = computed(() => {
-  return objToStyle({ width: boxSize.value, height: boxSize.value })
+const hasBuiltin = computed(() => {
+  return !props.cssIcon && !isImage.value && isDef(props.name) && !!iconPaths[props.name]
 })
 
 const rootClass = computed(() => {
@@ -65,21 +48,44 @@ const rootClass = computed(() => {
     }
   } else if (isImage.value) {
     clazz['wd-icon--image'] = true
+  } else {
+    clazz[props.classPrefix] = true
+    clazz[`${props.classPrefix}-${props.name}`] = true
   }
 
-  return [clazz, props.customClass]
+  return normalizeClass([clazz, props.customClass])
+})
+
+const iconSize = computed(() => {
+  return props.size ? addUnit(props.size) : `${DEFAULT_ICON_SIZE}px`
 })
 
 const rootStyle = computed(() => {
-  const style: CSSProperties = {}
-  if (props.color) {
-    style['color'] = props.color
+  const style: Record<string, string> = {}
+  const color = props.color || (globalConfig.value.theme === 'dark' ? THEME_ICON_COLOR.dark : THEME_ICON_COLOR.light)
+  if (color) {
+    style['color'] = color
   }
   if (props.size) {
-    const sizeValue = addUnit(props.size)
-    style['font-size'] = sizeValue
+    style['font-size'] = iconSize.value
+    // CSS 图标和图片模式下，同步设置 width/height
+    if (props.cssIcon || isImage.value) {
+      style['width'] = iconSize.value
+      style['height'] = iconSize.value
+    }
   }
-  return `${objToStyle(style)}${props.customStyle ? ';' + props.customStyle : ''}`
+  return `${objToStyle(style)} ${props.customStyle}`
+})
+
+const svgContent = computed(() => {
+  const d = iconPaths[props.name]
+  if (!d) return ''
+  const color = props.color || (globalConfig.value.theme === 'dark' ? THEME_ICON_COLOR.dark : THEME_ICON_COLOR.light)
+  const markup =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${ICON_VIEW_BOX}" ` +
+    `width="${iconSize.value}" height="${iconSize.value}" fill="${color}">` +
+    `<path d="${d}"/></svg>`
+  return sanitizeSvgContent(markup)
 })
 
 function handleClick(event: any) {
@@ -88,8 +94,8 @@ function handleClick(event: any) {
 </script>
 
 <template>
-  <view :class="rootClass" :style="styleToObject(rootStyle)" @tap="handleClick">
-    <image v-if="isImage" class="wd-icon__image" :src="name" :style="styleToObject(boxStyle)" />
-    <svg v-else-if="svgContent" class="wd-icon__svg" :content="svgContent" :style="styleToObject(boxStyle)" />
+  <view :class="rootClass" :style="rootStyle" @click="handleClick">
+    <image v-if="isImage" class="wd-icon__image" :src="name" />
+    <svg v-else-if="hasBuiltin" :content="svgContent" />
   </view>
 </template>

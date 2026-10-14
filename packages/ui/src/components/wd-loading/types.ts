@@ -1,12 +1,3 @@
-/*
- * @Author: weisheng
- * @Date: 2024-03-15 20:40:34
- * @LastEditTime: 2026-01-23 14:59:32
- * @LastEditors: weisheng
- * @Description:
- * @FilePath: /wot-ui/src/uni_modules/wot-ui/components/wd-loading/types.ts
- * 记得注释
- */
 import type { ExtractPropTypes } from 'vue-lynx'
 import { baseProps, makeStringProp, numericProp } from '../../common/props'
 

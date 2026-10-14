@@ -1,21 +1,8 @@
-@use '../../styles/theme/dark.scss' as dark;
-@use '../../styles/theme/light.scss' as light;
+@use '../../styles/mixin/mixin.scss' as *;
 
-/*
- * 根 view 挂 height:100%（布局中立化）：
- * Lynx 的百分比高度只相对「已确定高度」的父级解析，本 view 默认 auto（内容高度）。
- * 本组件是文档标准用法里的应用根包裹器（页面根[屏幕高，确定] > 本 view > 业务内容），
- * 若本 view 为 auto，业务侧 scroll-view 的 height:100% 会解析成内容高度而非屏幕高度，
- * 滚动容器与内容等高即无可滚动范围（页面无法滚动）。
- * 父级高度不确定时（如嵌在某个 section 内做局部换肤），百分比按 auto 处理，行为不变；
- * 需要覆盖时可经 custom-style 内联样式（内联优先于类）改回。
- */
-.wot-theme-dark {
-  @include dark.dark-theme-vars;
+@include b(config-provider) {
+  /* 根容器：布局中立化——作为页面根时撑满，作为内联包裹时按内容高度 */
   height: 100%;
-}
-
-.wot-theme-light {
-  @include light.light-theme-vars;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
 }

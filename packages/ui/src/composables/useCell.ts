@@ -1,7 +1,34 @@
-import { computed } from 'vue-lynx'
+import { computed, type InjectionKey } from 'vue-lynx'
 import { useParent } from './useParent'
-import { CELL_GROUP_KEY } from '../components/wd-cell-group/types'
-import type { CellLayout, CellSize, CellValueAlign } from '../components/wd-cell/types'
+
+/** 单元格布局方式 */
+export type CellLayout = 'horizontal' | 'vertical'
+
+/** 单元格右侧内容对齐方式 */
+export type CellValueAlign = 'left' | 'right' | 'center'
+
+/** 单元格尺寸 */
+export type CellSize = 'large'
+
+/** WdCellGroup 向下提供的上下文（props 快照） */
+export type CellGroupProvide = {
+  props: {
+    /** 是否显示边框线 */
+    border?: boolean
+    /** 是否使内容垂直居中 */
+    center?: boolean
+    /** 单元格大小 */
+    size?: CellSize
+    /** 左侧标题宽度 */
+    titleWidth?: string | number
+    /** 单元格布局方式 */
+    layout?: CellLayout
+    /** 右侧内容对齐方式 */
+    valueAlign?: CellValueAlign
+  }
+}
+
+export const CELL_GROUP_KEY: InjectionKey<CellGroupProvide> = Symbol('wd-cell-group')
 
 export function useCell() {
   const { parent: cellGroup, index } = useParent(CELL_GROUP_KEY)

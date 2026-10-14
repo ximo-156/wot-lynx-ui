@@ -1,36 +1,20 @@
-@use '../../styles/variable.scss' as *;
-@use '../../styles/mixin/mixin' as *;
-
-// 图标字号
-$icon-font-size: var(--wot-icon-font-size, $typography-body-size-main) !default;
+@use '../../styles/mixin/mixin.scss' as *;
 
 @include b(icon) {
+  /* 根容器：尺寸由内容（svg / image / 字号）决定，不撑满 */
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  font-size: $icon-font-size;
-  line-height: 1;
-  color: $icon-main;
-
-  @include e(svg) {
-    width: 1em;
-    height: 1em;
-  }
+  color: var(--wd-icon-1);
 
   @include e(image) {
-    width: 1em;
-    height: 1em;
+    width: 100%;
+    height: 100%;
   }
 
-  // 图片模式
-  @include m(image) {
-    width: $icon-font-size;
-    height: $icon-font-size;
-  }
-
-  // CSS 图标模式（UnoCSS 等 CSS class 图标库）
+  /* CSS 图标模式：name 直接作为类名，字号即图标尺寸 */
   @include m(css) {
-    width: $icon-font-size;
-    height: $icon-font-size;
+    font-size: var(--wd-font-lg);
   }
 }

@@ -1,15 +1,16 @@
 import { computed, provide, unref, type MaybeRef } from 'vue-lynx'
-import { type ConfigProviderThemeVars } from '../components/wd-config-provider/theme-vars'
 import { objToStyle } from '../common/util'
 import {
+  CONFIG_PROVIDER_KEY,
   mergeConfig,
-  type GlobalConfig,
   type ConfigProviderInput,
-  type ButtonConfig,
-  type TagConfig
-} from '../components/wd-config-provider/global-config'
+  type ConfigProviderProvide,
+  type ConfigProviderThemeVars,
+  type GlobalConfig
+} from './global-config'
 
-export const USE_CONFIG_PROVIDER_KEY = '__CONFIG_PROVIDER__'
+export { CONFIG_PROVIDER_KEY }
+export type { ConfigProviderProvide }
 
 export const kebabCase = (str: string): string => {
   str = str.replace(str.charAt(0), str.charAt(0).toLocaleLowerCase())
@@ -23,7 +24,7 @@ export const mapThemeVarsToCSSVars = (themeVars: Record<string, string>) => {
   if (!themeVars) return
   const cssVars: Record<string, string> = {}
   Object.keys(themeVars).forEach((key) => {
-    cssVars[`--wot-${kebabCase(key)}`] = themeVars[key]
+    cssVars[`--wd-${kebabCase(key)}`] = themeVars[key]
   })
 
   return cssVars
@@ -32,8 +33,8 @@ export const mapThemeVarsToCSSVars = (themeVars: Record<string, string>) => {
 export interface UseConfigProviderOptions {
   themeVars?: MaybeRef<ConfigProviderThemeVars>
   theme?: MaybeRef<string>
-  button?: MaybeRef<ButtonConfig>
-  tag?: MaybeRef<TagConfig>
+  button?: MaybeRef<Record<string, any>>
+  tag?: MaybeRef<Record<string, any>>
 }
 
 export function useConfigProvider(options: UseConfigProviderOptions = {}) {
@@ -53,7 +54,7 @@ export function useConfigProvider(options: UseConfigProviderOptions = {}) {
     } as ConfigProviderInput)
   })
 
-  provide(USE_CONFIG_PROVIDER_KEY, {
+  provide<ConfigProviderProvide>(CONFIG_PROVIDER_KEY, {
     themeStyle,
     globalConfig
   })

@@ -1,10 +1,10 @@
-import type { ExtractPropTypes, PropType, InjectionKey, ComputedRef } from 'vue-lynx'
-import { makeStringProp, baseProps } from '../../common/props'
-import type { ButtonConfig, GlobalConfig, TagConfig } from './global-config'
-import type { ConfigProviderThemeVars } from './theme-vars'
-
-// 兼容历史从 wd-config-provider/types 深度导入 ConfigProviderThemeVars 的用法
-export type { ConfigProviderThemeVars }
+import type { ExtractPropTypes, PropType } from 'vue-lynx'
+import { baseProps, makeStringProp } from '../../common/props'
+import type {
+  ButtonConfig,
+  ConfigProviderThemeVars,
+  TagConfig
+} from '../../composables/global-config'
 
 export const configProviderProps = {
   ...baseProps,
@@ -13,7 +13,7 @@ export const configProviderProps = {
    */
   theme: makeStringProp('light'),
   /**
-   * 自定义主题变量
+   * 自定义主题变量（camelCase 键，映射为 --wd-* 内联变量）
    */
   themeVars: {
     type: Object as PropType<ConfigProviderThemeVars>,
@@ -37,9 +37,6 @@ export const configProviderProps = {
 
 export type ConfigProviderProps = ExtractPropTypes<typeof configProviderProps>
 
-export type ConfigProviderProvide = {
-  globalConfig: ComputedRef<GlobalConfig>
-  themeStyle: ComputedRef<string>
-}
-
-export const CONFIG_PROVIDER_KEY: InjectionKey<ConfigProviderProvide> = Symbol('wd-config-provider')
+// 兼容历史从 wd-config-provider/types 深度导入的用法
+export { CONFIG_PROVIDER_KEY } from '../../composables/global-config'
+export type { ConfigProviderProvide, ConfigProviderThemeVars }

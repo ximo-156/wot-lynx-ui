@@ -1,0 +1,139 @@
+/**
+ * 语义令牌层（Semantic Tokens）— 亮 / 暗双主题。
+ *
+ * 组件样式只应消费本层的语义令牌（--wd-color-primary / --wd-text-1 /
+ * --wd-bg-container ...），不直接引用色阶（--wd-blue-6），这样亮暗主题
+ * 只需切换语义令牌的指向。
+ *
+ * 主题类名由 WdConfigProvider 挂载到根 view：
+ *   .wd-theme-light（默认，可省略）/ .wd-theme-dark
+ * position: fixed 弹层会被 Lynx 提升到页面根节点、脱离 ConfigProvider
+ * 子树，因此 .wd-root-portal 容器内需镜像一份同名变量（选择器保序：
+ * 暗色在前、亮色在后，page 经层叠级默认落到亮色）。
+ */
+
+/* ===== 暗色主题 ===== */
+page,
+.wd-theme-dark,
+.wd-theme-dark .wd-root-portal {
+  /* 品牌色 */
+  --wd-color-primary: var(--wd-blue-5);
+  --wd-color-primary-pressed: var(--wd-blue-4);
+  --wd-color-primary-disabled: var(--wd-blue-8);
+  --wd-color-primary-bg: #4A6DF029;
+  --wd-color-primary-bg-pressed: #4A6DF033;
+  --wd-color-primary-border: #4A6DF04D;
+  --wd-color-on-primary: #FFFFFFFF;
+
+  /* 危险色 */
+  --wd-color-danger: var(--wd-red-5);
+  --wd-color-danger-pressed: var(--wd-red-4);
+  --wd-color-danger-disabled: var(--wd-red-8);
+  --wd-color-danger-bg: #DC403829;
+  --wd-color-danger-bg-pressed: #DC403833;
+
+  /* 成功色 */
+  --wd-color-success: var(--wd-green-5);
+  --wd-color-success-pressed: var(--wd-green-4);
+  --wd-color-success-disabled: var(--wd-green-8);
+  --wd-color-success-bg: #00A06D29;
+  --wd-color-success-bg-pressed: #00A06D33;
+
+  /* 警告色 */
+  --wd-color-warning: var(--wd-amber-4);
+  --wd-color-warning-pressed: var(--wd-amber-5);
+  --wd-color-warning-disabled: var(--wd-amber-8);
+  --wd-color-warning-bg: #DF9A2B29;
+  --wd-color-warning-bg-pressed: #DF9A2B33;
+
+  /* 文字 */
+  --wd-text-1: #F4F6FAFF;
+  --wd-text-2: #AEB6C4FF;
+  --wd-text-3: #7D8595FF;
+  --wd-text-4: #565E6EFF;
+  --wd-text-disabled: #3D4452FF;
+
+  /* 图标 */
+  --wd-icon-1: #F4F6FAFF;
+  --wd-icon-2: #AEB6C4FF;
+  --wd-icon-3: #7D8595FF;
+  --wd-icon-4: #565E6EFF;
+  --wd-icon-disabled: #3D4452FF;
+
+  /* 背景 */
+  --wd-bg-page: #0F1115FF;
+  --wd-bg-container: #171A21FF;
+  --wd-bg-elevated: #1E222BFF;
+  --wd-bg-secondary: #1E222BFF;
+  --wd-bg-disabled: #22262FFF;
+
+  /* 边框 */
+  --wd-border-1: #2A2F3AFF;
+  --wd-border-2: #20242EFF;
+
+  /* 遮罩 */
+  --wd-mask-bg: #00000099;
+}
+
+/* ===== 亮色主题（默认；page 经层叠级默认落在本块） ===== */
+page,
+.wd-theme-light,
+.wd-theme-light .wd-root-portal {
+  /* 品牌色 */
+  --wd-color-primary: var(--wd-blue-6);
+  --wd-color-primary-pressed: var(--wd-blue-7);
+  --wd-color-primary-disabled: var(--wd-blue-3);
+  --wd-color-primary-bg: var(--wd-blue-1);
+  --wd-color-primary-bg-pressed: var(--wd-blue-2);
+  --wd-color-primary-border: var(--wd-blue-3);
+  --wd-color-on-primary: #FFFFFFFF;
+
+  /* 危险色 */
+  --wd-color-danger: var(--wd-red-6);
+  --wd-color-danger-pressed: var(--wd-red-7);
+  --wd-color-danger-disabled: var(--wd-red-3);
+  --wd-color-danger-bg: var(--wd-red-1);
+  --wd-color-danger-bg-pressed: var(--wd-red-2);
+
+  /* 成功色 */
+  --wd-color-success: var(--wd-green-6);
+  --wd-color-success-pressed: var(--wd-green-7);
+  --wd-color-success-disabled: var(--wd-green-3);
+  --wd-color-success-bg: var(--wd-green-1);
+  --wd-color-success-bg-pressed: var(--wd-green-2);
+
+  /* 警告色 */
+  --wd-color-warning: var(--wd-amber-6);
+  --wd-color-warning-pressed: var(--wd-amber-7);
+  --wd-color-warning-disabled: var(--wd-amber-3);
+  --wd-color-warning-bg: var(--wd-amber-1);
+  --wd-color-warning-bg-pressed: var(--wd-amber-2);
+
+  /* 文字 */
+  --wd-text-1: var(--wd-gray-10);
+  --wd-text-2: var(--wd-gray-7);
+  --wd-text-3: var(--wd-gray-6);
+  --wd-text-4: var(--wd-gray-5);
+  --wd-text-disabled: var(--wd-gray-4);
+
+  /* 图标 */
+  --wd-icon-1: var(--wd-gray-10);
+  --wd-icon-2: var(--wd-gray-7);
+  --wd-icon-3: var(--wd-gray-6);
+  --wd-icon-4: var(--wd-gray-5);
+  --wd-icon-disabled: var(--wd-gray-4);
+
+  /* 背景 */
+  --wd-bg-page: var(--wd-gray-1);
+  --wd-bg-container: #FFFFFFFF;
+  --wd-bg-elevated: #FFFFFFFF;
+  --wd-bg-secondary: var(--wd-gray-2);
+  --wd-bg-disabled: var(--wd-gray-2);
+
+  /* 边框 */
+  --wd-border-1: var(--wd-gray-3);
+  --wd-border-2: var(--wd-gray-2);
+
+  /* 遮罩 */
+  --wd-mask-bg: #00000073;
+}

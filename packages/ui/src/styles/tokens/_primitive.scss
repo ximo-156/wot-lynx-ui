@@ -1,0 +1,127 @@
+/**
+ * 原始刻度层（Primitive Tokens）— 主题无关，亮/暗色下取值不变。
+ *
+ * 三层令牌体系的第一层：
+ *   1. primitive（本文件）— 色阶 / 间距 / 圆角 / 字号 / 动效等原始刻度
+ *   2. semantic（_semantic.scss）— 语义令牌，亮暗主题下指向不同刻度
+ *   3. component（各组件 index.scss）— 组件私有令牌，回退到语义令牌
+ *
+ * 命名规则：--wd-<类别>-<刻度>，如 --wd-blue-6、--wd-space-4。
+ * 颜色一律使用 8 位十六进制（#RRGGBBAA，Lynx 引擎约定，避免 rgba() 解析差异）。
+ */
+
+:root,
+page,
+.wd-root-portal {
+  /* ===== 基础 ===== */
+  --wd-white: #FFFFFFFF;
+  --wd-black: #000000FF;
+  --wd-transparent: transparent;
+
+  /* ===== 品牌蓝阶（indigo 蓝，primary 取 6 档） ===== */
+  --wd-blue-1: #EDF1FFFF;
+  --wd-blue-2: #DCE5FFFF;
+  --wd-blue-3: #BCCEFFFF;
+  --wd-blue-4: #94AEFFFF;
+  --wd-blue-5: #6E8FFBFF;
+  --wd-blue-6: #4A6DF0FF;
+  --wd-blue-7: #3A57CCFF;
+  --wd-blue-8: #2C44A3FF;
+  --wd-blue-9: #1F317AFF;
+  --wd-blue-10: #142252FF;
+
+  /* ===== 中性灰阶（冷灰） ===== */
+  --wd-gray-1: #F7F8FAFF;
+  --wd-gray-2: #EFF1F5FF;
+  --wd-gray-3: #E4E7EDFF;
+  --wd-gray-4: #D3D7E0FF;
+  --wd-gray-5: #B4BAC7FF;
+  --wd-gray-6: #8B93A3FF;
+  --wd-gray-7: #667085FF;
+  --wd-gray-8: #4A5568FF;
+  --wd-gray-9: #2D3442FF;
+  --wd-gray-10: #171B26FF;
+
+  /* ===== 成功色阶（绿） ===== */
+  --wd-green-1: #E8F7F0FF;
+  --wd-green-2: #C6EBD8FF;
+  --wd-green-3: #8FD9B7FF;
+  --wd-green-4: #54C495FF;
+  --wd-green-5: #22B583FF;
+  --wd-green-6: #00A06DFF;
+  --wd-green-7: #00855AFF;
+  --wd-green-8: #006B48FF;
+  --wd-green-9: #004A32FF;
+  --wd-green-10: #00301FFF;
+
+  /* ===== 警告色阶（琥珀） ===== */
+  --wd-amber-1: #FDF6E9FF;
+  --wd-amber-2: #F9E7C2FF;
+  --wd-amber-3: #F2D08FFF;
+  --wd-amber-4: #E9B45AFF;
+  --wd-amber-5: #DF9A2BFF;
+  --wd-amber-6: #C97F10FF;
+  --wd-amber-7: #A5670CFF;
+  --wd-amber-8: #7F5009FF;
+  --wd-amber-9: #593906FF;
+  --wd-amber-10: #382403FF;
+
+  /* ===== 危险色阶（红） ===== */
+  --wd-red-1: #FDECECFF;
+  --wd-red-2: #FBD6D4FF;
+  --wd-red-3: #F5AFAEFF;
+  --wd-red-4: #EE8583FF;
+  --wd-red-5: #E65A57FF;
+  --wd-red-6: #DC4038FF;
+  --wd-red-7: #B6302AFF;
+  --wd-red-8: #8F2620FF;
+  --wd-red-9: #661B17FF;
+  --wd-red-10: #451210FF;
+
+  /* ===== 间距（4px 基准网格） ===== */
+  --wd-space-1: 4px;
+  --wd-space-2: 8px;
+  --wd-space-3: 12px;
+  --wd-space-4: 16px;
+  --wd-space-5: 20px;
+  --wd-space-6: 24px;
+  --wd-space-7: 32px;
+  --wd-space-8: 40px;
+  --wd-space-9: 48px;
+  --wd-space-10: 64px;
+
+  /* ===== 圆角 ===== */
+  --wd-radius-xs: 4px;
+  --wd-radius-sm: 8px;
+  --wd-radius-md: 12px;
+  --wd-radius-lg: 16px;
+  --wd-radius-xl: 20px;
+  --wd-radius-full: 999px;
+
+  /* ===== 字号 ===== */
+  --wd-font-xs: 11px;
+  --wd-font-sm: 12px;
+  --wd-font-md: 14px;
+  --wd-font-lg: 16px;
+  --wd-font-xl: 18px;
+  --wd-font-2xl: 22px;
+
+  /* ===== 字重 ===== */
+  --wd-font-weight-regular: 400;
+  --wd-font-weight-medium: 500;
+  --wd-font-weight-semibold: 600;
+
+  /* ===== 动效 ===== */
+  --wd-duration-fast: 0.15s;
+  --wd-duration-base: 0.25s;
+  --wd-duration-slow: 0.35s;
+  --wd-ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --wd-ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --wd-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ===== 层级 ===== */
+  --wd-z-sticky: 100;
+  --wd-z-overlay: 1000;
+  --wd-z-popup: 1000;
+  --wd-z-toast: 2000;
+}

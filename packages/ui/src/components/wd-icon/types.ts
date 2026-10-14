@@ -1,12 +1,3 @@
-/*
- * @Author: weisheng
- * @Date: 2025-07-17 10:27:32
- * @LastEditTime: 2026-01-23 14:57:01
- * @LastEditors: weisheng
- * @Description:
- * @FilePath: /wot-ui/src/uni_modules/wot-ui/components/wd-icon/types.ts
- * 记得注释
- */
 import { baseProps, makeStringProp, numericProp } from '../../common/props'
 import type { ExtractPropTypes } from 'vue-lynx'
 
@@ -18,12 +9,12 @@ export const iconProps = {
    */
   name: makeStringProp(''),
   /**
-   * 图标颜色
+   * 图标颜色（svg content 不继承 CSS 变量，未传时按主题取 --wd-icon-1 对应值）
    * 类型: string
    */
   color: String,
   /**
-   * 图标字体大小
+   * 图标大小，默认单位为 px
    * 类型: string | number
    */
   size: numericProp,

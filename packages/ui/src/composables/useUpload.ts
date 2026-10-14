@@ -1,6 +1,87 @@
 import { uni } from '../common/uni'
 import { isArray, isDef, isFunction } from '../common/util'
-import type { ChooseFile, ChooseFileOption, UploadFileItem, UploadMethod, UploadStatusType, UploadSuccessStatus } from '../components/wd-upload/types'
+
+/* ===== 上传相关类型契约（composable 层自有，wd-upload 组件从这里导入） ===== */
+
+export type UploadSourceType = 'album' | 'camera'
+export type UploadSizeType = 'original' | 'compressed'
+export type UploadFileType = 'image' | 'video' | 'media' | 'all' | 'file'
+export type UploadCameraType = 'front' | 'back'
+export type UploadStatusType = 'pending' | 'loading' | 'success' | 'fail'
+export type UploadSuccessStatus = number | number[]
+export type UploadFormData = Record<string, any>
+
+export interface ChooseFileOption {
+  // 是否支持多选文件
+  multiple?: boolean
+  // 所选的图片的尺寸
+  sizeType?: UploadSizeType[]
+  // 选择文件的来源
+  sourceType?: UploadSourceType[]
+  // 最大允许上传个数
+  maxCount?: number
+  // 接受文件类型
+  accept?: UploadFileType
+  // 是否压缩视频，当 accept 为 video 时生效
+  compressed?: boolean
+  // 拍摄视频最长拍摄时间，当 accept 为 video | media 时生效，单位秒
+  maxDuration?: number
+  // 使用前置或者后置相机，可选值为：back｜front
+  camera?: UploadCameraType
+  // 根据文件拓展名过滤，每一项都不能是空字符串, 默认不过滤，例如: ['.jpg']
+  extension?: string[]
+}
+
+export type UploadFileItem = {
+  [key: string]: any
+  // 当前上传文件在列表中的唯一标识
+  uid: number
+  // 缩略图地址
+  thumb?: string
+  // 当前文件名称
+  name?: string
+  // 上传状态。若自定义了 statusKey，应取对应字段
+  status?: UploadStatusType
+  // 文件大小
+  size?: number
+  // 上传图片/视频的本地地址
+  url: string
+  // 上传进度
+  percent?: number
+  // 后端返回的内容，可能是对象，也可能是字符串
+  response?: string | Record<string, any>
+}
+
+export interface ChooseFile {
+  path: string // 上传临时地址
+  size?: number // 上传大小
+  name?: string // 当前文件名称
+  type: 'image' | 'video' | 'file' // 上传类型
+  duration?: number // 上传时间
+  thumb?: string // 缩略图地址
+}
+
+export type UploadMethod = (
+  uploadFile: UploadFileItem,
+  formData: UploadFormData,
+  options: {
+    action: string
+    header: Record<string, any>
+    name: string
+    fileName: string
+    fileType: 'image' | 'video' | 'audio'
+    statusCode: UploadSuccessStatus
+    // 是否自动中断之前的上传任务
+    abortPrevious?: boolean
+    onSuccess: (
+      res: UniApp.UploadFileSuccessCallbackResult,
+      file: UploadFileItem,
+      formData: UploadFormData
+    ) => void
+    onError: (res: UniApp.GeneralCallbackResult, file: UploadFileItem, formData: UploadFormData) => void
+    onProgress: (res: UniApp.OnProgressUpdateResult, file: UploadFileItem) => void
+  }
+) => UniApp.UploadTask | void | Promise<void>
 
 export const UPLOAD_STATUS: Record<string, UploadStatusType> = {
   PENDING: 'pending',
