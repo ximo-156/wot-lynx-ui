@@ -1,0 +1,149 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(calendar-view) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: var(--wd-bg-container);
+
+  @include e(weeks) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 40px;
+  }
+
+  @include e(week) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    flex-basis: 0;
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-3);
+  }
+
+  @include e(grid) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  @include e(day) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 14.2857%;
+    height: 52px;
+
+    @include e(day-text) {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: var(--wd-font-md);
+      color: var(--wd-text-1);
+    }
+
+    @include e(day-top) {
+      font-size: var(--wd-font-xs);
+      color: var(--wd-text-4);
+      margin-top: 1px;
+    }
+
+    @include e(day-bottom) {
+      position: absolute;
+      bottom: 4px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background-color: var(--wd-color-primary);
+    }
+
+    /* 非本月 */
+    &.is-normal {
+      .wd-calendar-view__day-text {
+        color: var(--wd-text-4);
+      }
+    }
+
+    /* 选中 / 范围端点 */
+    &.is-selected,
+    &.is-start,
+    &.is-end {
+      .wd-calendar-view__day-text {
+        background-color: var(--wd-color-primary);
+        color: var(--wd-color-on-primary);
+      }
+    }
+
+    /* 范围中段 */
+    &.is-middle {
+      background-color: var(--wd-color-primary-bg);
+    }
+
+    /* 多选 */
+    &.is-multiple-selected {
+      .wd-calendar-view__day-text {
+        background-color: var(--wd-color-primary);
+        color: var(--wd-color-on-primary);
+      }
+    }
+
+    /* 今天 */
+    &.is-current {
+      .wd-calendar-view__day-text {
+        border-width: 1px;
+        border-style: solid;
+        border-color: var(--wd-color-primary);
+        color: var(--wd-color-primary);
+      }
+    }
+
+    /* 禁用 */
+    &.is-disabled {
+      .wd-calendar-view__day-text {
+        color: var(--wd-text-disabled);
+      }
+    }
+  }
+
+  @include e(panel-title) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+  }
+
+  @include e(panel-title-text) {
+    font-size: var(--wd-font-md);
+    font-weight: var(--wd-font-weight-medium);
+    color: var(--wd-text-1);
+    margin: 0 var(--wd-space-3);
+  }
+
+  @include e(panel-arrow) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-3);
+  }
+
+  @include e(time) {
+    border-top-width: 1ppx;
+    border-top-style: solid;
+    border-top-color: var(--wd-border-1);
+    padding: var(--wd-space-2) 0;
+  }
+}

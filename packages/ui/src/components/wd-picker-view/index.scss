@@ -1,0 +1,91 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(picker-view) {
+  width: 100%;
+
+  @include e(main) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  @include e(column) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  @include e(column-content) {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  @include e(column-item) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0 var(--wd-space-2);
+  }
+
+  @include e(column-label) {
+    font-size: var(--wd-font-lg);
+    color: var(--wd-text-1);
+  }
+
+  @include e(column-item) {
+    @include when(active) {
+      .wd-picker-view__column-label {
+        font-weight: var(--wd-font-weight-semibold);
+      }
+    }
+
+    @include m(disabled) {
+      opacity: 0.4;
+    }
+  }
+
+  /* 选中指示带 */
+  @include e(indicator) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top-width: 1ppx;
+    border-top-style: solid;
+    border-top-color: var(--wd-border-1);
+    border-bottom-width: 1ppx;
+    border-bottom-style: solid;
+    border-bottom-color: var(--wd-border-1);
+    background-color: var(--wd-bg-secondary);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* 上下渐隐遮罩 */
+  @include e(mask) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 1;
+
+    @include m(top) {
+      top: 0;
+      background-image: linear-gradient(to bottom, var(--wd-bg-container), rgba(255, 255, 255, 0));
+    }
+
+    @include m(bottom) {
+      bottom: 0;
+      background-image: linear-gradient(to top, var(--wd-bg-container), rgba(255, 255, 255, 0));
+    }
+  }
+}

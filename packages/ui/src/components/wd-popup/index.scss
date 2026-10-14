@@ -1,0 +1,75 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(popup-wrapper) {
+  display: flex;
+  flex-direction: column;
+}
+
+@include b(popup) {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--wd-bg-elevated);
+  color: var(--wd-text-1);
+
+  /* 居中 */
+  @include m(center) {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: var(--wd-radius-lg);
+    max-width: 80%;
+  }
+
+  /* 顶部 */
+  @include m(top) {
+    left: 0;
+    right: 0;
+    top: 0;
+    border-bottom-left-radius: var(--wd-radius-lg);
+    border-bottom-right-radius: var(--wd-radius-lg);
+  }
+
+  /* 底部 */
+  @include m(bottom) {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-top-left-radius: var(--wd-radius-lg);
+    border-top-right-radius: var(--wd-radius-lg);
+  }
+
+  /* 左侧 */
+  @include m(left) {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-top-right-radius: var(--wd-radius-lg);
+    border-bottom-right-radius: var(--wd-radius-lg);
+  }
+
+  /* 右侧 */
+  @include m(right) {
+    right: 0;
+    top: 0;
+    bottom: 0;
+    border-top-left-radius: var(--wd-radius-lg);
+    border-bottom-left-radius: var(--wd-radius-lg);
+  }
+
+  @include e(close) {
+    position: absolute;
+    right: var(--wd-space-3);
+    top: var(--wd-space-3);
+    color: var(--wd-icon-3);
+    z-index: 10;
+  }
+
+  @include when(round) {
+    border-radius: var(--wd-radius-lg);
+  }
+
+  @include when(safe-area) {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

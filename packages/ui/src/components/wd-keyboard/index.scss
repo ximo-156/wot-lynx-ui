@@ -1,0 +1,45 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(keyboard) {
+  background-color: var(--wd-bg-secondary);
+
+  @include e(header) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 var(--wd-space-4);
+  }
+
+  @include e(title) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-1);
+  }
+
+  @include e(close) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-color-primary);
+  }
+
+  @include e(body) {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  @include e(keys) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex-grow: 3;
+    flex-basis: 0;
+  }
+
+  @include e(sidebar) {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    flex-basis: 0;
+  }
+}

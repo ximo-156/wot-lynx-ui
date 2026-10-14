@@ -1,0 +1,87 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(password-input) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  @include e(security) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+  }
+
+  @include e(item) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 48px;
+    background-color: var(--wd-bg-container);
+
+    @include when(border) {
+      border-width: 1px;
+      border-style: solid;
+      border-color: var(--wd-border-1);
+      border-left-width: 0;
+    }
+
+    /* 首格补齐左边框与左圆角（Lynx 不支持 :first-child，用索引类名） */
+    @include when(first) {
+      border-left-width: 1px;
+      border-top-left-radius: var(--wd-radius-sm);
+      border-bottom-left-radius: var(--wd-radius-sm);
+    }
+
+    /* 末格右圆角 */
+    @include when(last) {
+      border-top-right-radius: var(--wd-radius-sm);
+      border-bottom-right-radius: var(--wd-radius-sm);
+    }
+  }
+
+  @include e(value) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(mask) {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--wd-text-1);
+  }
+
+  @include e(cursor) {
+    width: 1px;
+    height: 20px;
+    background-color: var(--wd-color-primary);
+    animation: wd-password-input-cursor 1s step-end infinite;
+  }
+
+  @include e(info) {
+    margin-top: var(--wd-space-2);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-3);
+
+    @include when(error) {
+      color: var(--wd-color-danger);
+    }
+  }
+}
+
+@keyframes wd-password-input-cursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
