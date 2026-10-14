@@ -1,0 +1,108 @@
+@use '../../styles/mixin/mixin.scss'as *;
+@use '../../styles/variable.scss'as *;
+
+// 折叠面板背景颜色
+$collapse-bg: var(--wot-collapse-bg, $filled-oppo) !default;
+// 折叠内容文字颜色
+$collapse-body-color: var(--wot-collapse-body-color, $text-auxiliary) !default;
+// 折叠内容文字字号
+$collapse-body-font-size: var(--wot-collapse-body-font-size, $typography-label-size-large) !default;
+// 折叠容器左右内边距
+$collapse-padding: var(--wot-collapse-padding, $padding-loose) !default;
+// 折叠内容区域内边距
+$collapse-body-padding: var(--wot-collapse-body-padding, $padding-extra-loose $padding-loose) !default;
+// 折叠标题文字颜色
+$collapse-title-color: var(--wot-collapse-title-color, $text-main) !default;
+// 折叠标题文字字号（HyperOS：标题 15px）
+$collapse-title-font-size: var(--wot-collapse-title-font-size, $typography-body-size-main) !default;
+// 折叠箭头尺寸
+$collapse-arrow-size: var(--wot-collapse-arrow-size, $n-16) !default;
+// 折叠箭头颜色
+$collapse-arrow-color: var(--wot-collapse-arrow-color, $icon-main) !default;
+// 更多按钮文字字号
+$collapse-more-font-size: var(--wot-collapse-more-font-size, $typography-body-size-main) !default;
+// 更多按钮文字颜色
+$collapse-more-color: var(--wot-collapse-more-color, $primary-6) !default;
+// 更多按钮上边距
+$collapse-more-margin-top: var(--wot-collapse-more-margin-top, $spacing-main) !default;
+// 更多按钮文字右侧间距
+$collapse-more-text-margin-right: var(--wot-collapse-more-text-margin-right, $spacing-super-tight) !default;
+// 卡片圆角（HyperOS：卡片 16px）
+$collapse-radius: var(--wot-collapse-radius, $radius-large) !default;
+// 卡片阴影（HyperOS 阴影-s）
+$collapse-shadow: var(--wot-collapse-shadow, var(--wot-shadow-s, 0 2px 8px rgba(25, 26, 31, 0.05))) !default;
+// 卡片水平外边距（HyperOS：页面左右留白 12px）
+$collapse-margin-horizontal: var(--wot-collapse-margin-horizontal, $spacing-loose) !default;
+// 折叠项标题字重
+$collapse-title-font-weight: var(--wot-collapse-title-font-weight, $font-weight-medium) !default;
+// 折叠项分割线颜色
+$collapse-divider-color: var(--wot-collapse-divider-color, $divider-main) !default;
+
+@include b(collapse) {
+  background: $collapse-bg;
+  border-radius: $collapse-radius;
+  box-shadow: $collapse-shadow;
+  margin: 0 $collapse-margin-horizontal;
+  overflow: hidden;
+
+  // 「查看更多」模式为行内展开，不套用卡片外框
+  @include when(viewmore) {
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: $collapse-padding;
+  }
+
+  // HyperOS 4 折叠面板视觉规范。
+  // 说明：wd-collapse-item 的细节样式由 wd-collapse-item/index.scss 定义，
+  // 此处由父容器统一下发 HyperOS 规格（标题 15px/500、分割线 --wot-divider-main），
+  // 选择器带上 .wd-collapse .wd-collapse-item 两级上下文以保证优先级稳定。
+  .wd-collapse-item {
+    .wd-collapse-item__title {
+      font-size: $collapse-title-font-size;
+      font-weight: $collapse-title-font-weight;
+    }
+
+    &.is-border {
+      border-top-color: $collapse-divider-color;
+    }
+
+    &.is-border .wd-collapse-item__header.is-expanded {
+      border-bottom-color: $collapse-divider-color;
+    }
+  }
+  @include e(content) {
+    font-size: $collapse-body-font-size;
+    color: $collapse-body-color;
+
+    @include when(retract) {
+      // Lynx 适配：-webkit-box 多行截断在 Lynx 不支持，改由组件模板中
+      // <text text-maxline="N"> 实现（见 wd-collapse.vue），此处仅保留溢出裁剪。
+      overflow: hidden;
+    }
+  }
+  @include e(more) {
+    display: inline-block;
+    font-size: $collapse-more-font-size;
+    margin-top: $collapse-more-margin-top;
+    color: $collapse-more-color;
+    user-select: none;
+  }
+  @include e(more-txt) {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: $collapse-more-text-margin-right;
+  }
+  @include e(arrow) {
+    display: inline-block;
+    vertical-align: middle;
+    transition: transform 0.1s;
+    font-size: $collapse-arrow-size;
+    height: $collapse-arrow-size;
+    line-height: $collapse-arrow-size;
+
+    @include when(retract) {
+      transform: rotate(-180deg);
+    }
+  }
+}

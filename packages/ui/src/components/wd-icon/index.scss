@@ -1,0 +1,36 @@
+@use '../../styles/variable.scss' as *;
+@use '../../styles/mixin/mixin' as *;
+
+// 图标字号
+$icon-font-size: var(--wot-icon-font-size, $typography-body-size-main) !default;
+
+@include b(icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $icon-font-size;
+  line-height: 1;
+  color: $icon-main;
+
+  @include e(svg) {
+    width: 1em;
+    height: 1em;
+  }
+
+  @include e(image) {
+    width: 1em;
+    height: 1em;
+  }
+
+  // 图片模式
+  @include m(image) {
+    width: $icon-font-size;
+    height: $icon-font-size;
+  }
+
+  // CSS 图标模式（UnoCSS 等 CSS class 图标库）
+  @include m(css) {
+    width: $icon-font-size;
+    height: $icon-font-size;
+  }
+}

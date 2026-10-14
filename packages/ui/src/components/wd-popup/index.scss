@@ -1,0 +1,113 @@
+@use '../../styles/mixin/mixin.scss'as *;
+@use '../../styles/variable.scss'as *;
+
+// 弹窗背景色
+$popup-bg: var(--wot-popup-bg, $filled-oppo) !default;
+// 关闭图标按钮尺寸（HyperOS：32px 圆形浅填充按钮）
+$popup-close-size: var(--wot-popup-close-size, $n-32) !default;
+// 关闭图标按钮背景色（浅填充）
+$popup-close-bg: var(--wot-popup-close-bg, $filled-content) !default;
+// 关闭图标颜色（辅助灰；实际图标色经 svg fill 显式下发，见 wd-popup.vue）
+$popup-close-color: var(--wot-popup-close-color, $icon-auxiliary) !default;
+// 关闭图标字号
+$popup-close-icon-size: var(--wot-popup-close-icon-size, $n-16) !default;
+// 关闭图标外边距
+$popup-close-margin: var(--wot-popup-close-margin, $spacing-loose) !default;
+// 弹窗圆角：根据弹出位置自动适配（左右贴边 16px / 底部弹层 28px / 居中弹窗 24px）
+$popup-radius: var(--wot-popup-radius, $radius-large) !default;
+// 底部弹层顶部圆角（HyperOS 底部弹层 28px）
+$popup-radius-bottom: var(--wot-popup-radius-bottom, $radius-ultra-large) !default;
+// 居中弹窗圆角（HyperOS 对话框/居中弹窗 24px）
+$popup-radius-center: var(--wot-popup-radius-center, $radius-super-large) !default;
+// 居中弹窗阴影（HyperOS 浮层阴影-l）
+$popup-center-shadow: var(--wot-popup-center-shadow, var(--wot-shadow-l, 0 12px 36px rgba(25, 26, 31, 0.1))) !default;
+
+@include b(popup) {
+  position: fixed;
+  max-height: 100%;
+  overflow-y: auto;
+  background: $popup-bg;
+
+  @include edeep(close) {
+    position: absolute;
+    top: $popup-close-margin;
+    right: $popup-close-margin;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: $popup-close-size;
+    height: $popup-close-size;
+    border-radius: $radius-full;
+    background: $popup-close-bg;
+    color: $popup-close-color;
+    font-size: $popup-close-icon-size;
+  }
+
+  // Lynx 适配：位置修饰符必须用 m（@at-root 生成 `.wd-popup--bottom` 单类选择器）。
+  // wot-ui 原版即为 m；此前误用 mdeep 会编译成后代选择器
+  // `.wd-popup .wd-popup--bottom`，而 wd-popup 与位置类名同在一个 transition
+  // 根节点上（无 `.wd-popup` 祖先），导致全部定位/圆角/动画规则失效，已修正。
+  @include m(center) {
+    left: 50%;
+    top: 50%;
+    transform: translate3d(-50%, -50%, 0);
+    transform-origin: 0% 0%;
+
+    @include when(round) {
+      border-radius: $popup-radius-center;
+      box-shadow: $popup-center-shadow;
+    }
+
+    // Lynx 适配：!important 在 Lynx CSS 中不受支持，已移除；
+    // 过渡态类名（两个类）特异性已高于基础定位类（一个类），无需 !important。
+    &.wd-transition--zoom-in-enter,
+    &.wd-transition--zoom-in-leave-to {
+      transform: scale(0.8) translate3d(-50%, -50%, 0);
+    }
+
+    @include when(deep) {
+
+      &.wd-transition--zoom-in-enter,
+      &.wd-transition--zoom-in-leave-to {
+        transform: scale(0.1) translate3d(-50%, -50%, 0);
+      }
+    }
+
+  }
+
+  @include m(left) {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    @include when(round) {
+      border-radius: 0 $popup-radius $popup-radius 0;
+    }
+  }
+
+  @include m(right) {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    @include when(round) {
+      border-radius: $popup-radius 0 0 $popup-radius;
+    }
+  }
+
+  @include m(top) {
+    top: 0;
+    left: 0;
+    right: 0;
+    @include when(round) {
+      border-radius: 0 0 $popup-radius $popup-radius;
+    }
+  }
+
+  @include m(bottom) {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    @include when(round) {
+      border-radius: $popup-radius-bottom $popup-radius-bottom 0 0 ;
+    }
+  }
+}

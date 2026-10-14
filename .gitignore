@@ -1,0 +1,22 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+.rspeedy/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
+# 设计预览（tools/preview 产物，仅开发用）
+.preview/
+.preview-form/
+
+# 系统文件
+.DS_Store
+*.log
+docs/guide/*
+docs/components/*
+.preview/*
+scripts/*
+.vscode/*
+.pnpm-store/*

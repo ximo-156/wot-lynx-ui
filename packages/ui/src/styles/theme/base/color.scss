@@ -1,0 +1,210 @@
+:root,
+page,
+.wd-root-portal {
+  // 颜色（小米 HyperOS 色板）
+  --wot-base-black: #000000FF;
+  --wot-base-white: #FFFFFFFF;
+  --wot-base-transparent: transparent;
+  // 品牌蓝（Xiaomi Blue #3482FF）
+  --wot-blue-1: #EFF5FFFF;
+  --wot-blue-2: #DFEAFFFF;
+  --wot-blue-3: #B9D2FFFF;
+  --wot-blue-4: #8AB0FFFF;
+  --wot-blue-5: #5C99FFFF;
+  --wot-blue-6: #3482FFFF;
+  --wot-blue-7: #2A6FE0FF;
+  --wot-blue-8: #2059BCFF;
+  --wot-blue-9: #174494FF;
+  --wot-blue-10: #0F2F66FF;
+  --wot-blue-opac: #3482FF14;
+
+  // 亮蓝
+  --wot-lightblue-1: #E8F7FEFF;
+  --wot-lightblue-2: #C2EBFDFF;
+  --wot-lightblue-3: #93D8FBFF;
+  --wot-lightblue-4: #5FC4F8FF;
+  --wot-lightblue-5: #2CAFF5FF;
+  --wot-lightblue-6: #0E9FF0FF;
+  --wot-lightblue-7: #0B87CCFF;
+  --wot-lightblue-8: #096FA6FF;
+  --wot-lightblue-9: #065780FF;
+  --wot-lightblue-10: #043D5CFF;
+  --wot-lightblue-opac: #0E9FF014;
+
+  // 粉色
+  --wot-pink-1: #FFF0F4FF;
+  --wot-pink-2: #FFD9E4FF;
+  --wot-pink-3: #FFB0C7FF;
+  --wot-pink-4: #FF85A6FF;
+  --wot-pink-5: #FF5D87FF;
+  --wot-pink-6: #FF3D6EFF;
+  --wot-pink-7: #DB2A57FF;
+  --wot-pink-8: #B71F45FF;
+  --wot-pink-9: #931735FF;
+  --wot-pink-10: #660E24FF;
+  --wot-pink-opac: #FF3D6E14;
+
+  // 红色
+  --wot-red-1: #FFF1F0FF;
+  --wot-red-2: #FFDCDAFF;
+  --wot-red-3: #FFB3B2FF;
+  --wot-red-4: #FF8483FF;
+  --wot-red-5: #FF6563FF;
+  --wot-red-6: #FF4D4FFF;
+  --wot-red-7: #DB3B3DFF;
+  --wot-red-8: #B72C2EFF;
+  --wot-red-9: #931F21FF;
+  --wot-red-10: #661415FF;
+  --wot-red-opac: #FF4D4F14;
+
+  // 橘红色
+  --wot-volcano-1: #FFF2ECFF;
+  --wot-volcano-2: #FFDCCFFF;
+  --wot-volcano-3: #FFB79BFF;
+  --wot-volcano-4: #FF9066FF;
+  --wot-volcano-5: #FF6B3DFF;
+  --wot-volcano-6: #F94E1FFF;
+  --wot-volcano-7: #D63E15FF;
+  --wot-volcano-8: #B1300FFF;
+  --wot-volcano-9: #8C250BFF;
+  --wot-volcano-10: #611907FF;
+  --wot-volcano-opac: #F94E1F14;
+
+  // 橙色
+  --wot-orange-1: #FFF4E6FF;
+  --wot-orange-2: #FFE3BFFF;
+  --wot-orange-3: #FFC98CFF;
+  --wot-orange-4: #FFAE57FF;
+  --wot-orange-5: #FF9626FF;
+  --wot-orange-6: #FF8800FF;
+  --wot-orange-7: #DB7300FF;
+  --wot-orange-8: #B75E00FF;
+  --wot-orange-9: #934B00FF;
+  --wot-orange-10: #663300FF;
+  --wot-orange-opac: #FF880014;
+
+  // 黄色
+  --wot-yellow-1: #FFF9E6FF;
+  --wot-yellow-2: #FFF0BFFF;
+  --wot-yellow-3: #FFE28CFF;
+  --wot-yellow-4: #FFD257FF;
+  --wot-yellow-5: #FFC526FF;
+  --wot-yellow-6: #FFB300FF;
+  --wot-yellow-7: #DB9700FF;
+  --wot-yellow-8: #B77C00FF;
+  --wot-yellow-9: #936200FF;
+  --wot-yellow-10: #664400FF;
+  --wot-yellow-opac: #FFB30014;
+
+  // 绿色
+  --wot-green-1: #ECFAEFFF;
+  --wot-green-2: #D6F5DFFF;
+  --wot-green-3: #A8E9BBFF;
+  --wot-green-4: #6FD98EFF;
+  --wot-green-5: #4ECB73FF;
+  --wot-green-6: #34C759FF;
+  --wot-green-7: #2AA64AFF;
+  --wot-green-8: #20853CFF;
+  --wot-green-9: #17652EFF;
+  --wot-green-10: #0E4520FF;
+  --wot-green-opac: #34C75914;
+
+  // 青色
+  --wot-cyan-1: #E6FAFDFF;
+  --wot-cyan-2: #BFF2F9FF;
+  --wot-cyan-3: #8CE6F2FF;
+  --wot-cyan-4: #57D8EAFF;
+  --wot-cyan-5: #26C9E0FF;
+  --wot-cyan-6: #00B8D4FF;
+  --wot-cyan-7: #0098B0FF;
+  --wot-cyan-8: #007A8EFF;
+  --wot-cyan-9: #005C6BFF;
+  --wot-cyan-10: #003E49FF;
+  --wot-cyan-opac: #00B8D414;
+
+  // 紫色
+  --wot-purple-1: #F3F1FFFF;
+  --wot-purple-2: #E4DEFFFF;
+  --wot-purple-3: #C6BAFFFF;
+  --wot-purple-4: #A794FDFF;
+  --wot-purple-5: #8B72FBFF;
+  --wot-purple-6: #7355F7FF;
+  --wot-purple-7: #5D3FDBFF;
+  --wot-purple-8: #4A2FB7FF;
+  --wot-purple-9: #392493FF;
+  --wot-purple-10: #271866FF;
+  --wot-purple-opac: #7355F714;
+
+  // 靛色
+  --wot-grape-1: #FBF1FFFF;
+  --wot-grape-2: #F3DCFAFF;
+  --wot-grape-3: #E7B8F5FF;
+  --wot-grape-4: #D98FEEFF;
+  --wot-grape-5: #CB66E7FF;
+  --wot-grape-6: #B845DBFF;
+  --wot-grape-7: #9A33B8FF;
+  --wot-grape-8: #7C2895FF;
+  --wot-grape-9: #5F1E73FF;
+  --wot-grape-10: #42144FFF;
+  --wot-grape-opac: #B845DB14;
+
+  // 冷灰（带一点蓝调的 HyperOS 中性色）
+  --wot-coolgrey-1: #F7F8FAFF;
+  --wot-coolgrey-2: #F1F2F5FF;
+  --wot-coolgrey-3: #E7E8EDFF;
+  --wot-coolgrey-4: #D5D7DEFF;
+  --wot-coolgrey-5: #AFB2BBFF;
+  --wot-coolgrey-6: #868A93FF;
+  --wot-coolgrey-7: #5F636CFF;
+  --wot-coolgrey-8: #454851FF;
+  --wot-coolgrey-9: #2B2D33FF;
+  --wot-coolgrey-10: #191A1FFF;
+
+  // 中性灰
+  --wot-neutralgrey-1: #FAFAFAFF;
+  --wot-neutralgrey-2: #F5F5F5FF;
+  --wot-neutralgrey-3: #EBEBEBFF;
+  --wot-neutralgrey-4: #D9D9D9FF;
+  --wot-neutralgrey-5: #BFBFBFFF;
+  --wot-neutralgrey-6: #A6A6A6FF;
+  --wot-neutralgrey-7: #8C8C8CFF;
+  --wot-neutralgrey-8: #737373FF;
+  --wot-neutralgrey-9: #404040FF;
+  --wot-neutralgrey-10: #292929FF;
+
+  // 暖灰
+  --wot-warmgrey-1: #FAF9F7FF;
+  --wot-warmgrey-2: #F5F3F0FF;
+  --wot-warmgrey-3: #EBE7E3FF;
+  --wot-warmgrey-4: #D9D3CDFF;
+  --wot-warmgrey-5: #C4BCB4FF;
+  --wot-warmgrey-6: #A89E94FF;
+  --wot-warmgrey-7: #8D8177FF;
+  --wot-warmgrey-8: #726A62FF;
+  --wot-warmgrey-9: #463F39FF;
+  --wot-warmgrey-10: #2E2A26FF;
+
+  // 遮罩
+  --wot-opac-1_02: #00000005;
+  --wot-opac-2_04: #0000000A;
+  --wot-opac-3_08: #00000014;
+  --wot-opac-4_15: #00000026;
+  --wot-opac-5_20: #00000033;
+  --wot-opac-6_30: #0000004D;
+  --wot-opac-7_45: #00000073;
+  --wot-opac-7_55: #0000008C;
+  --wot-opac-8_65: #000000A6;
+  --wot-opac-9_75: #000000BF;
+  --wot-opac-10_85: #000000D9;
+  --wot-opacwhite-1_02: #FFFFFF05;
+  --wot-opacwhite-2_04: #FFFFFF0A;
+  --wot-opacwhite-3_08: #FFFFFF14;
+  --wot-opacwhite-4_15: #FFFFFF26;
+  --wot-opacwhite-5_20: #FFFFFF33;
+  --wot-opacwhite-6_30: #FFFFFF4D;
+  --wot-opacwhite-7_45: #FFFFFF73;
+  --wot-opacwhite-7_55: #FFFFFF8C;
+  --wot-opacwhite-8_65: #FFFFFFA6;
+  --wot-opacwhite-9_75: #FFFFFFBF;
+  --wot-opacwhite-10_85: #FFFFFFD9;
+}

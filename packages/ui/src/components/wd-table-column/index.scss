@@ -1,0 +1,17 @@
+@use '../../styles/mixin/mixin.scss'as *;
+
+@use '../wd-table/index.scss' as *;
+
+@include b(table-column) {
+  display: contents;
+
+  // Lynx 适配：wot-ui 在此用 :last-child + ::before 去掉最后一行单元格的下边框，
+  // 现单元格边框已由 wd-table/index.scss 改为原生 border，同步将“最后一行”
+  // 改为模板按索引生成的 is-last-row 类名，直接重置原生 border-bottom。
+  .wd-table__cell.is-last-row {
+    @include when(border) {
+      border-bottom-width: 0;
+      border-bottom-style: none;
+    }
+  }
+}

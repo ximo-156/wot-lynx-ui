@@ -1,0 +1,22 @@
+{
+  "name": "wot-lynx-ui-monorepo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:demo": "pnpm --filter wot-lynx-demo run dev",
+    "dev:device-test": "pnpm --filter wot-lynx-demo run dev:device-test",
+    "build:demo": "pnpm --filter wot-lynx-demo run build",
+    "build:device-test": "pnpm --filter wot-lynx-demo run build:device-test",
+    "build:css": "pnpm --filter wot-lynx-ui run build:css",
+    "build:ui": "pnpm --filter wot-lynx-ui run build",
+    "typecheck": "pnpm --filter wot-lynx-ui run typecheck",
+    "test": "pnpm --filter wot-lynx-ui run test",
+    "docs:dev": "pnpm --filter wot-lynx-ui-docs run dev",
+    "docs:build": "pnpm --filter wot-lynx-ui-docs run build",
+    "verify": "pnpm build:css && pnpm typecheck && pnpm test && pnpm build:demo"
+  },
+  "packageManager": "pnpm@10.24.0",
+  "engines": {
+    "node": ">=18"
+  }
+}

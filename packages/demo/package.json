@@ -1,0 +1,28 @@
+{
+  "name": "wot-lynx-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "rspeedy dev",
+    "build": "rspeedy build",
+    "preview": "rspeedy preview",
+    "dev:device-test": "rspeedy dev --entry device-test",
+    "build:device-test": "rspeedy build --entry device-test"
+  },
+  "dependencies": {
+    "vue": "^3.5.30",
+    "vue-lynx": "^0.5.1",
+    "wot-lynx-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@lynx-js/qrcode-rsbuild-plugin": "^0.4.6",
+    "@lynx-js/rspeedy": "0.13.5",
+    "@rsbuild/plugin-css-minimizer": "1.1.1",
+    "@rsbuild/plugin-vue": "1.2.7",
+    "sass": "^1.98.0",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

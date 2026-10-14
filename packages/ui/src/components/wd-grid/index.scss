@@ -1,0 +1,40 @@
+@use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 宫格图标圆角（HyperOS：控件 12px）
+$grid-icon-radius: var(--wot-grid-icon-radius, $radius-main) !default;
+// 宫格文字字号（HyperOS：辅助 13px）
+$grid-text-font-size: var(--wot-grid-text-font-size, $typography-label-size-main) !default;
+// 宫格文字行高
+$grid-text-line-height: var(--wot-grid-text-line-height, $typography-label-line-height-size-main) !default;
+// 宫格分割线颜色
+$grid-divider-color: var(--wot-grid-divider-color, $divider-main) !default;
+
+@include b(grid) {
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  height: auto;
+
+  // HyperOS 4 宫格视觉规范。
+  // 说明：wd-grid-item 的细节样式由 wd-grid-item/index.scss 定义，此处由父容器
+  // 统一下发 HyperOS 规格（图标容器 12px 圆角、文字 13px、分割线 --wot-divider-main），
+  // 选择器带上 .wd-grid .wd-grid-item 两级上下文以保证优先级稳定。
+  .wd-grid-item {
+    .wd-grid-item__wrapper {
+      border-radius: $grid-icon-radius;
+      overflow: hidden;
+    }
+
+    .wd-grid-item__text {
+      font-size: $grid-text-font-size;
+      line-height: $grid-text-line-height;
+    }
+
+    .wd-grid-item__content.is-around {
+      border-color: $grid-divider-color;
+    }
+  }
+}

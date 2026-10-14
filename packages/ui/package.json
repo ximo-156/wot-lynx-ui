@@ -1,0 +1,64 @@
+{
+  "name": "wot-lynx-ui",
+  "version": "0.1.0",
+  "description": "基于 Vue Lynx 的 wot-ui 适配组件库 — 原生性能、样式与 wot-ui 一致",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./theme": "./src/styles/theme/index.css",
+    "./components/*": "./src/components/*",
+    "./package.json": "./package.json",
+    "./theme/scss": "./src/styles/theme/index.scss",
+    "./styles/*": "./src/styles/*",
+    "./plugin": "./plugin/index.js"
+  },
+  "files": [
+    "src",
+    "plugin",
+    "README.md"
+  ],
+  "sideEffects": true,
+  "scripts": {
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:css": "node ../../scripts/build-css.mjs",
+    "build": "node ../../scripts/build-css.mjs"
+  },
+  "keywords": [
+    "vue",
+    "lynx",
+    "vue-lynx",
+    "wot-ui",
+    "components",
+    "ui",
+    "cross-platform"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "vue-lynx": "^0.5.0"
+  },
+  "devDependencies": {
+    "@lynx-js/testing-environment": "^0.1.11",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "@vue/runtime-core": "^3.5.0",
+    "jsdom": "^25.0.0",
+    "sass": "^1.105.1",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4",
+    "vue": "^3.5.30",
+    "vue-lynx": "^0.5.1",
+    "vue-tsc": "^2.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wot-lynx-ui/wot-lynx-ui.git"
+  },
+  "homepage": "https://wot-lynx-ui.github.io"
+}
