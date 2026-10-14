@@ -1,0 +1,184 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(slider) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+
+  @include e(value) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-3);
+  }
+
+  @include e(bar) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    height: 4px;
+    border-radius: var(--wd-radius-full);
+    background-color: var(--wd-gray-3);
+  }
+
+  @include e(track) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    height: 100%;
+  }
+
+  @include e(line) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 100%;
+    border-radius: var(--wd-radius-full);
+    background-color: var(--wd-color-primary);
+  }
+
+  @include e(dot) {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background-color: var(--wd-bg-container);
+    border-radius: 50%;
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--wd-border-2);
+
+    /* 默认（单滑块）：位于进度条末端 */
+    right: 0;
+    transform: translateX(50%);
+
+    /* 双滑块左端：位于进度条起点 */
+    @include m(left) {
+      right: auto;
+      left: 0;
+      transform: translateX(-50%);
+    }
+
+    /* 双滑块右端：位于进度条末端 */
+    @include m(right) {
+      right: 0;
+      transform: translateX(50%);
+    }
+  }
+
+  @include e(dot-slider) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(dot-popover) {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: var(--wd-space-2);
+    padding: var(--wd-space-1) var(--wd-space-2);
+    background-color: var(--wd-gray-9);
+    border-radius: var(--wd-radius-xs);
+    opacity: 0;
+    transition: opacity var(--wd-duration-fast) var(--wd-ease-out);
+
+    @include when(visible) {
+      opacity: 1;
+    }
+  }
+
+  @include e(dot-popover-text) {
+    font-size: var(--wd-font-xs);
+    color: var(--wd-white);
+  }
+
+  @include e(dot-popover-arrow) {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left-width: 4px;
+    border-left-style: solid;
+    border-left-color: transparent;
+    border-right-width: 4px;
+    border-right-style: solid;
+    border-right-color: transparent;
+    border-top-width: 4px;
+    border-top-style: solid;
+    border-top-color: var(--wd-gray-9);
+  }
+
+  /* 刻度 */
+  @include e(scale-item) {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+
+    @include when(active) {
+      .wd-slider__scale-desc {
+        color: var(--wd-text-1);
+      }
+    }
+  }
+
+  @include e(scale-desc) {
+    position: absolute;
+    top: 100%;
+    margin-top: var(--wd-space-2);
+    font-size: var(--wd-font-xs);
+    color: var(--wd-text-4);
+    white-space: nowrap;
+  }
+
+  /* 有刻度时轨道留出标签空间 */
+  @include when(marks) {
+    margin-bottom: var(--wd-space-6);
+  }
+
+  /* 禁用 */
+  @include when(disabled) {
+    opacity: 0.5;
+  }
+
+  /* capsule 主题：加粗轨道 */
+  @include m(theme-capsule) {
+    .wd-slider__bar {
+      height: 8px;
+    }
+  }
+}
+
+/* 垂直方向 */
+.wd-slider--vertical {
+  flex-direction: column;
+  height: 100%;
+
+  .wd-slider__bar {
+    width: 4px;
+    height: 100%;
+  }
+
+  .wd-slider__line {
+    width: 100%;
+    height: auto;
+  }
+
+  .wd-slider__dot {
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}

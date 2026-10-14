@@ -1,0 +1,37 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(toast) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 70%;
+  padding: var(--wd-space-3) var(--wd-space-4);
+  background-color: var(--wd-gray-9);
+  border-radius: var(--wd-radius-md);
+  color: var(--wd-white);
+
+  @include m(vertical) {
+    flex-direction: column;
+  }
+
+  @include e(icon) {
+    color: var(--wd-white);
+    margin-bottom: var(--wd-space-2);
+
+    @include m(vertical) {
+      margin-bottom: var(--wd-space-2);
+    }
+  }
+
+  @include e(msg) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-white);
+    line-height: 20px;
+    text-align: center;
+
+    @include m(vertical) {
+      margin-top: var(--wd-space-2);
+    }
+  }
+}

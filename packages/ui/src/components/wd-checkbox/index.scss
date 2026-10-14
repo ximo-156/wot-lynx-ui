@@ -1,0 +1,70 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(checkbox) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  color: var(--wd-text-1);
+  font-size: var(--wd-font-md);
+
+  @include e(label) {
+    margin: 0 var(--wd-space-2);
+  }
+
+  @include e(shape) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(icon) {
+    color: var(--wd-text-4);
+  }
+
+  /* 图标在右 */
+  @include m(right) {
+    flex-direction: row-reverse;
+
+    .wd-checkbox__label {
+      margin: 0 var(--wd-space-2);
+    }
+  }
+
+  /* button 类型 */
+  @include when(button) {
+    padding: var(--wd-space-2) var(--wd-space-4);
+    border-radius: var(--wd-radius-sm);
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--wd-border-1);
+    background-color: var(--wd-bg-container);
+  }
+
+  /* 大尺寸 */
+  @include when(large) {
+    font-size: var(--wd-font-lg);
+
+    .wd-checkbox__icon {
+      font-size: var(--wd-font-xl);
+    }
+  }
+
+  /* 选中态 */
+  @include when(checked) {
+    .wd-checkbox__icon {
+      color: var(--wd-color-primary);
+    }
+
+    &.is-button {
+      border-color: var(--wd-color-primary);
+      background-color: var(--wd-color-primary-bg);
+      color: var(--wd-color-primary);
+    }
+  }
+
+  /* 禁用 */
+  @include when(disabled) {
+    opacity: 0.5;
+  }
+}

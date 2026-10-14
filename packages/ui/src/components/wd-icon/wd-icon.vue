@@ -2,11 +2,11 @@
  * wd-icon — 图标
  *
  * Lynx 实现说明：
- * - 内置图标（302 个，icons/data.ts）经原生 <svg :content> 渲染，
+ * - 内置图标（302 个，icons/data.ts）经原生 svg 元素的 content 属性渲染，
  *   content 标记过 sanitizeSvgContent 安全网（SVG 元素白名单，见 CONVENTIONS §8）；
  * - svg content 不继承 CSS 变量/currentColor，未传 color 时按主题取
  *   --wd-icon-1 的对应值（common/theme.ts 镜像常量）；
- * - name 含 '/' 按图片渲染 <image>；cssIcon 走 CSS 类名模式。
+ * - name 含 '/' 按图片渲染原生 image 元素；cssIcon 走 CSS 类名模式。
  */
 <script lang="ts" setup>
 import './index.css'

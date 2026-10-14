@@ -1,0 +1,13 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(radio-group) {
+  display: flex;
+  flex-direction: column;
+
+  @include m(horizontal) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+}

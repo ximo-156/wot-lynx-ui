@@ -1,0 +1,94 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(input) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: var(--wd-space-1) var(--wd-space-3);
+  background-color: var(--wd-bg-container);
+  border-radius: var(--wd-radius-sm);
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--wd-border-1);
+  color: var(--wd-text-1);
+  font-size: var(--wd-font-md);
+
+  @include e(prefix) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-right: var(--wd-space-2);
+  }
+
+  @include e(suffix) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-left: var(--wd-space-2);
+  }
+
+  @include e(icon) {
+    color: var(--wd-icon-3);
+  }
+
+  @include e(clear) {
+    color: var(--wd-icon-4);
+  }
+
+  @include e(inner) {
+    flex-grow: 1;
+    height: 100%;
+    min-height: 24px;
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-1);
+    background-color: transparent;
+    border-width: 0;
+
+    @include m(prefix) {
+      padding-left: var(--wd-space-1);
+    }
+
+    @include when(align-right) {
+      text-align: right;
+    }
+  }
+
+  @include e(count) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-4);
+  }
+
+  @include e(readonly-mask) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: transparent;
+  }
+
+  @include e(placeholder) {
+    color: var(--wd-text-4);
+  }
+
+  /* 标错 */
+  @include when(error) {
+    border-color: var(--wd-color-danger);
+  }
+
+  /* 禁用 */
+  @include when(disabled) {
+    background-color: var(--wd-bg-disabled);
+    opacity: 0.7;
+  }
+
+  /* 紧凑（form-item 内） */
+  @include when(compact) {
+    border-width: 0;
+    background-color: transparent;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}

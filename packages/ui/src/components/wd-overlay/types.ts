@@ -1,4 +1,4 @@
-import type { PropType } from 'vue-lynx'
+import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp } from '../../common/props'
 
 export const overlayProps = {
@@ -31,3 +31,5 @@ export const overlayProps = {
    */
   zIndex: makeNumberProp(10)
 }
+
+export type OverlayProps = ExtractPropTypes<typeof overlayProps>

@@ -39,4 +39,4 @@ export type ConfigProviderProps = ExtractPropTypes<typeof configProviderProps>
 
 // 兼容历史从 wd-config-provider/types 深度导入的用法
 export { CONFIG_PROVIDER_KEY } from '../../composables/global-config'
-export type { ConfigProviderProvide, ConfigProviderThemeVars }
+export type { ConfigProviderProvide, ConfigProviderThemeVars } from '../../composables/global-config'

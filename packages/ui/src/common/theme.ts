@@ -90,3 +90,18 @@ export const WHITE = '#FFFFFF'
  */
 export const COOLGREY = GRAY
 export const ORANGE = AMBER
+
+/**
+ * 语义色的 JS 镜像：svg content 不继承 CSS 变量 / currentColor，
+ * 需要"用 JS 算颜色"的场景（wd-icon 默认色、button 内嵌 loading 颜色等）
+ * 按主题从此处取与 --wd-icon-1 / --wd-text-1 一致的值。
+ */
+export const THEME_ICON_COLOR = {
+  light: GRAY[10],
+  dark: '#F4F6FA'
+} as const
+
+export const THEME_TEXT_COLOR = {
+  light: GRAY[10],
+  dark: '#F4F6FA'
+} as const

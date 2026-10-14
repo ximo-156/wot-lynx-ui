@@ -343,9 +343,9 @@ CSS `:active` 伪类 + 对应类名样式（如 `.wd-button:active`、`.wd-cell.
 
 | Tier | 内容 | 状态 |
 | --- | --- | --- |
-| 0 | 基础设施：删除移植产物、新设计令牌、composable 契约上移、index.ts 裁剪 | 进行中 |
-| 1 | 基础组件：config-provider / icon / loading / transition / overlay / root-portal / text / gap / divider / button / cell / cell-group | 待开始 |
-| 2 | 表单体系：form / form-item / input / textarea / input-number / search / switch / radio(-group) / checkbox(-group) / slider / rate / segmented / picker(-view) / datetime-picker(-view) / calendar(-view) / upload / signature / img-cropper / password-input / keyboard / slide-verify / select-picker / cascader | 待开始 |
+| 0 | 基础设施：删除移植产物、新设计令牌、composable 契约上移、index.ts 裁剪 | ✅ 完成 |
+| 1 | 基础组件：config-provider / icon / loading / transition / overlay / root-portal / text / gap / divider / button / cell / cell-group | ✅ 完成（12/12，冒烟测试 21 项全绿）|
+| 2 | 表单体系：form / form-item / input / textarea / input-number / search / switch / radio(-group) / checkbox(-group) / slider / rate / segmented / toast | ✅ 完成（16/26，冒烟测试 32 项全绿）；picker(-view) / datetime-picker(-view) / calendar(-view) / upload / signature / img-cropper / password-input / keyboard / slide-verify / select-picker / cascader | 待开始 |
 | 3 | 展示反馈：tag / badge / card / img / empty / progress / circle / count-down / count-to / notice-bar / skeleton / watermark / avatar(-group) / table(-column) / steps / step / pagination / swipe(-nav) / collapse(-item) / popover / tooltip / tour / curtain / loadmore / drop-menu(-item) / sort-button / index-bar / index-anchor / sticky(-box) / resize / backtop / floating-panel / swipe-action / sidebar(-item) / navbar(-capsule) / tabbar(-item) / tab / video-preview / image-preview / row / col / grid(-item) / fab | 待开始 |
 | 4 | 图形码：qr-code / bar-code / circle / signature 的 SVG 绘制 | 并入 2/3 |
 | 5 | 收尾：测试重写、文档重写、Demo 更新、README/differences 同步、全量验证 | 待开始 |

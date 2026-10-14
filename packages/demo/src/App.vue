@@ -1,44 +1,41 @@
 <script setup lang="ts">
 import { ref } from 'vue-lynx'
-import { useToast, useNotify } from 'wot-lynx-ui'
 
-// 组件通过 wotLynxUI 插件全局注册
-
+// 组件通过 wotLynxUI 插件全局注册（Tier 1：基础组件）
 const count = ref(0)
-const showOverlay = ref(false)
-const showPopup = ref(false)
-const showCenterPopup = ref(false)
-const showDialog = ref(false)
-const showActionSheet = ref(false)
-const inputValue = ref('')
 const switchValue = ref(true)
 const radioValue = ref('a')
 const checkboxValues = ref<string[]>(['a'])
-const rateValue = ref(3)
+const inputValue = ref('')
+const textareaValue = ref('')
+const numberValue = ref(5)
 const sliderValue = ref(50)
+const rateValue = ref(3)
 const segmentedValue = ref('a')
-const tabValue = ref(0)
-const sidebarValue = ref(0)
-const collapseValue = ref<string[]>(['1'])
-const swiperIndex = ref(0)
-const swiperList = [
-  { color: '#3482FF', text: '1' },
-  { color: '#34C759', text: '2' },
-  { color: '#FF4D4F', text: '3' }
-]
-const stepValue = ref(1)
-const qrValue = ref('https://wot-ui.cn')
-const barValue = ref('12345678901')
-const signResult = ref('')
-const signatureRef = ref<any>(null)
-const paginationValue = ref(1)
-
-// 命令式弹层：useToast / useNotify 与 wot-ui 用法一致（在挂载了对应组件的父级调用）
-const toast = useToast()
-const notify = useNotify()
 
 function onTapButton() {
   count.value++
+}
+
+// ---- Form 校验示例 ----
+const formRef = ref<any>(null)
+const formModel = ref({ name: '', phone: '' })
+const formSchema = {
+  validate(model: Record<string, any>) {
+    const issues: Array<{ path: string[]; message: string }> = []
+    if (!model.name) issues.push({ path: ['name'], message: '请输入姓名' })
+    if (!/^1\d{10}$/.test(model.phone || '')) issues.push({ path: ['phone'], message: '手机号格式不正确' })
+    return issues
+  }
+}
+
+async function onValidate() {
+  const result = await formRef.value?.validate()
+  console.log('[demo] form validate result:', result)
+}
+
+function onReset() {
+  formRef.value?.reset()
 }
 </script>
 
@@ -46,23 +43,33 @@ function onTapButton() {
   <!-- app-root 显式挂 height:100%：Lynx 中百分比高度只相对「已确定高度」的父级解析，
        若包裹层为 auto（内容高度），其下 scroll-view 的 height:100% 会解析成内容高度而非
        屏幕高度——滚动容器与内容等高即无可滚动范围（页面无法滚动）。
-       链路：page 根(屏幕高，确定) > app-root(100%) > scroll-view.page(100%)。
-       wd-config-provider 的根 view 现已内置 height:100%，此处显式声明使布局契约不依赖组件内部实现。 -->
+       链路：page 根(屏幕高，确定) > app-root(100%) > scroll-view.page(100%) > 内容。 -->
   <wd-config-provider theme="light" custom-class="app-root">
     <scroll-view scroll-orientation="vertical" class="page">
       <view class="page__header">
         <text class="page__title">wot-lynx-ui</text>
-        <text class="page__subtitle">基于 Vue Lynx 的 wot-ui 适配组件库 · {{ count }}</text>
+        <text class="page__subtitle">Vue Lynx 组件库 · 重写版 Tier 1 · {{ count }}</text>
+      </view>
+
+      <!-- ConfigProvider 主题切换 -->
+      <view class="demo-section">
+        <text class="demo-section__title">ConfigProvider 全局配置</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">主题（本页固定 light，暗色令牌见 theme）</text>
+          <view class="demo-row">
+            <text class="demo-tag">theme="light"</text>
+            <text class="demo-tag">theme="dark"</text>
+          </view>
+        </view>
       </view>
 
       <!-- Button -->
       <view class="demo-section">
         <text class="demo-section__title">Button 按钮</text>
         <view class="demo-panel">
-          <!-- 演示结构对齐 wot-ui demo：组件类型 / 变体 / 样式（尺寸） / 内容形态 / 布局能力 -->
           <text class="demo-panel__label">类型</text>
           <view class="demo-row">
-            <wd-button type="primary" @click="onTapButton">主要按钮</wd-button>
+            <wd-button type="primary" @tap="onTapButton">主要按钮</wd-button>
             <wd-button type="success">成功</wd-button>
             <wd-button type="danger">危险</wd-button>
           </view>
@@ -74,7 +81,9 @@ function onTapButton() {
           <text class="demo-panel__label">变体</text>
           <view class="demo-row">
             <wd-button type="primary" variant="plain">朴素</wd-button>
+            <wd-button type="primary" variant="dashed">虚线</wd-button>
             <wd-button type="primary" variant="soft">柔和</wd-button>
+            <wd-button type="primary" variant="subtle">淡雅</wd-button>
             <wd-button type="primary" variant="text">文字</wd-button>
           </view>
 
@@ -107,7 +116,7 @@ function onTapButton() {
         <view class="demo-panel">
           <view class="demo-row">
             <wd-icon name="close" size="20" />
-            <wd-icon name="loading" size="24" color="#3482FF" />
+            <wd-icon name="loading" size="24" color="#4A6DF0" />
             <wd-icon name="arrow-left" size="20" />
             <wd-icon name="settings" size="20" color="#FF8800" />
           </view>
@@ -116,424 +125,208 @@ function onTapButton() {
             <wd-loading type="spinner" size="24px" />
             <wd-loading type="dots" size="24px" />
             <wd-loading type="wave" size="24px" />
-            <wd-loading type="circular" size="20px" color="#3482FF" text="加载中" />
+          </view>
+          <view class="demo-row">
+            <wd-loading type="circular" size="20px" color="#4A6DF0" text="加载中" />
+            <wd-loading type="dots" size="20px" direction="horizontal" text="横向" />
           </view>
         </view>
       </view>
 
-      <!-- Cell -->
+      <!-- Cell / CellGroup -->
       <view class="demo-section">
         <text class="demo-section__title">Cell 单元格</text>
-        <wd-cell-group border>
-          <wd-cell title="头像" value="未设置" is-link />
-          <wd-cell title="昵称" value="Lynx" is-link />
-          <wd-cell title="简介" label="点击查看更多信息" value="点击设置" is-link />
-          <wd-cell title="手机号" placeholder="请输入手机号" />
-        </wd-cell-group>
+        <view class="demo-panel">
+          <wd-cell-group title="基础用法" border>
+            <wd-cell title="单元格" value="内容" />
+            <wd-cell title="图标 + 箭头" prefix-icon="settings" is-link value="跳转" />
+            <wd-cell title="描述文本" label="这是描述信息" value="内容" />
+          </wd-cell-group>
+          <wd-cell-group title="卡片分组" insert>
+            <wd-cell title="左侧标题宽度" value="内容" title-width="120" />
+            <wd-cell title="垂直布局" label="上下排列" value="内容" layout="vertical" />
+          </wd-cell-group>
+        </view>
       </view>
 
-      <!-- 基础展示 -->
+      <!-- 表单体系（Tier 2） -->
       <view class="demo-section">
-        <text class="demo-section__title">Tag / Badge / Divider / Text / Card / Avatar / Empty</text>
+        <text class="demo-section__title">Form 表单体系</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">Switch / Radio / Checkbox</text>
+          <view class="demo-row">
+            <wd-switch v-model="switchValue" />
+            <wd-radio-group v-model="radioValue" direction="horizontal">
+              <wd-radio value="a">选项A</wd-radio>
+              <wd-radio value="b">选项B</wd-radio>
+            </wd-radio-group>
+          </view>
+          <view class="demo-row">
+            <wd-checkbox-group v-model="checkboxValues" direction="horizontal">
+              <wd-checkbox name="a">多选A</wd-checkbox>
+              <wd-checkbox name="b">多选B</wd-checkbox>
+            </wd-checkbox-group>
+          </view>
+
+          <text class="demo-panel__label">Input / Textarea / InputNumber / Search</text>
+          <view class="demo-row">
+            <wd-input v-model="inputValue" placeholder="请输入" clearable style="flex: 1" />
+          </view>
+          <view class="demo-row">
+            <wd-textarea v-model="textareaValue" placeholder="多行输入" :show-word-limit="true" :maxlength="50" style="flex: 1" />
+          </view>
+          <view class="demo-row">
+            <wd-input-number v-model="numberValue" :min="0" :max="10" />
+            <wd-search v-model="inputValue" placeholder="搜索" style="flex: 1" />
+          </view>
+
+          <text class="demo-panel__label">Slider / Rate / Segmented</text>
+          <view class="demo-row">
+            <wd-slider v-model="sliderValue" style="flex: 1" />
+          </view>
+          <view class="demo-row">
+            <wd-rate v-model="rateValue" />
+            <wd-segmented v-model="segmentedValue" :options="['日', '周', '月']" style="flex: 1" />
+          </view>
+
+          <text class="demo-panel__label">Form + FormItem（schema 校验）</text>
+          <wd-form ref="formRef" :model="formModel" :schema="formSchema" error-type="message">
+            <wd-form-item prop="name" title="姓名" required>
+              <wd-input v-model="formModel.name" placeholder="请输入姓名" />
+            </wd-form-item>
+            <wd-form-item prop="phone" title="手机号" required>
+              <wd-input v-model="formModel.phone" placeholder="请输入手机号" />
+            </wd-form-item>
+            <view class="demo-row">
+              <wd-button type="primary" size="small" @tap="onValidate">校验</wd-button>
+              <wd-button size="small" @tap="onReset">重置</wd-button>
+            </view>
+          </wd-form>
+        </view>
+      </view>
+
+      <!-- Text / Divider / Gap -->
+      <view class="demo-section">
+        <text class="demo-section__title">Text 文本 / Divider 分割线 / Gap 间距</text>
         <view class="demo-panel">
           <view class="demo-row">
-            <wd-tag type="primary">主要</wd-tag>
-            <wd-tag type="success">成功</wd-tag>
-            <wd-tag type="danger" round>危险</wd-tag>
-            <wd-badge :value="8"><wd-button size="mini">消息</wd-button></wd-badge>
-            <wd-badge dot><wd-icon name="notification" size="20" /></wd-badge>
+            <wd-text text="主文本" />
+            <wd-text text="品牌色" type="primary" />
+            <wd-text text="成功" type="success" />
+            <wd-text text="危险" type="error" />
+            <wd-text text="粗体" bold />
+          </view>
+          <view class="demo-row">
+            <wd-text mode="price" text="1234567.89" />
+            <wd-text mode="phone" format text="22644212509" />
+            <wd-text mode="date" text="1735689600000" />
           </view>
           <wd-divider>分割线</wd-divider>
-          <wd-text text="主要文本" type="primary" />
-          <wd-text text="这是一段很长的文本内容用来测试单行省略效果超出容器宽度后自动省略号显示" size="14" :ellipsis="true" style="width: 200px" />
-          <wd-gap height="12px" />
-          <wd-card title="卡片标题" content="卡片内容区域，用于展示信息。">
-            <template #footer>
-              <text class="demo-card-footer">卡片尾部</text>
-            </template>
-          </wd-card>
-          <view class="demo-row">
-            <wd-avatar name="L" size="40" />
-            <wd-avatar name="A" size="40" shape="circle" />
-            <wd-img src="https://avatars.githubusercontent.com/u/6128107?s=64" width="40px" height="40px" radius="8px" />
-          </view>
-          <wd-empty description="暂无数据" />
+          <wd-divider content-position="left">左对齐</wd-divider>
+          <wd-divider dashed />
+          <wd-gap height="12" bg-color="#F7F8FA" />
         </view>
       </view>
 
-      <!-- 表单 -->
+      <!-- Overlay / Transition / RootPortal -->
       <view class="demo-section">
-        <text class="demo-section__title">Form 表单</text>
+        <text class="demo-section__title">Transition 过渡</text>
         <view class="demo-panel">
-          <wd-input v-model="inputValue" label="输入框" placeholder="请输入" clearable />
-          <wd-textarea v-model="inputValue" label="文本域" placeholder="请输入" :maxlength="100" show-count />
-          <wd-input-number v-model="sliderValue" :min="0" :max="100" label="步进器" />
-          <wd-search v-model="inputValue" placeholder="搜索" />
+          <text class="demo-panel__label">弹层三件套的组合用法随 Tier 3（Popup/Dialog）演示回归</text>
           <view class="demo-row">
-            <text class="demo-label">Switch</text>
-            <wd-switch v-model="switchValue" />
-          </view>
-          <wd-radio-group v-model="radioValue">
-            <wd-radio value="a">选项 A</wd-radio>
-            <wd-radio value="b">选项 B</wd-radio>
-          </wd-radio-group>
-          <wd-checkbox-group v-model="checkboxValues">
-            <wd-checkbox value="a">多选 A</wd-checkbox>
-            <wd-checkbox value="b">多选 B</wd-checkbox>
-          </wd-checkbox-group>
-          <view class="demo-row">
-            <text class="demo-label">Rate</text>
-            <wd-rate v-model="rateValue" />
-          </view>
-          <view class="demo-row">
-            <text class="demo-label">Slider</text>
-            <wd-slider v-model="sliderValue" style="flex: 1" />
-          </view>
-          <view class="demo-row">
-            <text class="demo-label">Segmented</text>
-            <wd-segmented v-model:value="segmentedValue" :options="[{label:'A',value:'a'},{label:'B',value:'b'}]" />
-            <wd-sort-button v-model="segmentedValue" title="排序" />
+            <wd-transition :show="count > 0" name="fade-up">
+              <view class="demo-transition-box">
+                <text class="demo-transition-box__text">fade-up 过渡（点击主要按钮计数 > 0 时显示）</text>
+              </view>
+            </wd-transition>
           </view>
         </view>
-      </view>
-
-      <!-- 反馈 -->
-      <view class="demo-section">
-        <text class="demo-section__title">Feedback 反馈</text>
-        <view class="demo-panel">
-          <view class="demo-row">
-            <wd-button type="primary" @click="showOverlay = true">遮罩</wd-button>
-            <wd-button type="primary" @click="showPopup = true">底部弹出</wd-button>
-            <wd-button type="primary" @click="showCenterPopup = true">居中弹出</wd-button>
-            <wd-button type="primary" @click="showDialog = true">对话框</wd-button>
-            <wd-button type="primary" @click="showActionSheet = true">动作面板</wd-button>
-          </view>
-          <view class="demo-row">
-            <wd-button type="primary" @click="toast.show('这是一条 Toast 提示')">Toast</wd-button>
-            <wd-button type="primary" @click="toast.loading('加载中...')">Loading</wd-button>
-            <wd-button type="primary" @click="notify.showNotify('这是一条通知')">通知</wd-button>
-          </view>
-          <view class="demo-row">
-            <wd-skeleton title :row="3" />
-          </view>
-        </view>
-      </view>
-
-      <!-- 展示 -->
-      <view class="demo-section">
-        <text class="demo-section__title">Progress / Circle / CountDown / NoticeBar</text>
-        <view class="demo-panel">
-          <view class="demo-row">
-            <text class="demo-label">Progress</text>
-            <wd-progress :percentage="60" style="flex: 1" />
-          </view>
-          <view class="demo-row">
-            <wd-circle :percentage="70" size="100px" />
-            <wd-count-down :time="3600000" format="HH:mm:ss" />
-          </view>
-          <wd-notice-bar text="这是一条通知公告内容" left-icon="notification" />
-        </view>
-      </view>
-
-      <!-- 导航 -->
-      <view class="demo-section">
-        <text class="demo-section__title">Tabs / Sidebar / Steps / Pagination / Backtop</text>
-        <view class="demo-panel">
-          <wd-tabs v-model="tabValue">
-            <wd-tab title="标签一">
-              <text class="demo-tab-text">标签一内容</text>
-            </wd-tab>
-            <wd-tab title="标签二">
-              <text class="demo-tab-text">标签二内容</text>
-            </wd-tab>
-          </wd-tabs>
-          <view class="demo-row" style="height: 120px">
-            <wd-sidebar v-model="sidebarValue">
-              <wd-sidebar-item value="0" label="侧边一" />
-              <wd-sidebar-item value="1" label="侧边二" />
-            </wd-sidebar>
-            <text class="demo-tab-text">当前选中: {{ sidebarValue }}</text>
-          </view>
-          <wd-steps :active="stepValue">
-            <wd-step title="步骤一" description="描述" />
-            <wd-step title="步骤二" description="描述" />
-            <wd-step title="步骤三" description="描述" />
-          </wd-steps>
-          <view class="demo-row">
-            <wd-pagination v-model="paginationValue" :total-items="100" :items-per-page="10" />
-            <wd-backtop :scroll-top="200" />
-          </view>
-          <wd-collapse v-model="collapseValue">
-            <wd-collapse-item name="1" title="折叠面板">
-              <text class="demo-tab-text">折叠内容</text>
-            </wd-collapse-item>
-          </wd-collapse>
-        </view>
-      </view>
-
-      <!-- 高级展示 -->
-      <view class="demo-section">
-        <text class="demo-section__title">SwipeAction 滑动操作 / Slider 滑块</text>
-        <wd-swipe-action>
-          <wd-cell title="左滑显示操作" value="跟手无延迟" />
-          <template #right>
-            <view class="demo-swipe-btn demo-swipe-btn--danger"><text class="demo-swipe-btn-text">删除</text></view>
-          </template>
-        </wd-swipe-action>
-        <view class="demo-panel">
-          <view class="demo-row" style="margin-top: 12px">
-            <text class="demo-label">Slider</text>
-            <wd-slider v-model="sliderValue" style="flex: 1" />
-          </view>
-
-          <text class="demo-section__title">Swiper / Table / Fab / Loadmore / Sticky</text>
-          <wd-swiper :current="swiperIndex" :height="150" autoplay :list="swiperList" @update:current="swiperIndex = $event">
-            <template #default="{ item }">
-              <view class="demo-swiper-item" :style="{ background: item.color }"><text class="demo-swiper-text">{{ item.text }}</text></view>
-            </template>
-          </wd-swiper>
-          <wd-table :data="[{name: 'Lynx', age: 1}, {name: 'Vue', age: 3}]">
-            <wd-table-column prop="name" label="名称" />
-            <wd-table-column prop="age" label="版本" />
-          </wd-table>
-          <view class="demo-row">
-            <wd-fab icon="plus" />
-            <wd-loadmore>没有更多了</wd-loadmore>
-          </view>
-        </view>
-      </view>
-
-      <!-- SVG 化组件：QrCode / BarCode / Signature / Watermark / Circle -->
-      <view class="demo-section">
-        <text class="demo-section__title">QrCode 二维码 / BarCode 条形码（SVG）</text>
-        <view class="demo-panel">
-          <view class="demo-row">
-            <wd-qr-code :text="qrValue" :size="120" />
-            <wd-bar-code :value="barValue" :width="180" :height="60" />
-          </view>
-
-          <text class="demo-section__title">Signature 手写签名（SVG polyline）</text>
-          <view class="demo-row" style="align-items: flex-start">
-            <wd-signature ref="signatureRef" :height="120" background="#f7f8fa" style="flex: 1" @confirm="(e: any) => (signResult = e.tempFilePath.slice(0, 42) + '…')" />
-          </view>
-          <view class="demo-row">
-            <wd-button size="mini" @click="signatureRef && signatureRef.clear()">清空</wd-button>
-            <wd-button size="mini" type="primary" @click="signatureRef && signatureRef.confirm()">确认</wd-button>
-            <text class="demo-label">{{ signResult || '签名结果' }}</text>
-          </view>
-
-          <text class="demo-section__title">Watermark 水印（SVG data URI 背景）</text>
-          <!-- full-screen=false：本节演示「容器内平铺」水印（.demo-watermark 是 120px 定位容器），
-               fullScreen 默认 true 会渲染成 position:fixed 全屏水印、覆盖整个页面 -->
-          <view class="demo-watermark">
-            <wd-watermark content="wot-lynx-ui" :width="120" :height="60" :gutter-x="24" :gutter-y="24" :full-screen="false" />
-            <text class="demo-watermark__text">水印平铺内容区域</text>
-          </view>
-        </view>
-      </view>
-
-      <view class="page__footer">
-        <text class="page__footer-text">Lynx × Vue × wot-ui</text>
       </view>
     </scroll-view>
-
-    <!-- 遮罩 -->
-    <wd-overlay :show="showOverlay" @click="showOverlay = false" />
-
-    <!-- 底部弹出层 -->
-    <wd-popup v-model="showPopup" position="bottom">
-      <view class="demo-popup">
-        <text class="demo-popup__text">底部弹出层</text>
-        <wd-button type="primary" @click="showPopup = false">关闭</wd-button>
-      </view>
-    </wd-popup>
-
-    <!-- 居中弹出层 -->
-    <wd-popup v-model="showCenterPopup" position="center">
-      <view class="demo-popup demo-popup--center">
-        <text class="demo-popup__text">居中弹出层</text>
-        <wd-button type="primary" @click="showCenterPopup = false">关闭</wd-button>
-      </view>
-    </wd-popup>
-
-    <!-- 对话框（声明式 v-model：点击确定/取消自动同步 showDialog 并关闭） -->
-    <wd-dialog v-model="showDialog" title="提示" msg="这是一个对话框" />
-
-    <!-- 动作面板 -->
-    <wd-action-sheet v-model="showActionSheet" :actions="[{name: '选项一'}, {name: '选项二'}]" />
-
-    <!-- Toast / Notify：命令式调用（useToast / useNotify），无需 v-model -->
-    <wd-toast />
-    <wd-notify />
   </wd-config-provider>
 </template>
 
-<style>
-/* 见模板内注释：高度链路必须逐级确定，scroll-view 才能获得有界高度并可滚动 */
+<style scoped>
 .app-root {
-  width: 100%;
   height: 100%;
 }
 
 .page {
-  width: 100%;
   height: 100%;
-  background: #f7f8fa;
+  padding: 16px;
 }
 
 .page__header {
-  padding: 32px 20px 16px;
+  padding: 16px 4px 24px;
 }
 
 .page__title {
-  font-size: 26px;
-  font-weight: 700;
-  color: #191a1f;
+  font-size: 28px;
+  font-weight: 600;
+  color: #171b26;
 }
 
 .page__subtitle {
   font-size: 13px;
-  color: #868a93;
-  margin-top: 6px;
+  color: #667085;
+  margin-top: 4px;
 }
 
-.page__footer {
-  padding: 32px 0;
-  align-items: center;
-}
-
-.page__footer-text {
-  font-size: 12px;
-  color: #afb2bb;
-}
-
-/* HyperOS：分组标题在卡片之外（页面级辅助文字），内容为白色圆角卡片 */
 .demo-section {
-  margin-bottom: 4px;
+  margin-bottom: 20px;
 }
 
 .demo-section__title {
-  font-size: 13px;
-  font-weight: 500;
-  color: #868a93;
-  margin: 16px 16px 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #171b26;
+  margin-bottom: 8px;
 }
 
 .demo-panel {
-  background: #fff;
+  background: #ffffff;
   border-radius: 16px;
-  margin: 0 12px 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(25, 26, 31, 0.05);
+  border-width: 1px;
+  border-style: solid;
+  border-color: #e4e7ed;
+  padding: 12px;
 }
 
-/* 面板内分组标签（对齐 wot-ui demo 的 demo-group-item 标题） */
 .demo-panel__label {
-  display: block;
   font-size: 12px;
-  font-weight: 500;
-  color: #868a93;
-  margin: 12px 0 8px;
+  color: #8b93a3;
+  margin: 8px 0;
 }
 
-.demo-panel__label:first-child {
-  margin-top: 0;
-}
-
-.demo-watermark {
-  position: relative;
-  height: 120px;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #fff;
-}
-
-.demo-watermark__text {
-  position: absolute;
-  left: 16px;
-  top: 16px;
-  font-size: 14px;
-  color: #191a1f;
-}
-
-/* Lynx 3.x 新 CSS 引擎（enableCSSEngine + defaultDisplayLinear）下 view 的默认
-   布局是 linear 而非 flex：未显式声明 display:flex 的元素不识别 flex-direction /
-   flex-wrap（按 linear 默认的纵向排列，行内元素逐个独占一行）。
-   因此所有依赖横向 flex 布局的容器必须显式 display:flex，详见 CONVENTIONS.md §14。 */
 .demo-row {
   display: flex;
   flex-direction: row;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-/* 块级按钮行：子按钮 width:100% 独占一行，去掉底部间距避免双倍留白 */
 .demo-row--block {
-  margin-bottom: 0;
+  display: block;
 }
 
-.demo-label {
-  font-size: 14px;
-  color: #454851;
-  width: 64px;
-}
-
-.demo-card-footer {
+.demo-tag {
   font-size: 12px;
-  color: #868a93;
+  color: #4a6df0;
+  background: #edf1ff;
+  border-radius: 6px;
+  padding: 4px 8px;
 }
 
-.demo-tab-text {
-  font-size: 14px;
-  color: #454851;
-  padding: 12px 0;
+.demo-transition-box {
+  background: #4a6df0;
+  border-radius: 12px;
+  padding: 16px;
 }
 
-.demo-swiper-item {
-  width: 100%;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
-}
-
-.demo-swiper-text {
-  font-size: 32px;
-  color: #fff;
-}
-
-.demo-popup {
-  background: #fff;
-  border-radius: 28px 28px 0 0;
-  padding: 24px;
-  align-items: center;
-  gap: 16px;
-}
-
-.demo-popup--center {
-  border-radius: 24px;
-  width: 280px;
-}
-
-.demo-swipe-btn {
-  height: 100%;
-  padding: 0 20px;
-  align-items: center;
-  justify-content: center;
-}
-
-.demo-swipe-btn--danger {
-  background: #ff4d4f;
-}
-
-.demo-swipe-btn-text {
-  color: #fff;
-  font-size: 14px;
-}
-
-.demo-popup__text {
-  font-size: 15px;
-  color: #191a1f;
+.demo-transition-box__text {
+  color: #ffffff;
+  font-size: 13px;
 }
 </style>

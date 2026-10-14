@@ -1,0 +1,77 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(textarea) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  @include e(body) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    width: 100%;
+    padding: var(--wd-space-2) var(--wd-space-3);
+    background-color: var(--wd-bg-container);
+    border-radius: var(--wd-radius-sm);
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--wd-border-1);
+  }
+
+  @include e(prefix) {
+    margin-right: var(--wd-space-2);
+    color: var(--wd-icon-3);
+  }
+
+  @include e(inner) {
+    flex-grow: 1;
+    width: 100%;
+    min-height: 48px;
+    font-size: var(--wd-font-md);
+    line-height: 22px;
+    color: var(--wd-text-1);
+    background-color: transparent;
+    border-width: 0;
+  }
+
+  @include e(clear) {
+    position: absolute;
+    right: var(--wd-space-3);
+    bottom: var(--wd-space-2);
+    color: var(--wd-icon-4);
+  }
+
+  @include e(count) {
+    align-self: flex-end;
+    margin-top: var(--wd-space-1);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-4);
+  }
+
+  @include e(readonly-mask) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: transparent;
+  }
+
+  @include e(placeholder) {
+    color: var(--wd-text-4);
+  }
+
+  @include when(error) {
+    .wd-textarea__body {
+      border-color: var(--wd-color-danger);
+    }
+  }
+
+  @include when(disabled) {
+    .wd-textarea__body {
+      background-color: var(--wd-bg-disabled);
+      opacity: 0.7;
+    }
+  }
+}

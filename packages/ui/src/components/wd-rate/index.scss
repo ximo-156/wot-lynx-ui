@@ -1,0 +1,41 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(rate) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
+  @include e(item) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(item-star) {
+    color: var(--wd-gray-3);
+
+    @include when(active) {
+      color: var(--wd-color-primary);
+    }
+  }
+
+  /* 半星：左半裁剪，右半点击区 */
+  @include e(item-half) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  @include when(disabled) {
+    opacity: 0.5;
+  }
+
+  @include when(block) {
+    justify-content: space-between;
+  }
+}

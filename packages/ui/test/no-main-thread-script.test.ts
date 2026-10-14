@@ -53,8 +53,23 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
 describe('组件库源码不得使用 Main Thread Script', () => {
   const files = collectSourceFiles(SRC_DIR)
 
-  it('覆盖率：应扫描到全部组件源码', () => {
-    expect(files.length).toBeGreaterThan(200)
+  it('覆盖率：收集器不应漏扫 src 下的源码文件', () => {
+    // 重写期间组件数量动态变化，断言「磁盘文件数 == 收集器文件数」，
+    // 即收集逻辑始终覆盖全部源码（全部 102 个组件重写完成后约 350 个文件）。
+    let onDisk = 0
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        const full = path.join(dir, entry)
+        if (statSync(full).isDirectory()) {
+          walk(full)
+        } else if (/\.(vue|ts)$/.test(entry)) {
+          onDisk++
+        }
+      }
+    }
+    walk(SRC_DIR)
+    expect(files.length).toBe(onDisk)
+    expect(files.length).toBeGreaterThan(50)
   })
 
   it.each(FORBIDDEN_PATTERNS.map((p) => [p.hint, p.pattern] as const))(

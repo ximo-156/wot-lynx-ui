@@ -1,11 +1,24 @@
 import { computed, inject, type ComputedRef, type InjectionKey } from 'vue-lynx'
 import { isDef } from '../common/util'
 
-/** WdForm 向下提供的上下文（useFormDisabled 只消费 disabled） */
+/** WdForm 向下提供的上下文（完整契约） */
 export type FormProvide = {
   props: {
+    model?: Record<string, any>
     disabled?: boolean | null
+    border?: boolean
+    center?: boolean
+    size?: string
+    titleWidth?: string | number
+    layout?: string
+    valueAlign?: string
+    ellipsis?: boolean
+    asteriskPosition?: string
+    hideAsterisk?: boolean
+    validateTrigger?: string | string[]
   }
+  errorMessages?: Record<string, string>
+  validate?: (prop?: string | string[]) => Promise<{ valid: boolean; errors: { prop: string; message: string }[] }>
 }
 
 export const FORM_KEY: InjectionKey<FormProvide> = Symbol('wd-form')

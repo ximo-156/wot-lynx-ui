@@ -2,7 +2,7 @@
  * wd-text — 文本
  *
  * Lynx 实现说明：
- * - 根元素为原生 <text>（Lynx 文本容器），前后缀经 slot 嵌入；
+ * - 根元素为原生 text 元素（Lynx 文本容器），前后缀经 slot 嵌入；
  * - 行数限制用 text-maxline 属性（Lynx 多行省略机制）；
  * - mode=phone 且 call 时点击拨号，经 common/uni 兼容层下发，
  *   宿主未注入适配器时降级为 warning。

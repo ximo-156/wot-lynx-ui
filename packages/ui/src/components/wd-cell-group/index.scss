@@ -1,0 +1,42 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(cell-group) {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--wd-bg-container);
+
+  @include e(title) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--wd-space-3) var(--wd-space-4);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-3);
+  }
+
+  @include e(left) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  @include e(right) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  @include e(body) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 卡片式分组：圆角 + 水平边距 */
+  @include m(insert) {
+    margin-left: var(--wd-space-3);
+    margin-right: var(--wd-space-3);
+    border-radius: var(--wd-radius-lg);
+    overflow: hidden;
+  }
+}

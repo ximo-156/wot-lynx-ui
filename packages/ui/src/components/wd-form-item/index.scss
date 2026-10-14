@@ -1,0 +1,17 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(form-item) {
+  @include e(placeholder) {
+    color: var(--wd-text-4);
+  }
+
+  @include e(error-message) {
+    margin-top: var(--wd-space-1);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-color-danger);
+  }
+
+  @include when(disabled) {
+    opacity: 0.6;
+  }
+}
