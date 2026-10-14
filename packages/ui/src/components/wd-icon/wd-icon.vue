@@ -94,7 +94,7 @@ function handleClick(event: any) {
 </script>
 
 <template>
-  <view :class="rootClass" :style="rootStyle" @click="handleClick">
+  <view :class="rootClass" :style="rootStyle" @tap="handleClick">
     <image v-if="isImage" class="wd-icon__image" :src="name" />
     <svg v-else-if="hasBuiltin" :content="svgContent" />
   </view>

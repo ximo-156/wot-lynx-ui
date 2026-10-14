@@ -1,0 +1,99 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(transition) {
+  /* 过渡容器：不改变布局，仅承载动画类 */
+  display: flex;
+  flex-direction: column;
+
+  /* ===== fade ===== */
+  &--fade-enter,
+  &--fade-leave-to {
+    opacity: 0;
+  }
+
+  /* ===== fade 方向 ===== */
+  &--fade-up-enter,
+  &--fade-up-leave-to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  &--fade-down-enter,
+  &--fade-down-leave-to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  &--fade-left-enter,
+  &--fade-left-leave-to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  &--fade-right-enter,
+  &--fade-right-leave-to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  /* ===== slide 方向（全程位移，不透明度不变） ===== */
+  &--slide-up-enter,
+  &--slide-up-leave-to {
+    transform: translateY(100%);
+  }
+
+  &--slide-down-enter,
+  &--slide-down-leave-to {
+    transform: translateY(-100%);
+  }
+
+  &--slide-left-enter,
+  &--slide-left-leave-to {
+    transform: translateX(100%);
+  }
+
+  &--slide-right-enter,
+  &--slide-right-leave-to {
+    transform: translateX(-100%);
+  }
+
+  /* ===== zoom ===== */
+  &--zoom-in-enter,
+  &--zoom-in-leave-to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  &--zoom-out-enter,
+  &--zoom-out-leave-to {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+
+  /* 激活态：统一过渡属性（时长由内联 transition-duration 控制） */
+  &--fade-enter-active,
+  &--fade-leave-active,
+  &--fade-up-enter-active,
+  &--fade-up-leave-active,
+  &--fade-down-enter-active,
+  &--fade-down-leave-active,
+  &--fade-left-enter-active,
+  &--fade-left-leave-active,
+  &--fade-right-enter-active,
+  &--fade-right-leave-active,
+  &--slide-up-enter-active,
+  &--slide-up-leave-active,
+  &--slide-down-enter-active,
+  &--slide-down-leave-active,
+  &--slide-left-enter-active,
+  &--slide-left-leave-active,
+  &--slide-right-enter-active,
+  &--slide-right-leave-active,
+  &--zoom-in-enter-active,
+  &--zoom-in-leave-active,
+  &--zoom-out-enter-active,
+  &--zoom-out-leave-active {
+    transition-property: opacity, transform;
+    transition-timing-function: var(--wd-ease-out);
+  }
+}

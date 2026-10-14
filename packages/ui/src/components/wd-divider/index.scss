@@ -1,0 +1,60 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(divider) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  color: var(--wd-text-3);
+  font-size: var(--wd-font-sm);
+
+  @include e(line) {
+    flex-grow: 1;
+    border-top-width: 1px;
+    border-top-style: solid;
+    border-top-color: var(--wd-border-1);
+
+    /* 内容左/右对齐时的缩短线段（显式修饰类，不用结构性伪类） */
+    @include m(short) {
+      flex-grow: 0;
+      width: var(--wd-space-6);
+    }
+  }
+
+  @include e(content) {
+    margin: 0 var(--wd-space-3);
+    color: var(--wd-text-3);
+  }
+
+  /* 细线：1ppx 物理像素 */
+  @include when(hairline) {
+    .wd-divider__line {
+      border-top-width: 1ppx;
+    }
+  }
+
+  @include when(dashed) {
+    .wd-divider__line {
+      border-top-style: dashed;
+    }
+  }
+
+  /* 垂直分割线 */
+  @include m(vertical) {
+    display: flex;
+    flex-direction: column;
+    width: 1ppx;
+    height: 100%;
+    align-self: stretch;
+
+    .wd-divider__line {
+      width: 0;
+      height: 100%;
+      flex-grow: 1;
+      border-top-width: 0;
+      border-left-width: 1ppx;
+      border-left-style: solid;
+      border-left-color: var(--wd-border-1);
+    }
+  }
+}

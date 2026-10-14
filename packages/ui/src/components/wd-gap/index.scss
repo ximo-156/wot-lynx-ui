@@ -1,0 +1,10 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(gap) {
+  width: 100%;
+  background-color: transparent;
+
+  @include m(safe) {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

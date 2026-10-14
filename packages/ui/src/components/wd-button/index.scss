@@ -1,0 +1,245 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+/*
+ * 按钮设计令牌（组件层）：
+ * 每个 is-<type> 类定义一组颜色令牌，变体（base/plain/dashed/soft/subtle/text）
+ * 只消费令牌，从而类型 × 变体正交组合。
+ */
+@include b(button) {
+  /* ===== 类型 → 令牌 ===== */
+  @include when(primary) {
+    --wd-button-bg: var(--wd-color-primary);
+    --wd-button-bg-pressed: var(--wd-color-primary-pressed);
+    --wd-button-bg-disabled: var(--wd-color-primary-disabled);
+    --wd-button-border: var(--wd-color-primary);
+    --wd-button-text: var(--wd-color-on-primary);
+    --wd-button-text-disabled: var(--wd-color-on-primary);
+    --wd-button-soft-bg: var(--wd-color-primary-bg);
+    --wd-button-soft-bg-pressed: var(--wd-color-primary-bg-pressed);
+    --wd-button-soft-text: var(--wd-color-primary);
+  }
+
+  @include when(success) {
+    --wd-button-bg: var(--wd-color-success);
+    --wd-button-bg-pressed: var(--wd-color-success-pressed);
+    --wd-button-bg-disabled: var(--wd-color-success-disabled);
+    --wd-button-border: var(--wd-color-success);
+    --wd-button-text: var(--wd-color-on-primary);
+    --wd-button-text-disabled: var(--wd-color-on-primary);
+    --wd-button-soft-bg: var(--wd-color-success-bg);
+    --wd-button-soft-bg-pressed: var(--wd-color-success-bg-pressed);
+    --wd-button-soft-text: var(--wd-color-success);
+  }
+
+  @include when(warning) {
+    --wd-button-bg: var(--wd-color-warning);
+    --wd-button-bg-pressed: var(--wd-color-warning-pressed);
+    --wd-button-bg-disabled: var(--wd-color-warning-disabled);
+    --wd-button-border: var(--wd-color-warning);
+    --wd-button-text: var(--wd-color-on-primary);
+    --wd-button-text-disabled: var(--wd-color-on-primary);
+    --wd-button-soft-bg: var(--wd-color-warning-bg);
+    --wd-button-soft-bg-pressed: var(--wd-color-warning-bg-pressed);
+    --wd-button-soft-text: var(--wd-color-warning);
+  }
+
+  @include when(danger) {
+    --wd-button-bg: var(--wd-color-danger);
+    --wd-button-bg-pressed: var(--wd-color-danger-pressed);
+    --wd-button-bg-disabled: var(--wd-color-danger-disabled);
+    --wd-button-border: var(--wd-color-danger);
+    --wd-button-text: var(--wd-color-on-primary);
+    --wd-button-text-disabled: var(--wd-color-on-primary);
+    --wd-button-soft-bg: var(--wd-color-danger-bg);
+    --wd-button-soft-bg-pressed: var(--wd-color-danger-bg-pressed);
+    --wd-button-soft-text: var(--wd-color-danger);
+  }
+
+  /* info：中性灰按钮 */
+  @include when(info) {
+    --wd-button-bg: var(--wd-gray-6);
+    --wd-button-bg-pressed: var(--wd-gray-7);
+    --wd-button-bg-disabled: var(--wd-gray-4);
+    --wd-button-border: var(--wd-gray-6);
+    --wd-button-text: var(--wd-white);
+    --wd-button-text-disabled: var(--wd-white);
+    --wd-button-soft-bg: var(--wd-gray-2);
+    --wd-button-soft-bg-pressed: var(--wd-gray-3);
+    --wd-button-soft-text: var(--wd-gray-8);
+  }
+
+  /* ===== 基础（base 变体） ===== */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  border-width: 1px;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: var(--wd-radius-sm);
+  background-color: var(--wd-button-bg);
+  color: var(--wd-button-text);
+  transition: background-color var(--wd-duration-fast) var(--wd-ease-out),
+    border-color var(--wd-duration-fast) var(--wd-ease-out);
+
+  @include e(content) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(text) {
+    font-size: inherit;
+    color: inherit;
+  }
+
+  @include e(icon) {
+    margin-right: var(--wd-space-1);
+  }
+
+  /* 仅图标：正方形（Lynx 无 aspect-ratio，按尺寸给显式宽度） */
+  @include when(icon) {
+    padding-left: 0;
+    padding-right: 0;
+
+    &.is-mini {
+      width: 28px;
+    }
+
+    &.is-small {
+      width: 32px;
+    }
+
+    &.is-medium {
+      width: 36px;
+    }
+
+    &.is-large {
+      width: 44px;
+    }
+  }
+
+  /* ===== 尺寸 ===== */
+  @include m(mini) {
+    height: 28px;
+    padding-left: var(--wd-space-3);
+    padding-right: var(--wd-space-3);
+    border-radius: var(--wd-radius-xs);
+    font-size: var(--wd-font-xs);
+  }
+
+  @include m(small) {
+    height: 32px;
+    padding-left: var(--wd-space-4);
+    padding-right: var(--wd-space-4);
+    border-radius: var(--wd-radius-sm);
+    font-size: var(--wd-font-sm);
+  }
+
+  @include m(medium) {
+    height: 36px;
+    padding-left: var(--wd-space-5);
+    padding-right: var(--wd-space-5);
+    border-radius: var(--wd-radius-sm);
+    font-size: var(--wd-font-md);
+  }
+
+  @include m(large) {
+    height: 44px;
+    padding-left: var(--wd-space-6);
+    padding-right: var(--wd-space-6);
+    border-radius: var(--wd-radius-md);
+    font-size: var(--wd-font-lg);
+  }
+
+  /* ===== 变体 ===== */
+  /* plain：描边 + 同色文字 */
+  @include when(plain) {
+    background-color: transparent;
+    border-color: var(--wd-button-border);
+    color: var(--wd-button-soft-text);
+
+    &:active {
+      background-color: var(--wd-button-soft-bg-pressed);
+    }
+  }
+
+  /* dashed：虚线描边 */
+  @include when(dashed) {
+    background-color: transparent;
+    border-style: dashed;
+    border-color: var(--wd-button-border);
+    color: var(--wd-button-soft-text);
+
+    &:active {
+      background-color: var(--wd-button-soft-bg-pressed);
+    }
+  }
+
+  /* soft：浅色底 + 同色文字 */
+  @include when(soft) {
+    background-color: var(--wd-button-soft-bg);
+    border-color: transparent;
+    color: var(--wd-button-soft-text);
+
+    &:active {
+      background-color: var(--wd-button-soft-bg-pressed);
+    }
+  }
+
+  /* subtle：无底无框，仅按压反馈 */
+  @include when(subtle) {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--wd-button-soft-text);
+
+    &:active {
+      background-color: var(--wd-button-soft-bg);
+    }
+  }
+
+  /* text：纯文字 */
+  @include when(text) {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--wd-button-soft-text);
+  }
+
+  /* ===== 细线 ===== */
+  @include when(hairline) {
+    &.is-plain,
+    &.is-dashed {
+      border-width: 1ppx;
+    }
+  }
+
+  /* ===== 圆角 ===== */
+  @include when(round) {
+    border-radius: var(--wd-radius-full);
+  }
+
+  /* ===== 撑满 ===== */
+  @include when(block) {
+    width: 100%;
+  }
+
+  /* ===== 按压（base 变体加深） ===== */
+  &:active {
+    background-color: var(--wd-button-bg-pressed);
+  }
+
+  /* ===== 禁用 ===== */
+  @include when(disabled) {
+    background-color: var(--wd-button-bg-disabled);
+    border-color: transparent;
+    color: var(--wd-button-text-disabled);
+  }
+
+  /* 加载中：不响应按压反馈 */
+  @include when(loading) {
+    &:active {
+      background-color: var(--wd-button-bg);
+    }
+  }
+}

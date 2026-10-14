@@ -1,0 +1,7 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(root-portal) {
+  /* 主题变量镜像容器：不参与布局，仅承载变量与层级 */
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,45 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(text) {
+  /* 根文本：默认字号/行高/颜色经语义令牌 */
+  font-size: var(--wd-font-md);
+  line-height: 22px;
+  color: var(--wd-text-1);
+
+  @include when(primary) {
+    color: var(--wd-color-primary);
+  }
+
+  @include when(success) {
+    color: var(--wd-color-success);
+  }
+
+  @include when(warning) {
+    color: var(--wd-color-warning);
+  }
+
+  @include when(error) {
+    color: var(--wd-color-danger);
+  }
+
+  @include when(bold) {
+    font-weight: var(--wd-font-weight-semibold);
+  }
+
+  /* 多行省略：行数由模板 text-maxline 属性控制，CSS 负责裁剪 */
+  @include when(lines-1) {
+    @include lineEllipsis;
+  }
+
+  @include when(lines-2, lines-3, lines-4, lines-5) {
+    overflow: hidden;
+  }
+
+  @include e(prefix) {
+    margin-right: var(--wd-space-1);
+  }
+
+  @include e(suffix) {
+    margin-left: var(--wd-space-1);
+  }
+}

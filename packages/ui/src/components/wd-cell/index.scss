@@ -1,0 +1,137 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(cell) {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--wd-bg-container);
+  color: var(--wd-text-1);
+
+  /* 分组分割线：首块无线，其余 border-top 1ppx */
+  @include when(border) {
+    @include halfPixelBorder('top');
+  }
+
+  @include e(wrapper) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--wd-space-3) var(--wd-space-4);
+    min-height: 48px;
+
+    @include m(vertical) {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+
+  @include e(left) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: var(--wd-space-3);
+  }
+
+  @include e(title) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  @include e(label) {
+    margin-top: 2px;
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-3);
+  }
+
+  @include e(required) {
+    color: var(--wd-color-danger);
+    font-size: var(--wd-font-md);
+    margin-right: 2px;
+
+    @include m(left) {
+      margin-left: 2px;
+    }
+  }
+
+  @include e(right) {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  @include e(body) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    flex-grow: 1;
+  }
+
+  @include e(value) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-2);
+    text-align: right;
+
+    @include m(left) {
+      text-align: left;
+    }
+
+    @include m(center) {
+      text-align: center;
+    }
+
+    @include m(ellipsis) {
+      @include lineEllipsis;
+    }
+  }
+
+  @include e(placeholder) {
+    color: var(--wd-text-4);
+  }
+
+  @include e(arrow-right) {
+    margin-left: var(--wd-space-1);
+    color: var(--wd-icon-4);
+  }
+
+  @include e(prefix) {
+    margin-right: var(--wd-space-2);
+  }
+
+  @include e(suffix) {
+    margin-left: var(--wd-space-2);
+  }
+
+  /* 垂直布局：右侧内容左对齐并占满 */
+  .wd-cell__wrapper--vertical .wd-cell__right {
+    justify-content: flex-start;
+  }
+
+  /* 大尺寸 */
+  @include when(large) {
+    .wd-cell__wrapper {
+      padding: var(--wd-space-4) var(--wd-space-5);
+      min-height: 56px;
+    }
+  }
+
+  /* 垂直居中 */
+  @include when(center) {
+    .wd-cell__wrapper {
+      align-items: center;
+    }
+  }
+
+  /* 按压缩态：可点击时 */
+  &:active {
+    background-color: var(--wd-bg-container);
+  }
+
+  &.is-link:active,
+  &.is-clickable:active {
+    background-color: var(--wd-bg-secondary);
+  }
+}
