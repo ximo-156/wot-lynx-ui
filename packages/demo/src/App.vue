@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue-lynx'
+import { useToast, useNotify } from 'wot-lynx-ui'
 
 // 组件通过 wotLynxUI 插件全局注册
 
@@ -31,6 +32,10 @@ const barValue = ref('12345678901')
 const signResult = ref('')
 const signatureRef = ref<any>(null)
 const paginationValue = ref(1)
+
+// 命令式弹层：useToast / useNotify 与 wot-ui 用法一致（在挂载了对应组件的父级调用）
+const toast = useToast()
+const notify = useNotify()
 
 function onTapButton() {
   count.value++
@@ -186,7 +191,7 @@ function onTapButton() {
           </view>
           <view class="demo-row">
             <text class="demo-label">Segmented</text>
-            <wd-segmented v-model="segmentedValue" :options="[{label:'A',value:'a'},{label:'B',value:'b'}]" />
+            <wd-segmented v-model:value="segmentedValue" :options="[{label:'A',value:'a'},{label:'B',value:'b'}]" />
             <wd-sort-button v-model="segmentedValue" title="排序" />
           </view>
         </view>
@@ -204,9 +209,13 @@ function onTapButton() {
             <wd-button type="primary" @click="showActionSheet = true">动作面板</wd-button>
           </view>
           <view class="demo-row">
-            <wd-toast ref="toastRef" v-model="showOverlay" />
+            <wd-button type="primary" @click="toast.show('这是一条 Toast 提示')">Toast</wd-button>
+            <wd-button type="primary" @click="toast.loading('加载中...')">Loading</wd-button>
+            <wd-button type="primary" @click="notify.showNotify('这是一条通知')">通知</wd-button>
           </view>
-          <wd-skeleton title :row="3" />
+          <view class="demo-row">
+            <wd-skeleton title :row="3" />
+          </view>
         </view>
       </view>
 
@@ -347,14 +356,15 @@ function onTapButton() {
       </view>
     </wd-popup>
 
-    <!-- 对话框 -->
-    <wd-dialog v-model="showDialog" title="提示" message="这是一个对话框" />
+    <!-- 对话框（声明式 v-model：点击确定/取消自动同步 showDialog 并关闭） -->
+    <wd-dialog v-model="showDialog" title="提示" msg="这是一个对话框" />
 
     <!-- 动作面板 -->
     <wd-action-sheet v-model="showActionSheet" :actions="[{name: '选项一'}, {name: '选项二'}]" />
 
-    <!-- Toast / Notify -->
-    <wd-notify v-model="showOverlay" />
+    <!-- Toast / Notify：命令式调用（useToast / useNotify），无需 v-model -->
+    <wd-toast />
+    <wd-notify />
   </wd-config-provider>
 </template>
 

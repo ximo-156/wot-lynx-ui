@@ -111,6 +111,18 @@ import VideoPreview from './components/wd-video-preview/wd-video-preview.vue'
 import Watermark from './components/wd-watermark/wd-watermark.vue'
 import { configureUniAdapter, hasUniAdapter, uni } from './common/uni'
 
+// 命令式弹层 composables（与 wot-ui 的 useDialog/useToast 等用法一致）。
+// 注意：命令式 API 类型加 Api 后缀导出，避免与同名组件（Dialog/Toast/...）冲突。
+export { useDialog } from './components/wd-dialog'
+export type { Dialog as DialogApi, DialogOptions, DialogResult, DialogType } from './components/wd-dialog/types'
+export { useToast } from './components/wd-toast'
+export type { Toast as ToastApi, ToastOptions } from './components/wd-toast/types'
+export { useNotify } from './components/wd-notify'
+export { useImagePreview } from './components/wd-image-preview'
+export type { ImagePreview as ImagePreviewApi, ImagePreviewOptions } from './components/wd-image-preview/types'
+export { useVideoPreview } from './components/wd-video-preview'
+export type { VideoPreview as VideoPreviewApi, VideoPreviewOptions } from './components/wd-video-preview/types'
+
 export {
   // uni-app 兼容层：宿主可注入路由 / 媒体选择 / Toast 等能力
   configureUniAdapter,

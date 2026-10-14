@@ -37,7 +37,6 @@ export function useDialog(selector: string = ''): Dialog {
   if (dialogOption.value === None) {
     dialogOption.value = defaultOptions
     provide(dialogOptionKey, dialogOption)
-    ;(globalThis as any).__DBG_DIALOG_REF__ = dialogOption
   }
 
   const createMethod = (type: DialogType) => {
@@ -126,23 +125,17 @@ export function useDialog(selector: string = ''): Dialog {
     // 返回一个promise
     return new Promise<DialogResult>((resolve, reject) => {
       const options = deepMerge(defaultOptions, isString(option) ? { title: option } : option)
-      console.log('[DBG] useDialog show, options =', JSON.stringify(options).slice(0, 150))
-      try {
-        dialogOption.value = deepMerge(options, {
-          show: true,
-          success: (res: DialogResult) => {
-            close()
-            resolve(res)
-          },
-          fail: (res: DialogResult) => {
-            close()
-            reject(res)
-          }
-        })
-        console.log('[DBG] assignment done, value.show =', (dialogOption.value as any).show)
-      } catch (e) {
-        console.log('[DBG] assignment threw:', e)
-      }
+      dialogOption.value = deepMerge(options, {
+        show: true,
+        success: (res: DialogResult) => {
+          close()
+          resolve(res)
+        },
+        fail: (res: DialogResult) => {
+          close()
+          reject(res)
+        }
+      })
     })
   }
 
@@ -157,7 +150,6 @@ export function useDialog(selector: string = ''): Dialog {
    * 关闭弹窗
    */
   const close = () => {
-    console.log('[DBG] useDialog close called')
     if (dialogOption.value !== None) {
       dialogOption.value.show = false
     }

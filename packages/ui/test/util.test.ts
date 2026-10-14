@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { styleToObject, objToStyle, addUnit, getRect, sanitizeSvgContent } from '../src/common/util'
+import { styleToObject, objToStyle, addUnit, getRect, sanitizeSvgContent, deepMerge, deepClone } from '../src/common/util'
 import { render } from './render'
 import WdCell from '../src/components/wd-cell/wd-cell.vue'
 import WdText from '../src/components/wd-text/wd-text.vue'
@@ -188,5 +188,66 @@ describe('内联样式绑定（vue-lynx 仅支持对象形式）', () => {
     const text = container.querySelector('.wd-text') as HTMLElement
     expect(text.style.fontSize).toBe('14px')
     expect(text.style.lineHeight).toBe('20px')
+  })
+})
+
+describe('deepMerge / deepClone', () => {
+  it('deepMerge 返回新对象，不修改入参（命令式弹层依赖新引用触发 watch）', () => {
+    const defaults = { title: '', show: false, zIndex: 99, inputProps: { type: 'text', modelValue: '' } }
+    const source = { title: '标题', show: true }
+    const merged = deepMerge(defaults, source)
+
+    // 返回新引用
+    expect(merged).not.toBe(defaults)
+    expect(merged).not.toBe(source)
+    // 合并结果正确
+    expect(merged.title).toBe('标题')
+    expect(merged.show).toBe(true)
+    expect(merged.zIndex).toBe(99)
+    // 嵌套对象递归合并且为新引用
+    expect(merged.inputProps).toEqual({ type: 'text', modelValue: '' })
+    expect(merged.inputProps).not.toBe(defaults.inputProps)
+    // 入参未被修改
+    expect(defaults.title).toBe('')
+    expect(defaults.show).toBe(false)
+    expect(source).toEqual({ title: '标题', show: true })
+  })
+
+  it('deepMerge 连续合并不污染 defaultOptions（模拟 useDialog 多次调用）', () => {
+    const defaultOptions = { title: '', show: false, type: 'alert' as const, confirmButtonProps: {} }
+    const first = deepMerge(defaultOptions, { title: '第一次', show: true })
+    const second = deepMerge(defaultOptions, { title: '第二次', show: true })
+    expect(first.title).toBe('第一次')
+    expect(second.title).toBe('第二次')
+    expect(defaultOptions.title).toBe('')
+    expect(defaultOptions.show).toBe(false)
+  })
+
+  it('deepClone 保留 RegExp / Date / Error 原型', () => {
+    const pattern = /^\d+$/
+    const date = new Date('2026-10-14T00:00:00Z')
+    const error = new Error('boom')
+    const cloned = deepClone({ pattern, date, error, fn: () => 1, list: [1, 2] })
+
+    expect(cloned.pattern).toBeInstanceOf(RegExp)
+    expect(cloned.pattern.source).toBe(pattern.source)
+    expect(cloned.pattern.test('123')).toBe(true)
+    expect(cloned.date).toBeInstanceOf(Date)
+    expect(cloned.date.getTime()).toBe(date.getTime())
+    expect(cloned.error).toBeInstanceOf(Error)
+    expect(cloned.error.message).toBe('boom')
+    // 函数按引用保留
+    expect(typeof cloned.fn).toBe('function')
+    expect(cloned.list).toEqual([1, 2])
+    expect(cloned.list).not.toBe([1, 2])
+  })
+
+  it('deepClone 处理循环引用', () => {
+    const obj: any = { name: 'a' }
+    obj.self = obj
+    const cloned = deepClone(obj)
+    expect(cloned).not.toBe(obj)
+    expect(cloned.self).toBe(cloned)
+    expect(cloned.name).toBe('a')
   })
 })

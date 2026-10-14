@@ -461,6 +461,19 @@ export function deepClone<T>(obj: T, cache: Map<any, any> = new Map()): T {
   if (obj === null || typeof obj !== 'object') {
     return obj
   }
+  // 特殊对象类型：日期、正则表达式、错误对象（正则需保留原型，否则被降级为普通对象，
+  // 如 wd-dialog 的 inputPattern 校验会失效）
+  if (obj instanceof Date) {
+    return new Date(obj.getTime()) as any
+  }
+  if (obj instanceof RegExp) {
+    return new RegExp(obj.source, obj.flags) as any
+  }
+  if (obj instanceof Error) {
+    const errorCopy = new Error(obj.message)
+    errorCopy.stack = obj.stack
+    return errorCopy as any
+  }
   if (cache.has(obj)) {
     return cache.get(obj)
   }
@@ -475,21 +488,27 @@ export function deepClone<T>(obj: T, cache: Map<any, any> = new Map()): T {
 }
 
 /**
- * 深合并
+ * 深合并（与 wot-ui 语义一致：深拷贝 target 后合并 source，不修改入参）
+ *
+ * 注意：必须返回**新对象**。命令式弹层组件（useDialog/useToast/useNotify 等）依赖
+ * `optionRef.value = deepMerge(defaultOptions, options)` 产生新引用来触发 watch——
+ * 若原地修改并返回 target，赋值的是同一引用（defaultOptions），Vue 的 ref 不会
+ * 通知依赖，弹层永远打不开；同时 defaultOptions 还会被调用方选项污染。
  */
 export function deepMerge<T extends Record<string, any>>(target: T, source: Record<string, any>): T {
+  const result = deepClone(target) as Record<string, any>
   for (const key in source) {
     if (Object.prototype.hasOwnProperty.call(source, key)) {
       const sourceValue = source[key]
-      const targetValue = target[key]
+      const targetValue = result[key]
       if (isObj(sourceValue) && isObj(targetValue)) {
-        deepMerge(targetValue as Record<string, any>, sourceValue)
+        result[key] = deepMerge(targetValue as Record<string, any>, sourceValue)
       } else {
-        ;(target as Record<string, any>)[key] = sourceValue
+        result[key] = sourceValue
       }
     }
   }
-  return target
+  return result as T
 }
 
 /**

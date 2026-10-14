@@ -193,7 +193,6 @@ const bodyClass = computed(() => {
 
 const messageOptionKey = getDialogDefaultOptionKey(props.selector)
 const messageOption = inject(messageOptionKey, ref<DialogOptionsWithCallBack>(defaultOptions)) // message选项
-console.log('[DBG] component setup, same ref as provided?', messageOption === (globalThis as any).__DBG_DIALOG_REF__, 'value show:', (messageOption.value as any).show)
 
 const inputVal = ref<string | number>('') // 输入框当前值
 
@@ -414,7 +413,6 @@ watch(
   }
 )
 
-/* BISECT-DISABLED
 // 声明式用法（v-model + props）：props 变化同步进 dialogState。
 //
 // Lynx/vue-lynx 适配要点：wd-dialog 必须自行声明 modelValue prop 并消费。
@@ -463,7 +461,6 @@ watch(
   { immediate: true }
 )
 
-*/
 watch(
   () => dialogState.show,
   (newValue) => {
@@ -707,7 +704,6 @@ watch(
  * @param option message选项值
  */
 function reset(option: DialogOptionsWithCallBack) {
-  console.log('[DBG] reset called, show =', option && option.show, 'title =', option && option.title)
   if (option) {
     dialogState.title = isDef(option.title) ? option.title : ''
     dialogState.show = option.show
