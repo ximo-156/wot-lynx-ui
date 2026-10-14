@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue-lynx'
+import { useToast } from 'wot-lynx-ui'
 import { testSections, totalItems, type TestItem } from './checklist'
 
 // ---------- 设备信息 ----------
@@ -45,8 +46,8 @@ const showPopup = ref(false)
 const showCenter = ref(false)
 const showDialog = ref(false)
 const showSheet = ref(false)
-const showToast = ref(false)
 const showNotify = ref(false)
+const toast = useToast()
 const theme = ref<'light' | 'dark'>('light')
 const swiperIndex = ref(0)
 const swiperList = [
@@ -196,7 +197,7 @@ function onSliderInput(v: number) {
         </view>
         <view class="row">
           <wd-button type="primary" size="mini" @tap="showSheet = true">动作面板</wd-button>
-          <wd-button type="primary" size="mini" @tap="showToast = true">Toast</wd-button>
+          <wd-button type="primary" size="mini" @tap="toast.show('轻提示 2 秒后自动关闭')">Toast</wd-button>
           <wd-button type="primary" size="mini" @tap="showNotify = true">通知</wd-button>
         </view>
         <view class="checklist">
@@ -358,7 +359,7 @@ function onSliderInput(v: number) {
       </view>
     </wd-popup>
 
-    <wd-dialog v-model="showDialog" title="对话框" message="确认/取消回调验证" @confirm="showDialog = false" />
+    <wd-dialog v-model="showDialog" title="对话框" msg="确认/取消回调验证" />
 
     <wd-action-sheet
       v-model="showSheet"
@@ -366,8 +367,9 @@ function onSliderInput(v: number) {
       @select="showSheet = false"
     />
 
-    <wd-toast v-model="showToast" message="轻提示 2 秒后自动关闭" />
-    <wd-notify v-model="showNotify" message="顶部通知栏" />
+    <!-- toast 为命令式组件（useToast），notify 支持 v-model:visible -->
+    <wd-toast />
+    <wd-notify v-model:visible="showNotify" message="顶部通知栏" @click="showNotify = false" />
   </wd-config-provider>
 </template>
 

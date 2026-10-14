@@ -1,77 +1,92 @@
 /**
- * 设计令牌的 JS 侧常量。
+ * 设计令牌的 JS 侧镜像。
  *
- * SCSS 主题变量（--wot-*）无法在 JS 中读取，少数需要"用 JS 算出颜色"的场景
+ * SCSS 主题变量（--wd-*）无法在 JS 中读取，少数需要"用 JS 算出颜色"的场景
  * （如 wd-button 给内嵌 loading 下发显式颜色 —— Lynx 的 svg content 不继承
- * CSS currentColor）使用此处的常量。数值与 styles/theme/base/color.scss 保持一致，
- * 修改主题色时需同步更新。
+ * CSS currentColor）使用此处的常量。数值与 styles/tokens/_primitive.scss
+ * 保持一致，修改色板时需同步更新。
  */
 
-/** HyperOS 品牌蓝阶（与 --wot-blue-* 对应） */
+/** 品牌蓝阶（与 --wd-blue-* 对应） */
 export const BLUE = {
-  1: '#EFF5FF',
-  2: '#DFEAFF',
-  3: '#B9D2FF',
-  4: '#8AB0FF',
-  5: '#5C99FF',
-  6: '#3482FF',
-  7: '#2A6FE0',
-  8: '#2059BC',
-  9: '#174494',
-  10: '#0F2F66'
+  1: '#EDF1FF',
+  2: '#DCE5FF',
+  3: '#BCCEFF',
+  4: '#94AEFF',
+  5: '#6E8FFB',
+  6: '#4A6DF0',
+  7: '#3A57CC',
+  8: '#2C44A3',
+  9: '#1F317A',
+  10: '#142252'
 } as const
 
-export const GREEN = {
-  1: '#ECFAEF',
-  2: '#D6F5DF',
-  3: '#A8E9BB',
-  4: '#6FD98E',
-  5: '#4ECB73',
-  6: '#34C759',
-  7: '#2AA64A',
-  8: '#20853C',
-  9: '#17652E',
-  10: '#0E4520'
-} as const
-
-export const RED = {
-  1: '#FFF1F0',
-  2: '#FFDCDA',
-  3: '#FFB3B2',
-  4: '#FF8483',
-  5: '#FF6563',
-  6: '#FF4D4F',
-  7: '#DB3B3D',
-  8: '#B72C2E',
-  9: '#931F21',
-  10: '#661415'
-} as const
-
-export const ORANGE = {
-  1: '#FFF4E6',
-  2: '#FFE3BF',
-  3: '#FFC98C',
-  4: '#FFAE57',
-  5: '#FF9626',
-  6: '#FF8800',
-  7: '#DB7300',
-  8: '#B75E00',
-  9: '#934B00',
-  10: '#663300'
-} as const
-
-/** HyperOS 冷灰阶（与 --wot-coolgrey-* 对应） */
-export const COOLGREY = {
+/** 中性灰阶（与 --wd-gray-* 对应） */
+export const GRAY = {
   1: '#F7F8FA',
-  2: '#F1F2F5',
-  3: '#E7E8ED',
-  4: '#D5D7DE',
-  5: '#AFB2BB',
-  6: '#868A93',
-  7: '#5F636C',
-  8: '#454851',
-  9: '#2B2D33',
-  10: '#191A1F'
+  2: '#EFF1F5',
+  3: '#E4E7ED',
+  4: '#D3D7E0',
+  5: '#B4BAC7',
+  6: '#8B93A3',
+  7: '#667085',
+  8: '#4A5568',
+  9: '#2D3442',
+  10: '#171B26'
+} as const
+
+/** 成功色阶（与 --wd-green-* 对应） */
+export const GREEN = {
+  1: '#E8F7F0',
+  2: '#C6EBD8',
+  3: '#8FD9B7',
+  4: '#54C495',
+  5: '#22B583',
+  6: '#00A06D',
+  7: '#00855A',
+  8: '#006B48',
+  9: '#004A32',
+  10: '#00301F'
+} as const
+
+/** 警告色阶（与 --wd-amber-* 对应） */
+export const AMBER = {
+  1: '#FDF6E9',
+  2: '#F9E7C2',
+  3: '#F2D08F',
+  4: '#E9B45A',
+  5: '#DF9A2B',
+  6: '#C97F10',
+  7: '#A5670C',
+  8: '#7F5009',
+  9: '#593906',
+  10: '#382403'
+} as const
+
+/** 危险色阶（与 --wd-red-* 对应） */
+export const RED = {
+  1: '#FDECEC',
+  2: '#FBD6D4',
+  3: '#F5AFAE',
+  4: '#EE8583',
+  5: '#E65A57',
+  6: '#DC4038',
+  7: '#B6302A',
+  8: '#8F2620',
+  9: '#661B17',
+  10: '#451210'
 } as const
 
 export const WHITE = '#FFFFFF'
+
+/**
+ * 兼容别名（过渡期保留）：
+ *
+ * 设计令牌重构将冷灰阶/橙色阶更名为 GRAY/AMBER（数值为新令牌），组件侧的
+ * import 尚在批量迁移中。此处保留旧名导出，避免迁移期间组件因
+ * `COOLGREY[6]` / `ORANGE[6]` 读到 undefined 而抛
+ * "Cannot read properties of undefined"。
+ * 组件全部迁移到新名后，可移除本段。
+ */
+export const COOLGREY = GRAY
+export const ORANGE = AMBER
