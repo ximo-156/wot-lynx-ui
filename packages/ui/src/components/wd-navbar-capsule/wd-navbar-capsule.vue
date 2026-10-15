@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { filterStyle, parseStyle } from '../../common/util'
 
 import { computed } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
@@ -18,7 +19,7 @@ const rootStyle = computed(() => {
   const style: Record<string, string> = {}
   if (props.bgColor) style['background-color'] = props.bgColor
   if (props.color) style.color = props.color
-  return Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ') + (props.customStyle ? `; ${props.customStyle}` : '')
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 function handleBack() {

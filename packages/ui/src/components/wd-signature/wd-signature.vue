@@ -14,7 +14,7 @@ import './index.css'
 
 import { computed, getCurrentInstance, onMounted, ref } from 'vue-lynx'
 import { signatureProps, type SignatureEmits, type SignatureExpose } from './types'
-import { getRect, sanitizeSvgContent, uuid } from '../../common/util'
+import { getRect, sanitizeSvgContent, uuid, filterStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 
 const props = defineProps(signatureProps)
@@ -49,9 +49,7 @@ const canvasStyle = computed(() => {
   if (props.width) style.width = typeof props.width === 'number' ? `${props.width}px` : String(props.width)
   if (props.height) style.height = typeof props.height === 'number' ? `${props.height}px` : String(props.height)
   if (props.backgroundColor) style['background-color'] = props.backgroundColor
-  return Object.entries(style)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('; ')
+  return filterStyle(style)
 })
 
 /** SVG content：白名单元素（svg / rect / polyline） */

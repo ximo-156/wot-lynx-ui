@@ -17,7 +17,7 @@ import WdRootPortal from '../wd-root-portal/wd-root-portal.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { popupProps, type PopupType } from './types'
 import type { TransitionName } from '../wd-transition/types'
-import { objToStyle } from '../../common/util'
+import { parseStyle } from '../../common/util'
 
 const props = defineProps(popupProps)
 const emit = defineEmits([
@@ -50,9 +50,8 @@ const rootClass = computed(() => {
   return classes.join(' ')
 })
 
-const style = computed(() => {
-  const s: Record<string, string> = { 'z-index': String(props.zIndex) }
-  return objToStyle(s) + (props.customStyle || '')
+const style = computed<Record<string, string>>(() => {
+  return { 'z-index': String(props.zIndex), ...parseStyle(props.customStyle) }
 })
 
 function handleClickModal() {

@@ -11,7 +11,7 @@ import { computed, useSlots } from 'vue-lynx'
 import WdImg from '../wd-img/wd-img.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { avatarProps, type AvatarShape } from './types'
-import { addUnit, isDef } from '../../common/util'
+import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(avatarProps)
 const slots = useSlots()
@@ -39,7 +39,7 @@ const rootStyle = computed(() => {
   }
   if (props.bgColor) style['background-color'] = props.bgColor
   if (props.color) style.color = props.color
-  return Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ') + (props.customStyle ? `; ${props.customStyle}` : '')
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 function handleClick(event: any) {

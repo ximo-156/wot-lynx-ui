@@ -14,7 +14,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { radioProps } from './types'
 import { RADIO_GROUP_KEY, useRadioGroup, type RadioType } from '../../composables/useRadioGroup'
 import { useFormDisabled } from '../../composables/useFormDisabled'
-import { isDef, objToStyle, parseStyle } from '../../common/util'
+import { isDef, parseStyle } from '../../common/util'
 
 const props = defineProps(radioProps)
 const emit = defineEmits(['tap'])

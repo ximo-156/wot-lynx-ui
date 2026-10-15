@@ -15,7 +15,7 @@ import WdBadge from '../wd-badge/wd-badge.vue'
 import { tabsProps } from './types'
 import { useChildren } from '../../composables/useChildren'
 import { TABS_KEY } from './types'
-import { getRect, objToStyle, parseStyle } from '../../common/util'
+import { getRect, parseStyle } from '../../common/util'
 
 const props = defineProps(tabsProps)
 const emit = defineEmits(['change', 'click', 'update:modelValue'])
@@ -28,7 +28,7 @@ const { children, linkChildren } = useChildren(TABS_KEY)
 const state = ref({
   activeIndex: 0,
   scrollLeft: 0,
-  lineStyle: '',
+  lineStyle: {} as Record<string, string>,
   inited: false
 })
 
@@ -113,8 +113,8 @@ function handleSelect(index: number) {
   updateLineStyle()
 }
 
-function getTabItemStyle(index: number): string {
-  return ''
+function getTabItemStyle(index: number): Record<string, string> {
+  return {}
 }
 
 /** 指示线定位：度量各 tab 宽度，累计偏移 */
@@ -127,11 +127,11 @@ function updateLineStyle() {
     const left = rects.slice(0, index).reduce((prev, curr) => prev + Number(curr.width), 0)
     const width = props.lineWidth ? (typeof props.lineWidth === 'number' ? `${props.lineWidth}px` : props.lineWidth) : `${Number(rect.width)}px`
     const height = props.lineHeight ? (typeof props.lineHeight === 'number' ? `${props.lineHeight}px` : props.lineHeight) : '3px'
-    state.value.lineStyle = objToStyle({
+    state.value.lineStyle = {
       width,
       height,
       transform: `translateX(${left + (Number(rect.width) - (props.lineWidth ? Number(props.lineWidth) : Number(rect.width))) / 2}px)`
-    })
+    }
   })
 }
 

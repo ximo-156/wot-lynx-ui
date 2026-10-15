@@ -317,6 +317,24 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
 }
 
 /**
+ * 过滤样式对象中的空值并统一为字符串值。
+ *
+ * vue-lynx 的 patchProp 对 `:style` **只接受对象语法**——字符串形式会被静默
+ * 丢弃（CONVENTIONS §19），因此需要下发样式对象的场景（如 ConfigProvider 的
+ * themeVars）统一走本函数：剔除 undefined / null / 空串，其余转字符串，
+ * 避免生成无效的 CSS 变量声明。
+ */
+export function filterStyle(styleObj: Record<string, any>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const key in styleObj) {
+    const value = styleObj[key]
+    if (value === undefined || value === null || value === '') continue
+    result[key] = String(value)
+  }
+  return result
+}
+
+/**
  * Lynx scroll-view 程序化滚动（官方 API：SelectorQuery.invoke('scrollTo')）。
  *
  * 背景：Lynx 的 scroll-view 支持 scroll-x / scroll-y / scroll-left / scroll-top

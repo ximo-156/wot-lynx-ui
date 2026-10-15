@@ -19,7 +19,7 @@ import { dialogProps, type DialogResult } from './types'
 import { defaultOptions, getDialogDefaultOptionKey } from '.'
 import { callInterceptor } from '../../common/interceptor'
 import { useTranslate } from '../../composables/useTranslate'
-import { isDef, objToStyle } from '../../common/util'
+import { isDef } from '../../common/util'
 
 const props = defineProps(dialogProps)
 const emit = defineEmits(['update:modelValue', 'confirm', 'cancel', 'close', 'open'])

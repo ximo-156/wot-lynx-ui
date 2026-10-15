@@ -684,12 +684,782 @@ const portalBarVisible = ref(false)
         </view>
       </view>
 
+      <!-- 导航类组件（Tier 5 补齐） -->
+      <view class="demo-section">
+        <text class="demo-section__title">Navbar 导航栏</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">标题 + 左侧箭头 + 下边框</text>
+          <wd-navbar title="标题" left-arrow bordered @click-left="() => console.log('[demo] navbar 左侧')" @click-right="() => console.log('[demo] navbar 右侧')" />
+          <text class="demo-panel__label">左侧文字 + 右侧文字</text>
+          <wd-navbar title="标题" left-text="返回" right-text="设置" @click-left="() => console.log('[demo] navbar 左侧')" @click-right="() => console.log('[demo] navbar 右侧')" />
+          <text class="demo-panel__label">胶囊按钮（capsule 插槽）</text>
+          <wd-navbar title="标题">
+            <template #capsule>
+              <wd-navbar-capsule @back="() => console.log('[demo] navbar 胶囊返回')" @home="() => console.log('[demo] navbar 胶囊首页')" />
+            </template>
+          </wd-navbar>
+        </view>
+      </view>
 
+      <view class="demo-section">
+        <text class="demo-section__title">NavbarCapsule 导航胶囊</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">返回 + 首页 / 仅返回（show-home=false + border）</text>
+          <view class="demo-row">
+            <wd-navbar-capsule @back="() => console.log('[demo] capsule 返回')" @home="() => console.log('[demo] capsule 首页')" />
+            <wd-navbar-capsule :show-home="false" border @back="() => console.log('[demo] capsule 返回')" />
+          </view>
+          <text class="demo-panel__label">自定义颜色（bg-color / color）</text>
+          <view class="demo-row">
+            <wd-navbar-capsule bg-color="#7F5CFF" color="#FFFFFF" />
+            <wd-navbar-capsule :show-back="false" bg-color="#EDF1FF" color="#7F5CFF" />
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">SortButton 排序按钮</text>
+        <view class="demo-panel">
+          <view class="demo-row">
+            <wd-sort-button v-model="sortValue" title="价格" @change="(e: any) => console.log('[demo] sort change', e)" />
+            <text class="demo-tag">当前状态：{{ sortValue }}</text>
+          </view>
+          <text class="demo-panel__label">allow-reset 可重置 / desc-first 降序优先 / line 下划线</text>
+          <view class="demo-row">
+            <wd-sort-button v-model="sortResetValue" title="可重置" allow-reset />
+            <wd-sort-button v-model="sortDescValue" title="降序优先" desc-first />
+            <wd-sort-button v-model="sortLineValue" title="带下划线" line />
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">SwiperNav 轮播导航</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">图片导航（type="image"）</text>
+          <wd-swiper-nav :items="swiperNavItems" @click="(e: any) => { swiperNavIndex.value = e.index; console.log('[demo] swiper-nav click', e) }" />
+          <text class="demo-panel__label">图标导航（type="icon"）</text>
+          <wd-swiper-nav type="icon" :items="swiperNavIconItems" @click="(e: any) => { swiperNavIndex.value = e.index; console.log('[demo] swiper-nav click', e) }" />
+          <view class="demo-row">
+            <text class="demo-tag">点击索引：{{ swiperNavIndex }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Tabbar 标签栏</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">基础用法（v-model + bordered + change 事件）</text>
+          <wd-tabbar v-model="tabbarValue" bordered @change="(e: any) => console.log('[demo] tabbar change', e)">
+            <wd-tabbar-item title="首页" icon="home" />
+            <wd-tabbar-item title="消息" icon="message" />
+            <wd-tabbar-item title="我的" icon="user" />
+          </wd-tabbar>
+          <text class="demo-panel__label">圆角形状（shape="round"）+ 自定义激活色</text>
+          <wd-tabbar v-model="tabbarRoundValue" shape="round" active-color="#7F5CFF" style="margin-top: 8px">
+            <wd-tabbar-item title="首页" icon="home" active-icon="home-fill" />
+            <wd-tabbar-item title="消息" icon="message" />
+            <wd-tabbar-item title="我的" icon="user" />
+          </wd-tabbar>
+          <view class="demo-row">
+            <text class="demo-tag">当前：{{ tabbarValue }} / {{ tabbarRoundValue }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">TabbarItem 标签栏项</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">icon / active-icon / value 徽标 / is-dot 圆点 / max 上限</text>
+          <wd-tabbar v-model="tabbarItemValue">
+            <wd-tabbar-item title="首页" icon="home" active-icon="home-fill" />
+            <wd-tabbar-item title="相机" icon="camera" />
+            <wd-tabbar-item title="消息" icon="message" :value="8" />
+            <wd-tabbar-item title="通知" icon="notification" is-dot />
+            <wd-tabbar-item title="我的" icon="user" :name="99" :value="150" :max="99" />
+          </wd-tabbar>
+          <view class="demo-row">
+            <text class="demo-tag">当前选中：{{ tabbarItemValue }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Loadmore 加载更多</text>
+        <view class="demo-panel">
+          <view class="demo-row">
+            <wd-button size="small" @tap="cycleLoadmoreState">切换状态</wd-button>
+            <text class="demo-tag">state: {{ loadmoreState }}</text>
+          </view>
+          <wd-loadmore :state="loadmoreState" loading-text="努力加载中..." finished-text="没有更多了" error-text="加载失败，点击重试" @reload="() => console.log('[demo] loadmore reload')" />
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">IndexAnchor 索引锚点</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">index 必填；无插槽内容时回退显示索引字符</text>
+          <view style="height: 300px">
+            <wd-index-bar>
+              <wd-index-anchor index="A" />
+              <wd-index-anchor index="B">
+                <view class="demo-row">
+                  <text class="demo-tag">北京</text>
+                  <text class="demo-tag">蚌埠</text>
+                </view>
+              </wd-index-anchor>
+            </wd-index-bar>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">IndexBar 索引栏</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">城市列表（外层容器固定 300px，触摸右侧索引条跳转，sticky 吸顶）</text>
+          <view style="height: 300px">
+            <wd-index-bar sticky>
+              <wd-index-anchor v-for="group in indexBarData" :key="group.index" :index="group.index">
+                <text class="demo-panel__label" style="margin: 0">{{ group.index }}</text>
+                <view v-for="city in group.cities" :key="city" style="padding: 6px 0">
+                  <text class="demo-tag">{{ city }}</text>
+                </view>
+              </wd-index-anchor>
+            </wd-index-bar>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Fab 悬浮按钮</text>
+        <view class="demo-panel">
+          <view class="demo-row">
+            <wd-button size="small" @tap="fabActive = true">展开</wd-button>
+            <wd-button size="small" @tap="fabActive = false">收起</wd-button>
+            <text class="demo-tag">active: {{ fabActive }}</text>
+          </view>
+          <text class="demo-panel__label">右下角向上展开（默认）；左上角向下展开（position="left-top" + direction="bottom"）</text>
+        </view>
+        <wd-fab v-model:active="fabActive" @click="() => console.log('[demo] fab click')">
+          <wd-button size="small" @tap="() => console.log('[demo] fab 菜单一')">菜单一</wd-button>
+          <wd-button size="small" @tap="() => console.log('[demo] fab 菜单二')">菜单二</wd-button>
+        </wd-fab>
+        <wd-fab v-model:active="fabActiveLeft" position="left-top" direction="bottom" type="warning" inactive-icon="edit">
+          <wd-button size="small" type="warning" @tap="() => console.log('[demo] fab 左上菜单')">编辑</wd-button>
+        </wd-fab>
+      </view>
+
+      <!-- 展示 / 布局类组件（Tier 5 补齐） -->
+      <view class="demo-section">
+        <text class="demo-section__title">Img 图片</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">mode 裁剪模式</text>
+          <view class="demo-row">
+            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="110" height="80" mode="aspectFill" />
+            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="110" height="80" mode="aspectFit" />
+            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="110" height="80" mode="widthFix" />
+          </view>
+          <text class="demo-panel__label">圆形 / 圆角 / 懒加载 / 预览</text>
+          <view class="demo-row">
+            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" round />
+            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" radius="8" />
+            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" lazy-load />
+            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" enable-preview show-menu-by-longpress @load="(e: any) => console.log('[demo] img load', e)" />
+          </view>
+          <text class="demo-panel__label">错误态 / 点击</text>
+          <view class="demo-row">
+            <wd-img src="https://temp.img1.lynxjs.org/not-found.png" width="72" height="72" @error="(e: any) => console.log('[demo] img error', e)" />
+            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" round @tap="(e: any) => console.log('[demo] img tap', e)" />
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Empty 空状态</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">基础用法</text>
+          <wd-empty tip="暂无数据" />
+          <text class="demo-panel__label">icon / iconSize 自定义</text>
+          <view class="demo-row" style="align-items: flex-start">
+            <wd-empty icon="delete" :icon-size="56" tip="购物车是空的" style="flex: 1" />
+            <wd-empty icon="settings" :icon-size="56" tip="没有搜索结果" style="flex: 1" />
+          </view>
+          <text class="demo-panel__label">底部插槽</text>
+          <wd-empty tip="还没有订单" icon="image" :icon-size="56">
+            <template #bottom>
+              <wd-button size="small" type="primary">去下单</wd-button>
+            </template>
+          </wd-empty>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Skeleton 骨架屏</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">animation 动画类型</text>
+          <view class="demo-row" style="align-items: flex-start">
+            <wd-skeleton animation="gradient" style="flex: 1" />
+            <wd-skeleton animation="flashing" style="flex: 1" />
+            <wd-skeleton animation="pulse" style="flex: 1" />
+            <wd-skeleton animation="none" style="flex: 1" />
+          </view>
+          <text class="demo-panel__label">rowCol 行列配置 / round</text>
+          <wd-skeleton :row-col="skeletonRowCol" animation="flashing" round />
+          <text class="demo-panel__label">loading 控制真实内容</text>
+          <wd-skeleton :loading="skeletonLoading" :row-col="[2]">
+            <text class="demo-tag">内容加载完成</text>
+          </wd-skeleton>
+          <view class="demo-row">
+            <wd-button size="small" @tap="skeletonLoading = !skeletonLoading">切换 loading</wd-button>
+            <text class="demo-tag">loading: {{ skeletonLoading }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">CountTo 数字滚动</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">type 主题 / prefix / suffix / decimals</text>
+          <view class="demo-row">
+            <wd-count-to :key="countToKey" type="primary" :start-val="0" :end-val="2024" :duration="2000" prefix="¥" @finish="onCountToFinish" />
+            <wd-count-to type="success" :start-val="0" :end-val="99.99" :decimals="2" :duration="2000" suffix="%" />
+            <wd-count-to type="error" :start-val="0" :end-val="666" :duration="2000" />
+          </view>
+          <text class="demo-panel__label">separator 千分位 / color / autoStart 手动开始</text>
+          <view class="demo-row">
+            <wd-count-to :start-val="0" :end-val="1234567" :duration="3000" color="#7F5CFF" />
+            <wd-count-to :auto-start="false" :start-val="0" :end-val="8888" :duration="1500" separator="," />
+          </view>
+          <view class="demo-row">
+            <wd-button size="small" @tap="replayCountTo">重新播放</wd-button>
+            <text class="demo-tag">finish 已触发：{{ countToDone }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Backtop 回到顶部</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">scroll-view 滚动超过 top 阈值显示</text>
+          <scroll-view scroll-orientation="vertical" style="height: 220px" :scroll-top="backtopScrollTop" @scroll="onBacktopScroll">
+            <view style="padding: 12px">
+              <wd-backtop :scroll-top="backtopScrollTop" :top="60" text="顶部" shape="square" :bottom="24" :right="24" @tap="onBacktopTap" />
+              <text class="demo-panel__label">scrollTop: {{ backtopScrollTop }}（阈值 60）</text>
+              <view v-for="item in 12" :key="item" style="padding: 10px 0">
+                <text class="demo-tag">滚动内容 {{ item }}</text>
+              </view>
+            </view>
+          </scroll-view>
+          <view class="demo-row">
+            <text class="demo-tag">shape="square"</text>
+            <text class="demo-tag">text="顶部" / bottom / right 可配</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Col 列布局</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">span 占据数（24 制）</text>
+          <wd-row style="margin-bottom: 8px">
+            <wd-col :span="24" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">span 24</text></wd-col>
+          </wd-row>
+          <wd-row style="margin-bottom: 8px">
+            <wd-col :span="12" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">span 12</text></wd-col>
+            <wd-col :span="12" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">span 12</text></wd-col>
+          </wd-row>
+          <text class="demo-panel__label">offset 左侧偏移</text>
+          <wd-row style="margin-bottom: 8px">
+            <wd-col :span="6" :offset="6" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">offset 6</text></wd-col>
+            <wd-col :span="6" :offset="6" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">offset 6</text></wd-col>
+          </wd-row>
+          <wd-row>
+            <wd-col :span="4" :offset="4" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">4</text></wd-col>
+            <wd-col :span="4" :offset="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">4</text></wd-col>
+          </wd-row>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Row 行布局</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">gutter 列间距</text>
+          <wd-row :gutter="12" style="margin-bottom: 8px">
+            <wd-col :span="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
+          </wd-row>
+          <text class="demo-panel__label">justify 水平排列</text>
+          <wd-row justify="space-between" style="margin-bottom: 8px">
+            <wd-col :span="6" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">6</text></wd-col>
+            <wd-col :span="6" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">6</text></wd-col>
+          </wd-row>
+          <wd-row justify="center" style="margin-bottom: 8px">
+            <wd-col :span="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">居中</text></wd-col>
+          </wd-row>
+          <text class="demo-panel__label">align 垂直对齐</text>
+          <wd-row align="bottom" style="height: 64px; background: #f7f8fa">
+            <wd-col :span="12" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">底部对齐</text></wd-col>
+            <wd-col :span="12" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">align="bottom"</text></wd-col>
+          </wd-row>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Resize 尺寸监听</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">内容尺寸变化时触发 resize</text>
+          <wd-resize @resize="onResize">
+            <view :style="`height: ${resizeHeight}px; background: #edf1ff; border-radius: 8px; padding: 12px`">
+              <text class="demo-tag">高度 {{ resizeHeight }}px · resize 触发 {{ resizeCount }} 次</text>
+            </view>
+          </wd-resize>
+          <view class="demo-row">
+            <wd-button size="small" @tap="toggleResizeHeight">切换高度</wd-button>
+            <text class="demo-tag">事件参数含 width / height</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Sticky 粘性布局</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">滚动容器内吸顶（zIndex / offsetTop）</text>
+          <scroll-view scroll-orientation="vertical" style="height: 200px">
+            <view style="padding: 12px">
+              <view style="height: 32px; background: #f7f8fa" />
+              <wd-sticky :offset-top="0" :z-index="10">
+                <view style="background: #7f5cff; padding: 10px; border-radius: 8px">
+                  <text style="color: #ffffff; font-size: 13px">吸顶标题 A（offsetTop 0）</text>
+                </view>
+              </wd-sticky>
+              <view style="height: 260px; background: #f7f8fa; padding: 12px"><text class="demo-tag">滚动内容区</text></view>
+              <wd-sticky :offset-top="12" :z-index="9">
+                <view style="background: #ff8800; padding: 10px; border-radius: 8px">
+                  <text style="color: #ffffff; font-size: 13px">吸顶标题 B（offsetTop 12）</text>
+                </view>
+              </wd-sticky>
+              <view style="height: 260px; background: #f7f8fa; padding: 12px"><text class="demo-tag">更多内容</text></view>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">StickyBox 粘性容器</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">containerHeight 容器高度 / offsetTop 偏移</text>
+          <wd-sticky-box :container-height="180">
+            <view style="padding: 12px">
+              <wd-sticky :offset-top="0" :z-index="10">
+                <view style="background: #7f5cff; padding: 10px; border-radius: 8px">
+                  <text style="color: #ffffff; font-size: 13px">offsetTop 0</text>
+                </view>
+              </wd-sticky>
+              <view style="height: 24px" />
+              <view style="height: 220px; background: #f7f8fa; padding: 12px"><text class="demo-tag">容器内滚动内容</text></view>
+              <wd-sticky :offset-top="8">
+                <view style="background: #ff8800; padding: 10px; border-radius: 8px">
+                  <text style="color: #ffffff; font-size: 13px">offsetTop 8</text>
+                </view>
+              </wd-sticky>
+              <view style="height: 220px; background: #f7f8fa; padding: 12px"><text class="demo-tag">继续滚动</text></view>
+            </view>
+          </wd-sticky-box>
+        </view>
+      </view>
+
+      <!-- 选择器 / 表单类组件（Tier 5 补齐） -->
+      <view class="demo-section">
+        <text class="demo-section__title">Cascader 级联选择</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">弹层形态（v-model:visible，三级选项）</text>
+          <view class="demo-row">
+            <wd-button type="primary" size="small" @tap="cascaderVisible = true">选择地区</wd-button>
+            <text class="demo-tag">当前：{{ cascaderLabel() }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">SelectPicker 下拉选择</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">多选弹层（type="checkbox"，v-model:visible）</text>
+          <view class="demo-row">
+            <wd-button type="primary" size="small" @tap="selectPickerVisible = true">选择分类</wd-button>
+            <text class="demo-tag">已选：{{ selectPickerValue.join('、') || '无' }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">DropMenu 下拉菜单</text>
+        <view class="demo-panel">
+          <wd-drop-menu>
+            <wd-drop-menu-item
+              v-model="dropSortValue"
+              title="排序方式"
+              :options="dropSortOptions"
+              @change="onSortChange"
+            />
+            <wd-drop-menu-item
+              v-model="dropPriceValue"
+              title="价格区间"
+              :options="dropPriceOptions"
+              @change="onPriceChange"
+            />
+          </wd-drop-menu>
+          <view class="demo-row">
+            <text class="demo-tag">排序：{{ dropSortLabel || '未选择' }}</text>
+            <text class="demo-tag">价格：{{ dropPriceLabel || '未选择' }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">DropMenuItem 下拉菜单项</text>
+        <view class="demo-panel">
+          <wd-drop-menu>
+            <wd-drop-menu-item
+              v-model="dropCustomValue"
+              title="自定义字段"
+              :options="dropCustomOptions"
+              value-key="id"
+              label-key="name"
+              @change="onCustomChange"
+            />
+            <wd-drop-menu-item v-model="dropDisabledValue" title="禁用项" :options="dropSortOptions" disabled />
+          </wd-drop-menu>
+          <view class="demo-row">
+            <text class="demo-tag">valueKey/labelKey：id / name</text>
+            <text class="demo-tag">已选：{{ dropCustomLabel || '未选择' }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">CalendarView 日历视图</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">内嵌视图（type="date"，无弹层）</text>
+          <wd-calendar-view v-model="calendarViewValue" style="height: 400px" />
+          <view class="demo-row">
+            <text class="demo-tag">选中：{{ calendarViewValue ? new Date(calendarViewValue).toLocaleDateString() : '未选择' }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">DateTimePickerView 日期时间视图</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">内嵌视图（type="datetime"，无弹层）</text>
+          <view style="height: 280px">
+            <wd-datetime-picker-view v-model="datetimePickerViewValue" />
+          </view>
+          <view class="demo-row">
+            <text class="demo-tag">{{ new Date(datetimePickerViewValue).toLocaleString() }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">ImgCropper 图片裁剪</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">基础裁剪（网络图，aspectRatio="1:1"）</text>
+          <view class="demo-row">
+            <wd-button type="primary" size="small" @tap="cropperVisible = true">打开裁剪</wd-button>
+            <text class="demo-tag">{{ cropperResult || '未裁剪' }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">AvatarGroup 头像组</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">层叠叠加（maxCount 折叠，direction="right"）</text>
+          <view class="demo-row">
+            <wd-avatar-group :max-count="3" :size="40" collapse-text="+5">
+              <wd-avatar :size="40" text="A" bg-color="#7F5CFF" />
+              <wd-avatar :size="40" text="B" bg-color="#34C759" />
+              <wd-avatar :size="40" text="C" bg-color="#FF9500" />
+            </wd-avatar-group>
+          </view>
+          <text class="demo-panel__label">方形不层叠（shape="square"，overlap=false）</text>
+          <view class="demo-row">
+            <wd-avatar-group shape="square" :overlap="false" :size="40">
+              <wd-avatar :size="40" src="https://temp.img1.lynxjs.org/close.png" />
+              <wd-avatar :size="40" src="https://temp.img1.lynxjs.org/close.png" />
+              <wd-avatar :size="40" src="https://temp.img1.lynxjs.org/close.png" />
+            </wd-avatar-group>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">SwipeAction 滑动操作</text>
+        <view class="demo-panel">
+          <text class="demo-tag">{{ swipeTip }}</text>
+          <wd-swipe-action v-for="(cell, index) in swipeCells" :key="index" v-model="cell.status">
+            <template #left>
+              <wd-button size="small" type="warning" @tap="swipeTip = cell.title + '：收藏'">收藏</wd-button>
+            </template>
+            <wd-cell :title="cell.title" :value="cell.status" />
+            <template #right>
+              <wd-button size="small" type="danger" @tap="swipeTip = cell.title + '：删除'">删除</wd-button>
+            </template>
+          </wd-swipe-action>
+          <view class="demo-row">
+            <text class="demo-tag">状态：{{ swipeCells.map((c) => c.status).join(' / ') }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">TableColumn 表格列</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">作用域插槽自定义列（status 渲染为标签）</text>
+          <wd-table :data="tableColData" :columns="tableColColumns">
+            <template #default="scope">
+              <text v-if="scope?.column?.prop === 'status'" class="demo-tag">{{ scope?.row?.status }}</text>
+              <template v-else>
+                <wd-table-column :prop="scope?.column?.prop" :label="scope?.column?.label" :width="scope?.column?.width" />
+                <text>{{ scope?.row?.[scope.column.prop] }}</text>
+              </template>
+            </template>
+          </wd-table>
+          <view class="demo-row">
+            <text class="demo-tag">插槽参数：row / column / rowIndex</text>
+            <text class="demo-tag">TableColumn：prop / label / width</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Watermark 水印</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">文字水印（content，固定高度容器）</text>
+          <view style="height: 180px; border-radius: 12px; overflow: hidden">
+            <wd-watermark content="wot-lynx-ui" :font-size="14" :opacity="0.15" style="height: 100%">
+              <view style="padding: 12px">
+                <text class="demo-panel__label">被水印覆盖的内容区域</text>
+              </view>
+            </wd-watermark>
+          </view>
+        </view>
+      </view>
+
+      <!-- 弹层反馈类组件（Tier 5 补齐） -->
+      <view class="demo-section">
+        <text class="demo-section__title">Popup 弹出层</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">弹出位置（v-model 受控，round + closable）</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="openPopup('top')">top</wd-button>
+            <wd-button size="small" @tap="openPopup('bottom')">bottom</wd-button>
+            <wd-button size="small" @tap="openPopup('center')">center</wd-button>
+            <wd-button size="small" @tap="openPopup('left')">left</wd-button>
+            <wd-button size="small" @tap="openPopup('right')">right</wd-button>
+          </view>
+          <view class="demo-row">
+            <text class="demo-tag">position: {{ popupPosition }}</text>
+            <text class="demo-tag">visible: {{ popupVisible }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Overlay 遮罩</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">基础遮罩（:show 控制，点击遮罩关闭）</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="overlayVisible = true">显示遮罩</wd-button>
+            <text class="demo-tag">show: {{ overlayVisible }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Popover 气泡弹出</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">normal 模式（点击目标切换，Lynx 无 hover）</text>
+          <view class="demo-row">
+            <wd-popover v-model="popoverVisible" content="普通气泡内容" placement="top">
+              <wd-button size="small">点我弹出</wd-button>
+            </wd-popover>
+          </view>
+          <text class="demo-panel__label">menu 模式（content 为菜单项数组）</text>
+          <view class="demo-row">
+            <wd-popover mode="menu" :content="popoverMenu" placement="bottom" @menuclick="(e: any) => console.log('[demo] popover menuclick', e)">
+              <wd-button size="small">菜单气泡</wd-button>
+            </wd-popover>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Tooltip 文字提示</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">纯文本提示（点击目标切换可见性）</text>
+          <view class="demo-row">
+            <wd-tooltip v-model="tooltipVisible" content="这是文字提示内容" placement="top">
+              <wd-button size="small">显示提示</wd-button>
+            </wd-tooltip>
+            <text class="demo-tag">visible: {{ tooltipVisible }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Tour 新手引导</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">分步引导（steps: element / title / content）</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="tourVisible = true">开始引导</wd-button>
+          </view>
+          <view class="demo-row">
+            <view id="tour-target-1" style="padding: 8px 12px; background-color: #edf1ff; border-radius: 8px">
+              <text class="demo-tag">引导目标 1</text>
+            </view>
+            <view id="tour-target-2" style="padding: 8px 12px; background-color: #edf1ff; border-radius: 8px">
+              <text class="demo-tag">引导目标 2</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Curtain 幕帘</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">横幅幕布广告（src + width + closePosition + to）</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="curtainVisible = true">打开幕帘</wd-button>
+            <text class="demo-tag">closePosition: bottom</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">FloatingPanel 浮动面板</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">拖动手柄改变高度，松手吸附到最近锚点</text>
+          <view class="demo-row">
+            <text class="demo-tag">height: {{ panelHeight }}px</text>
+            <text class="demo-tag">anchors: 120 / 200 / 280</text>
+          </view>
+          <view style="border-width: 1px; border-style: solid; border-color: #e4e7ed; border-radius: 12px; overflow: hidden">
+            <wd-floating-panel :height="panelHeight" :anchors="[120, 200, 280]" safe-area-inset-bottom @height-change="onPanelHeightChange">
+              <view style="padding: 12px">
+                <text class="demo-panel__label">面板内容区（内容可滚动）</text>
+                <text class="demo-panel__label">当前高度：{{ panelHeight }}px</text>
+              </view>
+            </wd-floating-panel>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">Toast 轻提示</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">命令式 API：useToast(selector)（模块级注入单例）</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="toast.success('保存成功')">success</wd-button>
+            <wd-button size="small" @tap="toast.error('操作失败')">error</wd-button>
+            <wd-button size="small" @tap="toast.loading('加载中')">loading</wd-button>
+          </view>
+          <view class="demo-row">
+            <wd-button size="small" @tap="toast.warning('请注意规范')">warning</wd-button>
+            <wd-button size="small" @tap="toast.info('这是一条提示')">info</wd-button>
+            <wd-button size="small" @tap="toast.close()">close</wd-button>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">ImagePreview 图片预览</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">命令式 API：ref.open({ images, startPosition })</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="showImagePreview">预览图片</wd-button>
+            <text class="demo-tag">共 {{ previewImages.length }} 张</text>
+          </view>
+          <view class="demo-row">
+            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="64" height="64" mode="aspectFill" round />
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">VideoPreview 视频预览</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">命令式 API：ref.open({ url, poster, title })</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="showVideoPreview">播放视频</wd-button>
+            <text class="demo-tag">closePosition: right-top</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="demo-section">
+        <text class="demo-section__title">RootPortal 根节点容器</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">fixed 内容经 RootPortal 提升至页面根节点，主题令牌保持继承</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="portalBarVisible = !portalBarVisible">{{ portalBarVisible ? '隐藏' : '显示' }}底部固定条</wd-button>
+          </view>
+          <wd-root-portal v-if="portalBarVisible">
+            <view style="position: fixed; left: 0; right: 0; bottom: 0; padding: 12px; background-color: #7f5cff">
+              <text style="color: #ffffff; font-size: 13px">经 RootPortal 挂载的底部固定条</text>
+            </view>
+          </wd-root-portal>
+        </view>
+      </view>
+
+      <!-- 不可见弹层实例（命令式 / 受控显隐，集中在 scroll-view 末尾） -->
+      <wd-cascader
+        v-model="cascaderValue"
+        v-model:visible="cascaderVisible"
+        :options="cascaderOptions"
+        title="选择地区"
+        @confirm="(e: any) => console.log('[demo] cascader confirm', e)"
+      />
+      <wd-select-picker
+        v-model="selectPickerValue"
+        v-model:visible="selectPickerVisible"
+        :columns="selectPickerColumns"
+        title="选择分类"
+        @confirm="(e: any) => console.log('[demo] select-picker confirm', e)"
+      />
+      <wd-img-cropper
+        v-model="cropperVisible"
+        img-src="https://temp.img1.lynxjs.org/close.png"
+        aspect-ratio="1:1"
+        @confirm="onCropperConfirm"
+      />
+      <wd-popup v-model="popupVisible" :position="popupPosition" round closable>
+        <view style="padding: 24px; min-width: 200px">
+          <text class="demo-panel__label">position = {{ popupPosition }}</text>
+          <text class="demo-panel__label">点击遮罩或关闭按钮退出</text>
+        </view>
+      </wd-popup>
+      <wd-overlay :show="overlayVisible" @click="overlayVisible = false">
+        <view style="position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); padding: 20px; background-color: #ffffff; border-radius: 12px">
+          <text class="demo-panel__label">遮罩内容（点击任意处关闭）</text>
+        </view>
+      </wd-overlay>
+      <wd-tour v-model="tourVisible" :steps="tourSteps" @finish="() => console.log('[demo] tour finish')" />
+      <wd-curtain
+        v-model="curtainVisible"
+        src="https://temp.img1.lynxjs.org/close.png"
+        :width="260"
+        close-position="bottom"
+        to="/pages/demo/index"
+      />
+      <wd-toast selector="demo-toast" />
+      <wd-image-preview ref="imagePreviewRef" selector="demo-image-preview" />
+      <wd-video-preview ref="videoPreviewRef" selector="demo-video-preview" close-position="right-top" />
     </scroll-view>
   </wd-config-provider>
 </template>
 
-<style scoped>
 <style scoped>
 .app-root {
   height: 100%;

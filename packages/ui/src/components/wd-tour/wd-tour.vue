@@ -33,12 +33,12 @@ const step = computed<TourStep | undefined>(() => props.steps[current.value])
 const isLast = computed(() => current.value >= props.steps.length - 1)
 const isFirst = computed(() => current.value <= 0)
 
-const maskStyle = computed(() => {
-  return props.maskColor ? `background-color: ${props.maskColor};` : ''
+const maskStyle = computed<Record<string, string>>(() => {
+  return props.maskColor ? ({ 'background-color': props.maskColor } as Record<string, string>) : ({} as Record<string, string>)
 })
 
-const bubbleStyle = computed(() => {
-  return ''
+const bubbleStyle = computed<Record<string, string>>(() => {
+  return {} as Record<string, string>
 })
 
 function next() {

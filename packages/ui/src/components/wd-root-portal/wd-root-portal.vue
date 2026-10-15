@@ -14,6 +14,7 @@ import { computed } from 'vue-lynx'
 import { rootPortalProps } from './types'
 import { useParent } from '../../composables/useParent'
 import { CONFIG_PROVIDER_KEY } from '../../composables/global-config'
+import { parseStyle } from '../../common/util'
 
 const props = defineProps(rootPortalProps)
 
@@ -27,10 +28,16 @@ const themeClass = computed(() => {
   const theme = configProvider.value?.globalConfig?.value.theme
   return theme ? `wd-theme-${theme}` : 'wd-theme-light'
 })
+
+/** 主题变量 + customStyle 合并为对象（字符串 :style 会被丢弃，CONVENTIONS §19） */
+const rootStyle = computed(() => ({
+  ...parseStyle(configProviderStyle.value),
+  ...parseStyle(props.customStyle)
+}))
 </script>
 
 <template>
-  <view :class="`wd-root-portal ${themeClass} ${customClass}`" :style="`${configProviderStyle}${customStyle}`">
+  <view :class="`wd-root-portal ${themeClass} ${customClass}`" :style="rootStyle">
     <slot />
   </view>
 </template>

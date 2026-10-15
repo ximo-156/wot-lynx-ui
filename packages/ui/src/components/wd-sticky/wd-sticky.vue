@@ -11,7 +11,7 @@ import './index.css'
 import { computed, ref } from 'vue-lynx'
 import WdResize from '../wd-resize/wd-resize.vue'
 import { stickyProps } from './types'
-import { uuid } from '../../common/util'
+import { uuid, filterStyle } from '../../common/util'
 
 const props = defineProps(stickyProps)
 
@@ -32,11 +32,11 @@ const stickyStyle = computed(() => {
     style.right = '0'
     style['z-index'] = String(props.zIndex)
   }
-  return Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ')
+  return filterStyle(style)
 })
 
-const containerStyle = computed(() => {
-  return ''
+const containerStyle = computed<Record<string, string>>(() => {
+  return {}
 })
 
 function handleResize() {

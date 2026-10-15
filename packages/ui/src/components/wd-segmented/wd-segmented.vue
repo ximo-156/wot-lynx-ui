@@ -13,7 +13,7 @@ import './index.css'
 
 import { computed, getCurrentInstance, onMounted, reactive, watch } from 'vue-lynx'
 import { segmentedProps, type SegmentedExpose, type SegmentedOption } from './types'
-import { addUnit, getRect, isEqual, isObj, objToStyle, pause, parseStyle } from '../../common/util'
+import { addUnit, filterStyle, getRect, isEqual, isObj, pause, parseStyle } from '../../common/util'
 import { uni } from '../../common/uni'
 
 const props = defineProps(segmentedProps)
@@ -21,7 +21,7 @@ const emit = defineEmits(['update:value', 'change', 'click'])
 
 const state = reactive({
   activeIndex: 0,
-  activeStyle: ''
+  activeStyle: {} as Record<string, string>
 })
 
 const optionValue = (option: string | number | SegmentedOption): string | number => {
@@ -70,7 +70,7 @@ function updateActiveStyle(animation: boolean = true) {
     if (animation) {
       style.transition = 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)'
     }
-    state.activeStyle = objToStyle(style)
+    state.activeStyle = filterStyle(style)
   })
 }
 

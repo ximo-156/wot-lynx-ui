@@ -13,7 +13,7 @@ import './index.css'
 
 import { computed, normalizeClass } from 'vue-lynx'
 import { iconProps } from './types'
-import { addUnit, isDef, objToStyle, sanitizeSvgContent } from '../../common/util'
+import { addUnit, isDef, sanitizeSvgContent, filterStyle, parseStyle } from '../../common/util'
 import { ICON_VIEW_BOX, iconPaths } from '../../icons/data'
 import { GRAY, THEME_ICON_COLOR } from '../../common/theme'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
@@ -74,7 +74,7 @@ const rootStyle = computed(() => {
       style['height'] = iconSize.value
     }
   }
-  return `${objToStyle(style)} ${props.customStyle}`
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 const svgContent = computed(() => {

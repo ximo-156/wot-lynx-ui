@@ -1,5 +1,5 @@
 import { computed, provide, unref, type MaybeRef } from 'vue-lynx'
-import { objToStyle } from '../common/util'
+import { filterStyle } from '../common/util'
 import {
   CONFIG_PROVIDER_KEY,
   mergeConfig,
@@ -40,9 +40,11 @@ export interface UseConfigProviderOptions {
 export function useConfigProvider(options: UseConfigProviderOptions = {}) {
   const { themeVars, theme, button, tag } = options
 
-  const themeStyle = computed(() => {
+  // themeVars 映射为 --wd-* CSS 变量对象（对象语法：字符串 :style 会被
+  // vue-lynx patchProp 静默丢弃，themeVars 定制主题整体失效，CONVENTIONS §19）
+  const themeStyle = computed<Record<string, string>>(() => {
     const styleObj = mapThemeVarsToCSSVars(unref(themeVars) || {})
-    return styleObj ? `${objToStyle(styleObj)}` : ''
+    return styleObj ? filterStyle(styleObj) : {}
   })
 
   const globalConfig = computed<GlobalConfig>(() => {

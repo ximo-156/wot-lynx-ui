@@ -29,7 +29,7 @@ const activeLabel = computed(() => {
 
 const listStyle = computed(() => {
   const offset = dropMenu?.value?.offset.value || 0
-  return `top: ${offset}px;`
+  return { top: `${offset}px` }
 })
 
 function toggle() {

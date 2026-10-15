@@ -92,7 +92,8 @@ function omitUndefined<T extends object>(obj: T): Partial<T> {
 /** ConfigProvider 向下提供的上下文 */
 export type ConfigProviderProvide = {
   globalConfig: ComputedRef<GlobalConfig>
-  themeStyle: ComputedRef<string>
+  /** themeVars 映射出的 --wd-* 变量（对象样式，CONVENTIONS §19） */
+  themeStyle: ComputedRef<Record<string, string>>
 }
 
 export const CONFIG_PROVIDER_KEY: InjectionKey<ConfigProviderProvide> = Symbol('wd-config-provider')

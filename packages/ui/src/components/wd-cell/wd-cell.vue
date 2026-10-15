@@ -67,10 +67,10 @@ const showPlaceholder = computed(() => {
   return Boolean(props.placeholder && (props.value === '' || props.value === undefined || props.value === null) && !slots.default)
 })
 
-const titleWidthStyle = computed(() => {
-  if (!isDef(cellTitleWidth.value)) return ''
+const titleWidthStyle = computed<Record<string, string>>(() => {
+  if (!isDef(cellTitleWidth.value)) return {}
   const width = addUnit(cellTitleWidth.value as string | number)
-  return `min-width:${width};max-width:${width};`
+  return { 'min-width': width, 'max-width': width } as Record<string, string>
 })
 
 const rootClass = computed(() => {

@@ -10,6 +10,7 @@ import './index.css'
 import { computed } from 'vue-lynx'
 import WdEmpty from '../wd-empty/wd-empty.vue'
 import { tableProps, type TableColumn } from './types'
+import { parseStyle } from '../../common/util'
 
 const props = defineProps(tableProps)
 const emit = defineEmits(['click-row'])
@@ -23,7 +24,7 @@ const totalWidth = computed(() => {
 })
 
 const tableStyle = computed(() => {
-  return `width: ${totalWidth.value}px;`
+  return { width: `${totalWidth.value}px` }
 })
 
 function cellAlign(col: TableColumn): string {
@@ -32,7 +33,7 @@ function cellAlign(col: TableColumn): string {
 </script>
 
 <template>
-  <view :class="`wd-table ${customClass}`" :style="customStyle">
+  <view :class="`wd-table ${customClass}`" :style="parseStyle(customStyle)">
     <scroll-view scroll-x class="wd-table__scroll">
       <view v-if="hasData" class="wd-table__inner" :style="tableStyle">
         <!-- 表头 -->
@@ -41,7 +42,7 @@ function cellAlign(col: TableColumn): string {
             v-for="(col, colIndex) in columns"
             :key="colIndex"
             :class="['wd-table__th', col.fixed ? 'wd-table__th--fixed' : '']"
-            :style="`width: ${col.width || 100}px; justify-content: ${cellAlign(col) === 'center' ? 'center' : cellAlign(col) === 'right' ? 'flex-end' : 'flex-start'};`"
+            :style="{ width: `${col.width || 100}px`, 'justify-content': cellAlign(col) === 'center' ? 'center' : cellAlign(col) === 'right' ? 'flex-end' : 'flex-start' }"
           >
             <text class="wd-table__th-text">{{ col.label }}</text>
           </view>
@@ -57,7 +58,7 @@ function cellAlign(col: TableColumn): string {
             v-for="(col, colIndex) in columns"
             :key="colIndex"
             :class="['wd-table__td', col.fixed ? 'wd-table__td--fixed' : '']"
-            :style="`width: ${col.width || 100}px; justify-content: ${cellAlign(col) === 'center' ? 'center' : cellAlign(col) === 'right' ? 'flex-end' : 'flex-start'};`"
+            :style="{ width: `${col.width || 100}px`, 'justify-content': cellAlign(col) === 'center' ? 'center' : cellAlign(col) === 'right' ? 'flex-end' : 'flex-start' }"
           >
             <slot :row="row" :column="col" :row-index="rowIndex" :column-index="colIndex" :rowspan="1" :colspan="1">
               <text class="wd-table__td-text">{{ row[col.prop] }}</text>

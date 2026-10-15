@@ -17,7 +17,7 @@ import WdOverlay from '../wd-overlay/wd-overlay.vue'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import { defaultOptions, getToastOptionKey, toastIcon } from '.'
 import { toastProps, type ToastDirection, type ToastLoadingType, type ToastOptions } from './types'
-import { addUnit, isDef, isFunction, objToStyle } from '../../common/util'
+import { addUnit, isDef, isFunction, filterStyle } from '../../common/util'
 
 const props = defineProps(toastProps)
 
@@ -71,7 +71,7 @@ const transitionStyle = computed(() => {
     style.transform = 'translateY(-50%)'
     style['align-items'] = 'center'
   }
-  return objToStyle(style)
+  return filterStyle(style)
 })
 
 const rootClass = computed(() => {

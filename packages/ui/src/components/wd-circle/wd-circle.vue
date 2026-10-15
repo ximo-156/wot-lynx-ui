@@ -11,7 +11,7 @@ import './index.css'
 
 import { computed, ref, watch } from 'vue-lynx'
 import { circleProps } from './types'
-import { sanitizeSvgContent, uuid } from '../../common/util'
+import { sanitizeSvgContent, uuid, filterStyle, parseStyle } from '../../common/util'
 import { PURPLE } from '../../common/theme'
 import { isObj } from '../../common/util'
 
@@ -21,7 +21,7 @@ const canvasId = ref<string>(`wd-circle-${uuid()}`)
 const canvasSize = computed(() => props.size)
 
 const canvasStyle = computed(() => {
-  return `width: ${props.size}px; height: ${props.size}px;`
+  return { width: `${props.size}px`, height: `${props.size}px` }
 })
 
 /** 当前进度颜色（对象配置时取首档，渐变降级） */
@@ -57,7 +57,7 @@ const svgContent = computed(() => {
 const rootStyle = computed(() => {
   const style: Record<string, string> = {}
   if (props.fill) style['background-color'] = props.fill
-  return Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ') + (props.customStyle ? `; ${props.customStyle}` : '')
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 </script>
 

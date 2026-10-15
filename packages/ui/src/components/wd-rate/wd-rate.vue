@@ -146,7 +146,7 @@ async function onTouchMove(event: any) {
       v-for="(rate, index) in rateList"
       :key="index"
       class="wd-rate__item"
-      :style="isDef(space) ? `margin-right: ${index == rateList.length - 1 ? 0 : addUnit(space)}` : ''"
+      :style="isDef(space) ? { 'margin-right': index == rateList.length - 1 ? 0 : addUnit(space) } : {}"
     >
       <wd-icon
         :custom-class="`wd-rate__item-star ${rate === '100%' ? 'wd-rate__item-star--active' : ''}`"

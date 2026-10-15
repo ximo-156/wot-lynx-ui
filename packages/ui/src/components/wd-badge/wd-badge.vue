@@ -11,7 +11,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { badgeProps, type BadgeType } from './types'
-import { isDef, parseStyle } from '../../common/util'
+import { isDef, parseStyle, filterStyle } from '../../common/util'
 
 const props = defineProps(badgeProps)
 
@@ -38,9 +38,7 @@ const contentStyle = computed(() => {
   if (props.bgColor) style['background-color'] = props.bgColor
   if (isDef(props.top)) style.top = typeof props.top === 'number' ? `${props.top}px` : String(props.top)
   if (isDef(props.right)) style.right = typeof props.right === 'number' ? `${props.right}px` : String(props.right)
-  return Object.entries(style)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('; ')
+  return filterStyle(style)
 })
 </script>
 

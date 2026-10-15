@@ -12,7 +12,7 @@ import WdPopup from '../wd-popup/wd-popup.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import { actionSheetProps, type Action, type Panel } from './types'
-import { isArray } from '../../common/util'
+import { isArray, parseStyle } from '../../common/util'
 
 const props = defineProps(actionSheetProps)
 const emit = defineEmits(['select', 'close', 'update:modelValue', 'enter', 'after-enter', 'leave', 'after-leave', 'click-modal'])
@@ -86,7 +86,7 @@ function handleClickModal() {
       @click-modal="handleClickModal"
       :z-index="zIndex"
     >
-      <view :class="`wd-action-sheet ${customClass}`" :style="customStyle">
+      <view :class="`wd-action-sheet ${customClass}`" :style="parseStyle(customStyle)">
         <view v-if="title" :class="`wd-action-sheet__title ${customTitleClass}`">
           <text class="wd-action-sheet__title-text">{{ title }}</text>
           <slot name="close" :close="close">
@@ -105,7 +105,7 @@ function handleClickModal() {
                 action.disabled ? 'wd-action-sheet__action--disabled' : '',
                 action.loading ? 'wd-action-sheet__action--loading' : ''
               ]"
-              :style="`color: ${action.color || ''}`"
+              :style="action.color ? { color: action.color } : {}"
               @tap="select(rowIndex, 'action')"
             >
               <wd-loading v-if="action.loading" custom-class="wd-action-sheet__action-loading" />

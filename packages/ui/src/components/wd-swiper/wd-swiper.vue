@@ -14,7 +14,7 @@ import './index.css'
 
 import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue-lynx'
 import { swiperProps, type SwiperExpose } from './types'
-import { addUnit, getRect } from '../../common/util'
+import { addUnit, getRect, parseStyle } from '../../common/util'
 
 const props = defineProps(swiperProps)
 const emit = defineEmits(['change', 'click', 'update:current'])
@@ -36,13 +36,19 @@ watch(
   }
 )
 
-const swiperStyle = computed(() => `height: ${addUnit(props.height)};${props.customStyle ? ` ${props.customStyle}` : ''}`)
+const swiperStyle = computed<Record<string, string>>(() => {
+  return { height: addUnit(props.height), ...parseStyle(props.customStyle) }
+})
 
 const itemCount = computed(() => props.list.length || 0)
 
-const trackStyle = computed(() => `width: ${itemCount.value * itemWidth.value}px;`)
+const trackStyle = computed(() => {
+  return { width: `${itemCount.value * itemWidth.value}px` }
+})
 
-const itemStyle = computed(() => `width: ${itemWidth.value}px;`)
+const itemStyle = computed(() => {
+  return { width: `${itemWidth.value}px` }
+})
 
 const indicators = computed(() => Array.from({ length: itemCount.value }, (_, i) => i))
 

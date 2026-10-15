@@ -14,7 +14,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { loadingProps } from './types'
-import { addUnit, isDef, objToStyle } from '../../common/util'
+import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(loadingProps)
 
@@ -29,7 +29,7 @@ const rootStyle = computed(() => {
   if (props.inheritColor) {
     style.color = 'inherit'
   }
-  return `${objToStyle(style)} ${props.customStyle}`
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 const spinnerStyle = computed(() => {
@@ -38,18 +38,21 @@ const spinnerStyle = computed(() => {
     style.height = addUnit(props.size)
     style.width = addUnit(props.size)
   }
-  return objToStyle(style)
+  return filterStyle(style)
 })
 
 /** spinner 单个 dot 的环绕定位（rotate + 向外平移） */
-function spinnerDotStyle(index: number): string {
+function spinnerDotStyle(index: number): Record<string, string> {
   const rotate = index * 30
-  return `transform: rotate(${rotate}deg) translate(0, -40%); opacity: ${(1 - index / 12).toFixed(2)};`
+  return {
+    transform: `rotate(${rotate}deg) translate(0, -40%)`,
+    opacity: (1 - index / 12).toFixed(2)
+  }
 }
 
 /** dots / wave 的阶梯延迟（Lynx 不支持 :nth-child，用索引内联） */
-function staggerDelay(index: number, step: number): string {
-  return `animation-delay: ${(index * step).toFixed(2)}s;`
+function staggerDelay(index: number, step: number): Record<string, string> {
+  return { 'animation-delay': `${(index * step).toFixed(2)}s` }
 }
 </script>
 

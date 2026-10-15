@@ -13,7 +13,7 @@ import './index.css'
 import { computed, onMounted, onUnmounted, ref } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { noticeBarProps, type NoticeBarExpose } from './types'
-import { objToStyle } from '../../common/util'
+import { filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(noticeBarProps)
 const emit = defineEmits(['click', 'close'])
@@ -53,11 +53,15 @@ const rootStyle = computed(() => {
   const style: Record<string, string> = {}
   if (props.color) style.color = props.color
   if (props.backgroundColor) style['background-color'] = props.backgroundColor
-  return objToStyle(style) + (props.customStyle ? `; ${props.customStyle}` : '')
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
-const contentStyle = computed(() => {
-  return isVertical.value ? `transform: translateY(-${currentIndex.value * 20}px); transition: transform 0.3s ease;` : ''
+const contentStyle = computed<Record<string, string>>(() => {
+  if (!isVertical.value) return {} as Record<string, string>
+  return {
+    transform: `translateY(-${currentIndex.value * 20}px)`,
+    transition: 'transform 0.3s ease'
+  } as Record<string, string>
 })
 
 function animationEnd() {

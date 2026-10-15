@@ -12,7 +12,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { barCodeProps } from './types'
-import { sanitizeSvgContent } from '../../common/util'
+import { parseStyle, sanitizeSvgContent } from '../../common/util'
 
 const props = defineProps(barCodeProps)
 
@@ -100,8 +100,8 @@ const svgContent = computed(() => {
 </script>
 
 <template>
-  <view :class="`wd-bar-code ${customClass}`" :style="customStyle">
-    <svg :content="svgContent" :style="`width: ${barWidth}px; height: ${barHeight}px;`" />
-    <text v-if="showText" class="wd-bar-code__text" :style="`font-size: ${fontSize}px; color: ${color};`">{{ text }}</text>
+  <view :class="`wd-bar-code ${customClass}`" :style="parseStyle(customStyle)">
+    <svg :content="svgContent" :style="{ width: `${barWidth}px`, height: `${barHeight}px` }" />
+    <text v-if="showText" class="wd-bar-code__text" :style="{ 'font-size': `${fontSize}px`, color }">{{ text }}</text>
   </view>
 </template>

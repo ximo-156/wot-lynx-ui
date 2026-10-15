@@ -12,7 +12,7 @@ import './index.css'
 
 import { computed, useSlots } from 'vue-lynx'
 import { dividerProps } from './types'
-import { objToStyle } from '../../common/util'
+import { filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(dividerProps)
 const slots = useSlots()
@@ -22,7 +22,7 @@ const rootStyle = computed(() => {
   if (props.color) {
     style.color = props.color
   }
-  return `${objToStyle(style)}${props.customStyle}`
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 const rootClass = computed(() => {

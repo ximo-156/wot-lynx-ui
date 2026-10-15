@@ -11,7 +11,7 @@ import { computed } from 'vue-lynx'
 import { tabProps } from './types'
 import { useParent } from '../../composables/useParent'
 import { TABS_KEY } from '../wd-tabs/types'
-import { isDef, objToStyle, parseStyle } from '../../common/util'
+import { isDef, parseStyle } from '../../common/util'
 
 const props = defineProps(tabProps)
 
@@ -34,7 +34,7 @@ const shouldBeRender = computed(() => {
 })
 
 const tabBodyStyle = computed(() => {
-  return objToStyle({})
+  return {}
 })
 </script>
 

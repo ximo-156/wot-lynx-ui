@@ -12,7 +12,7 @@ import WdPopup from '../wd-popup/wd-popup.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { notifyProps, type NotifyType } from './types'
 import { getNotifyOptionKey } from '.'
-import { objToStyle } from '../../common/util'
+import { filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(notifyProps)
 const emit = defineEmits(['click', 'closed', 'opened', 'update:visible', 'tap'])
@@ -28,7 +28,7 @@ const rootStyle = computed(() => {
   const style: Record<string, string> = {}
   if (state.value.color) style.color = state.value.color
   if (state.value.background) style['background-color'] = state.value.background
-  return objToStyle(style) + (props.customStyle ? `; ${props.customStyle}` : '')
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 const iconName = computed(() => {

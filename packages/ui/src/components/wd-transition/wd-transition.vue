@@ -15,7 +15,7 @@
 import './index.css'
 
 import { computed, onBeforeMount, ref, watch } from 'vue-lynx'
-import { isObj, isPromise, pause } from '../../common/util'
+import { isObj, isPromise, parseStyle, pause } from '../../common/util'
 import { transitionProps, type TransitionName } from './types'
 import { AbortablePromise } from '../../common/AbortablePromise'
 
@@ -72,9 +72,11 @@ const enterSchedule = ref<AbortablePromise<unknown> | null>(null)
 /** leave 阶段调度 promise */
 const leaveSchedule = ref<AbortablePromise<unknown> | null>(null)
 
-const style = computed(() => {
-  const hide = !display.value && props.destroy ? 'display: none;' : ''
-  return `transition-duration:${currentDuration.value}ms;${hide}${props.customStyle}`
+/** 根节点样式（对象语法：字符串 :style 会被 vue-lynx 静默丢弃，CONVENTIONS §19） */
+const style = computed<Record<string, string>>(() => {
+  const result: Record<string, string> = { 'transition-duration': `${currentDuration.value}ms` }
+  if (!display.value && props.destroy) result.display = 'none'
+  return { ...result, ...parseStyle(props.customStyle) }
 })
 
 const rootClass = computed(() => {

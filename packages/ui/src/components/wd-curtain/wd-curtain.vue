@@ -11,7 +11,7 @@ import { computed } from 'vue-lynx'
 import WdPopup from '../wd-popup/wd-popup.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { curtainProps, type ClosePosition } from './types'
-import { addUnit, isDef, objToStyle } from '../../common/util'
+import { addUnit, isDef, filterStyle } from '../../common/util'
 import { uni } from '../../common/uni'
 
 const props = defineProps(curtainProps)
@@ -29,13 +29,13 @@ const closeStyle = computed(() => {
   } else if (props.closePosition === 'top') {
     style.top = '-60px'
   }
-  return objToStyle(style)
+  return filterStyle(style)
 })
 
 const imgStyle = computed(() => {
   const style: Record<string, string> = {}
   if (isDef(props.width)) style.width = addUnit(props.width)
-  return objToStyle(style)
+  return filterStyle(style)
 })
 
 function handleClose() {

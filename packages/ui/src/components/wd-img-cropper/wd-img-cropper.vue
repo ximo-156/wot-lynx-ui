@@ -14,7 +14,7 @@ import './index.css'
 import { computed, ref } from 'vue-lynx'
 import WdButton from '../wd-button/wd-button.vue'
 import { imgCropperProps, type ImgCropperEmits, type ImgCropperExpose } from './types'
-import { addUnit, objToStyle, parseStyle } from '../../common/util'
+import { addUnit, parseStyle, filterStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 
 const props = defineProps(imgCropperProps)
@@ -38,7 +38,7 @@ const ratio = computed(() => {
 /** 裁剪框尺寸（Lynx 不支持 aspect-ratio，按比例换算） */
 const cutStyle = computed(() => {
   const base = 240
-  return `width: ${base}px; height: ${Math.round(base / ratio.value)}px;`
+  return { width: `${base}px`, height: `${Math.round(base / ratio.value)}px` }
 })
 
 const imgStyle = computed(() => {
@@ -47,7 +47,7 @@ const imgStyle = computed(() => {
   }
   if (props.imgWidth) style.width = addUnit(props.imgWidth)
   if (props.imgHeight) style.height = addUnit(props.imgHeight)
-  return objToStyle(style)
+  return filterStyle(style)
 })
 
 function onTouchStart(event: any) {

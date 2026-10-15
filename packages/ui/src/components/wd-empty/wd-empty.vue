@@ -10,7 +10,7 @@ import './index.css'
 import { computed } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { emptyProps } from './types'
-import { isDef, parseStyle } from '../../common/util'
+import { isDef, parseStyle, filterStyle } from '../../common/util'
 
 const props = defineProps(emptyProps)
 
@@ -19,7 +19,7 @@ const iconStyle = computed(() => {
   if (isDef(props.iconSize)) {
     style['font-size'] = typeof props.iconSize === 'number' ? `${props.iconSize}px` : String(props.iconSize)
   }
-  return Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ')
+  return filterStyle(style)
 })
 </script>
 

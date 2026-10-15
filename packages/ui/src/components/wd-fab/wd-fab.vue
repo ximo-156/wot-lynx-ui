@@ -12,7 +12,7 @@ import './index.css'
 import { computed, ref } from 'vue-lynx'
 import WdButton from '../wd-button/wd-button.vue'
 import { fabProps, type FabExpose } from './types'
-import { objToStyle } from '../../common/util'
+import { filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(fabProps)
 const emit = defineEmits(['update:active', 'click', 'touchstart', 'touchmove', 'touchend'])
@@ -30,7 +30,7 @@ const rootStyle = computed(() => {
   if (offset.value.x || offset.value.y) {
     style.transform = `translate(${offset.value.x}px, ${offset.value.y}px)`
   }
-  return objToStyle(style) + (props.customStyle ? `; ${props.customStyle}` : '')
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 const directionClass = computed(() => `wd-fab--${props.direction}`)

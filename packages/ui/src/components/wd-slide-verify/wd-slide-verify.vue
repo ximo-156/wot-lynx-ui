@@ -16,7 +16,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { slideVerifyProps, type SlideVerifyEmits } from './types'
 import { useTouch } from '../../composables/useTouch'
 import { useTranslate } from '../../composables/useTranslate'
-import { getRect, objToStyle, uuid } from '../../common/util'
+import { getRect, uuid, filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(slideVerifyProps)
 const emit = defineEmits<SlideVerifyEmits>()
@@ -52,7 +52,7 @@ const rootStyle = computed(() => {
   const style: Record<string, string> = {}
   if (props.backgroundColor) style['background-color'] = props.backgroundColor
   if (isPass.value && props.activeBackgroundColor) style['background-color'] = props.activeBackgroundColor
-  return objToStyle(style) + (props.customStyle || '')
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 const trackStyle = computed(() => {
@@ -65,7 +65,7 @@ const trackStyle = computed(() => {
   if (isDragging.value) {
     style.transition = 'none'
   }
-  return objToStyle(style)
+  return filterStyle(style)
 })
 
 onMounted(() => {

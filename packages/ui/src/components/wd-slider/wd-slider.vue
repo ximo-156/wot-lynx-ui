@@ -14,7 +14,7 @@ import './index.css'
 import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { sliderProps, type SliderEmits, type SliderExpose, type SliderMarks, type SliderPopoverVisible, type SliderValue } from './types'
-import { deepClone, getRect, isArray, isDef, isEqual, objToStyle, uuid, parseStyle } from '../../common/util'
+import { deepClone, getRect, isArray, isDef, isEqual, uuid, parseStyle, filterStyle } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useTouch } from '../../composables/useTouch'
 
@@ -89,7 +89,7 @@ const barClass = computed(() => {
 const barStyle = computed(() => {
   const style: Record<string, string> = {}
   if (props.inactiveColor) style.background = props.inactiveColor
-  return objToStyle(style)
+  return filterStyle(style)
 })
 
 const lineClass = computed(() => {
@@ -101,7 +101,7 @@ const lineClass = computed(() => {
 
 const lineStyle = computed(() => {
   const style: Record<string, string> = {}
-  if (scope.value === 0) return objToStyle(style)
+  if (scope.value === 0) return filterStyle(style)
 
   const prop = props.vertical ? 'height' : 'width'
   const startProp = props.vertical ? 'top' : 'left'
@@ -119,7 +119,7 @@ const lineStyle = computed(() => {
     style[prop] = `${size}%`
   }
   if (props.activeColor) style.background = props.activeColor
-  return objToStyle(style)
+  return filterStyle(style)
 })
 
 watch(
@@ -218,8 +218,8 @@ function scaleItemClass(val: number): string {
   return classes.join(' ')
 }
 
-function scaleItemStyle(position: number): string {
-  return props.vertical ? `top: ${position}%;` : `left: ${position}%;`
+function scaleItemStyle(position: number): Record<string, string> {
+  return props.vertical ? { top: `${position}%` } : { left: `${position}%` }
 }
 
 function dotDisplayValue(index: number): number {

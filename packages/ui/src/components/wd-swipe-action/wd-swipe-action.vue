@@ -29,8 +29,12 @@ const rightWidth = ref(0)
 
 const status = computed(() => props.modelValue)
 
-const wrapperStyle = computed(() => {
-  return `transform: translateX(${offsetX.value}px);${dragging.value ? '' : 'transition: transform 0.25s cubic-bezier(0.645, 0.045, 0.355, 1);'}`
+const wrapperStyle = computed<Record<string, string>>(() => {
+  const style: Record<string, string> = { transform: `translateX(${offsetX.value}px)` }
+  if (!dragging.value) {
+    style.transition = 'transform 0.25s cubic-bezier(0.645, 0.045, 0.355, 1)'
+  }
+  return style
 })
 
 onMounted(() => {

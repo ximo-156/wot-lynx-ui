@@ -10,7 +10,7 @@ import './index.css'
 import { computed, ref } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { imgProps } from './types'
-import { addUnit, isDef } from '../../common/util'
+import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(imgProps)
 const emit = defineEmits(['load', 'error', 'click', 'tap'])
@@ -29,7 +29,7 @@ const rootStyle = computed(() => {
   if (isDef(props.width)) style.width = addUnit(props.width)
   if (isDef(props.height)) style.height = addUnit(props.height)
   if (isDef(props.radius)) style['border-radius'] = addUnit(props.radius)
-  return Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ') + (props.customStyle ? `; ${props.customStyle}` : '')
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 function handleLoad(event: any) {

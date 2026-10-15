@@ -24,18 +24,21 @@ const parsedRowCols = computed(() => {
   return rows.map((row: SkeletonRowCol) => {
     if (isNumber(row)) {
       // 数字：一行 N 个默认块
-      return Array.from({ length: row }, () => ({ class: 'wd-skeleton__col', style: '' }))
+      return Array.from({ length: row }, () => ({ class: 'wd-skeleton__col', style: {} as Record<string, string> }))
     }
     // 对象配置：宽度/高度/形状
     if (isObj(row)) {
       const config = row as Record<string, any>
-      const style = Object.entries(config)
+      // 尺寸配置 → 对象样式（字符串 :style 会被丢弃，CONVENTIONS §19）
+      const style: Record<string, string> = {}
+      Object.entries(config)
         .filter(([k]) => ['width', 'height', 'size'].includes(k))
-        .map(([k, v]) => `${k === 'size' ? 'width' : k}: ${typeof v === 'number' ? `${v}px` : v}`)
-        .join('; ')
+        .forEach(([k, v]) => {
+          style[k === 'size' ? 'width' : k] = typeof v === 'number' ? `${v}px` : String(v)
+        })
       return [{ class: 'wd-skeleton__col', style }]
     }
-    return [{ class: 'wd-skeleton__col', style: '' }]
+    return [{ class: 'wd-skeleton__col', style: {} as Record<string, string> }]
   })
 })
 

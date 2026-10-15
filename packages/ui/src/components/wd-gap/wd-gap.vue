@@ -10,7 +10,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { gapProps } from './types'
-import { addUnit, isDef, objToStyle } from '../../common/util'
+import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(gapProps)
 
@@ -22,7 +22,7 @@ const rootStyle = computed(() => {
   if (isDef(props.height)) {
     style['height'] = addUnit(props.height)
   }
-  return `${objToStyle(style)}${props.customStyle}`
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 const rootClass = computed(() => {

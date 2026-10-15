@@ -251,7 +251,7 @@ const rootClass = computed(() => {
     <view v-if="!withoutInput" class="wd-input-number__inner" @tap.stop="">
       <input
         class="wd-input-number__input"
-        :style="inputWidth ? `width: ${addUnit(inputWidth)}` : ''"
+        :style="inputWidth ? { width: addUnit(inputWidth) } : {}"
         :type="inputType"
         :input-mode="precision ? 'decimal' : 'numeric'"
         :disabled="isDisabled || disableInput"

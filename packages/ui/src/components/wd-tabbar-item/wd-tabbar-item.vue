@@ -13,7 +13,7 @@ import WdBadge from '../wd-badge/wd-badge.vue'
 import { tabbarItemProps } from './types'
 import { useParent } from '../../composables/useParent'
 import { TABBAR_KEY } from '../wd-tabbar/types'
-import { isDef } from '../../common/util'
+import { isDef, parseStyle } from '../../common/util'
 
 const props = defineProps(tabbarItemProps)
 const emit = defineEmits(['tap'])
@@ -41,13 +41,13 @@ function handleClick() {
 </script>
 
 <template>
-  <view :class="`wd-tabbar-item ${active ? 'is-active' : ''} ${customClass}`" :style="customStyle" @tap="handleClick">
+  <view :class="`wd-tabbar-item ${active ? 'is-active' : ''} ${customClass}`" :style="parseStyle(customStyle)" @tap="handleClick">
     <view class="wd-tabbar-item__icon">
       <wd-badge v-if="badgeProps" v-bind="badgeProps" custom-class="wd-tabbar-item__badge">
         <wd-icon :name="active ? (activeIcon || icon) : icon" :color="active ? activeColor : inactiveColor" custom-class="wd-tabbar-item__icon-img" />
       </wd-badge>
       <wd-icon v-else :name="active ? (activeIcon || icon) : icon" :color="active ? activeColor : inactiveColor" custom-class="wd-tabbar-item__icon-img" />
     </view>
-    <text v-if="title" class="wd-tabbar-item__title" :style="`color: ${active ? activeColor : inactiveColor}`">{{ title }}</text>
+    <text v-if="title" class="wd-tabbar-item__title" :style="{ color: active ? activeColor : inactiveColor }">{{ title }}</text>
   </view>
 </template>

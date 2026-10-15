@@ -11,7 +11,7 @@
 import './index.css'
 
 import { computed, ref, watch } from 'vue-lynx'
-import { isDef, objToStyle } from '../../common/util'
+import { isDef, filterStyle, parseStyle } from '../../common/util'
 import { textProps } from './types'
 import { formatDate } from '../../common/formatDate'
 import { uni } from '../../common/uni'
@@ -59,7 +59,7 @@ const rootStyle = computed(() => {
   if (props.decoration) {
     style['text-decoration'] = props.decoration
   }
-  return `${objToStyle(style)}${props.customStyle}`
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 function computeTextClass() {

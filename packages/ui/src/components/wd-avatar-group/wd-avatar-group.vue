@@ -11,7 +11,7 @@ import './index.css'
 import { computed, useSlots } from 'vue-lynx'
 import WdAvatar from '../wd-avatar/wd-avatar.vue'
 import { avatarGroupProps } from './types'
-import { addUnit, isDef, parseStyle } from '../../common/util'
+import { addUnit, isDef, parseStyle, filterStyle } from '../../common/util'
 
 const props = defineProps(avatarGroupProps)
 const slots = useSlots()
@@ -23,7 +23,7 @@ const collapseStyle = computed(() => {
   if (props.overlap) {
     style['margin-left'] = '-8px'
   }
-  return Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ')
+  return filterStyle(style)
 })
 
 const rootClass = computed(() => {

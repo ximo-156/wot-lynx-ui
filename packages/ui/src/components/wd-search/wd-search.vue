@@ -25,8 +25,8 @@ const inputValue = computed(() => props.modelValue)
 const isFocused = ref<boolean>(false)
 const showInput = ref<boolean>(false)
 
-const coverStyle = computed(() => {
-  return props.placeholderLeft ? 'display: none;' : ''
+const coverStyle = computed<Record<string, string>>(() => {
+  return props.placeholderLeft ? ({ display: 'none' } as Record<string, string>) : ({} as Record<string, string>)
 })
 
 function closeCover() {

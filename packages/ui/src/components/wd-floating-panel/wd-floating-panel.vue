@@ -8,6 +8,8 @@
 <script lang="ts" setup>
 import './index.css'
 
+import { parseStyle } from '../../common/util'
+
 import { computed, ref } from 'vue-lynx'
 import { floatingPanelProps } from './types'
 
@@ -24,8 +26,12 @@ const anchors = computed(() => {
   return [...list].sort((a, b) => a - b)
 })
 
-const panelStyle = computed(() => {
-  return `height: ${currentHeight.value}px;${dragging.value ? '' : `transition: height ${props.duration}ms cubic-bezier(0.645, 0.045, 0.355, 1);`}${props.customStyle || ''}`
+const panelStyle = computed<Record<string, string>>(() => {
+  const style: Record<string, string> = { height: `${currentHeight.value}px` }
+  if (!dragging.value) {
+    style.transition = `height ${props.duration}ms cubic-bezier(0.645, 0.045, 0.355, 1)`
+  }
+  return { ...style, ...parseStyle(props.customStyle) }
 })
 
 function onTouchStart(event: any) {

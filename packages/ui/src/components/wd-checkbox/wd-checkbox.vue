@@ -15,7 +15,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { checkboxProps, type CheckboxExpose } from './types'
 import { useCheckboxGroup } from '../../composables/useCheckboxGroup'
 import { useFormDisabled } from '../../composables/useFormDisabled'
-import { isDef, objToStyle, parseStyle } from '../../common/util'
+import { isDef, parseStyle } from '../../common/util'
 
 const props = defineProps(checkboxProps)
 const emit = defineEmits(['change', 'update:modelValue', 'tap'])
@@ -115,7 +115,7 @@ const iconStyle = computed(() => {
 })
 
 const labelStyle = computed(() => {
-  return objToStyle(props.maxWidth ? { 'max-width': props.maxWidth } : {})
+  return props.maxWidth ? { 'max-width': props.maxWidth } : {}
 })
 
 const rootClass = computed(() => {

@@ -13,7 +13,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { configProviderProps } from './types'
-import { objToStyle } from '../../common/util'
+import { filterStyle, parseStyle } from '../../common/util'
 import { useChildren } from '../../composables/useChildren'
 import { useParent } from '../../composables/useParent'
 import { mapThemeVarsToCSSVars } from '../../composables/useConfigProvider'
@@ -33,13 +33,13 @@ const themeClass = computed(() => {
   return `wd-theme-${props.theme}${props.customClass ? ' ' + props.customClass : ''}`
 })
 
-const themeStyle = computed(() => {
+const themeStyle = computed<Record<string, string>>(() => {
   const styleObj = mapThemeVarsToCSSVars(props.themeVars)
-  return styleObj ? objToStyle(styleObj) : ''
+  return styleObj ? filterStyle(styleObj) : {}
 })
 
 const rootStyle = computed(() => {
-  return `${themeStyle.value}${props.customStyle || ''}`
+  return { ...themeStyle.value, ...parseStyle(props.customStyle) }
 })
 
 const globalConfig = computed<GlobalConfig>(() => {

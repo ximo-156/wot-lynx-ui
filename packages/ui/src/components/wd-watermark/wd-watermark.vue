@@ -9,7 +9,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { watermarkProps } from './types'
-import { objToStyle, parseStyle } from '../../common/util'
+import { parseStyle, filterStyle } from '../../common/util'
 
 const props = defineProps(watermarkProps)
 
@@ -36,16 +36,16 @@ const unitStyle = computed(() => {
     style['background-image'] = `url(${props.image})`
     style['background-size'] = `${props.imageWidth}px ${props.imageHeight}px`
   }
-  return objToStyle(style)
+  return filterStyle(style)
 })
 
 const textStyle = computed(() => {
-  return objToStyle({
+  return {
     'font-size': `${props.fontSize}px`,
     color: props.color,
     opacity: String(props.opacity),
     transform: `rotate(${props.rotate}deg)`
-  })
+  }
 })
 </script>
 

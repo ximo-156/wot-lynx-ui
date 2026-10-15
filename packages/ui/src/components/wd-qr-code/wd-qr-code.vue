@@ -14,7 +14,7 @@ import './index.css'
 import { computed } from 'vue-lynx'
 import { qrCodeProps } from './types'
 import { encodeQr } from './qr-encoder'
-import { sanitizeSvgContent } from '../../common/util'
+import { parseStyle, sanitizeSvgContent } from '../../common/util'
 
 const props = defineProps(qrCodeProps)
 
@@ -52,9 +52,9 @@ const svgContent = computed(() => {
 </script>
 
 <template>
-  <view :class="`wd-qr-code ${customClass}`" :style="customStyle">
-    <svg v-if="svgContent" :content="svgContent" :style="`width: ${qrSize}px; height: ${qrSize}px;`" />
-    <view v-else class="wd-qr-code__empty" :style="`width: ${qrSize}px; height: ${qrSize}px;`">
+  <view :class="`wd-qr-code ${customClass}`" :style="parseStyle(customStyle)">
+    <svg v-if="svgContent" :content="svgContent" :style="{ width: `${qrSize}px`, height: `${qrSize}px` }" />
+    <view v-else class="wd-qr-code__empty" :style="{ width: `${qrSize}px`, height: `${qrSize}px` }">
       <text class="wd-qr-code__empty-text">内容过长</text>
     </view>
   </view>

@@ -15,7 +15,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import { switchProps } from './types'
 import { callInterceptor } from '../../common/interceptor'
-import { isDef, isUndefined, omitBy, objToStyle } from '../../common/util'
+import { isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
 import { WHITE } from '../../common/theme'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import type { LoadingProps } from '../wd-loading/types'
@@ -51,20 +51,24 @@ const rootClass = computed(() => {
 })
 
 const rootStyle = computed(() => {
-  return `${objToStyle({ height: `${metrics.value.height}px`, width: `${metrics.value.width}px` })}${props.customStyle}`
+  return {
+    height: `${metrics.value.height}px`,
+    width: `${metrics.value.width}px`,
+    ...parseStyle(props.customStyle)
+  }
 })
 
 const innerStyle = computed(() => {
   const background = isActive.value ? props.activeColor : props.inactiveColor
-  return objToStyle(background ? { background } : {})
+  return background ? { background } : {}
 })
 
 const actionStyle = computed(() => {
-  return objToStyle({
+  return {
     width: `${metrics.value.node}px`,
     height: `${metrics.value.node}px`,
     transform: `translateX(${isActive.value ? metrics.value.travel : 0}px)`
-  })
+  }
 })
 
 const innerIcon = computed(() => {

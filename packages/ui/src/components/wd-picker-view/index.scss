@@ -23,10 +23,20 @@
     overflow: hidden;
   }
 
+  /* 上下补位（高度与列项一致由内联定高给出，禁收缩） */
+  @include e(column-pad) {
+    width: 100%;
+    flex-shrink: 0;
+  }
+
   @include e(column-content) {
     display: flex;
     flex-direction: column;
     width: 100%;
+    /* 列内容总高（pad + 全部列项）远超可视区，靠父级 overflow:hidden 裁切；
+       flex 项默认 flex-shrink:1 会被容器高度按比例压缩（行高塌成 1/4），
+       必须禁用收缩——真机与 Web 预览同现。 */
+    flex-shrink: 0;
   }
 
   @include e(column-item) {
@@ -35,6 +45,7 @@
     align-items: center;
     justify-content: center;
     width: 100%;
+    flex-shrink: 0;
     padding: 0 var(--wd-space-2);
   }
 

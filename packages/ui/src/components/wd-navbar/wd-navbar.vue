@@ -10,7 +10,7 @@ import './index.css'
 import { computed } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { navbarProps } from './types'
-import { addUnit, isDef, objToStyle } from '../../common/util'
+import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(navbarProps)
 const emit = defineEmits(['click-left', 'click-right'])
@@ -18,7 +18,7 @@ const emit = defineEmits(['click-left', 'click-right'])
 const rootStyle = computed(() => {
   const style: Record<string, string> = {}
   if (props.fixed) style['z-index'] = String(props.zIndex)
-  return objToStyle(style) + (props.customStyle ? `; ${props.customStyle}` : '')
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
 function handleClickLeft() {
