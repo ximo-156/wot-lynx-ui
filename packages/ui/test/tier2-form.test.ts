@@ -199,8 +199,8 @@ describe('Tier 2 表单体系', () => {
           }
         } as any
       )
-      const sub = container.querySelector('.wd-input-number__sub')!
-      const add = container.querySelector('.wd-input-number__add')!
+      const sub = container.querySelector('.wd-input-number__action--sub')!
+      const add = container.querySelector('.wd-input-number__action--add')!
       fireEvent.tap(add)
       expect(updates).toContain('6')
       // 内部值已为 6，再减一步为 5（组件以内部状态为准，符合用户感知）

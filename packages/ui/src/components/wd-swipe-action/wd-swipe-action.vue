@@ -16,7 +16,7 @@ import { callInterceptor } from '../../common/interceptor'
 import { getRect } from '../../common/util'
 
 const props = defineProps(swipeActionProps)
-const emit = defineEmits(['update:modelValue', 'click'])
+const emit = defineEmits(['update:modelValue', 'click', 'touchstart', 'touchmove', 'touchend', 'touchcancel'])
 
 const { proxy } = getCurrentInstance() as any
 
@@ -44,6 +44,7 @@ onMounted(() => {
 })
 
 function startDrag(event: any) {
+  emit('touchstart', event)
   if (props.disabled) return
   dragging.value = true
   startX.value = Number(event.touches?.[0]?.clientX || 0)
@@ -51,6 +52,7 @@ function startDrag(event: any) {
 }
 
 function onDrag(event: any) {
+  emit('touchmove', event)
   if (!dragging.value) return
   const x = Number(event.touches?.[0]?.clientX || 0)
   let next = startOffset.value + (x - startX.value)
@@ -59,7 +61,18 @@ function onDrag(event: any) {
   offsetX.value = next
 }
 
-async function endDrag() {
+async function endDrag(event?: any) {
+  emit('touchend', event)
+  finishDrag()
+}
+
+/** touchcancel 与 touchend 共用收尾逻辑，但分别转发各自的原生事件 */
+function cancelDrag(event?: any) {
+  emit('touchcancel', event)
+  finishDrag()
+}
+
+async function finishDrag() {
   if (!dragging.value) return
   dragging.value = false
   // 过半吸附
@@ -110,7 +123,7 @@ function handleClick(position?: SwipeActionPosition) {
 </script>
 
 <template>
-  <view :class="`wd-swipe-action ${disabled ? 'is-disabled' : ''} ${customClass}`" :style="customStyle" @click.stop="handleClick()" @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag" @touchcancel="endDrag">
+  <view :class="`wd-swipe-action ${disabled ? 'is-disabled' : ''} ${customClass}`" :style="customStyle" @click.stop="handleClick()" @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag" @touchcancel="cancelDrag">
     <view class="wd-swipe-action__wrapper" :style="wrapperStyle">
       <view class="wd-swipe-action__left" @click.stop="handleClick('left')">
         <slot name="left" />

@@ -22,7 +22,6 @@ import { AbortablePromise } from '../../common/AbortablePromise'
 const props = defineProps(transitionProps)
 const emit = defineEmits([
   'click',
-  'tap',
   'before-enter',
   'enter',
   'before-leave',
@@ -194,7 +193,6 @@ function onTransitionEnd() {
 
 function handleClick() {
   emit('click')
-  emit('tap')
 }
 
 function noop() {}

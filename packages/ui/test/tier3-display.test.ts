@@ -51,7 +51,7 @@ describe('Tier 3 展示 / 布局 / 导航', () => {
       cleanup()
 
       const dot = render(Badge, { isDot: true })
-      expect(dot.container.querySelector('.is-dot')).not.toBeNull()
+      expect(dot.container.querySelector('.wd-badge__content--dot')).not.toBeNull()
       cleanup()
 
       const max = render(Badge, { value: 100, max: 99 })

@@ -116,9 +116,20 @@ defineProps(xxxProps)
    - `!important` → Lynx 默认不支持，去掉
    - `:deep(...)` / `::v-deep` → 去掉（全局样式直接写后代选择器）
    - `display: inline-flex` / `inline-block` → 改为 `display: flex` + `flex-direction: row`
-5. 多行省略：CSS 保留 `overflow:hidden; text-overflow:ellipsis`，模板同步给
+5. **`m()` 与 `when()` 必须与 DOM 实际类名一致（静默丢样式的头号根源）**：
+   `m(size)` 生成 `.wd-xxx--size`，`when(size)` 生成 `.wd-xxx.is-size`。
+   与 Vue 侧 `rootClass` 推送的类名（`is-${size}` 或 `--${size}`）**任一方
+   写错都不报错**——CSS 规则 simply 不匹配，整组声明（height / padding /
+   font-size / background…）被静默丢弃，表现为「内边距一直不显示、按钮塌成
+   内容高度」。wd-button 尺寸类即为此 bug（SCSS 用 `m()` 生成 `--medium`，
+   DOM 推 `is-medium`，按钮全部丢失高度与内边距）。
+   **规则**：新增/修改状态类时，先确认 DOM 推的类名形式再选 mixin；嵌套
+   写法（如 `when(icon)` 内的 `&.is-mini`）与外层尺寸类必须同源。
+   **验证**：`pnpm build:css` 后 grep 生成的 `index.css`，确认选择器与
+   模板类名一致（如 CSS 的 `.wd-button.is-medium` ↔ DOM 的 `is-medium`）。
+6. 多行省略：CSS 保留 `overflow:hidden; text-overflow:ellipsis`，模板同步给
    `<text>` 加 `text-maxline="N"` 属性。
-6. 已知约束：令牌回退链多层嵌套 `var()` 出现在 `calc()` 内时，cssnano 的
+7. 已知约束：令牌回退链多层嵌套 `var()` 出现在 `calc()` 内时，cssnano 的
    postcss-calc 会输出 `Parse error` 告警——仅告警，产物正确。Demo 已通过
    关闭 cssnano 的 `calc` 转换消除告警，组件样式保持原样即可。
 
@@ -302,6 +313,18 @@ Vue 的 `mergeProps` 会把两个同名 `on*` 监听合并成**数组**，数组
   已内置 `@touchmove.stop.prevent`），**禁止**再给包裹层组件补绑 `@touchmove="noop"`。
 - 给**组件**绑事件前，先确认该事件是目标组件 `defineEmits` 声明过的；否则它会
   穿透 `$attrs` 挂到子组件根原生元素上，与根元素自身的同名绑定合并成数组。
+- **交互组件必须把根 view 上的原生事件名同时声明为 emit 并在自有处理器里转发**
+  （`emits: [..., 'tap']` + `emit('tap', event)`）。Lynx 的事件惯用法就是
+  `@tap` / `@touchmove`（见 vue.lynxjs.org「不同的事件」），消费方在组件上绑
+  原生事件名是自然写法；不声明就会落入上面的合并崩溃。已修复范围：根绑
+  `@tap` 的全部交互组件（button / cell / icon / input / switch / checkbox /
+  radio / tag / text / img / avatar / backtop / loadmore / notify / popover /
+  sidebar-item / sort-button / tabbar-item / tooltip / curtain / grid-item /
+  transition 除外）+ 根绑 touch 的 rate / fab / swipe-action。
+  例外：WdTransition 声明 `tap` emit 会触发 Web 预览渲染异常（已实测回退，
+  待上游修复），消费方勿直接给 WdTransition 绑 `@tap`。
+  回归测试：`packages/ui/test/event-tap-registry.test.ts`、
+  `test/event-merge-props.test.ts`。
 
 ## 15. Lynx 3.x 新 CSS 引擎：默认 linear 布局，flex 属性必须挂在 `display: flex` 上
 

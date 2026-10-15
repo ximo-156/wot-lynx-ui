@@ -17,7 +17,7 @@ import { addUnit, getRect, isDef } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 
 const props = defineProps(rateProps)
-const emit = defineEmits(['update:modelValue', 'change'])
+const emit = defineEmits(['update:modelValue', 'change', 'touchmove'])
 const isDisabled = useFormDisabled(props)
 const { proxy } = getCurrentInstance() as any
 
@@ -123,6 +123,9 @@ function updateValue(value: number) {
 }
 
 async function onTouchMove(event: any) {
+  // 转发原生 touchmove（Lynx 事件惯用法：父级 @touchmove 消费为 emit，
+  // 不再穿透 $attrs 与根元素监听合并成数组击穿事件注册表，CONVENTIONS §14）
+  emit('touchmove', event)
   if (props.readonly || isDisabled.value) return
   const clientX = Number(event.touches?.[0]?.clientX ?? event.detail?.x ?? 0)
   if (!itemRects.length) {

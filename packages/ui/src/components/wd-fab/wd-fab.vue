@@ -15,7 +15,7 @@ import { fabProps, type FabExpose } from './types'
 import { objToStyle } from '../../common/util'
 
 const props = defineProps(fabProps)
-const emit = defineEmits(['update:active', 'click'])
+const emit = defineEmits(['update:active', 'click', 'touchstart', 'touchmove', 'touchend'])
 
 const inited = ref<boolean>(false)
 const isActive = computed(() => props.active)
@@ -46,12 +46,14 @@ function handleClick() {
 }
 
 function handleTouchStart(event: any) {
+  emit('touchstart', event)
   const t = event.touches?.[0] || {}
   dragging.value = true
   dragStart.value = { x: t.clientX || 0, y: t.clientY || 0, ox: offset.value.x, oy: offset.value.y }
 }
 
 function handleTouchMove(event: any) {
+  emit('touchmove', event)
   if (!dragging.value) return
   const t = event.touches?.[0] || {}
   offset.value = {
@@ -60,7 +62,8 @@ function handleTouchMove(event: any) {
   }
 }
 
-function handleTouchEnd() {
+function handleTouchEnd(event?: any) {
+  emit('touchend', event)
   dragging.value = false
 }
 
