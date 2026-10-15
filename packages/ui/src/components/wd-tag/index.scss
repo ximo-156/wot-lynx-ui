@@ -1,0 +1,158 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+/*
+ * 标签类型色（组件私有令牌）：核心五色走语义令牌，
+ * 扩展色（volcano/lightblue/cyan/pink/purple）为标签专用装饰色。
+ */
+@include b(tag) {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 2px var(--wd-space-2);
+  border-radius: var(--wd-radius-xs);
+  font-size: var(--wd-font-sm);
+  line-height: 18px;
+
+  /* ===== 类型令牌 ===== */
+  --wd-tag-text: var(--wd-text-2);
+  --wd-tag-bg: var(--wd-gray-2);
+
+  &.is-primary {
+    --wd-tag-text: var(--wd-color-primary);
+    --wd-tag-bg: var(--wd-color-primary-bg);
+  }
+
+  &.is-success {
+    --wd-tag-text: var(--wd-color-success);
+    --wd-tag-bg: var(--wd-color-success-bg);
+  }
+
+  &.is-warning {
+    --wd-tag-text: var(--wd-color-warning);
+    --wd-tag-bg: var(--wd-color-warning-bg);
+  }
+
+  &.is-danger {
+    --wd-tag-text: var(--wd-color-danger);
+    --wd-tag-bg: var(--wd-color-danger-bg);
+  }
+
+  &.is-volcano {
+    --wd-tag-text: #D4480BFF;
+    --wd-tag-bg: #FFF2E8FF;
+  }
+
+  &.is-lightblue {
+    --wd-tag-text: #0E79CCFF;
+    --wd-tag-bg: #E6F4FEFF;
+  }
+
+  &.is-cyan {
+    --wd-tag-text: #08979CFF;
+    --wd-tag-bg: #E6FFFBFF;
+  }
+
+  &.is-pink {
+    --wd-tag-text: #C41D7BFF;
+    --wd-tag-bg: #FFF0F6FF;
+  }
+
+  &.is-purple {
+    --wd-tag-text: #6B3FA0FF;
+    --wd-tag-bg: #F6F0FFFF;
+  }
+
+  background-color: var(--wd-tag-bg);
+  color: var(--wd-tag-text);
+
+  @include e(text) {
+    color: inherit;
+  }
+
+  @include e(icon) {
+    margin-right: 2px;
+    color: inherit;
+  }
+
+  @include e(add) {
+    margin-right: 2px;
+    color: inherit;
+  }
+
+  @include e(close) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-left: 2px;
+  }
+
+  @include e(close-icon) {
+    color: inherit;
+    font-size: 12px;
+  }
+
+  @include e(input) {
+    width: 60px;
+    height: 20px;
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-1);
+    background-color: transparent;
+    border-width: 0;
+  }
+
+  @include e(placeholder) {
+    color: var(--wd-text-4);
+  }
+
+  /* ===== 变体 ===== */
+  &.is-dark {
+    background-color: var(--wd-tag-text);
+    color: var(--wd-white);
+  }
+
+  &.is-plain {
+    background-color: transparent;
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--wd-tag-text);
+  }
+
+  &.is-dashed {
+    background-color: transparent;
+    border-width: 1px;
+    border-style: dashed;
+    border-color: var(--wd-tag-text);
+  }
+
+  &.is-text {
+    background-color: transparent;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* ===== 尺寸 ===== */
+  &.is-small {
+    padding: 1px 6px;
+    font-size: var(--wd-font-xs);
+  }
+
+  &.is-large {
+    padding: 3px 10px;
+    font-size: var(--wd-font-md);
+  }
+
+  &.is-extra-large {
+    padding: 4px 12px;
+    font-size: var(--wd-font-lg);
+  }
+
+  /* ===== 圆角 / 禁用 ===== */
+  &.is-round {
+    border-radius: var(--wd-radius-full);
+  }
+
+  &.is-disabled {
+    opacity: 0.5;
+  }
+}

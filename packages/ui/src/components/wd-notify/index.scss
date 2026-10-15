@@ -1,0 +1,69 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(notify) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  padding: var(--wd-space-3) var(--wd-space-4);
+  font-size: var(--wd-font-md);
+
+  @include m(primary) {
+    background-color: var(--wd-color-primary);
+    color: var(--wd-color-on-primary);
+  }
+
+  @include m(success) {
+    background-color: var(--wd-color-success);
+    color: var(--wd-color-on-primary);
+  }
+
+  @include m(warning) {
+    background-color: var(--wd-color-warning);
+    color: var(--wd-color-on-primary);
+  }
+
+  @include m(danger) {
+    background-color: var(--wd-color-danger);
+    color: var(--wd-color-on-primary);
+  }
+
+  @include m(top) {
+    border-bottom-left-radius: var(--wd-radius-sm);
+    border-bottom-right-radius: var(--wd-radius-sm);
+  }
+
+  @include m(bottom) {
+    border-top-left-radius: var(--wd-radius-sm);
+    border-top-right-radius: var(--wd-radius-sm);
+  }
+
+  /* floating 变体：悬浮卡片 */
+  @include m(floating) {
+    margin: var(--wd-space-3);
+    border-radius: var(--wd-radius-md);
+    background-color: var(--wd-bg-elevated) !important;
+    color: var(--wd-text-1) !important;
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--wd-border-1);
+  }
+
+  @include e(prefix) {
+    margin-right: var(--wd-space-2);
+    color: inherit;
+  }
+
+  @include e(content) {
+    flex-grow: 1;
+  }
+
+  @include e(text) {
+    color: inherit;
+  }
+
+  @include e(close) {
+    margin-left: var(--wd-space-2);
+    color: inherit;
+  }
+}

@@ -1,0 +1,20 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(empty) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--wd-space-8) var(--wd-space-4);
+
+  @include e(icon) {
+    color: var(--wd-icon-4);
+    font-size: 80px;
+  }
+
+  @include e(text) {
+    margin-top: var(--wd-space-3);
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-3);
+  }
+}

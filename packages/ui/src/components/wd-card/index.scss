@@ -1,0 +1,43 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(card) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: var(--wd-bg-container);
+  border-radius: var(--wd-radius-lg);
+
+  @include m(rectangle) {
+    border-radius: 0;
+  }
+
+  @include m(round) {
+    border-radius: var(--wd-radius-xl);
+  }
+
+  @include e(title) {
+    padding: var(--wd-space-3) var(--wd-space-4);
+    border-bottom-width: 1ppx;
+    border-bottom-style: solid;
+    border-bottom-color: var(--wd-border-2);
+  }
+
+  @include e(title-text) {
+    font-size: var(--wd-font-lg);
+    font-weight: var(--wd-font-weight-semibold);
+    color: var(--wd-text-1);
+  }
+
+  @include e(content) {
+    padding: var(--wd-space-4);
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-2);
+  }
+
+  @include e(footer) {
+    padding: var(--wd-space-3) var(--wd-space-4);
+    border-top-width: 1ppx;
+    border-top-style: solid;
+    border-top-color: var(--wd-border-2);
+  }
+}

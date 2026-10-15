@@ -1,0 +1,10 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(drop-menu) {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  background-color: var(--wd-bg-container);
+}

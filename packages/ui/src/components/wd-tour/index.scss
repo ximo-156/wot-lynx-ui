@@ -1,0 +1,59 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(tour) {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1000;
+
+  @include e(mask) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: #00000099;
+  }
+
+  @include e(bubble) {
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    width: 280px;
+    padding: var(--wd-space-4);
+    background-color: var(--wd-bg-elevated);
+    border-radius: var(--wd-radius-lg);
+  }
+
+  @include e(title) {
+    margin-bottom: var(--wd-space-2);
+  }
+
+  @include e(content) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-2);
+    line-height: 22px;
+  }
+
+  @include e(footer) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--wd-space-4);
+  }
+
+  @include e(skip) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-4);
+  }
+
+  @include e(actions) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+}

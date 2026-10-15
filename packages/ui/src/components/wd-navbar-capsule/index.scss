@@ -1,0 +1,38 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(navbar-capsule) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 32px;
+  padding: 0 var(--wd-space-2);
+  border-radius: var(--wd-radius-full);
+  background-color: var(--wd-bg-container);
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--wd-border-2);
+  color: var(--wd-text-1);
+
+  @include e(item) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--wd-space-1);
+  }
+
+  @include e(icon) {
+    color: inherit;
+    font-size: 18px;
+  }
+
+  @include e(divider) {
+    width: 1px;
+    height: 16px;
+    background-color: var(--wd-border-1);
+  }
+
+  @include when(border) {
+    border-color: var(--wd-border-1);
+  }
+}

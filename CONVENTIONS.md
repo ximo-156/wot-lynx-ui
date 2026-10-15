@@ -345,7 +345,7 @@ CSS `:active` 伪类 + 对应类名样式（如 `.wd-button:active`、`.wd-cell.
 | --- | --- | --- |
 | 0 | 基础设施：删除移植产物、新设计令牌、composable 契约上移、index.ts 裁剪 | ✅ 完成 |
 | 1 | 基础组件：config-provider / icon / loading / transition / overlay / root-portal / text / gap / divider / button / cell / cell-group | ✅ 完成（12/12，冒烟测试 21 项全绿）|
-| 2 | 表单体系：form / form-item / input / textarea / input-number / search / switch / radio(-group) / checkbox(-group) / slider / rate / segmented / toast | ✅ 完成（16/26，冒烟测试 32 项全绿）；picker(-view) / datetime-picker(-view) / calendar(-view) / upload / signature / img-cropper / password-input / keyboard / slide-verify / select-picker / cascader | 待开始 |
-| 3 | 展示反馈：tag / badge / card / img / empty / progress / circle / count-down / count-to / notice-bar / skeleton / watermark / avatar(-group) / table(-column) / steps / step / pagination / swipe(-nav) / collapse(-item) / popover / tooltip / tour / curtain / loadmore / drop-menu(-item) / sort-button / index-bar / index-anchor / sticky(-box) / resize / backtop / floating-panel / swipe-action / sidebar(-item) / navbar(-capsule) / tabbar(-item) / tab / video-preview / image-preview / row / col / grid(-item) / fab | 待开始 |
-| 4 | 图形码：qr-code / bar-code / circle / signature 的 SVG 绘制 | 并入 2/3 |
+| 2 | 表单体系：30 个组件全部完成 ✅（form / form-item / input / textarea / input-number / search / switch / radio(-group) / checkbox(-group) / slider / rate / segmented / toast / popup / picker(-view) / datetime-picker(-view) / select-picker / cascader / keyboard / password-input / slide-verify / signature / img-cropper / calendar(-view) / upload，冒烟测试 41 项全绿）|
+| 3 | 展示/布局/导航/弹层：52 个组件全部完成 ✅（Tier 3a 展示反馈 12 + Tier 3b 布局 7 + Tier 3c 导航 9 + Tier 3d 弹层反馈/图形/列表导航 24，含 notify/dialog/action-sheet/popover/tooltip/curtain/loadmore/tour/circle/watermark/table/steps/swiper/collapse/drop-menu/tabbar/fab/floating-panel/swipe-action/video-preview/image-preview/navbar-capsule/sort-button）|
+| 4 | 图形码：qr-code（完整 QR 编码器：Byte 模式/版本自适应/RS 纠错/掩码评估）/ bar-code（Code128）/ table-column / wot-ui 内部占位 | ✅ 完成（编码器 9 项结构测试全绿）|
 | 5 | 收尾：测试重写、文档重写、Demo 更新、README/differences 同步、全量验证 | 待开始 |

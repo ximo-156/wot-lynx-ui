@@ -1,0 +1,161 @@
+/**
+ * Tier 2b 选择器 / 键盘 / 日历 / 上传 冒烟测试。
+ */
+import { describe, it, expect } from 'vitest'
+import { h, ref } from 'vue-lynx'
+import { render, cleanup } from './render'
+import { pause } from '../src/common/util'
+import { fireEvent } from './fire-event'
+import Popup from '../src/components/wd-popup/wd-popup.vue'
+import PickerView from '../src/components/wd-picker-view/wd-picker-view.vue'
+import Picker from '../src/components/wd-picker/wd-picker.vue'
+import DatetimePickerView from '../src/components/wd-datetime-picker-view/wd-datetime-picker-view.vue'
+import DatetimePicker from '../src/components/wd-datetime-picker/wd-datetime-picker.vue'
+import Keyboard from '../src/components/wd-keyboard/wd-keyboard.vue'
+import PasswordInput from '../src/components/wd-password-input/wd-password-input.vue'
+import SlideVerify from '../src/components/wd-slide-verify/wd-slide-verify.vue'
+import Signature from '../src/components/wd-signature/wd-signature.vue'
+import CalendarView from '../src/components/wd-calendar-view/wd-calendar-view.vue'
+import Upload from '../src/components/wd-upload/wd-upload.vue'
+import Cascader from '../src/components/wd-cascader/wd-cascader.vue'
+import SelectPicker from '../src/components/wd-select-picker/wd-select-picker.vue'
+
+describe('Tier 2b 选择器 / 键盘 / 日历', () => {
+  describe('渲染冒烟', () => {
+    it('WdPopup 各位置渲染', async () => {
+      for (const position of ['center', 'top', 'bottom', 'left', 'right']) {
+        const { container } = render(Popup, { modelValue: true, position, modal: false })
+        // transition 内容经 enter 状态机延迟约 100ms 渲染
+        await pause(150)
+        expect(container.querySelector(`.wd-popup--${position}`), position).not.toBeNull()
+        cleanup()
+      }
+    })
+
+    it('WdPickerView 多列渲染', () => {
+      const { container } = render(PickerView, {
+        modelValue: ['a'],
+        columns: [['a', 'b', 'c'], ['x', 'y']]
+      })
+      const columns = container.querySelectorAll('.wd-picker-view__column')
+      expect(columns.length).toBe(2)
+      expect(columns[0].querySelectorAll('.wd-picker-view__column-item').length).toBe(3)
+      cleanup()
+    })
+
+    it('WdDatetimePickerView 生成日期列', () => {
+      const { container } = render(DatetimePickerView, {
+        modelValue: Date.now(),
+        type: 'date'
+      })
+      const columns = container.querySelectorAll('.wd-picker-view__column')
+      // 年 / 月 / 日 三列
+      expect(columns.length).toBe(3)
+      cleanup()
+    })
+
+    it('WdCalendarView 生成 42 格月历', () => {
+      const { container } = render(CalendarView, {
+        modelValue: Date.now(),
+        type: 'date'
+      })
+      expect(container.querySelectorAll('.wd-calendar-view__day').length).toBe(42)
+      expect(container.querySelectorAll('.wd-calendar-view__week').length).toBe(7)
+      cleanup()
+    })
+
+    it('WdKeyboard / WdPasswordInput / WdSlideVerify / WdSignature / WdUpload / WdPicker / WdDatetimePicker / WdCascader / WdSelectPicker 渲染', async () => {
+      const cases: Array<[any, Record<string, any>, string]> = [
+        [Keyboard, { visible: true }, '.wd-keyboard'],
+        [PasswordInput, {}, '.wd-password-input'],
+        [SlideVerify, {}, '.wd-slide-verify'],
+        [Signature, {}, '.wd-signature'],
+        [Upload, {}, '.wd-upload'],
+        [Picker, { visible: false }, '.wd-picker'],
+        [DatetimePicker, { visible: false }, '.wd-datetime-picker'],
+        [Cascader, { visible: false }, '.wd-cascader'],
+        [SelectPicker, { visible: false }, '.wd-select-picker']
+      ]
+      for (const [comp, props, selector] of cases) {
+        const { container } = render(comp, props)
+        await pause(150)
+        expect(container.querySelector(selector), selector).not.toBeNull()
+        cleanup()
+      }
+    })
+  })
+
+  describe('交互行为', () => {
+    it('WdKeyboard 按键输入', async () => {
+      const inputs: any[] = []
+      const { container } = render(
+        {
+          setup() {
+            const value = ref('')
+            return () =>
+              h(Keyboard, {
+                visible: true,
+                modelValue: value.value,
+                'onUpdate:modelValue': (v: string) => {
+                  value.value = v
+                  inputs.push(v)
+                }
+              })
+          }
+        } as any
+      )
+      await pause(150)
+      // 事件绑定在 wrapper 上（Lynx 事件不冒泡，需 fire 在 wrapper）
+      const keys = container.querySelectorAll('.wd-key-wrapper')
+      expect(keys.length).toBeGreaterThan(9)
+      fireEvent.touchstart(keys[0], { touches: [{ clientX: 0, clientY: 0 }] })
+      fireEvent.touchend(keys[0], { touches: [{ clientX: 0, clientY: 0 }] })
+      expect(inputs).toContain('1')
+      cleanup()
+    })
+
+    it('WdPasswordInput 格子与光标', () => {
+      const { container } = render(PasswordInput, { modelValue: '12', length: 6 })
+      expect(container.querySelectorAll('.wd-password-input__item').length).toBe(6)
+      cleanup()
+    })
+
+    it('WdUpload 上传按钮与 limit', () => {
+      const { container } = render(Upload, { limit: 2, showLimitNum: true })
+      expect(container.querySelector('.wd-upload__upload')).not.toBeNull()
+      cleanup()
+
+      const full = render(Upload, { fileList: [{ uid: 1, url: 'x', name: 'a' }, { uid: 2, url: 'y', name: 'b' }] as any, limit: 2 })
+      expect(full.container.querySelector('.wd-upload__upload')).toBeNull()
+      cleanup()
+    })
+
+    it('WdPickerView 触摸选择', () => {
+      const updates: any[] = []
+      const { container } = render(
+        {
+          setup() {
+            const value = ref<string[]>(['a'])
+            return () =>
+              h(PickerView, {
+                modelValue: value.value,
+                columns: [['a', 'b', 'c']],
+                'onUpdate:modelValue': (v: any) => {
+                  value.value = v
+                  updates.push(v)
+                }
+              })
+          }
+        } as any
+      )
+      const column = container.querySelector('.wd-picker-view__column')!
+      fireEvent.touchstart(column, { touches: [{ clientX: 0, clientY: 0 }] })
+      fireEvent.touchmove(column, { touches: [{ clientX: 0, clientY: -50 }] })
+      fireEvent.touchend(column)
+      // 向上拖动一屏，选中值应变化
+      expect(updates.length).toBeGreaterThan(0)
+      expect(updates[updates.length - 1]).not.toEqual(['a'])
+      cleanup()
+    })
+  })
+})

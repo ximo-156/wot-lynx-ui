@@ -1,0 +1,129 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(action-sheet-wrapper) {
+  @include e(popup) {
+    border-top-left-radius: var(--wd-radius-xl);
+    border-top-right-radius: var(--wd-radius-xl);
+  }
+}
+
+@include b(action-sheet) {
+  width: 100%;
+  background-color: var(--wd-bg-elevated);
+
+  @include e(title) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: var(--wd-space-4);
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-1);
+  }
+
+  @include e(title-text) {
+    font-weight: var(--wd-font-weight-medium);
+  }
+
+  @include e(close) {
+    position: absolute;
+    right: var(--wd-space-4);
+    color: var(--wd-icon-3);
+  }
+
+  @include e(actions) {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  @include e(action) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: var(--wd-space-4);
+    font-size: var(--wd-font-lg);
+    color: var(--wd-text-1);
+
+    @include when(border) {
+      border-top-width: 1ppx;
+      border-top-style: solid;
+      border-top-color: var(--wd-border-2);
+    }
+
+    @include m(disabled) {
+      opacity: 0.5;
+    }
+
+    @include m(loading) {
+      opacity: 0.7;
+    }
+  }
+
+  @include e(name) {
+    color: inherit;
+  }
+
+  @include e(description) {
+    margin-left: var(--wd-space-2);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-3);
+  }
+
+  @include e(action-loading) {
+    color: var(--wd-icon-3);
+  }
+
+  @include e(panels-wrap) {
+    width: 100%;
+  }
+
+  @include e(panels-content) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: var(--wd-space-2) 0;
+  }
+
+  @include e(panel) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 33.33%;
+    padding: var(--wd-space-3) 0;
+  }
+
+  @include e(panel-img) {
+    font-size: 32px;
+    color: var(--wd-icon-2);
+  }
+
+  @include e(panel-title) {
+    margin-top: var(--wd-space-2);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-2);
+  }
+
+  @include e(gap) {
+    height: var(--wd-space-2);
+    background-color: var(--wd-bg-secondary);
+  }
+
+  @include e(cancel) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: var(--wd-space-4);
+    background-color: var(--wd-bg-elevated);
+  }
+
+  @include e(cancel-text) {
+    font-size: var(--wd-font-lg);
+    color: var(--wd-text-1);
+  }
+}

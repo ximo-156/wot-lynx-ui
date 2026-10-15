@@ -10,7 +10,7 @@ export function useTouch() {
   const startY = ref<number>(0)
 
   function touchStart(event: any) {
-    const touch = event.touches[0]
+    const touch = event.touches?.[0] || event.changedTouches?.[0] || { clientX: 0, clientY: 0 }
     direction.value = ''
     deltaX.value = 0
     deltaY.value = 0
@@ -21,7 +21,7 @@ export function useTouch() {
   }
 
   function touchMove(event: any) {
-    const touch = event.touches[0]
+    const touch = event.touches?.[0] || event.changedTouches?.[0] || { clientX: startX.value, clientY: startY.value }
     deltaX.value = touch.clientX - startX.value
     deltaY.value = touch.clientY - startY.value
     offsetX.value = Math.abs(deltaX.value)

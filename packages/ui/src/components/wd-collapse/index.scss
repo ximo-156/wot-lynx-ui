@@ -1,0 +1,15 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(collapse) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: var(--wd-bg-container);
+
+  @include e(more) {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    padding: var(--wd-space-3);
+  }
+}

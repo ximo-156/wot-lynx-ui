@@ -12,6 +12,56 @@ const numberValue = ref(5)
 const sliderValue = ref(50)
 const rateValue = ref(3)
 const segmentedValue = ref('a')
+const pickerVisible = ref(false)
+const pickerValue = ref<string[]>(['a'])
+const pickerColumns = ref([
+  ['a', 'b', 'c'],
+  ['x', 'y', 'z']
+])
+const datetimeVisible = ref(false)
+const datetimeValue = ref(Date.now())
+const calendarVisible = ref(false)
+const calendarValue = ref<number | null>(null)
+const keyboardVisible = ref(false)
+const payValue = ref('')
+const verifyPassed = ref(false)
+const uploadFiles = ref<any[]>([])
+const tabValue = ref(0)
+const sidebarValue = ref('a')
+const progressValue = ref(60)
+const pageValue = ref(1)
+const qrText = ref('https://wot-ui.cn')
+const barText = ref('1234567890128')
+const collapseActive = ref<string[]>(['1'])
+const tableData = ref([
+  { name: '张三', age: 28, city: '北京' },
+  { name: '李四', age: 34, city: '上海' }
+])
+const tableColumns = ref([
+  { prop: 'name', label: '姓名', width: 80 },
+  { prop: 'age', label: '年龄', width: 60 },
+  { prop: 'city', label: '城市', width: 80 }
+])
+const swiperList2 = ref([
+  { url: 'https://temp.img1.lynxjs.org/close.png', text: '1' },
+  { url: 'https://temp.img1.lynxjs.org/close.png', text: '2' }
+])
+const dialogRef = ref<any>(null)
+const actionSheetRef = ref<any>(null)
+const notifyRef = ref<any>(null)
+const asVisible = ref(false)
+
+function showDemoDialog() {
+  dialogRef.value?.alert({ title: '提示', msg: '这是一个对话框' })
+}
+
+function showDemoActionSheet() {
+  actionSheetRef.value?.open()
+}
+
+function showDemoNotify() {
+  notifyRef.value?.showNotify({ message: '这是一条消息通知', type: 'primary' })
+}
 
 function onTapButton() {
   count.value++
@@ -204,6 +254,151 @@ function onReset() {
           </wd-form>
         </view>
       </view>
+
+      <!-- Picker / Datetime / Calendar（Tier 2b） -->
+      <view class="demo-section">
+        <text class="demo-section__title">Picker 选择器 / Datetime / Calendar</text>
+        <view class="demo-panel">
+          <view class="demo-row">
+            <wd-button type="primary" size="small" @tap="pickerVisible = true">单列选择</wd-button>
+            <wd-button size="small" @tap="datetimeVisible = true">日期时间</wd-button>
+            <wd-button size="small" @tap="calendarVisible = true">日历</wd-button>
+          </view>
+          <view class="demo-row">
+            <text class="demo-tag">picker: {{ pickerValue.join('/') }}</text>
+            <text class="demo-tag">calendar: {{ calendarValue ? new Date(calendarValue).toLocaleDateString() : '未选择' }}</text>
+          </view>
+
+          <text class="demo-panel__label">PickerView（内嵌）</text>
+          <wd-picker-view v-model="pickerValue" :columns="pickerColumns" />
+
+          <text class="demo-panel__label">Keyboard + PasswordInput</text>
+          <view class="demo-row">
+            <wd-password-input :model-value="payValue" :length="6" />
+            <wd-button size="small" @tap="keyboardVisible = true">弹出键盘</wd-button>
+          </view>
+
+          <text class="demo-panel__label">SlideVerify / Signature / Upload</text>
+          <view class="demo-row">
+            <wd-slide-verify v-model="verifyPassed" />
+          </view>
+          <view class="demo-row">
+            <wd-signature style="flex: 1" />
+          </view>
+          <view class="demo-row">
+            <wd-upload v-model:file-list="uploadFiles" :limit="3" action="" />
+          </view>
+        </view>
+      </view>
+
+      <!-- 弹层类组件（Tier 2b） -->
+      <wd-picker
+        v-model="pickerValue"
+        v-model:visible="pickerVisible"
+        :columns="pickerColumns"
+        title="选择器"
+        @confirm="(e: any) => console.log('[demo] picker confirm', e)"
+      />
+      <wd-datetime-picker
+        v-model="datetimeValue"
+        v-model:visible="datetimeVisible"
+        type="datetime"
+        title="日期时间"
+        @confirm="(e: any) => console.log('[demo] datetime confirm', e)"
+      />
+      <wd-calendar
+        v-model="calendarValue"
+        v-model:visible="calendarVisible"
+        type="date"
+        title="日历"
+        @confirm="(e: any) => console.log('[demo] calendar confirm', e)"
+      />
+      <wd-keyboard v-model="payValue" v-model:visible="keyboardVisible" />
+
+      <!-- 展示 / 布局 / 导航（Tier 3） -->
+      <view class="demo-section">
+        <text class="demo-section__title">展示 / 布局 / 导航</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">Tag / Badge / Avatar / Progress</text>
+          <view class="demo-row">
+            <wd-tag type="primary">主标签</wd-tag>
+            <wd-tag type="success" variant="plain">朴素</wd-tag>
+            <wd-tag type="danger" round closable>可关</wd-tag>
+            <wd-badge :value="8"><wd-avatar size="36" text="A" /></wd-badge>
+          </view>
+          <view class="demo-row">
+            <wd-progress :percentage="progressValue" style="flex: 1" />
+          </view>
+
+          <text class="demo-panel__label">Tabs 选项卡</text>
+          <wd-tabs v-model="tabValue">
+            <wd-tab title="标签一"><text class="demo-panel__label">标签一内容</text></wd-tab>
+            <wd-tab title="标签二"><text class="demo-panel__label">标签二内容</text></wd-tab>
+          </wd-tabs>
+
+          <text class="demo-panel__label">Sidebar 侧边导航</text>
+          <view class="demo-row" style="height: 120px">
+            <wd-sidebar v-model="sidebarValue" style="height: 100%">
+              <wd-sidebar-item label="选项一" value="a" />
+              <wd-sidebar-item label="选项二" value="b" />
+            </wd-sidebar>
+            <view style="flex: 1; padding: 12px">
+              <text class="demo-panel__label">当前：{{ sidebarValue }}</text>
+            </view>
+          </view>
+
+          <text class="demo-panel__label">Pagination / CountDown / NoticeBar / Skeleton / Card / Grid</text>
+          <view class="demo-row">
+            <wd-pagination v-model="pageValue" :total-page="5" />
+            <wd-count-down :time="60000" format="mm:ss" />
+          </view>
+          <wd-notice-bar text="这是一条通知栏提示" prefix="sound" />
+          <wd-card title="卡片标题" style="margin-top: 8px">卡片内容</wd-card>
+          <wd-grid :column="3" style="margin-top: 8px">
+            <wd-grid-item icon="image" text="图片" />
+            <wd-grid-item icon="video" text="视频" />
+            <wd-grid-item icon="file" text="文件" />
+          </wd-grid>
+        </view>
+      </view>
+
+      <!-- 图形码 / 弹层（Tier 3d/4） -->
+      <view class="demo-section">
+        <text class="demo-section__title">图形码 / 弹层反馈</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">QrCode / BarCode / Circle（SVG 方案）</text>
+          <view class="demo-row">
+            <wd-qr-code :text="qrText" :size="120" />
+            <wd-bar-code :text="barText" :width="160" :height="60" />
+            <wd-circle :model-value="65" :size="80" text="65%" />
+          </view>
+
+          <text class="demo-panel__label">Dialog / ActionSheet / Notify（命令式）</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="showDemoDialog">Dialog</wd-button>
+            <wd-button size="small" @tap="showDemoActionSheet">ActionSheet</wd-button>
+            <wd-button size="small" @tap="showDemoNotify">Notify</wd-button>
+          </view>
+
+          <text class="demo-panel__label">Table / Steps / Swiper / Watermark / Collapse</text>
+          <wd-table :data="tableData" :columns="tableColumns" style="margin-bottom: 8px" />
+          <wd-steps :active="1">
+            <wd-step title="步骤一" />
+            <wd-step title="步骤二" />
+            <wd-step title="步骤三" />
+          </wd-steps>
+          <wd-swiper :list="swiperList2" style="margin-top: 8px" />
+          <wd-collapse v-model="collapseActive" style="margin-top: 8px">
+            <wd-collapse-item name="1" title="折叠面板一">内容一</wd-collapse-item>
+            <wd-collapse-item name="2" title="折叠面板二">内容二</wd-collapse-item>
+          </wd-collapse>
+        </view>
+      </view>
+
+      <!-- 命令式弹层实例 -->
+      <wd-dialog ref="dialogRef" selector="demo-dialog" />
+      <wd-action-sheet ref="actionSheetRef" v-model="asVisible" :actions="[{ name: '选项一' }, { name: '选项二' }]" cancel-text="取消" />
+      <wd-notify ref="notifyRef" selector="demo-notify" />
 
       <!-- Text / Divider / Gap -->
       <view class="demo-section">

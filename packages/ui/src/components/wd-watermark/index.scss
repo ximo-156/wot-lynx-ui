@@ -1,0 +1,35 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(watermark) {
+  position: relative;
+  width: 100%;
+
+  @include e(layer) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-around;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  @include e(unit) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  @include e(text) {
+    white-space: nowrap;
+  }
+}

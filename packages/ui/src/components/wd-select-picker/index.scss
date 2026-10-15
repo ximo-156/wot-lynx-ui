@@ -1,0 +1,60 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(select-picker) {
+  @include e(popup) {
+    border-top-left-radius: var(--wd-radius-xl);
+    border-top-right-radius: var(--wd-radius-xl);
+  }
+
+  @include e(wraper) {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: var(--wd-bg-elevated);
+  }
+
+  @include e(header) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+  }
+
+  @include e(title) {
+    font-size: var(--wd-font-md);
+    font-weight: var(--wd-font-weight-medium);
+    color: var(--wd-text-1);
+  }
+
+  @include e(wrapper) {
+    max-height: 320px;
+
+    @include when(loading) {
+      height: 200px;
+    }
+  }
+
+  @include e(loading) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  @include e(checkbox-item) {
+    padding: 0 var(--wd-space-4);
+  }
+
+  @include e(radio-item) {
+    padding: 0 var(--wd-space-4);
+  }
+
+  @include e(footer) {
+    padding: var(--wd-space-3) var(--wd-space-4);
+    border-top-width: 1ppx;
+    border-top-style: solid;
+    border-top-color: var(--wd-border-1);
+  }
+}

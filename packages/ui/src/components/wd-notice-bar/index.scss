@@ -1,0 +1,63 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(notice-bar) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: var(--wd-space-2) var(--wd-space-3);
+  background-color: var(--wd-color-warning-bg);
+  color: var(--wd-color-warning);
+  font-size: var(--wd-font-sm);
+
+  @include m(vertical) {
+    align-items: flex-start;
+  }
+
+  @include when(wrapable) {
+    height: auto;
+  }
+
+  @include e(prefix) {
+    margin-right: var(--wd-space-2);
+    color: inherit;
+  }
+
+  @include e(wrap) {
+    flex-grow: 1;
+    height: 20px;
+    overflow: hidden;
+  }
+
+  @include e(content) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  @include e(text) {
+    color: inherit;
+  }
+
+  @include e(line) {
+    height: 20px;
+    line-height: 20px;
+  }
+
+  @include e(close) {
+    margin-left: var(--wd-space-2);
+    color: inherit;
+  }
+
+  /* 类型色 */
+  &.is-danger {
+    background-color: var(--wd-color-danger-bg);
+    color: var(--wd-color-danger);
+  }
+
+  &.is-info {
+    background-color: var(--wd-color-primary-bg);
+    color: var(--wd-color-primary);
+  }
+}

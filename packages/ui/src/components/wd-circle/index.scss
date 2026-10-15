@@ -1,0 +1,15 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(circle) {
+  position: relative;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+
+  @include e(text) {
+    font-size: var(--wd-font-lg);
+    font-weight: var(--wd-font-weight-semibold);
+    color: var(--wd-text-1);
+  }
+}

@@ -1,0 +1,74 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(step) {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-basis: 0;
+
+  @include e(header) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  @include e(icon) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--wd-gray-3);
+    color: var(--wd-text-3);
+    font-size: var(--wd-font-sm);
+  }
+
+  @include e(icon-text) {
+    color: inherit;
+  }
+
+  @include e(icon-img) {
+    color: inherit;
+  }
+
+  @include e(title) {
+    margin-left: var(--wd-space-2);
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-2);
+  }
+
+  @include e(description) {
+    margin-top: var(--wd-space-1);
+    margin-left: var(--wd-space-6);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-3);
+  }
+
+  @include when(finished) {
+    .wd-step__icon {
+      background-color: var(--wd-color-primary);
+      color: var(--wd-color-on-primary);
+    }
+  }
+
+  @include when(process) {
+    .wd-step__icon {
+      background-color: var(--wd-color-primary);
+      color: var(--wd-color-on-primary);
+    }
+
+    .wd-step__title {
+      color: var(--wd-text-1);
+      font-weight: var(--wd-font-weight-medium);
+    }
+  }
+
+  @include when(wait) {
+    .wd-step__icon {
+      background-color: var(--wd-gray-3);
+      color: var(--wd-text-3);
+    }
+  }
+}

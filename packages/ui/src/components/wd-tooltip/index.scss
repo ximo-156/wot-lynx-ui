@@ -1,0 +1,55 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(tooltip) {
+  position: relative;
+  display: inline-flex;
+  flex-direction: row;
+
+  @include e(pos) {
+    position: absolute;
+    z-index: 10;
+  }
+
+  @include e(hidden) {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  @include e(container) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 60px;
+    padding: var(--wd-space-2) var(--wd-space-3);
+    background-color: var(--wd-gray-9);
+    border-radius: var(--wd-radius-xs);
+  }
+
+  @include e(inner) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-white);
+  }
+
+  @include e(arrow) {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left-width: 5px;
+    border-left-style: solid;
+    border-left-color: transparent;
+    border-right-width: 5px;
+    border-right-style: solid;
+    border-right-color: transparent;
+  }
+
+  @include e(close-icon) {
+    color: var(--wd-white);
+  }
+
+  @include e(target) {
+    display: flex;
+    flex-direction: row;
+  }
+}

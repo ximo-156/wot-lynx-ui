@@ -1,0 +1,41 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(cascader) {
+  @include e(popup) {
+    border-top-left-radius: var(--wd-radius-xl);
+    border-top-right-radius: var(--wd-radius-xl);
+  }
+
+  @include e(wraper) {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: var(--wd-bg-elevated);
+  }
+
+  @include e(header) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 var(--wd-space-2);
+  }
+
+  @include e(action) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0 var(--wd-space-3);
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-2);
+  }
+
+  @include e(title) {
+    font-size: var(--wd-font-md);
+    font-weight: var(--wd-font-weight-medium);
+    color: var(--wd-text-1);
+  }
+}

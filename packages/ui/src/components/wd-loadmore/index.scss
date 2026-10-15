@@ -1,0 +1,35 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(loadmore) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--wd-space-3) 0;
+
+  @include e(text) {
+    margin-left: var(--wd-space-2);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-3);
+  }
+
+  @include e(refresh-text) {
+    margin-left: var(--wd-space-2);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-color-primary);
+  }
+
+  @include e(refresh) {
+    margin-left: var(--wd-space-1);
+    color: var(--wd-color-primary);
+  }
+
+  @include e(loading) {
+    color: var(--wd-text-3);
+  }
+
+  @include e(divider) {
+    width: 60%;
+  }
+}

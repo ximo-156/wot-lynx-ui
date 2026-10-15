@@ -1,0 +1,16 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(steps) {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+
+  @include when(vertical) {
+    flex-direction: column;
+  }
+
+  @include when(align-center) {
+    align-items: center;
+  }
+}

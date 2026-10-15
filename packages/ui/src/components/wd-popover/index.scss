@@ -1,0 +1,78 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(popover) {
+  position: relative;
+  display: inline-flex;
+  flex-direction: row;
+
+  @include e(pos) {
+    position: absolute;
+    z-index: 10;
+  }
+
+  @include e(hidden) {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  @include e(container) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 80px;
+    padding: var(--wd-space-2) var(--wd-space-3);
+    background-color: var(--wd-gray-9);
+    border-radius: var(--wd-radius-sm);
+  }
+
+  @include e(inner) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-white);
+  }
+
+  @include e(text) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-white);
+  }
+
+  @include e(menu) {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  @include e(menu-inner) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--wd-space-2) 0;
+
+    @include when(first) {
+      padding-top: 0;
+    }
+  }
+
+  @include e(icon) {
+    margin-right: var(--wd-space-2);
+    color: var(--wd-white);
+  }
+
+  @include e(arrow) {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left-width: 5px;
+    border-left-style: solid;
+    border-left-color: transparent;
+    border-right-width: 5px;
+    border-right-style: solid;
+    border-right-color: transparent;
+  }
+
+  @include e(target) {
+    display: flex;
+    flex-direction: row;
+  }
+}

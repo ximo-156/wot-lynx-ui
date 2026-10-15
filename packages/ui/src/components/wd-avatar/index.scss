@@ -1,0 +1,36 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(avatar) {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--wd-gray-3);
+  color: var(--wd-white);
+  font-size: var(--wd-font-md);
+  overflow: hidden;
+
+  @include m(square) {
+    border-radius: var(--wd-radius-xs);
+  }
+
+  @include m(round) {
+    border-radius: var(--wd-radius-sm);
+  }
+
+  @include e(img) {
+    width: 100%;
+    height: 100%;
+  }
+
+  @include e(text) {
+    color: inherit;
+  }
+
+  @include e(icon) {
+    color: var(--wd-white);
+  }
+}

@@ -1,0 +1,18 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(index-anchor) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  padding: var(--wd-space-2) var(--wd-space-4);
+  background-color: var(--wd-bg-secondary);
+  font-size: var(--wd-font-sm);
+  color: var(--wd-text-3);
+
+  @include when(sticky) {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+}

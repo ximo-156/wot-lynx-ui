@@ -1,0 +1,101 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(calendar) {
+  @include e(popup) {
+    border-top-left-radius: var(--wd-radius-xl);
+    border-top-right-radius: var(--wd-radius-xl);
+  }
+
+  @include e(header) {
+    display: flex;
+    flex-direction: column;
+    padding: var(--wd-space-2) var(--wd-space-4) 0;
+  }
+
+  @include e(tabs) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(tab) {
+    padding: var(--wd-space-1) var(--wd-space-4);
+    border-radius: var(--wd-radius-full);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-2);
+
+    @include when(active) {
+      background-color: var(--wd-color-primary-bg);
+      color: var(--wd-color-primary);
+    }
+  }
+
+  @include e(shortcuts) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: var(--wd-space-2) 0;
+  }
+
+  @include e(tag) {
+    padding: var(--wd-space-1) var(--wd-space-3);
+    margin-right: var(--wd-space-2);
+    margin-bottom: var(--wd-space-1);
+    border-radius: var(--wd-radius-full);
+    background-color: var(--wd-bg-secondary);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-2);
+
+    @include when(active) {
+      background-color: var(--wd-color-primary);
+      color: var(--wd-color-on-primary);
+    }
+
+    @include m(last-tag) {
+      margin-right: 0;
+    }
+  }
+
+  @include e(range) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--wd-space-2) var(--wd-space-4);
+  }
+
+  @include e(range-item) {
+    flex-grow: 1;
+    flex-basis: 0;
+    padding: var(--wd-space-2) var(--wd-space-3);
+    border-radius: var(--wd-radius-sm);
+    background-color: var(--wd-bg-secondary);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-1);
+    text-align: center;
+
+    @include when(placeholder) {
+      color: var(--wd-text-4);
+    }
+  }
+
+  @include e(range-separator) {
+    width: var(--wd-space-4);
+    height: 1ppx;
+    background-color: var(--wd-border-1);
+    margin: 0 var(--wd-space-2);
+  }
+
+  @include e(view) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  @include e(footer) {
+    padding: var(--wd-space-3) var(--wd-space-4);
+    border-top-width: 1ppx;
+    border-top-style: solid;
+    border-top-color: var(--wd-border-1);
+  }
+}

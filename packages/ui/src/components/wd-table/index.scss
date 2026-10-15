@@ -1,0 +1,69 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(table) {
+  width: 100%;
+
+  @include e(scroll) {
+    width: 100%;
+  }
+
+  @include e(inner) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  @include e(header) {
+    display: flex;
+    flex-direction: row;
+    background-color: var(--wd-bg-secondary);
+  }
+
+  @include e(th) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--wd-space-2) var(--wd-space-3);
+
+    @include m(fixed) {
+      position: sticky;
+      left: 0;
+      background-color: var(--wd-bg-secondary);
+    }
+  }
+
+  @include e(th-text) {
+    font-size: var(--wd-font-sm);
+    font-weight: var(--wd-font-weight-medium);
+    color: var(--wd-text-2);
+  }
+
+  @include e(row) {
+    display: flex;
+    flex-direction: row;
+    border-bottom-width: 1ppx;
+    border-bottom-style: solid;
+    border-bottom-color: var(--wd-border-2);
+
+    @include when(stripe) {
+      background-color: var(--wd-bg-secondary);
+    }
+  }
+
+  @include e(td) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--wd-space-2) var(--wd-space-3);
+
+    @include m(fixed) {
+      position: sticky;
+      left: 0;
+      background-color: var(--wd-bg-container);
+    }
+  }
+
+  @include e(td-text) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-1);
+  }
+}

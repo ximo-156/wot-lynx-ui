@@ -1,0 +1,75 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(badge) {
+  position: relative;
+  display: inline-flex;
+  flex-direction: row;
+
+  @include e(content) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: var(--wd-radius-full);
+    background-color: var(--wd-color-danger);
+    color: var(--wd-white);
+    font-size: var(--wd-font-xs);
+    line-height: 16px;
+
+    @include m(primary) {
+      background-color: var(--wd-color-primary);
+    }
+
+    @include m(success) {
+      background-color: var(--wd-color-success);
+    }
+
+    @include m(warning) {
+      background-color: var(--wd-color-warning);
+    }
+
+    @include m(danger) {
+      background-color: var(--wd-color-danger);
+    }
+
+    @include m(info) {
+      background-color: var(--wd-gray-6);
+    }
+
+    /* 圆点 */
+    @include m(dot) {
+      min-width: 8px;
+      width: 8px;
+      height: 8px;
+      padding: 0;
+    }
+
+    /* 方形 */
+    @include m(square) {
+      border-radius: var(--wd-radius-xs);
+    }
+
+    /* 直角 */
+    @include m(round) {
+      border-radius: var(--wd-radius-full);
+    }
+
+    /* 绝对定位角标 */
+    @include m(fixed) {
+      position: absolute;
+      top: 0;
+      right: 0;
+      transform: translate(50%, -50%);
+      z-index: 10;
+    }
+
+    @include when(border) {
+      border-width: 2px;
+      border-style: solid;
+      border-color: var(--wd-white);
+    }
+  }
+}

@@ -1,0 +1,34 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(floating-panel) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: var(--wd-bg-elevated);
+  border-top-left-radius: var(--wd-radius-xl);
+  border-top-right-radius: var(--wd-radius-xl);
+
+  @include when(safe-area) {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  @include e(header) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+  }
+
+  @include e(handle) {
+    width: 32px;
+    height: 4px;
+    border-radius: var(--wd-radius-full);
+    background-color: var(--wd-gray-4);
+  }
+
+  @include e(content) {
+    flex-grow: 1;
+    width: 100%;
+  }
+}

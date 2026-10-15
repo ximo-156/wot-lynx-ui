@@ -1,0 +1,47 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(collapse-item) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  @include e(header) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--wd-space-3) var(--wd-space-4);
+  }
+
+  @include e(title) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-1);
+  }
+
+  @include e(title-slot) {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+  }
+
+  @include e(arrow) {
+    color: var(--wd-icon-3);
+    transition: transform var(--wd-duration-fast) var(--wd-ease-out);
+  }
+
+  @include e(body) {
+    padding: 0 var(--wd-space-4) var(--wd-space-3);
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-2);
+  }
+
+  @include when(expanded) {
+    .wd-collapse-item__arrow {
+      transform: rotate(180deg);
+    }
+  }
+
+  @include when(disabled) {
+    opacity: 0.5;
+  }
+}

@@ -1,0 +1,9 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(grid) {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+  background-color: var(--wd-bg-container);
+}

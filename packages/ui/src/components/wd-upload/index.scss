@@ -1,0 +1,149 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(upload) {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+
+  @include e(preview) {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin-right: var(--wd-space-2);
+    margin-bottom: var(--wd-space-2);
+  }
+
+  @include e(status-content) {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--wd-radius-sm);
+    overflow: hidden;
+    background-color: var(--wd-bg-secondary);
+  }
+
+  @include e(picture) {
+    width: 100%;
+    height: 100%;
+  }
+
+  @include e(video) {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(video-play) {
+    position: absolute;
+    color: var(--wd-white);
+  }
+
+  @include e(file) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: var(--wd-space-2);
+  }
+
+  @include e(file-icon) {
+    color: var(--wd-icon-3);
+    font-size: 28px;
+  }
+
+  @include e(file-name) {
+    margin-top: var(--wd-space-1);
+    font-size: var(--wd-font-xs);
+    color: var(--wd-text-3);
+    text-align: center;
+    @include lineEllipsis;
+    width: 100%;
+  }
+
+  @include e(loading) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--wd-mask-bg);
+  }
+
+  @include e(loading-icon) {
+    color: var(--wd-white);
+  }
+
+  @include e(fail-mask) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--wd-mask-bg);
+  }
+
+  @include e(fail-text) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-white);
+  }
+
+  @include e(delete) {
+    position: absolute;
+    right: 0;
+    top: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-bottom-left-radius: var(--wd-radius-sm);
+    background-color: var(--wd-mask-bg);
+  }
+
+  @include e(delete-icon) {
+    color: var(--wd-white);
+    font-size: 12px;
+  }
+
+  @include e(upload) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    border-radius: var(--wd-radius-sm);
+    border-width: 1px;
+    border-style: dashed;
+    border-color: var(--wd-border-1);
+    background-color: var(--wd-bg-container);
+  }
+
+  @include e(add) {
+    color: var(--wd-icon-3);
+    font-size: 28px;
+  }
+
+  @include e(limit) {
+    margin-top: var(--wd-space-1);
+    font-size: var(--wd-font-xs);
+    color: var(--wd-text-4);
+  }
+}

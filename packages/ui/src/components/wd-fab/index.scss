@@ -1,0 +1,64 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(fab) {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 99;
+
+  @include m(left-top) {
+    left: var(--wd-space-4);
+    top: 20%;
+  }
+
+  @include m(right-top) {
+    right: var(--wd-space-4);
+    top: 20%;
+  }
+
+  @include m(left-bottom) {
+    left: var(--wd-space-4);
+    bottom: 15%;
+  }
+
+  @include m(right-bottom) {
+    right: var(--wd-space-4);
+    bottom: 15%;
+  }
+
+  @include e(trigger) {
+    display: flex;
+    flex-direction: row;
+  }
+
+  @include e(trigger-button) {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+  }
+
+  @include e(menu) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: var(--wd-space-2);
+  }
+
+  /* 展开方向 */
+  @include m(top) {
+    flex-direction: column-reverse;
+  }
+
+  @include m(bottom) {
+    flex-direction: column;
+  }
+
+  @include m(left) {
+    flex-direction: row-reverse;
+  }
+
+  @include m(right) {
+    flex-direction: row;
+  }
+}

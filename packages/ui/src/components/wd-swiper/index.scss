@@ -1,0 +1,60 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(swiper) {
+  position: relative;
+  width: 100%;
+
+  @include e(scroll) {
+    width: 100%;
+    height: 100%;
+  }
+
+  @include e(track) {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    height: 100%;
+  }
+
+  @include e(item) {
+    height: 100%;
+  }
+
+  @include e(img) {
+    width: 100%;
+    height: 100%;
+  }
+
+  @include e(indicators) {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+
+    @include m(horizontal) {
+      left: 0;
+      right: 0;
+      bottom: var(--wd-space-2);
+    }
+
+    @include m(vertical) {
+      right: var(--wd-space-2);
+      top: 0;
+      bottom: 0;
+      flex-direction: column;
+    }
+  }
+
+  @include e(dot) {
+    width: 6px;
+    height: 6px;
+    margin: 0 3px;
+    border-radius: 50%;
+    background-color: #FFFFFF80;
+
+    @include when(active) {
+      background-color: #FFFFFFFF;
+    }
+  }
+}

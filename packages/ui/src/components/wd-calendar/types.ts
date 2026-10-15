@@ -112,7 +112,35 @@ export const calendarProps = {
   /**
    * picker-view 自定义类名
    */
-  customViewClass: makeStringProp('')
+  customViewClass: makeStringProp(''),
+  /**
+   * 拖动过程中是否立即更新
+   */
+  immediateChange: makeBooleanProp(false),
+  /**
+   * 是否挂载到根节点
+   */
+  rootPortal: makeBooleanProp(false),
+  /**
+   * 是否显示
+   */
+  visible: makeBooleanProp(false),
+  /**
+   * 面板高度
+   */
+  panelHeight: makeNumberProp(316),
+  /**
+   * 是否显示面板标题
+   */
+  showPanelTitle: makeBooleanProp(true),
+  /**
+   * 面板切换模式
+   */
+  switchMode: makeStringProp<'none' | 'month' | 'year-month'>('none'),
+  /**
+   * 动画时长（ms）
+   */
+  duration: makeNumberProp(200)
 }
 
 export type CalendarProps = ExtractPropTypes<typeof calendarProps>

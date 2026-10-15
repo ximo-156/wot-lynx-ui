@@ -1,0 +1,52 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(drop-menu-item) {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-basis: 0;
+
+  @include e(title) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: var(--wd-space-3) var(--wd-space-2);
+  }
+
+  @include e(title-text) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-1);
+
+    @include when(active) {
+      color: var(--wd-color-primary);
+    }
+  }
+
+  @include e(list) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background-color: var(--wd-bg-elevated);
+    border-radius: 0 0 var(--wd-radius-sm) var(--wd-radius-sm);
+    z-index: 100;
+  }
+
+  @include e(option) {
+    padding: var(--wd-space-3) var(--wd-space-4);
+
+    @include when(active) {
+      color: var(--wd-color-primary);
+    }
+  }
+
+  @include e(option-text) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-1);
+  }
+
+  @include when(disabled) {
+    opacity: 0.5;
+  }
+}

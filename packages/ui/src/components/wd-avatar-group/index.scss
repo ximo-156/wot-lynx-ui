@@ -1,0 +1,20 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(avatar-group) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
+  @include m(left) {
+    flex-direction: row-reverse;
+  }
+
+  @include when(overlap) {
+    .wd-avatar {
+      margin-left: -8px;
+      border-width: 2px;
+      border-style: solid;
+      border-color: var(--wd-bg-container);
+    }
+  }
+}

@@ -1,0 +1,52 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(video-preview) {
+  @include e(video) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  @include e(video-player) {
+    width: 100%;
+  }
+
+  @include e(close) {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #00000080;
+  }
+
+  @include e(close-icon) {
+    color: var(--wd-white);
+    font-size: 16px;
+  }
+
+  @include e(close--left-top) {
+    left: var(--wd-space-4);
+    top: 10%;
+  }
+
+  @include e(close--right-top) {
+    right: var(--wd-space-4);
+    top: 10%;
+  }
+
+  @include e(close--left-bottom) {
+    left: var(--wd-space-4);
+    bottom: 10%;
+  }
+
+  @include e(close--right-bottom) {
+    right: var(--wd-space-4);
+    bottom: 10%;
+  }
+}

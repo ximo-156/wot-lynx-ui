@@ -1,0 +1,12 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(sidebar) {
+  display: flex;
+  flex-direction: column;
+  width: 100px;
+  background-color: var(--wd-bg-secondary);
+
+  @include e(padding) {
+    height: env(safe-area-inset-bottom);
+  }
+}

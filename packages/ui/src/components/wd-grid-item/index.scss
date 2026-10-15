@@ -1,0 +1,54 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(grid-item) {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  flex-basis: calc(100% / var(--wd-grid-item-column, 4));
+  box-sizing: border-box;
+
+  @include e(content) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: var(--wd-space-3) var(--wd-space-2);
+  }
+
+  /* 按压缩态（:active 渲染器原生处理） */
+  &:active {
+    .wd-grid-item__content {
+      background-color: var(--wd-bg-secondary);
+    }
+  }
+
+  @include e(wrapper) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(badge) {
+    display: flex;
+    flex-direction: row;
+  }
+
+  @include e(icon) {
+    font-size: 28px;
+    color: var(--wd-icon-2);
+  }
+
+  @include e(text) {
+    margin-top: var(--wd-space-2);
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-2);
+    text-align: center;
+
+    @include when(ellipsis) {
+      @include lineEllipsis;
+      width: 100%;
+    }
+  }
+}

@@ -65,6 +65,10 @@ watch(
 const padHeight = computed(() => ((props.visibleItemCount - 1) / 2) * props.itemHeight)
 const containerHeight = computed(() => props.itemHeight * props.visibleItemCount)
 
+/** 每列拖动状态 */
+const dragging = ref<boolean[]>([])
+const dragStart = ref<Array<{ y: number; offset: number }>>([])
+
 /** 每列当前位移（px）与过渡开关 */
 const offsets = ref<number[]>([])
 const transitions = ref<boolean[]>([])
@@ -82,10 +86,6 @@ watch(
   },
   { immediate: true, deep: true }
 )
-
-/** 每列拖动状态 */
-const dragging = ref<boolean[]>([])
-const dragStart = ref<Array<{ y: number; offset: number }>>([])
 
 const pickerViewStyle = computed(() => `height: ${addUnit(containerHeight.value)};`)
 

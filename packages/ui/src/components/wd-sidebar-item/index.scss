@@ -1,0 +1,53 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(sidebar-item) {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--wd-space-3) var(--wd-space-3);
+  background-color: var(--wd-bg-secondary);
+
+  @include e(label) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-2);
+  }
+
+  @include e(icon) {
+    margin-right: var(--wd-space-1);
+    color: var(--wd-icon-3);
+  }
+
+  @include e(badge) {
+    margin-left: auto;
+  }
+
+  @include m(active) {
+    background-color: var(--wd-bg-container);
+    font-weight: var(--wd-font-weight-medium);
+
+    .wd-sidebar-item__label {
+      color: var(--wd-text-1);
+      font-weight: var(--wd-font-weight-medium);
+    }
+
+    &::before {
+      content: '';
+    }
+  }
+
+  /* 激活指示条（左侧竖线，真实元素不可用伪元素，用 border-left） */
+  &--active {
+    border-left-width: 3px;
+    border-left-style: solid;
+    border-left-color: var(--wd-color-primary);
+  }
+
+  @include m(disabled) {
+    opacity: 0.5;
+  }
+
+  &:active {
+    background-color: var(--wd-bg-disabled);
+  }
+}

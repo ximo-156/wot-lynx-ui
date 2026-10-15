@@ -1,0 +1,80 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(navbar) {
+  width: 100%;
+  background-color: var(--wd-bg-container);
+
+  @include when(fixed) {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+  }
+
+  @include when(border) {
+    border-bottom-width: 1ppx;
+    border-bottom-style: solid;
+    border-bottom-color: var(--wd-border-1);
+  }
+
+  @include when(safe-top) {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  @include e(content) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 44px;
+    padding: 0 var(--wd-space-3);
+  }
+
+  @include e(capsule) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  @include e(left) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-width: 40px;
+  }
+
+  @include e(arrow) {
+    color: var(--wd-text-1);
+    font-size: 20px;
+  }
+
+  @include e(text) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-1);
+  }
+
+  @include e(title) {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(title-text) {
+    font-size: var(--wd-font-lg);
+    font-weight: var(--wd-font-weight-semibold);
+    color: var(--wd-text-1);
+  }
+
+  @include e(right) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 40px;
+  }
+
+  @include when(disabled) {
+    opacity: 0.5;
+  }
+}

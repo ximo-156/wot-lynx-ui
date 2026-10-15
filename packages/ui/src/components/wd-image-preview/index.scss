@@ -1,0 +1,58 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(image-preview) {
+  @include e(swiper) {
+    width: 100%;
+    height: 100%;
+  }
+
+  @include e(close) {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #00000080;
+    z-index: 10;
+  }
+
+  @include e(close-icon) {
+    color: var(--wd-white);
+    font-size: 16px;
+  }
+
+  @include e(close--top-left) {
+    left: var(--wd-space-4);
+    top: 10%;
+  }
+
+  @include e(close--top-right) {
+    right: var(--wd-space-4);
+    top: 10%;
+  }
+
+  @include e(close--bottom-left) {
+    left: var(--wd-space-4);
+    bottom: 10%;
+  }
+
+  @include e(close--bottom-right) {
+    right: var(--wd-space-4);
+    bottom: 10%;
+  }
+
+  @include e(index) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 10%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    font-size: var(--wd-font-md);
+    color: var(--wd-white);
+  }
+}

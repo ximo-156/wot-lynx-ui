@@ -1,0 +1,7 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+/* wd-datetime-picker-view 自身无额外样式（渲染委托 wd-picker-view），
+   此处仅保留样式入口，便于后续定制。 */
+@include b(datetime-picker-view) {
+  width: 100%;
+}

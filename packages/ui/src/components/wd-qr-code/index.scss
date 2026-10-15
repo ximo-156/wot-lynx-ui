@@ -1,0 +1,22 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(qr-code) {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+
+  @include e(empty) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--wd-bg-secondary);
+    border-radius: var(--wd-radius-sm);
+  }
+
+  @include e(empty-text) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-4);
+  }
+}

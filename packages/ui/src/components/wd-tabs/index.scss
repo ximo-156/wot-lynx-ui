@@ -1,0 +1,69 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(tabs) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  @include e(nav) {
+    width: 100%;
+    background-color: var(--wd-bg-container);
+  }
+
+  @include e(nav-container) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  @include e(nav-item) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--wd-space-3) var(--wd-space-4);
+    white-space: nowrap;
+
+    @include e(nav-item-text) {
+      font-size: var(--wd-font-md);
+      color: var(--wd-text-2);
+    }
+
+    @include when(active) {
+      .wd-tabs__nav-item-text {
+        color: var(--wd-text-1);
+        font-weight: var(--wd-font-weight-semibold);
+      }
+    }
+
+    @include when(disabled) {
+      opacity: 0.5;
+    }
+  }
+
+  @include e(line) {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 20px;
+    height: 3px;
+    border-radius: var(--wd-radius-full);
+    background-color: var(--wd-color-primary);
+    transition: transform var(--wd-duration-base) var(--wd-ease-out);
+    z-index: 1;
+
+    @include m(capsule) {
+      border-radius: var(--wd-radius-full);
+    }
+
+    @include m(rounded) {
+      border-radius: var(--wd-radius-xs);
+    }
+  }
+
+  @include e(body) {
+    width: 100%;
+  }
+}

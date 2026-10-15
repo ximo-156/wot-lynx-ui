@@ -1,0 +1,1 @@
+.wd-avatar-group{display:flex;flex-direction:row;align-items:center}.wd-avatar-group--left{flex-direction:row-reverse}.wd-avatar-group.is-overlap .wd-avatar{margin-left:-8px;border-width:2px;border-style:solid;border-color:var(--wd-bg-container)}

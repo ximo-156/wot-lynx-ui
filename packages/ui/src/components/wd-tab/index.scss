@@ -1,0 +1,13 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(tab) {
+  width: 100%;
+
+  @include e(body) {
+    width: 100%;
+
+    @include m(inactive) {
+      display: none;
+    }
+  }
+}

@@ -1,0 +1,124 @@
+/*
+ * wd-swipe-action — 滑动操作
+ *
+ * Lynx 实现说明：
+ * - 左右操作区经绝对定位叠在内容两侧，内容容器位移露出；
+ * - 拖动状态在后台线程 ref 中维护，落位吸附用 transition
+ *   （不用 MTS，CONVENTIONS §10）；
+ * - 操作区宽度一次性度量并缓存（CONVENTIONS §16）。
+ */
+<script lang="ts" setup>
+import './index.css'
+
+import { computed, getCurrentInstance, onMounted, ref } from 'vue-lynx'
+import { swipeActionProps, type SwipeActionPosition, type SwipeActionReason } from './types'
+import { callInterceptor } from '../../common/interceptor'
+import { getRect } from '../../common/util'
+
+const props = defineProps(swipeActionProps)
+const emit = defineEmits(['update:modelValue', 'click'])
+
+const { proxy } = getCurrentInstance() as any
+
+const offsetX = ref<number>(0)
+const dragging = ref(false)
+const startX = ref(0)
+const startOffset = ref(0)
+const leftWidth = ref(0)
+const rightWidth = ref(0)
+
+const status = computed(() => props.modelValue)
+
+const wrapperStyle = computed(() => {
+  return `transform: translateX(${offsetX.value}px);${dragging.value ? '' : 'transition: transform 0.25s cubic-bezier(0.645, 0.045, 0.355, 1);'}`
+})
+
+onMounted(() => {
+  // 操作区宽度一次性度量
+  getRect('.wd-swipe-action__left', false, proxy).then((data) => {
+    leftWidth.value = Number(data.width) || 0
+  })
+  getRect('.wd-swipe-action__right', false, proxy).then((data) => {
+    rightWidth.value = Number(data.width) || 0
+  })
+})
+
+function startDrag(event: any) {
+  if (props.disabled) return
+  dragging.value = true
+  startX.value = Number(event.touches?.[0]?.clientX || 0)
+  startOffset.value = offsetX.value
+}
+
+function onDrag(event: any) {
+  if (!dragging.value) return
+  const x = Number(event.touches?.[0]?.clientX || 0)
+  let next = startOffset.value + (x - startX.value)
+  // 限制范围
+  next = Math.min(Math.max(next, -rightWidth.value), leftWidth.value)
+  offsetX.value = next
+}
+
+async function endDrag() {
+  if (!dragging.value) return
+  dragging.value = false
+  // 过半吸附
+  if (offsetX.value > leftWidth.value / 2) {
+    offsetX.value = leftWidth.value
+    setStatus('left')
+  } else if (offsetX.value < -rightWidth.value / 2) {
+    offsetX.value = -rightWidth.value
+    setStatus('right')
+  } else {
+    offsetX.value = 0
+    setStatus('close')
+  }
+}
+
+async function setStatus(next: SwipeActionPosition) {
+  const allowed = await callCloseInterceptor('drag', next)
+  if (!allowed) {
+    offsetX.value = 0
+    return
+  }
+  emit('update:modelValue', next)
+}
+
+function callCloseInterceptor(reason: SwipeActionReason, position: SwipeActionPosition): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!props.beforeClose) {
+      resolve(true)
+      return
+    }
+    callInterceptor(props.beforeClose, {
+      args: [reason, position],
+      done: () => resolve(true),
+      canceled: () => resolve(false)
+    })
+  })
+}
+
+function handleClick(position?: SwipeActionPosition) {
+  if (props.disabled) return
+  if (position) {
+    // 点击操作区按钮后关闭（由消费方处理业务）
+    offsetX.value = 0
+    emit('update:modelValue', 'close')
+  }
+  emit('click', { position })
+}
+</script>
+
+<template>
+  <view :class="`wd-swipe-action ${disabled ? 'is-disabled' : ''} ${customClass}`" :style="customStyle" @click.stop="handleClick()" @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag" @touchcancel="endDrag">
+    <view class="wd-swipe-action__wrapper" :style="wrapperStyle">
+      <view class="wd-swipe-action__left" @click.stop="handleClick('left')">
+        <slot name="left" />
+      </view>
+      <slot />
+      <view class="wd-swipe-action__right" @click.stop="handleClick('right')">
+        <slot name="right" />
+      </view>
+    </view>
+  </view>
+</template>

@@ -1,0 +1,87 @@
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(slide-verify) {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  height: 44px;
+  background-color: var(--wd-bg-secondary);
+  border-radius: var(--wd-radius-sm);
+  overflow: hidden;
+
+  @include e(text) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(text-inner) {
+    font-size: var(--wd-font-md);
+    color: var(--wd-text-3);
+  }
+
+  @include e(track) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 100%;
+    width: 44px;
+    background-color: var(--wd-color-primary-bg);
+    transition: width var(--wd-duration-base) var(--wd-ease-out);
+  }
+
+  @include e(track-text) {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--wd-font-sm);
+    color: var(--wd-color-primary);
+  }
+
+  @include e(button) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 100%;
+    background-color: var(--wd-color-primary);
+    border-top-right-radius: var(--wd-radius-sm);
+    border-bottom-right-radius: var(--wd-radius-sm);
+  }
+
+  @include e(button-icon) {
+    color: var(--wd-white);
+  }
+
+  /* 通过态 */
+  @include when(pass) {
+    background-color: var(--wd-color-primary-bg);
+
+    .wd-slide-verify__track-text {
+      left: 44px;
+    }
+  }
+
+  /* 禁用 */
+  @include when(disabled) {
+    opacity: 0.5;
+  }
+}
