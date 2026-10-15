@@ -5,6 +5,11 @@ export type ImgCropperEmits = {
   (e: 'update:modelValue', value: boolean): void
   (e: 'confirm', value: { src: string; width: number; height: number; x: number; y: number; scale: number }): void
   (e: 'cancel'): void
+  // 根 view 绑定 @touchmove 锁滚：按 CONVENTIONS §14，根元素上的 Lynx
+  // 原生事件名必须同时声明为 emit 并转发，否则消费方的同名监听会经
+  // $attrs 穿透到根元素，与根元素自身绑定被 mergeProps 合成为数组，
+  // 真机 publishEvent 调用数组即 TypeError 崩溃。
+  (e: 'touchmove', value: any): void
 }
 
 export const imgCropperProps = {

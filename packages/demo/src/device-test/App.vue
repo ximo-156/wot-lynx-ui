@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue-lynx'
+import { computed, reactive, ref } from 'vue-lynx'
+import { useToast } from 'wot-lynx-ui'
+
 import { testSections, totalItems, type TestItem } from './checklist'
+import ChecklistBox from './ChecklistBox.vue'
 
 // ---------- 设备信息 ----------
 const sysInfo = (globalThis as any).SystemInfo || {}
@@ -15,6 +18,9 @@ const deviceInfo = computed(() => {
   }
 })
 
+// ---------- 主题（第 8 组：亮暗切换，根 provider 受控） ----------
+const themeMode = ref<'light' | 'dark'>('light')
+
 // ---------- 测试清单状态 ----------
 const checked = reactive<Record<string, boolean>>({})
 const checkedCount = computed(() => Object.values(checked).filter(Boolean).length)
@@ -27,20 +33,101 @@ function toggle(item: TestItem) {
 function resetAll() {
   Object.keys(checked).forEach((k) => delete checked[k])
 }
+
+// ---------- 2. Slider ----------
+const sliderValue = ref(50)
+const sliderStep = ref(50)
+const sliderRange = ref<number[]>([20, 80])
+
+// ---------- 3. SwipeAction ----------
+const swipeCells = ref([
+  { title: '单元格一', status: 'close' },
+  { title: '单元格二', status: 'close' },
+  { title: '单元格三', status: 'close' }
+])
+const swipeTip = ref('左右横滑单元格，点击两侧按钮')
+
+// ---------- 4. 弹层 ----------
+const popupVisible = ref(false)
+const popupPosition = ref<'top' | 'bottom' | 'center'>('bottom')
+const overlayVisible = ref(false)
+const overlayEvent = ref('未触发')
+const dialogRef = ref<any>(null)
+const toast = useToast('device-test-toast')
+
+function openPopup(position: 'top' | 'bottom' | 'center') {
+  popupPosition.value = position
+  popupVisible.value = true
+}
+
+function onPopupModel(value: boolean) {
+  overlayEvent.value = `update:modelValue: ${value}`
+}
+
+function showAlert() {
+  dialogRef.value?.alert({
+    title: '提示',
+    msg: '这是一个对话框',
+    confirm: () => {
+      overlayEvent.value = 'dialog alert: confirm'
+    }
+  })
+}
+
+function showConfirm() {
+  dialogRef.value?.confirm({
+    title: '确认操作',
+    msg: '确定要执行该操作吗？',
+    confirm: (result: any) => {
+      overlayEvent.value = `dialog confirm: ${result.action}`
+    },
+    cancel: (result: any) => {
+      overlayEvent.value = `dialog cancel: ${result.action}`
+    }
+  })
+}
+
+// ---------- 5. 表单 ----------
+const keyboardVisible = ref(false)
+const payValue = ref('')
+const inputValue = ref('')
+const switchValue = ref(true)
+const radioValue = ref('a')
+const checkboxValues = ref<string[]>(['a'])
+const rateValue = ref(3)
+
+// ---------- 6. Cell 长列表 ----------
+const longList = computed(() => Array.from({ length: 30 }, (_, i) => i + 1))
+
+// ---------- 7. 展示组件 ----------
+const tabValue = ref(0)
+const swiperList = ref([
+  { url: 'https://temp.img1.lynxjs.org/close.png', text: '1' },
+  { url: 'https://temp.img1.lynxjs.org/close.png', text: '2' }
+])
+
+// ---------- 8. 主题与适配 ----------
+const safeAreaText = computed(() => {
+  const sa = sysInfo.safeArea
+  return sa
+    ? `top ${sa.top} / bottom ${sa.bottom} / left ${sa.left} / right ${sa.right}`
+    : '宿主未提供（Lynx 裸跑置零，属预期，见 CONVENTIONS §181）'
+})
 </script>
 
 <template>
   <!-- app-root 显式挂 height:100%：Lynx 中百分比高度只相对「已确定高度」的父级解析，
-       若包裹层为 auto（内容高度），其下 scroll-view 的 height:100% 会解析成内容高度而非
-       屏幕高度——滚动容器与内容等高即无可滚动范围（页面无法滚动）。
-       链路：page 根(屏幕高，确定) > app-root(100%) > scroll-view.page(100%) > 内容。
-       wd-config-provider 的根 view 现已内置 height:100%，此处显式声明使布局契约不依赖组件内部实现。 -->
-  <wd-config-provider theme="light" custom-class="app-root">
+        若包裹层为 auto（内容高度），其下 scroll-view 的 height:100% 会解析成内容高度而非
+        屏幕高度——滚动容器与内容等高即无可滚动范围（页面无法滚动）。
+        链路：page 根(屏幕高，确定) > app-root(100%) > scroll-view.page(100%) > 内容。
+        wd-config-provider 的根 view 现已内置 height:100%，此处显式声明使布局契约不依赖组件内部实现。
+        theme 受控切换：亮/暗令牌由 provider 根 view 的 wd-theme-* 类翻转（第 8 组验证）。 -->
+  <wd-config-provider :theme="themeMode" custom-class="app-root">
     <scroll-view scroll-orientation="vertical" class="page">
       <!-- ============ 头部：设备信息 ============ -->
       <view class="header">
         <text class="header__title">wot-lynx-ui 真机测试</text>
-        <text class="header__sub">Vue Lynx · 重写版 Tier 1</text>
+        <text class="header__sub">Vue Lynx · 8 组 35 项验收清单</text>
         <view class="header__device">
           <text class="header__device-item">平台 {{ deviceInfo.platform }}</text>
           <text class="header__device-item">屏幕 {{ deviceInfo.width }}×{{ deviceInfo.height }}</text>
@@ -65,8 +152,8 @@ function resetAll() {
 
       <!-- ============ 1. Button ============ -->
       <view class="card">
-        <text class="card__title">1. Button 按钮</text>
-        <text class="card__hint">验证类型/变体/按压缩态/禁用/加载态</text>
+        <text class="card__title">{{ testSections[0].title }}</text>
+        <text class="card__hint">{{ testSections[0].hint }}</text>
         <view class="row">
           <wd-button type="primary">主要</wd-button>
           <wd-button type="success">成功</wd-button>
@@ -87,23 +174,126 @@ function resetAll() {
           <wd-button type="danger" round>圆角</wd-button>
           <wd-button type="primary" block>块级</wd-button>
         </view>
-        <view class="checklist">
-          <view v-for="item in testSections[0].items" :key="item.id" class="checklist__item" @tap="toggle(item)">
-            <view :class="['checklist__box', checked[item.id] ? 'checklist__box--on' : '']">
-              <text v-if="checked[item.id]" class="checklist__box-tick">✓</text>
-            </view>
-            <view class="checklist__body">
-              <text class="checklist__name">{{ item.name }}</text>
-              <text class="checklist__expect">{{ item.expect }}</text>
-            </view>
-          </view>
-        </view>
+        <ChecklistBox :items="testSections[0].items" :checked="checked" @toggle="toggle" />
       </view>
 
-      <!-- ============ 2. Icon / Loading ============ -->
+      <!-- ============ 2. Slider ============ -->
       <view class="card">
-        <text class="card__title">2. Icon / Loading</text>
-        <text class="card__hint">验证 SVG 图标渲染与四类加载指示器</text>
+        <text class="card__title">{{ testSections[1].title }}</text>
+        <text class="card__hint">{{ testSections[1].hint }}</text>
+        <view class="row">
+          <wd-slider v-model="sliderValue" style="flex: 1" />
+          <text class="tag">当前 {{ sliderValue }}</text>
+        </view>
+        <view class="row">
+          <wd-slider
+            v-model="sliderStep"
+            :step="10"
+            :marks="{ 0: '0', 50: '50', 100: '100' }"
+            style="flex: 1"
+          />
+        </view>
+        <view class="row">
+          <wd-slider v-model="sliderRange" range style="flex: 1" />
+          <text class="tag">{{ sliderRange[0] }} ~ {{ sliderRange[1] }}</text>
+        </view>
+        <ChecklistBox :items="testSections[1].items" :checked="checked" @toggle="toggle" />
+      </view>
+
+      <!-- ============ 3. SwipeAction ============ -->
+      <view class="card">
+        <text class="card__title">{{ testSections[2].title }}</text>
+        <text class="card__hint">{{ testSections[2].hint }}</text>
+        <text class="tag">{{ swipeTip }}</text>
+        <wd-swipe-action v-for="(cell, index) in swipeCells" :key="index" v-model="cell.status">
+          <template #left>
+            <wd-button size="small" type="warning" @tap="swipeTip = cell.title + '：收藏'">收藏</wd-button>
+          </template>
+          <wd-cell :title="cell.title" :value="cell.status" />
+          <template #right>
+            <wd-button size="small" type="danger" @tap="swipeTip = cell.title + '：删除'">删除</wd-button>
+          </template>
+        </wd-swipe-action>
+        <view class="row">
+          <text class="tag">状态：{{ swipeCells.map((c) => c.status).join(' / ') }}</text>
+        </view>
+        <ChecklistBox :items="testSections[2].items" :checked="checked" @toggle="toggle" />
+      </view>
+
+      <!-- ============ 4. 弹层 ============ -->
+      <view class="card">
+        <text class="card__title">{{ testSections[3].title }}</text>
+        <text class="card__hint">{{ testSections[3].hint }}</text>
+        <view class="row">
+          <wd-button size="small" @tap="openPopup('bottom')">底部 Popup</wd-button>
+          <wd-button size="small" @tap="openPopup('center')">居中 Popup</wd-button>
+          <wd-button size="small" @tap="overlayVisible = true">Overlay 遮罩</wd-button>
+        </view>
+        <view class="row">
+          <wd-button size="small" @tap="showAlert">Dialog 提示</wd-button>
+          <wd-button size="small" @tap="showConfirm">Dialog 确认</wd-button>
+          <wd-button size="small" @tap="toast.show('操作成功')">Toast</wd-button>
+          <wd-button size="small" @tap="toast.loading('加载中')">Toast 加载</wd-button>
+        </view>
+        <text class="tag">事件：{{ overlayEvent }}</text>
+        <ChecklistBox :items="testSections[3].items" :checked="checked" @toggle="toggle" />
+      </view>
+
+      <!-- ============ 5. 表单 ============ -->
+      <view class="card">
+        <text class="card__title">{{ testSections[4].title }}</text>
+        <text class="card__hint">{{ testSections[4].hint }}</text>
+        <view class="row">
+          <wd-password-input :model-value="payValue" :length="6" />
+          <wd-button size="small" @tap="keyboardVisible = true">弹起键盘</wd-button>
+        </view>
+        <view class="row">
+          <wd-input v-model="inputValue" placeholder="请输入（受控回显）" clearable style="flex: 1" />
+        </view>
+        <text class="tag">已输入：{{ inputValue || '（空）' }}</text>
+        <view class="row">
+          <wd-switch v-model="switchValue" />
+          <wd-radio-group v-model="radioValue" direction="horizontal">
+            <wd-radio value="a">选项A</wd-radio>
+            <wd-radio value="b">选项B</wd-radio>
+          </wd-radio-group>
+        </view>
+        <view class="row">
+          <wd-checkbox-group v-model="checkboxValues" direction="horizontal">
+            <wd-checkbox name="a">多选A</wd-checkbox>
+            <wd-checkbox name="b">多选B</wd-checkbox>
+          </wd-checkbox-group>
+        </view>
+        <view class="row">
+          <wd-rate v-model="rateValue" />
+          <text class="tag">{{ rateValue }} 分</text>
+        </view>
+        <ChecklistBox :items="testSections[4].items" :checked="checked" @toggle="toggle" />
+      </view>
+
+      <!-- ============ 6. Cell 列表 ============ -->
+      <view class="card">
+        <text class="card__title">{{ testSections[5].title }}</text>
+        <text class="card__hint">{{ testSections[5].hint }}</text>
+        <wd-cell-group title="基础用法" border>
+          <wd-cell title="单元格" value="内容" />
+          <wd-cell title="图标 + 箭头" prefix-icon="settings" is-link value="跳转" />
+          <wd-cell title="描述文本" label="这是描述信息" value="内容" />
+        </wd-cell-group>
+        <wd-cell-group title="卡片分组" insert>
+          <wd-cell title="左侧标题宽度" value="内容" title-width="120" />
+          <wd-cell title="垂直布局" label="上下排列" value="内容" layout="vertical" />
+        </wd-cell-group>
+        <wd-cell-group title="长列表（30 行）">
+          <wd-cell v-for="n in longList" :key="n" :title="'第 ' + n + ' 行'" value="内容" is-link />
+        </wd-cell-group>
+        <ChecklistBox :items="testSections[5].items" :checked="checked" @toggle="toggle" />
+      </view>
+
+      <!-- ============ 7. 展示组件 ============ -->
+      <view class="card">
+        <text class="card__title">{{ testSections[6].title }}</text>
+        <text class="card__hint">{{ testSections[6].hint }}</text>
         <view class="row">
           <wd-icon name="close" size="20" />
           <wd-icon name="loading" size="24" color="#7F5CFF" />
@@ -116,49 +306,6 @@ function resetAll() {
           <wd-loading type="dots" size="24px" />
           <wd-loading type="wave" size="24px" />
         </view>
-        <view class="checklist">
-          <view v-for="item in testSections[1].items" :key="item.id" class="checklist__item" @tap="toggle(item)">
-            <view :class="['checklist__box', checked[item.id] ? 'checklist__box--on' : '']">
-              <text v-if="checked[item.id]" class="checklist__box-tick">✓</text>
-            </view>
-            <view class="checklist__body">
-              <text class="checklist__name">{{ item.name }}</text>
-              <text class="checklist__expect">{{ item.expect }}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- ============ 3. Cell ============ -->
-      <view class="card">
-        <text class="card__title">3. Cell 单元格</text>
-        <text class="card__hint">验证分组配置/箭头/星号/布局</text>
-        <wd-cell-group title="基础用法" border>
-          <wd-cell title="单元格" value="内容" />
-          <wd-cell title="图标 + 箭头" prefix-icon="settings" is-link value="跳转" />
-          <wd-cell title="描述文本" label="这是描述信息" value="内容" />
-        </wd-cell-group>
-        <wd-cell-group title="卡片分组" insert>
-          <wd-cell title="左侧标题宽度" value="内容" title-width="120" />
-          <wd-cell title="垂直布局" label="上下排列" value="内容" layout="vertical" />
-        </wd-cell-group>
-        <view class="checklist">
-          <view v-for="item in testSections[2].items" :key="item.id" class="checklist__item" @tap="toggle(item)">
-            <view :class="['checklist__box', checked[item.id] ? 'checklist__box--on' : '']">
-              <text v-if="checked[item.id]" class="checklist__box-tick">✓</text>
-            </view>
-            <view class="checklist__body">
-              <text class="checklist__name">{{ item.name }}</text>
-              <text class="checklist__expect">{{ item.expect }}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- ============ 4. Text / Divider / Gap ============ -->
-      <view class="card">
-        <text class="card__title">4. Text / Divider / Gap</text>
-        <text class="card__hint">验证文本模式与分割线</text>
         <view class="row">
           <wd-text text="主文本" />
           <wd-text text="品牌色" type="primary" />
@@ -170,21 +317,78 @@ function resetAll() {
           <wd-text mode="phone" format text="22644212509" />
           <wd-text mode="date" text="1735689600000" />
         </view>
+        <view class="row row--block">
+          <wd-text text="这是一段用于验证行数省略的长文本，需要在容器宽度受限时于第二行末尾显示省略号。" :lines="2" />
+        </view>
         <wd-divider>分割线</wd-divider>
         <wd-divider content-position="left">左对齐</wd-divider>
         <wd-divider dashed />
-        <view class="checklist">
-          <view v-for="item in testSections[3].items" :key="item.id" class="checklist__item" @tap="toggle(item)">
-            <view :class="['checklist__box', checked[item.id] ? 'checklist__box--on' : '']">
-              <text v-if="checked[item.id]" class="checklist__box-tick">✓</text>
-            </view>
-            <view class="checklist__body">
-              <text class="checklist__name">{{ item.name }}</text>
-              <text class="checklist__expect">{{ item.expect }}</text>
-            </view>
-          </view>
+        <view class="row">
+          <wd-progress :percentage="60" style="flex: 1" />
         </view>
+        <wd-notice-bar text="这是一条通知栏提示" prefix="sound" />
+        <wd-swiper :list="swiperList" style="margin-top: 8px" />
+        <wd-tabs v-model="tabValue">
+          <wd-tab title="标签一">
+            <view class="tab-panel"><text class="tag">标签一内容</text></view>
+          </wd-tab>
+          <wd-tab title="标签二">
+            <view class="tab-panel"><text class="tag">标签二内容</text></view>
+          </wd-tab>
+        </wd-tabs>
+        <ChecklistBox :items="testSections[6].items" :checked="checked" @toggle="toggle" />
       </view>
+
+      <!-- ============ 8. 主题与适配 ============ -->
+      <view class="card">
+        <text class="card__title">{{ testSections[7].title }}</text>
+        <text class="card__hint">{{ testSections[7].hint }}</text>
+        <view class="row">
+          <wd-button size="small" :type="themeMode === 'light' ? 'primary' : 'default'" @tap="themeMode = 'light'">亮色</wd-button>
+          <wd-button size="small" :type="themeMode === 'dark' ? 'primary' : 'default'" @tap="themeMode = 'dark'">暗色</wd-button>
+          <text class="tag">当前：{{ themeMode }}</text>
+        </view>
+        <!-- themeVars 覆盖：嵌套 provider 需显式透传 theme，否则回退默认 light -->
+        <wd-config-provider :theme="themeMode" :theme-vars="{ colorPrimary: '#FF8800' }">
+          <view class="row">
+            <wd-button type="primary" size="small">themeVars 覆盖主色</wd-button>
+            <text class="tag">--wd-color-primary 被覆盖为 #FF8800</text>
+          </view>
+        </wd-config-provider>
+        <!-- rpx 与 px 对比：Lynx 仅支持 px/% ，rpx 解析为 0（web-core convertLengthToPx） -->
+        <view class="row">
+          <view class="unit-box unit-box--rpx" />
+          <view class="unit-box unit-box--px" />
+        </view>
+        <text class="tag">左盒 375rpx（Lynx 解析为 0 → 不可见），右盒 187.5px（正常显示）</text>
+        <text class="tag">安全区：{{ safeAreaText }}</text>
+        <ChecklistBox :items="testSections[7].items" :checked="checked" @toggle="toggle" />
+      </view>
+
+      <!-- ============ 命令式 / 受控弹层实例（集中在 scroll-view 末尾） ============ -->
+      <wd-popup
+        v-model="popupVisible"
+        :position="popupPosition"
+        round
+        closable
+        @update:modelValue="onPopupModel"
+        @after-enter="overlayEvent = 'popup after-enter'"
+        @after-leave="overlayEvent = 'popup after-leave'"
+      >
+        <view class="popup-body">
+          <text class="popup__title">position = {{ popupPosition }}</text>
+          <text class="popup__hint">点击遮罩或关闭按钮退出；也可在弹层上继续打开 Dialog 验证层级</text>
+          <wd-button size="small" type="primary" @tap="showConfirm">在弹层上打开 Dialog</wd-button>
+        </view>
+      </wd-popup>
+      <wd-overlay :show="overlayVisible" @click="overlayVisible = false">
+        <view class="overlay-box">
+          <text class="overlay-box__text">遮罩内容（点击任意处关闭）</text>
+        </view>
+      </wd-overlay>
+      <wd-dialog ref="dialogRef" selector="device-test-dialog" />
+      <wd-toast selector="device-test-toast" />
+      <wd-keyboard v-model="payValue" v-model:visible="keyboardVisible" />
     </scroll-view>
   </wd-config-provider>
 </template>
@@ -197,6 +401,7 @@ function resetAll() {
 .page {
   height: 100%;
   padding: 12px;
+  background-color: var(--wd-bg-page, #f5f5f7);
 }
 
 .header {
@@ -206,12 +411,12 @@ function resetAll() {
 .header__title {
   font-size: 20px;
   font-weight: 600;
-  color: #171b26;
+  color: var(--wd-text-1, #171b26);
 }
 
 .header__sub {
   font-size: 12px;
-  color: #667085;
+  color: var(--wd-text-3, #667085);
   margin-top: 2px;
 }
 
@@ -225,18 +430,18 @@ function resetAll() {
 
 .header__device-item {
   font-size: 11px;
-  color: #4a5568;
-  background: #eff1f5;
+  color: var(--wd-text-2, #4a5568);
+  background: var(--wd-bg-secondary, #eff1f5);
   border-radius: 4px;
   padding: 2px 6px;
 }
 
 .card {
-  background: #ffffff;
+  background: var(--wd-bg-container, #ffffff);
   border-radius: 12px;
   border-width: 1px;
   border-style: solid;
-  border-color: #e4e7ed;
+  border-color: var(--wd-border-1, #e4e7ed);
   padding: 12px;
   margin-bottom: 12px;
 }
@@ -244,12 +449,12 @@ function resetAll() {
 .card__title {
   font-size: 15px;
   font-weight: 600;
-  color: #171b26;
+  color: var(--wd-text-1, #171b26);
 }
 
 .card__hint {
   font-size: 11px;
-  color: #8b93a3;
+  color: var(--wd-text-3, #8b93a3);
   margin: 2px 0 8px;
 }
 
@@ -262,6 +467,68 @@ function resetAll() {
   margin-bottom: 8px;
 }
 
+.row--block {
+  display: block;
+}
+
+.tag {
+  font-size: 11px;
+  color: var(--wd-text-2, #4a5568);
+}
+
+.tab-panel {
+  padding: 12px;
+}
+
+.popup-body {
+  padding: 24px;
+  min-width: 200px;
+}
+
+.popup__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wd-text-1, #171b26);
+}
+
+.popup__hint {
+  font-size: 11px;
+  color: var(--wd-text-3, #8b93a3);
+  margin: 4px 0 12px;
+}
+
+.overlay-box {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  padding: 20px;
+  background-color: var(--wd-bg-container, #ffffff);
+  border-radius: 12px;
+}
+
+.overlay-box__text {
+  font-size: 13px;
+  color: var(--wd-text-1, #171b26);
+}
+
+.unit-box {
+  height: 28px;
+  border-radius: 4px;
+}
+
+/* 375rpx：Lynx 不支持 rpx，宽度解析为 0（不可见）——适配结论验证 */
+.unit-box--rpx {
+  width: 375rpx;
+  background: var(--wd-color-danger, #dc4038);
+}
+
+/* 187.5px：正常渲染的对照组 */
+.unit-box--px {
+  width: 187.5px;
+  background: var(--wd-color-success, #00a06d);
+}
+
 .progress__row {
   display: flex;
   flex-direction: row;
@@ -271,86 +538,31 @@ function resetAll() {
 
 .progress__count {
   font-size: 13px;
-  color: #171b26;
+  color: var(--wd-text-1, #171b26);
 }
 
 .progress__reset {
   padding: 4px 10px;
   border-radius: 6px;
-  background: #edf1ff;
+  background: var(--wd-color-primary-bg, #edf1ff);
 }
 
 .progress__reset-text {
   font-size: 12px;
-  color: #7f5cff;
+  color: var(--wd-color-primary, #7f5cff);
 }
 
 .progress__bar {
   height: 6px;
   border-radius: 3px;
-  background: #eff1f5;
+  background: var(--wd-bg-secondary, #eff1f5);
   margin-top: 8px;
   overflow: hidden;
 }
 
 .progress__bar-inner {
   height: 100%;
-  background: #7f5cff;
+  background: var(--wd-color-primary, #7f5cff);
   border-radius: 3px;
-}
-
-.progress__pct {
-  font-size: 11px;
-  color: #8b93a3;
-  margin-top: 4px;
-}
-
-.checklist {
-  margin-top: 8px;
-}
-
-.checklist__item {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  padding: 6px 0;
-}
-
-.checklist__box {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border-width: 1px;
-  border-style: solid;
-  border-color: #b4bac7;
-  margin-top: 2px;
-  margin-right: 8px;
-  align-items: center;
-  justify-content: center;
-}
-
-.checklist__box--on {
-  background: #7f5cff;
-  border-color: #7f5cff;
-}
-
-.checklist__box-tick {
-  font-size: 10px;
-  color: #ffffff;
-}
-
-.checklist__body {
-  flex-grow: 1;
-}
-
-.checklist__name {
-  font-size: 13px;
-  color: #171b26;
-}
-
-.checklist__expect {
-  font-size: 11px;
-  color: #8b93a3;
-  margin-top: 1px;
 }
 </style>

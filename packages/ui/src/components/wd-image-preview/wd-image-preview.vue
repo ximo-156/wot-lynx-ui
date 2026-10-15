@@ -13,8 +13,10 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import WdSwiper from '../wd-swiper/wd-swiper.vue'
 import { imagePreviewProps, type ImagePreviewExpose, type ImagePreviewOptions } from './types'
 import { getImagePreviewOptionKey, useImagePreview } from '.'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(imagePreviewProps)
+const isAlive = useAlive()
 
 const state = ref({
   show: false,
@@ -48,10 +50,15 @@ function close() {
 }
 
 function handleEnter() {
+  // enter 链经 wd-transition 的帧定时器驱动，可能晚于卸载落地
+  if (!isAlive()) return
   state.value.visible = true
 }
 
 function handleAfterLeave() {
+  // leave 链落地时组件可能已卸载：此时置 visible=false 会卸载 swiper
+  // 子树，在已销毁树上产生晚到的 remove（真机 9902 家族）
+  if (!isAlive()) return
   state.value.visible = false
 }
 

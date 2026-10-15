@@ -104,7 +104,8 @@ describe('WdIndexBar / WdIndexAnchor', () => {
     await nextTick()
 
     expect(calls.length, '应触发一次 scrollIntoView').toBe(1)
-    expect(calls[0].selector).toBe('#wd-index-anchor-B')
+    // 锚点 id = `${indexBarId}-anchor-${index}`（实例唯一前缀，防同页多 bar 撞 id）
+    expect(calls[0].selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-B$/)
     expect(calls[0].params.method).toBe('scrollIntoView')
     expect(calls[0].params.params.scrollIntoViewOptions.block).toBe('start')
 
@@ -128,10 +129,10 @@ describe('WdIndexBar / WdIndexAnchor', () => {
 
     touchSidebar(sidebar, 9999)
     await nextTick()
-    expect(calls[calls.length - 1].selector).toBe('#wd-index-anchor-C')
+    expect(calls[calls.length - 1].selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-C$/)
 
     touchSidebar(sidebar, 0)
     await nextTick()
-    expect(calls[calls.length - 1].selector).toBe('#wd-index-anchor-A')
+    expect(calls[calls.length - 1].selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-A$/)
   })
 })

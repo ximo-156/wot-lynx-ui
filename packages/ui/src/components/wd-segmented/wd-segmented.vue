@@ -15,9 +15,11 @@ import { computed, getCurrentInstance, onMounted, reactive, watch } from 'vue-ly
 import { segmentedProps, type SegmentedExpose, type SegmentedOption } from './types'
 import { addUnit, filterStyle, getRect, isEqual, isObj, pause, parseStyle } from '../../common/util'
 import { uni } from '../../common/uni'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(segmentedProps)
 const emit = defineEmits(['update:value', 'change', 'click'])
+const isAlive = useAlive()
 
 const state = reactive({
   activeIndex: 0,
@@ -48,6 +50,7 @@ const { proxy } = getCurrentInstance() as any
 onMounted(async () => {
   updateCurrentIndex()
   await pause()
+  if (!isAlive()) return
   updateActiveStyle(false)
 })
 
@@ -56,6 +59,8 @@ function updateActiveStyle(animation: boolean = true) {
   if (props.theme === 'outline') return
 
   getRect('.wd-segmented__item', true, proxy).then((rects: any[]) => {
+    // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
+    if (!isAlive()) return
     const rect = rects[state.activeIndex]
     if (!rect) return
     const style: Record<string, string> = {

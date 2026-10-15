@@ -91,8 +91,10 @@ function revertIsAnimation(_animation: boolean | { value: boolean }) {
   // 接口保留：本实现无入场动画需求
 }
 
-function preventTouchMove() {
-  // 阻止页面滚动（模板层已用 @touchmove.stop）
+function preventTouchMove(event: any) {
+  // 阻止页面滚动（模板层 @touchmove.stop 承担）；按 CONVENTIONS §14 转发
+  // 同名原生事件，避免消费方监听穿透后与根绑定合并成数组。
+  emit('touchmove', event)
 }
 
 function onCancel() {
@@ -120,7 +122,7 @@ defineExpose<ImgCropperExpose>({
 </script>
 
 <template>
-  <view v-if="modelValue" :class="`wd-img-cropper ${customClass}`" :style="parseStyle(customStyle)" @touchmove="preventTouchMove">
+  <view v-if="modelValue" :class="`wd-img-cropper ${customClass}`" :style="parseStyle(customStyle)" @touchmove.stop="preventTouchMove">
     <view class="wd-img-cropper__wrapper">
       <!-- 图片 -->
       <image

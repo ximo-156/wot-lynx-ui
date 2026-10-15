@@ -1,5 +1,6 @@
 import { getCurrentInstance, ref } from 'vue-lynx'
-import { getRect, isObj } from '../common/util'
+import { getRect, isObj, uuid } from '../common/util'
+import { useAlive } from './useAlive'
 
 /**
  * Popover/Tooltip 弹出位置类型
@@ -41,6 +42,18 @@ export interface PopoverMenuItem {
  */
 export function usePopover(visibleArrow = true) {
   const { proxy } = getCurrentInstance() as any
+  const isAlive = useAlive()
+  // 实例唯一 id 前缀：Lynx 引擎按 id 维护节点注册（createSelectorQuery
+  // 解析用），模板里写死静态 id 时同页多实例（如 demo 主页 2×popover +
+  // 1×tooltip）会造成 id→签名注册表错乱，且度量查询跨实例命中错误节点。
+  const instanceId = `wd-popover-${uuid()}`
+  /** 模板绑定的实例唯一 id（root 不参与度量，仅保留唯一性便于调试） */
+  const ids = {
+    root: instanceId,
+    pos: `${instanceId}-pos`,
+    content: `${instanceId}-content`,
+    target: `${instanceId}-target`
+  }
   // 定位样式一律对象语法（CONVENTIONS §19：字符串 :style 会被 vue-lynx 静默丢弃）
   const popStyle = ref<Record<string, string>>({})
   const arrowStyle = ref<Record<string, string>>({})
@@ -58,7 +71,8 @@ export function usePopover(visibleArrow = true) {
    * 初始化弹出框位置和箭头方向
    * @param placement 弹出位置
    * @param visibleArrow 是否显示箭头
-   * @param selector 选择器标识（popover/tooltip）
+   * @param selector 组件名前缀（popover/tooltip，仅用于生成 BEM 类名；
+   *        节点度量一律走实例唯一 id ids.*，不使用页面级静态 id）
    */
   function init(placement: PlacementType, visibleArrow: boolean, selector: string) {
     // 初始化 class
@@ -74,9 +88,9 @@ export function usePopover(visibleArrow = true) {
     }
 
     // 初始化数据获取
-    getRect('#target')
+    getRect(`#${ids.target}`)
       .then((rect) => {
-        if (!rect) return
+        if (!rect || !isAlive()) return
         left.value = (rect as any).left as number
         bottom.value = (rect as any).bottom as number
         width.value = (rect as any).width as number
@@ -88,9 +102,9 @@ export function usePopover(visibleArrow = true) {
         // 避免未处理的 Promise 拒绝被 Sentry 上报为 USER_RUNTIME_ERROR。
       })
     // 用透明度可在初始化时获取到pop尺寸
-    getRect('#pos')
+    getRect(`#${ids.pos}`)
       .then((rect) => {
-        if (!rect) return
+        if (!rect || !isAlive()) return
         popWidth.value = (rect as any).width as number
         popHeight.value = (rect as any).height as number
       })
@@ -216,9 +230,9 @@ export function usePopover(visibleArrow = true) {
    * @param offset 偏移量
    */
   function updatePosition(placement: PlacementType, offset: PopoverOffset) {
-    getRect('#content')
+    getRect(`#${ids.content}`)
       .then((rect) => {
-        if (!rect) return
+        if (!rect || !isAlive()) return
         const newWidth = (rect as any).width as number
         const newHeight = (rect as any).height as number
         // 仅当尺寸发生变化时重新计算定位
@@ -234,5 +248,5 @@ export function usePopover(visibleArrow = true) {
       })
   }
 
-  return { popStyle, arrowStyle, showStyle, arrowClass, init, control, updatePosition }
+  return { popStyle, arrowStyle, showStyle, arrowClass, ids, init, control, updatePosition }
 }

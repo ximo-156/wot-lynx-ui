@@ -11,6 +11,7 @@ import { parseStyle } from '../../common/util'
 import { computed, getCurrentInstance, inject, onUnmounted } from 'vue-lynx'
 import { indexAnchorProps } from './types'
 import { indexBarInjectionKey } from '../wd-index-bar/types'
+import { uuid } from '../../common/util'
 
 const props = defineProps(indexAnchorProps)
 
@@ -25,11 +26,18 @@ if (indexBar && typeof indexBar.link === 'function') {
   onUnmounted(() => indexBar.unlink(instance))
 }
 
+// DOM id 前缀：优先取父 index-bar 下发的唯一前缀（同页多个 index-bar 时
+// anchor id 不重复，与 index-bar 侧 scrollIntoViewById 的拼接口径一致）；
+// 父级缺失（独立使用）时退化为实例自身 uuid。历史上这里按
+// `wd-index-anchor-${index}` 裸派生，两个 index-bar 的 anchor A/B id
+// 完全重复，会撞引擎 id→签名注册表（真机 9902 removeNode 家族）。
+const anchorIdPrefix = indexBar?.id || `wd-index-anchor-${uuid()}`
+
 const isSticky = computed(() => Boolean(indexBar?.props?.sticky))
 </script>
 
 <template>
-  <view :class="`wd-index-anchor ${isSticky ? 'is-sticky' : ''} ${customClass}`" :style="parseStyle(customStyle)" :id="`wd-index-anchor-${index}`">
+  <view :class="`wd-index-anchor ${isSticky ? 'is-sticky' : ''} ${customClass}`" :style="parseStyle(customStyle)" :id="`${anchorIdPrefix}-anchor-${index}`">
     <slot>{{ index }}</slot>
   </view>
 </template>

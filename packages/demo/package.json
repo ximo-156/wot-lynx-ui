@@ -6,8 +6,8 @@
     "dev": "rspeedy dev",
     "build": "rspeedy build",
     "preview": "rspeedy preview",
-    "dev:device-test": "rspeedy dev --entry device-test",
-    "build:device-test": "rspeedy build --entry device-test"
+    "dev:device-test": "rspeedy dev -c lynx.config.device-test.ts",
+    "build:device-test": "rspeedy build -c lynx.config.device-test.ts"
   },
   "dependencies": {
     "vue": "^3.5.30",

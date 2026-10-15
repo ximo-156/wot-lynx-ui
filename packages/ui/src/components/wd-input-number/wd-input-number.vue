@@ -10,7 +10,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref, watch } from 'vue-lynx'
+import { computed, onUnmounted, ref, watch } from 'vue-lynx'
 import { inputNumberProps, type OperationType } from './types'
 import { addUnit, isDef, isEqual, parseStyle } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
@@ -32,6 +32,20 @@ const emit = defineEmits<{
 const inputValue = ref<string | number>(getInitValue())
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 let longPressInterval: ReturnType<typeof setInterval> | null = null
+
+// 长按连续步进的 400ms 前置定时器 + 100ms 步进定时器此前只在 touchend
+// 清理：真机 touchend 丢失（触摸移出元素 / 手势被系统接管）或长按中组件
+// 被卸载时，定时器会存活并持有组件闭包。onUnmounted 统一清理。
+onUnmounted(() => {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+  if (longPressInterval) {
+    clearInterval(longPressInterval)
+    longPressInterval = null
+  }
+})
 
 const minDisabled = computed(() => {
   const val = toNumber(inputValue.value)
@@ -246,6 +260,7 @@ const rootClass = computed(() => {
       @tap.stop="handleClick('sub')"
       @touchstart="handleTouchStart('sub')"
       @touchend.stop="handleTouchEnd"
+      @touchcancel.stop="handleTouchEnd"
     >
       <view class="wd-input-number__action-divider" />
     </view>
@@ -271,6 +286,7 @@ const rootClass = computed(() => {
       @tap.stop="handleClick('add')"
       @touchstart="handleTouchStart('add')"
       @touchend.stop="handleTouchEnd"
+      @touchcancel.stop="handleTouchEnd"
     >
       <view class="wd-input-number__action-divider" />
       <view class="wd-input-number__action-divider wd-input-number__action-divider--vertical" />

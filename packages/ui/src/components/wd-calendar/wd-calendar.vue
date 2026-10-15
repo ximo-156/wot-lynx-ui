@@ -15,6 +15,7 @@ import WdButton from '../wd-button/wd-button.vue'
 import WdCalendarView from '../wd-calendar-view/wd-calendar-view.vue'
 import WdPopup from '../wd-popup/wd-popup.vue'
 import { callInterceptor } from '../../common/interceptor'
+import { useAlive } from '../../composables/useAlive'
 import { formatDate } from '../../common/formatDate'
 import { deepClone, isArray, isEqual, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
@@ -22,6 +23,7 @@ import { calendarProps, type CalendarExpose } from './types'
 import type { CalendarType } from '../wd-calendar-view/types'
 
 const props = defineProps(calendarProps)
+const isAlive = useAlive()
 const emit = defineEmits(['cancel', 'change', 'update:modelValue', 'confirm', 'open', 'update:visible'])
 const { translate } = useTranslate('calendar')
 
@@ -145,6 +147,9 @@ function onConfirm() {
   callInterceptor(props.beforeConfirm, {
     args: [calendarValue.value],
     done: () => {
+      // beforeConfirm 可返回未决 Promise：期间组件/页面可能已卸载，
+      // done 落地时不得在已销毁树上写 ref（真机 9902 晚到 patch 家族）。
+      if (!isAlive()) return
       pickerShow.value = false
       emit('update:modelValue', calendarValue.value)
       emit('confirm', { value: calendarValue.value })

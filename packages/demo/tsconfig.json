@@ -11,8 +11,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "lib": ["ES2020", "DOM"],
     "types": []
   },
-  "include": ["src", "lynx.config.ts"]
+  "include": ["src", "lynx.config.ts", "lynx.config.device-test.ts"]
 }

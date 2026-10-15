@@ -14,7 +14,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onBeforeMount, ref, watch } from 'vue-lynx'
+import { computed, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue-lynx'
 import { isObj, isPromise, parseStyle, pause } from '../../common/util'
 import { transitionProps, type TransitionName } from './types'
 import { AbortablePromise } from '../../common/AbortablePromise'
@@ -91,6 +91,21 @@ onBeforeMount(() => {
   if (props.show) {
     enter()
   }
+})
+
+/**
+ * 卸载时中止全部动画调度（CONVENTIONS §16 / 真机 9902 崩溃防护）。
+ *
+ * enter()/leave() 的链式 await 由 pause()/delay() 的 setTimeout 驱动，
+ * abort() 只 reject 不清定时器；若不在此中止，父组件（popup / dialog /
+ * toast / overlay 等整条弹层链）在 leave 动画飞行中同步卸载时，
+ * 挂起的帧定时器到期后仍会在已销毁实例上写 classes/display/transitionEnded
+ * 并 emit('after-leave') —— vue-lynx 在已销毁树上继续 patch，产生晚到的
+ * remove/insert 配对，真机表现为
+ * java.lang.RuntimeException: Trying to remove unknown ui signature（9902）。
+ */
+onBeforeUnmount(() => {
+  abortSchedules()
 })
 
 watch(

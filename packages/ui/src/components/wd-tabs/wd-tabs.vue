@@ -16,6 +16,7 @@ import { tabsProps } from './types'
 import { useChildren } from '../../composables/useChildren'
 import { TABS_KEY } from './types'
 import { getRect, parseStyle } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(tabsProps)
 const emit = defineEmits(['change', 'click', 'update:modelValue'])
@@ -24,6 +25,7 @@ const emit = defineEmits(['change', 'click', 'update:modelValue'])
 const tabsProxy = (getCurrentInstance() as any)?.proxy
 
 const { children, linkChildren } = useChildren(TABS_KEY)
+const isAlive = useAlive()
 
 const state = ref({
   activeIndex: 0,
@@ -120,6 +122,9 @@ function getTabItemStyle(index: number): Record<string, string> {
 /** 指示线定位：度量各 tab 宽度，累计偏移 */
 function updateLineStyle() {
   getRect('.wd-tabs__nav-item', true, tabsProxy).then((rects: any[]) => {
+    // 度量回调晚于组件卸载落地时丢弃：在已销毁树上写 ref 会触发 vue-lynx
+    // 继续 patch，产生晚到的 remove/insert（真机 9902 removeNode 家族）。
+    if (!isAlive()) return
     if (!rects || rects.length === 0) return
     const index = state.value.activeIndex
     const rect = rects[index]

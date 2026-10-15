@@ -14,11 +14,13 @@ import { computed, getCurrentInstance, onMounted, ref } from 'vue-lynx'
 import { swipeActionProps, type SwipeActionPosition, type SwipeActionReason } from './types'
 import { callInterceptor } from '../../common/interceptor'
 import { getRect, parseStyle } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(swipeActionProps)
 const emit = defineEmits(['update:modelValue', 'click', 'touchstart', 'touchmove', 'touchend', 'touchcancel'])
 
 const { proxy } = getCurrentInstance() as any
+const isAlive = useAlive()
 
 const offsetX = ref<number>(0)
 const dragging = ref(false)
@@ -38,11 +40,15 @@ const wrapperStyle = computed<Record<string, string>>(() => {
 })
 
 onMounted(() => {
-  // 操作区宽度一次性度量
+  // 操作区宽度一次性度量。回调晚于组件卸载落地时丢弃：在已销毁树上写
+  // ref 会触发 vue-lynx 继续 patch，产生晚到的 remove/insert
+  // （真机 9902 removeNode 家族）。
   getRect('.wd-swipe-action__left', false, proxy).then((data) => {
+    if (!isAlive()) return
     leftWidth.value = Number(data.width) || 0
   })
   getRect('.wd-swipe-action__right', false, proxy).then((data) => {
+    if (!isAlive()) return
     rightWidth.value = Number(data.width) || 0
   })
 })
@@ -94,6 +100,9 @@ async function finishDrag() {
 
 async function setStatus(next: SwipeActionPosition) {
   const allowed = await callCloseInterceptor('drag', next)
+  // beforeClose 可返回长时间 pending 的 Promise：期间组件可能已卸载
+  // （如所在列表项被移除），晚到的 ref 写与 emit 不得作用在死树上。
+  if (!isAlive()) return
   if (!allowed) {
     offsetX.value = 0
     return

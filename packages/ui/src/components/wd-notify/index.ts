@@ -1,6 +1,7 @@
-import { inject, provide, ref } from 'vue-lynx'
+import { inject, onUnmounted, provide, ref } from 'vue-lynx'
 import type { NotifyProps } from './types'
 import { deepMerge, isString } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
 
 const notifyPropsDefaults: NotifyProps = {
   customStyle: '',
@@ -20,7 +21,10 @@ const notifyPropsDefaults: NotifyProps = {
   variant: 'filled'
 }
 
-let timer: ReturnType<typeof setTimeout> | null = null
+// 按 selector 分桶存储定时器：模块级单变量会被同页第二个 selector 的
+// showNotify 覆盖（前一条通知永不自动关闭）。与 useToast 的 toastTimerMap
+// 同范式。
+const notifyTimerMap = new Map<string, ReturnType<typeof setTimeout>>()
 let currentOptions = getDefaultOptions()
 const notifyDefaultOptionKey = '__NOTIFY_OPTION__'
 const None = Symbol('None')
@@ -42,27 +46,44 @@ export function useNotify(selector: string = '') {
     provide(notifyOptionKey, notifyOption)
   }
 
-  const showNotify = (option: NotifyProps | string) => {
-    const options = deepMerge(currentOptions, isString(option) ? { message: option } : option) as NotifyProps
-    notifyOption.value = deepMerge(options, { visible: true })
+  // 页面卸载后不再响应命令式调用（遗留引用写死树 ref → 真机 9902 家族）。
+  const isAlive = useAlive()
+
+  const clearNotifyTimer = () => {
+    const timer = notifyTimerMap.get(notifyOptionKey)
     if (timer) {
       clearTimeout(timer)
-      timer = null
+      notifyTimerMap.delete(notifyOptionKey)
     }
+  }
+
+  const showNotify = (option: NotifyProps | string) => {
+    if (!isAlive()) return
+    const options = deepMerge(currentOptions, isString(option) ? { message: option } : option) as NotifyProps
+    notifyOption.value = deepMerge(options, { visible: true })
+    clearNotifyTimer()
     if (notifyOption.value.duration && notifyOption.value.duration > 0) {
-      timer = setTimeout(() => closeNotify(), notifyOption.value.duration)
+      notifyTimerMap.set(
+        notifyOptionKey,
+        setTimeout(() => {
+          notifyTimerMap.delete(notifyOptionKey)
+          closeNotify()
+        }, notifyOption.value.duration)
+      )
     }
   }
 
   const closeNotify = () => {
-    if (timer) {
-      clearTimeout(timer)
-      timer = null
-    }
-    if (notifyOption.value !== None) {
+    clearNotifyTimer()
+    if (notifyOption.value !== None && isAlive()) {
       notifyOption.value.visible = false
     }
   }
+
+  // 页面卸载时清掉本 selector 的自动关闭定时器，断开「定时器 → 死树」链路。
+  onUnmounted(() => {
+    clearNotifyTimer()
+  })
 
   return { showNotify, closeNotify }
 }

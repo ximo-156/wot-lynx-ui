@@ -42,8 +42,10 @@ function toFloatingPlacement(placement: string): any {
 }
 
 
-// 按 placement/offset 初始化与更新定位
-popover.init(toFloatingPlacement(props.placement), props.visibleArrow, '#popover')
+// 按 placement/offset 初始化与更新定位。
+// 第三个参数为 BEM 类名前缀（popover），节点度量走 usePopover 生成的实例唯一 id
+// （静态 id 在同页多实例下会撞引擎 id 注册表，见 usePopover.ids 注释）。
+popover.init(toFloatingPlacement(props.placement), props.visibleArrow, 'popover')
 popover.control(toFloatingPlacement(props.placement), props.offset as any)
 
 const showStyle = computed(() => popover.showStyle.value)
@@ -84,8 +86,8 @@ defineExpose<PopoverExpose>({ open, close, updatePosition })
 </script>
 
 <template>
-  <view :class="rootClass" :style="parseStyle(customStyle)" id="popover" @tap.stop="toggle">
-    <view class="wd-popover__pos wd-popover__hidden" id="pos">
+  <view :class="rootClass" :style="parseStyle(customStyle)" :id="popover.ids.root" @tap.stop="toggle">
+    <view class="wd-popover__pos wd-popover__hidden" :id="popover.ids.pos">
       <view :class="`wd-popover__container ${customPop}`">
         <view v-if="!slots.content && mode === 'normal'" class="wd-popover__inner">
           <text>{{ content }}</text>
@@ -99,7 +101,7 @@ defineExpose<PopoverExpose>({ open, close, updatePosition })
       name="fade"
       @after-enter="updatePosition()"
     >
-      <view :class="`wd-popover__container ${customPop}`" id="content">
+      <view :class="`wd-popover__container ${customPop}`" :id="popover.ids.content">
         <view
           v-if="visibleArrow"
           :class="`wd-popover__arrow ${popover.arrowClass.value} ${customArrow}`"
@@ -124,7 +126,7 @@ defineExpose<PopoverExpose>({ open, close, updatePosition })
         <wd-icon v-if="showClose" name="close" custom-class="wd-popover__close-icon" @tap.stop="close" />
       </view>
     </wd-transition>
-    <view class="wd-popover__target" id="target">
+    <view class="wd-popover__target" :id="popover.ids.target">
       <slot />
     </view>
   </view>

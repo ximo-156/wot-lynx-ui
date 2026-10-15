@@ -170,7 +170,7 @@ function handlePress(text: string, type: NumberKeyType) {
       <template v-if="mode !== 'car'">
         <view class="wd-keyboard__body">
           <view class="wd-keyboard__keys">
-            <wd-key v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
+            <wd-key v-for="(key, keyIndex) in keys" :key="`${key.type}-${key.text}-${keyIndex}`" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
           </view>
           <view v-if="mode === 'custom'" class="wd-keyboard__sidebar">
             <wd-key v-if="showDeleteKey" large :text="deleteText" type="delete" @press="handlePress" />
@@ -181,7 +181,7 @@ function handlePress(text: string, type: NumberKeyType) {
       <template v-else>
         <view class="wd-keyboard__body">
           <view class="wd-keyboard__keys">
-            <wd-key v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" is-car @press="handlePress" />
+            <wd-key v-for="(key, keyIndex) in keys" :key="`${key.type}-${key.text}-${keyIndex}`" :text="key.text" :type="key.type" :wider="key.wider" is-car @press="handlePress" />
           </view>
         </view>
       </template>

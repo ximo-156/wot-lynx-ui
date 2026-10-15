@@ -17,6 +17,7 @@ import { useParent } from '../../composables/useParent'
 import { useTranslate } from '../../composables/useTranslate'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { FORM_ITEM_VALIDATE_KEY } from '../../composables/useFormItemValidate'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(textareaProps)
 const emit = defineEmits(['update:modelValue', 'clear', 'blur', 'focus', 'input', 'keyboardheightchange', 'confirm', 'linechange', 'click'])
@@ -24,6 +25,7 @@ const emit = defineEmits(['update:modelValue', 'clear', 'blur', 'focus', 'input'
 const { translate } = useTranslate('textarea')
 const { parent: formItemValidate } = useParent(FORM_ITEM_VALIDATE_KEY)
 const isDisabled = useFormDisabled(props)
+const isAlive = useAlive()
 
 const hasPrefixIcon = computed(() => Boolean(props.prefixIcon || (isString(props.cssIcon) && props.cssIcon)))
 
@@ -92,6 +94,9 @@ async function handleClear() {
     focused.value = false
   }
   await pause()
+  // 暂停窗口内组件可能已卸载：续写在已销毁树上 patch 会产生晚到的
+  // remove/insert（真机 9902 removeNode 家族）。
+  if (!isAlive()) return
   if (props.focusWhenClear) {
     focused.value = true
     focusing.value = true
@@ -102,6 +107,7 @@ async function handleClear() {
 
 async function handleBlur() {
   await pause(150)
+  if (!isAlive()) return
   if (clearing.value) {
     clearing.value = false
     return

@@ -42,7 +42,10 @@ function toFloatingPlacement(placement: string): any {
 }
 
 
-popover.init(toFloatingPlacement(props.placement), props.visibleArrow, '#tooltip')
+// 按 placement/offset 初始化与更新定位。
+// 第三个参数为 BEM 类名前缀（tooltip），节点度量走 usePopover 生成的实例唯一 id
+// （静态 id 在同页多实例下会撞引擎 id 注册表，见 usePopover.ids 注释）。
+popover.init(toFloatingPlacement(props.placement), props.visibleArrow, 'tooltip')
 popover.control(toFloatingPlacement(props.placement), props.offset as any)
 
 function toggle() {
@@ -75,8 +78,8 @@ defineExpose<TooltipExpose>({
 </script>
 
 <template>
-  <view :class="`wd-tooltip ${customClass}`" :style="parseStyle(customStyle)" id="tooltip" @tap.stop="toggle">
-    <view class="wd-tooltip__pos wd-tooltip__hidden" id="pos">
+  <view :class="`wd-tooltip ${customClass}`" :style="parseStyle(customStyle)" :id="popover.ids.root" @tap.stop="toggle">
+    <view class="wd-tooltip__pos wd-tooltip__hidden" :id="popover.ids.pos">
       <view :class="`wd-tooltip__container ${customPop}`">
         <view v-if="!slots.content" class="wd-tooltip__inner">
           <text>{{ content }}</text>
@@ -91,7 +94,7 @@ defineExpose<TooltipExpose>({
       :duration="200"
       @after-enter="updatePosition()"
     >
-      <view :class="`wd-tooltip__container ${customPop}`" id="content">
+      <view :class="`wd-tooltip__container ${customPop}`" :id="popover.ids.content">
         <view
           v-if="visibleArrow"
           :class="`wd-tooltip__arrow ${popover.arrowClass.value} ${customArrow}`"
@@ -105,7 +108,7 @@ defineExpose<TooltipExpose>({
         <wd-icon v-if="showClose" name="close" custom-class="wd-tooltip__close-icon" @tap.stop="close" />
       </view>
     </wd-transition>
-    <view class="wd-tooltip__target" id="target">
+    <view class="wd-tooltip__target" :id="popover.ids.target">
       <slot />
     </view>
   </view>

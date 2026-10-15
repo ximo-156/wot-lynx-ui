@@ -13,6 +13,7 @@ import { getCurrentInstance, onBeforeMount, onMounted, ref, watch } from 'vue-ly
 import WdPopup from '../wd-popup/wd-popup.vue'
 import WdPickerView from '../wd-picker-view/wd-picker-view.vue'
 import { deepClone, parseStyle } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
 import { callInterceptor } from '../../common/interceptor'
 import type { PickerOption, PickerViewExpose } from '../wd-picker-view/types'
 import { useTranslate } from '../../composables/useTranslate'
@@ -22,6 +23,7 @@ import type { Numeric } from '../../common/props'
 const { translate } = useTranslate('picker')
 
 const props = defineProps(pickerProps)
+const isAlive = useAlive()
 const emit = defineEmits(['confirm', 'open', 'cancel', 'update:modelValue', 'update:visible'])
 
 const popupShow = ref<boolean>(false)
@@ -106,6 +108,9 @@ function onConfirm() {
   callInterceptor(beforeConfirm, {
     args: [pickerValue.value],
     done: () => {
+      // beforeConfirm 可返回未决 Promise：期间组件/页面可能已卸载，
+      // done 落地时不得在已销毁树上写 ref（真机 9902 晚到 patch 家族）。
+      if (!isAlive()) return
       handleConfirm()
     }
   })

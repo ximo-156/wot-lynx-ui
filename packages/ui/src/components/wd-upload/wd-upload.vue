@@ -20,6 +20,7 @@ import { callInterceptor } from '../../common/interceptor'
 import { useTranslate } from '../../composables/useTranslate'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useUpload } from '../../composables/useUpload'
+import { useAlive } from '../../composables/useAlive'
 import {
   uploadProps,
   type UploadExpose,
@@ -46,6 +47,11 @@ defineExpose<UploadExpose>({
 })
 
 const { translate } = useTranslate('upload')
+
+// 选文件（宿主相册 UI，耗时不可控）/ buildFormData Promise / 上传回调均可能
+// 晚于组件卸载落地；续写 uploadFiles 或在已销毁树上 emit 会触发 vue-lynx
+// 继续 patch，产生晚到的 remove/insert（真机 9902 removeNode 家族）。
+const isAlive = useAlive()
 
 const uploadFiles = ref<UploadFileItem[]>([])
 
@@ -82,6 +88,8 @@ function startUploadFiles() {
     if (uploadFile[statusKey] !== UPLOAD_STATUS.PENDING) continue
 
     const runUpload = (fd: Record<string, any>) => {
+      // buildFormData 的 Promise 可能晚于卸载 settle
+      if (!isAlive()) return
       startUpload(uploadFile, {
         action,
         header,
@@ -137,6 +145,8 @@ async function handleChoose() {
     done: async () => {
       try {
         const files = await chooseFile(chooseOptions)
+        // 相册 UI 停留期间页面可能已卸载
+        if (!isAlive()) return
         onFilesChosen(files)
       } catch (error) {
         emit('chooseerror', error)
@@ -146,6 +156,8 @@ async function handleChoose() {
 }
 
 function onFilesChosen(files: any[]) {
+  // beforeChoose / beforeUpload 的拦截器 done 可能晚于卸载落地
+  if (!isAlive()) return
   const { statusKey, maxSize } = props
   const newFiles: UploadFileItem[] = []
 
@@ -176,6 +188,8 @@ function onFilesChosen(files: any[]) {
   callInterceptor(props.beforeUpload, {
     args: [pending[0], props.formData],
     done: () => {
+      // beforeUpload 可返回未决 Promise：确认期间组件/页面可能已卸载
+      if (!isAlive()) return
       uploadFiles.value = finalFiles
       emitFileList()
       emit('change', { fileList: finalFiles })
@@ -198,6 +212,8 @@ function onRemove(file: UploadFileItem, index: number) {
   callInterceptor(props.beforeRemove, {
     args: [file, fileList],
     done: () => {
+      // beforeRemove 可返回未决 Promise：确认期间组件可能已卸载
+      if (!isAlive()) return
       uploadFiles.value = fileList
       emitFileList()
       emit('remove', { file, index, fileList })

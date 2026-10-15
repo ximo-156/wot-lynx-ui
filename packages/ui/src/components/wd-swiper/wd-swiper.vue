@@ -12,14 +12,16 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, onMounted, onUnmounted, ref, watch } from 'vue-lynx'
 import { swiperProps, type SwiperExpose } from './types'
 import { addUnit, getRect, parseStyle } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(swiperProps)
 const emit = defineEmits(['change', 'click', 'update:current'])
 
 const { proxy } = getCurrentInstance() as any
+const isAlive = useAlive()
 
 const current = ref(props.current)
 const itemWidth = ref(0)
@@ -57,9 +59,20 @@ const scrollLeft = computed(() => current.value * itemWidth.value)
 
 onMounted(() => {
   getRect('.wd-swiper__scroll', false, proxy).then((data) => {
+    // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
+    if (!isAlive()) return
     const width = Number(data.width) || 0
     itemWidth.value = width / Math.max(props.displayMultipleItems, 1)
   })
+})
+
+// 防抖定时器不得活过组件：卸载后 250ms 到期的回调会写 userScrolling，
+// 在已销毁树上继续 patch（真机 9902 晚到 patch 家族）。
+onUnmounted(() => {
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+    scrollTimer = null
+  }
 })
 
 function onScroll(e: any) {
@@ -74,6 +87,7 @@ function onScroll(e: any) {
   userScrolling.value = true
   if (scrollTimer) clearTimeout(scrollTimer)
   scrollTimer = setTimeout(() => {
+    if (!isAlive()) return
     userScrolling.value = false
   }, 250)
 }

@@ -21,12 +21,14 @@ import WdLoading from '../wd-loading/wd-loading.vue'
 import WdButton from '../wd-button/wd-button.vue'
 import { selectPickerProps, type SelectPickerExpose } from './types'
 import { callInterceptor } from '../../common/interceptor'
+import { useAlive } from '../../composables/useAlive'
 import { isArray, isDef, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 
 const { translate } = useTranslate('select-picker')
 
 const props = defineProps(selectPickerProps)
+const isAlive = useAlive()
 const emit = defineEmits(['change', 'cancel', 'confirm', 'update:modelValue', 'open', 'close', 'update:visible'])
 
 const pickerShow = ref<boolean>(false)
@@ -116,6 +118,8 @@ async function open() {
   pickerShow.value = true
   selectList.value = isArray(props.modelValue) ? [...props.modelValue] : props.modelValue
   await nextTick()
+  // nextTick 刷新前组件可能已卸载（打开后立刻摘除）
+  if (!isAlive()) return
   if (props.scrollIntoView) {
     setScrollIntoView()
   }
@@ -139,6 +143,9 @@ function onConfirm() {
   callInterceptor(props.beforeConfirm, {
     args: [selectList.value],
     done: () => {
+      // beforeConfirm 可返回未决 Promise：期间组件/页面可能已卸载，
+      // done 落地时不得在已销毁树上写 ref（真机 9902 晚到 patch 家族）。
+      if (!isAlive()) return
       isConfirm.value = true
       pickerShow.value = false
       emit('update:modelValue', selectList.value)
