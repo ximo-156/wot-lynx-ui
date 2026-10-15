@@ -1,7 +1,7 @@
 {
   "name": "wot-lynx-ui",
   "version": "0.1.0",
-  "description": "基于 Vue Lynx 的 wot-ui 适配组件库 — 原生性能、样式与 wot-ui 一致",
+  "description": "\u57fa\u4e8e Vue Lynx \u7684 wot-ui \u9002\u914d\u7ec4\u4ef6\u5e93 \u2014 \u539f\u751f\u6027\u80fd\u3001\u6837\u5f0f\u4e0e wot-ui \u4e00\u81f4",
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",

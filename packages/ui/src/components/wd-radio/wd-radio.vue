@@ -17,6 +17,7 @@ import { useFormDisabled } from '../../composables/useFormDisabled'
 import { isDef, objToStyle } from '../../common/util'
 
 const props = defineProps(radioProps)
+const emit = defineEmits(['tap'])
 
 const { radioGroup } = useRadioGroup()
 const formDisabled = useFormDisabled(props)
@@ -111,6 +112,7 @@ function handleClick() {
     } else {
       radioGroup.value.updateValue(value)
     }
+    emit('tap')
   }
 }
 </script>

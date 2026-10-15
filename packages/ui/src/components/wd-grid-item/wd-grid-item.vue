@@ -17,7 +17,7 @@ import { uni } from '../../common/uni'
 
 const props = defineProps(gridItemProps)
 const slots = useSlots()
-const emit = defineEmits(['click'])
+const emit = defineEmits(['click', 'tap'])
 
 const hasIcon = computed(() => Boolean(props.icon || props.cssIcon || slots.icon))
 
@@ -46,6 +46,7 @@ const rootStyle = computed(() => {
 
 function click() {
   emit('click')
+  emit('tap')
   if (props.url) {
     uni[props.linkType]({ url: props.url })
   }

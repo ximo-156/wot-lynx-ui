@@ -56,7 +56,9 @@ function handleAfterLeave() {
 }
 
 function handleSwiperChange(e: any) {
-  state.value.currentIndex = e.detail?.current || 0
+  // swiper 的 change 载荷为 { current }（兼容 detail.current 形式）
+  const next = e?.current ?? e?.detail?.current ?? 0
+  state.value.currentIndex = Number(next) || 0
 }
 
 function handleImageClick() {

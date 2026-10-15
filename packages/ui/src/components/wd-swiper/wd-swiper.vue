@@ -23,6 +23,8 @@ const { proxy } = getCurrentInstance() as any
 
 const current = ref(props.current)
 const itemWidth = ref(0)
+/** 用户正在滑动（滚动事件防抖标记，避免与 scroll-left 程序定位互搏） */
+let scrollTimer: ReturnType<typeof setTimeout> | null = null
 const userScrolling = ref(false)
 
 watch(
@@ -55,7 +57,6 @@ onMounted(() => {
 })
 
 function onScroll(e: any) {
-  if (!userScrolling.value) return
   const left = Number(e.detail?.scrollLeft || 0)
   const index = Math.round(left / Math.max(itemWidth.value, 1))
   if (index !== current.value) {
@@ -63,6 +64,12 @@ function onScroll(e: any) {
     emit('update:current', index)
     emit('change', { current: index })
   }
+  // 标记用户滑动并防抖复位
+  userScrolling.value = true
+  if (scrollTimer) clearTimeout(scrollTimer)
+  scrollTimer = setTimeout(() => {
+    userScrolling.value = false
+  }, 250)
 }
 
 function onClick(index: number) {
@@ -88,14 +95,11 @@ defineExpose<SwiperExpose>({ next, prev })
   <view :class="`wd-swiper ${customClass}`" :style="swiperStyle">
     <scroll-view
       scroll-x
-      enhanced
       :show-scrollbar="false"
       :scroll-left="scrollLeft"
       :scroll-with-animation="true"
       class="wd-swiper__scroll"
       @scroll="onScroll"
-      @scrollstart="userScrolling = true"
-      @scrollend="userScrolling = false"
     >
       <view class="wd-swiper__track" :style="trackStyle">
         <view v-if="list.length" v-for="(item, index) in list" :key="index" class="wd-swiper__item" :style="itemStyle" @tap="onClick(index)">

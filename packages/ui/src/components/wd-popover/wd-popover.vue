@@ -14,7 +14,7 @@ import { popoverProps, type PopoverExpose, type PopoverMenuItem } from './types'
 import { usePopover } from '../../composables/usePopover'
 
 const props = defineProps(popoverProps)
-const emit = defineEmits(['change', 'update:modelValue', 'menuclick'])
+const emit = defineEmits(['change', 'update:modelValue', 'menuclick', 'tap'])
 
 const slots = useSlots()
 const showPopover = ref<boolean>(false)
@@ -58,6 +58,7 @@ function toggle() {
   showPopover.value = !showPopover.value
   emit('update:modelValue', showPopover.value)
   emit('change', { show: showPopover.value })
+  emit('tap')
 }
 
 function open() {

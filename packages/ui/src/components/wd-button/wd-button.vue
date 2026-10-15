@@ -47,6 +47,7 @@ const effectiveRound = computed(() => {
 
 const emit = defineEmits<{
   (e: 'click', event: any): void
+  (e: 'tap', event: any): void
 }>()
 
 /** 加载配置：默认继承按钮文字色 */
@@ -81,6 +82,7 @@ const rootClass = computed(() => {
 function handleClick(event: any) {
   if (!props.disabled && !props.loading) {
     emit('click', event)
+    emit('tap', event)
   }
 }
 </script>

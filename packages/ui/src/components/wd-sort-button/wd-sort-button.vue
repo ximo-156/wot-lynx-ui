@@ -12,7 +12,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { sortButtonProps, type SortButtonChangeDetail, type SortButtonValue } from './types'
 
 const props = defineProps(sortButtonProps)
-const emit = defineEmits(['change', 'update:modelValue', 'click'])
+const emit = defineEmits(['change', 'update:modelValue', 'click', 'tap'])
 
 const rootClass = computed(() => {
   const classes = ['wd-sort-button']
@@ -36,6 +36,7 @@ function handleClick() {
   emit('update:modelValue', next)
   emit('change', { value: next } as SortButtonChangeDetail)
   emit('click')
+  emit('tap')
 }
 </script>
 

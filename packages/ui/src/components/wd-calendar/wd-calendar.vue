@@ -196,7 +196,7 @@ defineExpose<CalendarExpose>({
           <view
             v-for="(item, index) in shortcuts"
             :key="index"
-            :class="`wd-calendar__tag ${index === shortcuts.length - 1 ? 'is-last-tag' : ''} ${
+            :class="`wd-calendar__tag ${index === shortcuts.length - 1 ? 'wd-calendar__tag--last-tag' : ''} ${
               activeShortcutIndex === index ? 'is-active' : ''
             }`"
             @tap="handleShortcutClick(index)"

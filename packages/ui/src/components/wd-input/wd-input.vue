@@ -31,7 +31,8 @@ const emit = defineEmits([
   'confirm',
   'clicksuffixicon',
   'clickprefixicon',
-  'click'
+  'click',
+  'tap'
 ])
 
 const { translate } = useTranslate('input')
@@ -181,6 +182,7 @@ function onClickPrefixIcon() {
 
 function handleClick(event: any) {
   emit('click', event)
+  emit('tap', event)
 }
 </script>
 

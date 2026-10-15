@@ -40,7 +40,7 @@ function cellAlign(col: TableColumn): string {
           <view
             v-for="(col, colIndex) in columns"
             :key="colIndex"
-            :class="['wd-table__th', col.fixed ? 'is-fixed' : '']"
+            :class="['wd-table__th', col.fixed ? 'wd-table__th--fixed' : '']"
             :style="`width: ${col.width || 100}px; justify-content: ${cellAlign(col) === 'center' ? 'center' : cellAlign(col) === 'right' ? 'flex-end' : 'flex-start'};`"
           >
             <text class="wd-table__th-text">{{ col.label }}</text>
@@ -56,7 +56,7 @@ function cellAlign(col: TableColumn): string {
           <view
             v-for="(col, colIndex) in columns"
             :key="colIndex"
-            :class="['wd-table__td', col.fixed ? 'is-fixed' : '']"
+            :class="['wd-table__td', col.fixed ? 'wd-table__td--fixed' : '']"
             :style="`width: ${col.width || 100}px; justify-content: ${cellAlign(col) === 'center' ? 'center' : cellAlign(col) === 'right' ? 'flex-end' : 'flex-start'};`"
           >
             <slot :row="row" :column="col" :row-index="rowIndex" :column-index="colIndex" :rowspan="1" :colspan="1">

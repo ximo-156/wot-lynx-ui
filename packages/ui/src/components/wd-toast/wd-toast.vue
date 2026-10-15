@@ -120,11 +120,11 @@ function handleAfterLeave() {
         :type="loadingType"
         :color="loadingColor"
         :size="loadingSize"
-        :custom-class="`wd-toast__icon ${direction === 'vertical' ? 'is-vertical' : ''}`"
+        :custom-class="`wd-toast__icon ${direction === 'vertical' ? 'wd-toast__icon--vertical' : ''}`"
       />
       <wd-icon
         v-else-if="iconName === 'success' || iconName === 'warning' || iconName === 'info' || iconName === 'error'"
-        :custom-class="`wd-toast__icon ${direction === 'vertical' ? 'is-vertical' : ''}`"
+        :custom-class="`wd-toast__icon ${direction === 'vertical' ? 'wd-toast__icon--vertical' : ''}`"
         :size="iconSize"
         :class-prefix="classPrefix"
         :color="iconColor"
@@ -132,14 +132,14 @@ function handleAfterLeave() {
       />
       <wd-icon
         v-else-if="iconClass || cssIcon"
-        :custom-class="`wd-toast__icon ${direction === 'vertical' ? 'is-vertical' : ''}`"
+        :custom-class="`wd-toast__icon ${direction === 'vertical' ? 'wd-toast__icon--vertical' : ''}`"
         :size="iconSize"
         :class-prefix="classPrefix"
         :color="iconColor"
         :name="iconClass"
         :css-icon="cssIcon"
       />
-      <view v-if="msg" :class="`wd-toast__msg ${direction === 'vertical' ? 'is-vertical' : ''}`">
+      <view v-if="msg" :class="`wd-toast__msg ${direction === 'vertical' ? 'wd-toast__msg--vertical' : ''}`">
         <text>{{ msg }}</text>
       </view>
     </view>

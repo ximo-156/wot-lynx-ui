@@ -16,7 +16,7 @@ import { useTranslate } from '../../composables/useTranslate'
 import { isDef, isUndefined, omitBy } from '../../common/util'
 
 const props = defineProps(loadmoreProps)
-const emit = defineEmits(['reload'])
+const emit = defineEmits(['reload', 'tap'])
 
 const { translate } = useTranslate('loadmore')
 
@@ -29,6 +29,7 @@ function reload() {
   if (props.state === 'error') {
     emit('reload')
   }
+  emit('tap')
 }
 </script>
 

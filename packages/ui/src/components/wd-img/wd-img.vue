@@ -13,7 +13,7 @@ import { imgProps } from './types'
 import { addUnit, isDef } from '../../common/util'
 
 const props = defineProps(imgProps)
-const emit = defineEmits(['load', 'error', 'click'])
+const emit = defineEmits(['load', 'error', 'click', 'tap'])
 
 const status = ref<'loading' | 'success' | 'error'>('loading')
 
@@ -44,6 +44,7 @@ function handleError(event: any) {
 
 function handleClick(event: any) {
   emit('click', event)
+  emit('tap', event)
 }
 </script>
 

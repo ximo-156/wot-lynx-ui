@@ -14,7 +14,7 @@ import { tooltipProps, type TooltipExpose } from './types'
 import { usePopover } from '../../composables/usePopover'
 
 const props = defineProps(tooltipProps)
-const emit = defineEmits(['change', 'update:modelValue'])
+const emit = defineEmits(['change', 'update:modelValue', 'tap'])
 
 const slots = useSlots()
 const showTooltip = ref<boolean>(false)
@@ -49,6 +49,7 @@ function toggle() {
   showTooltip.value = !showTooltip.value
   emit('update:modelValue', showTooltip.value)
   emit('change', { show: showTooltip.value })
+  emit('tap')
 }
 
 function open() {

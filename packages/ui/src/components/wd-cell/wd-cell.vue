@@ -22,6 +22,7 @@ import { uni } from '../../common/uni'
 const props = defineProps(cellProps)
 const emit = defineEmits<{
   (e: 'click'): void
+  (e: 'tap'): void
 }>()
 
 const slots = useSlots()
@@ -88,6 +89,7 @@ function onClick() {
 
   if (props.clickable || props.isLink) {
     emit('click')
+    emit('tap')
   }
   if (url && props.isLink) {
     if (props.replace) {

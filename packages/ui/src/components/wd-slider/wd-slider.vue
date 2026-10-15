@@ -73,7 +73,7 @@ const rootClass = computed(() => {
   const classes = ['wd-slider', `wd-slider--theme-${props.theme}`]
   if (isDisabled.value) classes.push('is-disabled')
   classes.push(props.vertical ? 'wd-slider--vertical' : 'wd-slider--horizontal')
-  if (hasMarks.value) classes.push('wd-slider--marks')
+  if (hasMarks.value) classes.push('is-marks')
   if (props.showExtremeValue) classes.push('wd-slider--with-extreme')
   if (props.range) classes.push('is-range')
   if (props.customClass) classes.push(props.customClass)

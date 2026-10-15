@@ -15,7 +15,7 @@ import { addUnit, isDef } from '../../common/util'
 
 const props = defineProps(avatarProps)
 const slots = useSlots()
-const emit = defineEmits(['click', 'error'])
+const emit = defineEmits(['click', 'error', 'tap'])
 
 const hasDefaultSlot = computed(() => Boolean(slots.default))
 const hasIcon = computed(() => Boolean(props.icon || props.cssIcon))
@@ -44,6 +44,7 @@ const rootStyle = computed(() => {
 
 function handleClick(event: any) {
   emit('click', event)
+  emit('tap', event)
 }
 
 function handleError(event: any) {

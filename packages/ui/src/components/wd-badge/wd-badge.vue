@@ -52,10 +52,10 @@ const contentStyle = computed(() => {
       :class="[
         'wd-badge__content',
         props.border ? 'is-border' : '',
-        'is-fixed',
+        'wd-badge__content--fixed',
         type ? `wd-badge__content--${type}` : '',
-        isDot ? 'is-dot' : '',
-        shape ? `is-${shape}` : ''
+        isDot ? 'wd-badge__content--dot' : '',
+        shape ? `wd-badge__content--${shape}` : ''
       ]"
       :style="contentStyle"
       >{{ content }}</text

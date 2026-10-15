@@ -16,6 +16,7 @@ import { TABBAR_KEY } from '../wd-tabbar/types'
 import { isDef } from '../../common/util'
 
 const props = defineProps(tabbarItemProps)
+const emit = defineEmits(['tap'])
 
 const { parent: tabbar, index } = useParent(TABBAR_KEY)
 
@@ -35,6 +36,7 @@ const badgeProps = computed<Record<string, any> | null>(() => {
 
 function handleClick() {
   tabbar.value?.setChange({ name: isDef(props.name) ? props.name : index.value })
+  emit('tap')
 }
 </script>
 

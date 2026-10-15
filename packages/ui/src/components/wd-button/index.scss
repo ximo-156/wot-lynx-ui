@@ -126,7 +126,11 @@
   }
 
   /* ===== 尺寸 ===== */
-  @include m(mini) {
+  /* 尺寸类是 DOM 上的 `is-<size>`（rootClass 与 when(icon) 内的 &.is-mini 等
+     嵌套规则同源），必须用 when() 生成 `.wd-button.is-<size>`；
+     误用 m() 会生成 `.wd-button--<size>`，与 DOM 类名不匹配导致整组
+     height / padding / font-size 被静默丢弃（按钮无内边距的根因）。 */
+  @include when(mini) {
     height: 28px;
     padding-left: var(--wd-space-3);
     padding-right: var(--wd-space-3);
@@ -134,7 +138,7 @@
     font-size: var(--wd-font-xs);
   }
 
-  @include m(small) {
+  @include when(small) {
     height: 32px;
     padding-left: var(--wd-space-3);
     padding-right: var(--wd-space-3);
@@ -142,7 +146,7 @@
     font-size: var(--wd-font-sm);
   }
 
-  @include m(medium) {
+  @include when(medium) {
     height: 40px;
     padding-left: var(--wd-space-4);
     padding-right: var(--wd-space-4);
@@ -150,7 +154,7 @@
     font-size: var(--wd-font-md);
   }
 
-  @include m(large) {
+  @include when(large) {
     height: 44px;
     padding-left: var(--wd-space-5);
     padding-right: var(--wd-space-5);

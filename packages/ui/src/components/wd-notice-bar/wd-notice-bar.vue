@@ -44,6 +44,8 @@ const noticeBarClass = computed(() => {
   const classes: string[] = []
   if (isVertical.value) classes.push('wd-notice-bar--vertical')
   if (props.wrapable) classes.push('is-wrapable')
+  // type 映射到 is-<type> 状态类（warning 为基类默认配色，仅 danger/info 需覆盖）
+  if (props.type && props.type !== 'warning') classes.push(`is-${props.type}`)
   return classes.join(' ')
 })
 

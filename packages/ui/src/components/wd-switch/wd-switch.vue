@@ -20,7 +20,7 @@ import { useFormDisabled } from '../../composables/useFormDisabled'
 import type { LoadingProps } from '../wd-loading/types'
 
 const props = defineProps(switchProps)
-const emit = defineEmits(['change', 'update:modelValue'])
+const emit = defineEmits(['change', 'update:modelValue', 'tap'])
 const isDisabled = useFormDisabled(props)
 
 const DEFAULT_SIZE = 26
@@ -97,6 +97,7 @@ function switchValue() {
   const doSwitch = () => {
     emit('update:modelValue', newVal)
     emit('change', { value: newVal })
+    emit('tap')
   }
   callInterceptor(props.beforeChange, { args: [newVal], done: doSwitch })
 }

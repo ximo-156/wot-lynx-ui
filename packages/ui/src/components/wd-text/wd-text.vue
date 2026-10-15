@@ -17,7 +17,7 @@ import { formatDate } from '../../common/formatDate'
 import { uni } from '../../common/uni'
 
 const props = defineProps(textProps)
-const emit = defineEmits(['click'])
+const emit = defineEmits(['click', 'tap'])
 
 const textClass = ref<string>('')
 
@@ -118,6 +118,7 @@ function handleClick(event: any) {
     uni.makePhoneCall({ phoneNumber: `${props.text}` })
   }
   emit('click', event)
+  emit('tap', event)
 }
 </script>
 

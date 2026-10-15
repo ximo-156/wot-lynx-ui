@@ -18,7 +18,7 @@ import { useFormDisabled } from '../../composables/useFormDisabled'
 import { isDef, objToStyle } from '../../common/util'
 
 const props = defineProps(checkboxProps)
-const emit = defineEmits(['change', 'update:modelValue'])
+const emit = defineEmits(['change', 'update:modelValue', 'tap'])
 
 defineExpose<CheckboxExpose>({
   toggle
@@ -138,6 +138,7 @@ function toggle() {
     emit('update:modelValue', newVal)
     emit('change', { value: newVal })
   }
+  emit('tap')
 }
 </script>
 

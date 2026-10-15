@@ -15,7 +15,7 @@ import { getNotifyOptionKey } from '.'
 import { objToStyle } from '../../common/util'
 
 const props = defineProps(notifyProps)
-const emit = defineEmits(['click', 'closed', 'opened', 'update:visible'])
+const emit = defineEmits(['click', 'closed', 'opened', 'update:visible', 'tap'])
 
 const notifyOptionKey = getNotifyOptionKey(props.selector)
 const state = ref({ ...props })
@@ -43,6 +43,7 @@ const iconName = computed(() => {
 
 function onClick() {
   emit('click')
+  emit('tap')
 }
 
 function handleClose() {

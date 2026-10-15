@@ -15,7 +15,7 @@ import { addUnit, isDef, objToStyle } from '../../common/util'
 import { uni } from '../../common/uni'
 
 const props = defineProps(curtainProps)
-const emit = defineEmits(['update:modelValue', 'close', 'click'])
+const emit = defineEmits(['update:modelValue', 'close', 'click', 'tap'])
 
 const show = computed({
   get: () => props.modelValue,
@@ -45,6 +45,7 @@ function handleClose() {
 
 function handleClick() {
   emit('click')
+  emit('tap')
   if (props.to) {
     uni.navigateTo({ url: props.to })
   }

@@ -16,6 +16,7 @@ import { SIDEBAR_KEY } from '../wd-sidebar/types'
 import { isDef } from '../../common/util'
 
 const props = defineProps(sidebarItemProps)
+const emit = defineEmits(['tap'])
 
 const { parent: sidebar } = useParent(SIDEBAR_KEY)
 
@@ -36,6 +37,7 @@ const badgeProps = computed(() => {
 function handleClick() {
   if (props.disabled) return
   sidebar.value?.setChange(props.value, props.label)
+  emit('tap')
 }
 </script>
 

@@ -19,7 +19,7 @@ import { GRAY, THEME_ICON_COLOR } from '../../common/theme'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
 
 const props = defineProps(iconProps)
-const emit = defineEmits(['click', 'touch'])
+const emit = defineEmits(['click', 'touch', 'tap'])
 
 const globalConfig = useGlobalConfig()
 
@@ -90,6 +90,7 @@ const svgContent = computed(() => {
 
 function handleClick(event: any) {
   emit('click', event)
+  emit('tap', event)
 }
 </script>
 

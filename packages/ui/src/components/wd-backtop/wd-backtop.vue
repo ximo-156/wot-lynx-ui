@@ -14,7 +14,7 @@ import { backtopProps } from './types'
 import { objToStyle } from '../../common/util'
 
 const props = defineProps(backtopProps)
-const emit = defineEmits(['click'])
+const emit = defineEmits(['click', 'tap'])
 
 const show = computed(() => props.scrollTop >= props.top)
 
@@ -24,13 +24,14 @@ const iconStyle = computed(() => {
 
 function handleBacktop() {
   emit('click')
+  emit('tap')
 }
 </script>
 
 <template>
   <wd-transition :show="show" name="fade">
     <view
-      :class="`wd-backtop ${customClass} is-${shape}`"
+      :class="`wd-backtop wd-backtop--${shape} ${customClass}`"
       :style="`z-index: ${zIndex}; bottom: ${bottom}px; right: ${right}px; ${customStyle}`"
       @tap="handleBacktop"
     >

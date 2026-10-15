@@ -18,5 +18,14 @@
   "packageManager": "pnpm@10.24.0",
   "engines": {
     "node": ">=18"
+  },
+  "pnpm": {
+    "overrides": {
+      "vue-lynx": "0.5.1",
+      "vue": "3.5.43",
+      "@vue/runtime-core": "3.5.43",
+      "postcss": "8.5.30",
+      "webpack": "5.111.1"
+    }
   }
 }

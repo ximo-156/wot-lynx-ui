@@ -162,7 +162,7 @@ const rootClass = computed(() => {
               </wd-badge>
               <text v-else class="wd-tabs__nav-item-text">{{ item.title }}</text>
             </view>
-            <view class="wd-tabs__line" :class="`is-${lineTheme}`" :style="state.lineStyle" />
+            <view class="wd-tabs__line" :class="`wd-tabs__line--${lineTheme}`" :style="state.lineStyle" />
           </view>
         </scroll-view>
       </view>

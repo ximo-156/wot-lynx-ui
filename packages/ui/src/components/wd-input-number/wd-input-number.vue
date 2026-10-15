@@ -240,7 +240,7 @@ const rootClass = computed(() => {
   <view :class="rootClass" :style="customStyle">
     <!-- 减号按钮 -->
     <view
-      :class="['wd-input-number__action', 'wd-input-number__sub', minDisabled || disableMinus ? 'is-disabled' : '']"
+      :class="['wd-input-number__action', 'wd-input-number__action--sub', minDisabled || disableMinus ? 'is-disabled' : '']"
       @tap.stop="handleClick('sub')"
       @touchstart="handleTouchStart('sub')"
       @touchend.stop="handleTouchEnd"
@@ -265,7 +265,7 @@ const rootClass = computed(() => {
     </view>
     <!-- 加号按钮 -->
     <view
-      :class="['wd-input-number__action', 'wd-input-number__add', maxDisabled || disablePlus ? 'is-disabled' : '']"
+      :class="['wd-input-number__action', 'wd-input-number__action--add', maxDisabled || disablePlus ? 'is-disabled' : '']"
       @tap.stop="handleClick('add')"
       @touchstart="handleTouchStart('add')"
       @touchend.stop="handleTouchEnd"

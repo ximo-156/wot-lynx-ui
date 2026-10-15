@@ -16,7 +16,7 @@ import { tagProps, type TagSize, type TagType, type TagVariant } from './types'
 import { useTranslate } from '../../composables/useTranslate'
 
 const props = defineProps(tagProps)
-const emit = defineEmits(['click', 'close', 'confirm', 'add'])
+const emit = defineEmits(['click', 'close', 'confirm', 'add', 'tap'])
 
 const { translate } = useTranslate('tag')
 
@@ -53,6 +53,7 @@ const textStyle = computed(() => {
 function handleClick() {
   if (props.disabled) return
   emit('click')
+  emit('tap')
 }
 
 function handleClose() {
