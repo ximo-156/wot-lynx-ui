@@ -212,9 +212,7 @@ defineExpose<PickerViewExpose>({
 <template>
   <view :class="`wd-picker-view ${customClass}`" :style="pickerStyle">
     <view class="wd-picker-view__main" :style="pickerViewStyle">
-      <!-- 选中指示带 -->
-      <view class="wd-picker-view__indicator" :style="{ top: addUnit(padHeight), height: addUnit(itemHeight) }" />
-      <!-- 上下遮罩 -->
+      <!-- 上下遮罩（盖在文字上形成渐隐；须排在列之前，见下方注释） -->
       <view class="wd-picker-view__mask wd-picker-view__mask--top" :style="{ height: addUnit(padHeight) }" />
       <view class="wd-picker-view__mask wd-picker-view__mask--bottom" :style="{ height: addUnit(padHeight) }" />
 
@@ -240,6 +238,11 @@ defineExpose<PickerViewExpose>({
           <view class="wd-picker-view__column-pad" :style="{ height: addUnit(padHeight) }" />
         </view>
       </view>
+
+      <!-- 选中指示带：必须排在列之后 + z-index 低于列。Web 预览的绘制
+           不遵循 z-index（按 DOM 逆序绘制），排在最前会连底色带文字一起
+           盖掉；真机按 z-index 绘制，indicator(1) < column(2) 同样在下方。 -->
+      <view class="wd-picker-view__indicator" :style="{ top: addUnit(padHeight), height: addUnit(itemHeight) }" />
     </view>
   </view>
 </template>

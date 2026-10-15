@@ -21,6 +21,9 @@
     flex-basis: 0;
     height: 100%;
     overflow: hidden;
+    /* 列内容（文字）必须盖在指示带之上：指示带是不透明底色，
+       z-index 高于列时会把选中项整行盖掉（表现为「选中行消失」）。 */
+    z-index: 2;
   }
 
   /* 上下补位（高度与列项一致由内联定高给出，禁收缩） */
@@ -83,7 +86,8 @@
     border-bottom-color: var(--wd-border-1);
     background-color: var(--wd-bg-secondary);
     pointer-events: none;
-    z-index: 2;
+    /* 指示带在列文字之下（不透明底色会盖住选中项） */
+    z-index: 1;
   }
 
   /* 上下渐隐遮罩 */
@@ -92,7 +96,8 @@
     left: 0;
     right: 0;
     pointer-events: none;
-    z-index: 1;
+    /* 遮罩盖在文字之上形成上下渐隐（仅覆盖 pad 区，不压选中带） */
+    z-index: 3;
 
     @include m(top) {
       top: 0;

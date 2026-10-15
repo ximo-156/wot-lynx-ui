@@ -388,3 +388,51 @@ CSS `:active` 伪类 + 对应类名样式（如 `.wd-button:active`、`.wd-cell.
 | 3 | 展示/布局/导航/弹层：52 个组件全部完成 ✅（Tier 3a 展示反馈 12 + Tier 3b 布局 7 + Tier 3c 导航 9 + Tier 3d 弹层反馈/图形/列表导航 24，含 notify/dialog/action-sheet/popover/tooltip/curtain/loadmore/tour/circle/watermark/table/steps/swiper/collapse/drop-menu/tabbar/fab/floating-panel/swipe-action/video-preview/image-preview/navbar-capsule/sort-button）|
 | 4 | 图形码：qr-code（完整 QR 编码器：Byte 模式/版本自适应/RS 纠错/掩码评估）/ bar-code（Code128）/ table-column / wot-ui 内部占位 | ✅ 完成（编码器 9 项结构测试全绿）|
 | 5 | 收尾：测试重写、文档重写、Demo 更新、README/differences 同步、全量验证 | ✅ 完成（101/101 组件全部进入 Demo 手机端演示；修复 wd-video-preview 命令式 open() 不显示遮罩、wd-index-bar/anchor 子组件注册失效与锚点跳转、button/progress 字符串样式丢弃、calendar-view 显式行结构等缺陷；新增命令式预览 / 索引栏 / 内联样式回归测试；全量验证 203 项测试 / typecheck / build:css / 双端 build 全绿）|
+
+## 19. 内联样式一律对象语法（字符串 `:style` 会被静默丢弃）
+
+vue-lynx 的 `patchProp`（`runtime/dist/node-ops.js`）对 `style` 只处理
+**对象 / 数组**（内部走 `normalizeStyle`）：
+
+```js
+} else if ('style' === key) {
+  const style = null != nextValue && 'object' == typeof nextValue ? normalizeStyle(nextValue) : {}
+```
+
+**字符串值（`` :style="`height: 44px`" ``、`custom-style="color: red"`、
+计算属性拼出的 `"top: 1px; left: 2px"`）被静默替换为 `{}`**——不报错、
+不告警，只是样式全部消失。这与 §5 的类名错配并称「静默丢样式」两大根源。
+
+**已暴露的故障现象**（真机 + Web 预览同现）：
+
+| 组件 | 字符串样式 | 故障表现 |
+| --- | --- | --- |
+| wd-picker-view（及 picker / datetime-picker / calendar 时间面板） | 列项高度、列内容 `translateY`、指示带/遮罩定高 | 列不滚动（选中项不居中）、行高塌成文本高、指示带消失 |
+| wd-config-provider | themeVars 的 `--wd-*` 变量串 | 定制主题整体失效 |
+| wd-progress / wd-table / wd-qr-code / wd-bar-code / wd-switch / wd-slider / wd-tabs / wd-popover / wd-tooltip / wd-watermark / wd-backtop / wd-floating-panel / wd-swipe-action / wd-notice-bar … | 各自定位/尺寸计算串 | 进度条宽度、表格列宽、二维码尺寸、滑块位移、气泡定位等全部失效 |
+
+**规则**：
+
+1. 模板内联样式一律对象语法：`:style="{ height: addUnit(itemHeight) }"`；
+   带条件的状态用对象展开或 `as Record<string, string>` 消歧义。
+2. 消费方传入的 `customStyle`（字符串）先过 `common/util.ts` 的
+   **`parseStyle()`** 归一为对象再绑定：`:style="parseStyle(customStyle)"`。
+   `baseProps.customStyle` 的类型已放宽为 `[String, Object]`，两种传法都支持。
+3. computed 返回样式对象；需要剔空值（`undefined` / `''`）时用
+   **`filterStyle()`**，不要再 `objToStyle()` 拼字符串后下发。
+4. 组件内拼接的多段样式（如 `${rootStyle}${customStyle}`）改为
+   `{ ...rootStyle, ...parseStyle(customStyle) }`。
+5. **回归测试**：`test/inline-style-regression.test.ts` 经双线程管线 +
+   JSDOM 挂载，直接断言关键元素 `style` 属性非空（列高 / translateY /
+   指示带 / customStyle / themeVars 映射）。改样式相关代码必须全绿。
+
+**两个附带的布局陷阱**（同在 picker-view 修复中发现，写组件时注意）：
+
+- **flex 子项默认 `flex-shrink: 1`**：列内容总高（pad + 全部列项）远超
+  可视区时，会被容器高度**按比例压缩**（行高塌成 1/4）。定高且不允许
+  压缩的 flex 子项必须显式 `flex-shrink: 0`。
+- **Web 预览的绘制不遵循 z-index**（疑似按 DOM 逆序绘制）：不透明底色的
+  `position: absolute` 装饰元素（如 picker 选中指示带）若排在兄弟节点
+  **之前**，会连文字一起盖掉。此类元素须排在内容节点**之后**，并保持
+  z-index 低于内容（真机按 z-index 绘制，两个平台才都不出问题）。
+

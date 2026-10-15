@@ -18,6 +18,9 @@ import DatetimePickerView from '../src/components/wd-datetime-picker-view/wd-dat
 import CalendarView from '../src/components/wd-calendar-view/wd-calendar-view.vue'
 import Button from '../src/components/wd-button/wd-button.vue'
 import Progress from '../src/components/wd-progress/wd-progress.vue'
+import ConfigProvider from '../src/components/wd-config-provider/wd-config-provider.vue'
+import Switch from '../src/components/wd-switch/wd-switch.vue'
+import { mapThemeVarsToCSSVars } from '../src/composables/useConfigProvider'
 
 function styleOf(el: Element | null): string {
   return el ? el.getAttribute('style') || '' : ''
@@ -135,6 +138,40 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     expect(grid).not.toBeNull()
     // 网格下不再直接挂 day（全部包在 row 内）
     expect(grid!.querySelectorAll(':scope > .wd-calendar-view__day').length).toBe(0)
+    cleanup()
+  })
+
+  it('WdConfigProvider themeVars 映射为 --wd-* 对象（定制主题曾整体失效）', () => {
+    // mapThemeVarsToCSSVars 输出对象（字符串形式会被 patchProp 丢弃）；
+    // 真机经 enableCSSInlineVariables 支持内联 CSS 变量，测试环境的
+    // JSDOM 不支持 setProperty 自定义属性，故在单元层断言映射结果。
+    const vars = mapThemeVarsToCSSVars({ colorPrimary: '#ff0000', fontSizeSmall: '12px' })
+    expect(vars).toEqual({
+      '--wd-color-primary': '#ff0000',
+      '--wd-font-size-small': '12px'
+    })
+  })
+
+  it('WdConfigProvider customStyle 合并进根节点对象样式', () => {
+    const { container } = render(ConfigProvider, {
+      theme: 'light',
+      customStyle: 'background-color: rgb(1, 2, 3)'
+    })
+    const root = container.querySelector('.wd-theme-light')
+    expect(styleOf(root)).toContain('background-color')
+    expect(styleOf(root)).toContain('rgb(1, 2, 3)')
+    cleanup()
+  })
+
+  it('WdSwitch 轨道 / 滑块样式为对象且已应用', () => {
+    const { container } = render(Switch, { modelValue: true, activeColor: '#34C759' })
+    const root = container.querySelector('.wd-switch')
+    expect(styleOf(root)).toMatch(/height|width/)
+    const action = container.querySelector('.wd-switch__action')
+    expect(styleOf(action)).toMatch(/width/)
+    expect(styleOf(action)).toMatch(/transform/)
+    const inner = container.querySelector('.wd-switch__inner')
+    if (inner) expect(styleOf(inner)).toMatch(/background/)
     cleanup()
   })
 })

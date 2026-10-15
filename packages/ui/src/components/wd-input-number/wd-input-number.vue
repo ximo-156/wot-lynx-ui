@@ -201,7 +201,9 @@ function handleTouchEnd() {
 }
 
 function handleInput({ detail }: any) {
-  const raw = detail.value !== undefined ? detail.value : inputValue.value
+  // detail 为可选载荷：真机上 Lynx 的 input 事件必带 detail.value，
+  // 但合成事件 / 测试派发可能不含 detail，直接读取会抛未捕获 TypeError。
+  const raw = detail?.value !== undefined ? detail.value : inputValue.value
   if (props.allowNull && (raw === '' || raw === null)) {
     inputValue.value = ''
     emit('update:modelValue', '')
