@@ -12,7 +12,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { collapseItemProps } from './types'
 import { useParent } from '../../composables/useParent'
 import { COLLAPSE_KEY } from '../wd-collapse/types'
-import { isArray } from '../../common/util'
+import { isArray, parseStyle } from '../../common/util'
 
 const props = defineProps(collapseItemProps)
 const emit = defineEmits(['click'])
@@ -35,7 +35,7 @@ function handleClick() {
 </script>
 
 <template>
-  <view :class="`wd-collapse-item ${expanded ? 'is-expanded' : ''} ${disabled ? 'is-disabled' : ''} ${customClass}`" :style="customStyle">
+  <view :class="`wd-collapse-item ${expanded ? 'is-expanded' : ''} ${disabled ? 'is-disabled' : ''} ${customClass}`" :style="parseStyle(customStyle)">
     <view class="wd-collapse-item__header" @tap="handleClick">
       <view v-if="useTitleSlot && $slots.title" class="wd-collapse-item__title-slot">
         <slot name="title" :expanded="expanded" />

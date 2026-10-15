@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { sidebarProps, type SidebarProvide } from './types'
 import { useChildren } from '../../composables/useChildren'
@@ -34,7 +35,7 @@ linkChildren({
 </script>
 
 <template>
-  <view :class="`wd-sidebar ${customClass}`" :style="customStyle">
+  <view :class="`wd-sidebar ${customClass}`" :style="parseStyle(customStyle)">
     <slot />
     <view class="wd-sidebar__padding" />
   </view>

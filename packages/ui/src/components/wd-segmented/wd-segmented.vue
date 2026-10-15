@@ -13,7 +13,7 @@ import './index.css'
 
 import { computed, getCurrentInstance, onMounted, reactive, watch } from 'vue-lynx'
 import { segmentedProps, type SegmentedExpose, type SegmentedOption } from './types'
-import { addUnit, getRect, isEqual, isObj, objToStyle, pause } from '../../common/util'
+import { addUnit, getRect, isEqual, isObj, objToStyle, pause, parseStyle } from '../../common/util'
 import { uni } from '../../common/uni'
 
 const props = defineProps(segmentedProps)
@@ -114,7 +114,7 @@ defineExpose<SegmentedExpose>({
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <view
       v-for="(option, index) in options"
       :key="index"

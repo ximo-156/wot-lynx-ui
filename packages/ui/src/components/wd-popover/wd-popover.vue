@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed, ref, useSlots } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
@@ -83,7 +84,7 @@ defineExpose<PopoverExpose>({ open, close, updatePosition })
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle" id="popover" @tap.stop="toggle">
+  <view :class="rootClass" :style="parseStyle(customStyle)" id="popover" @tap.stop="toggle">
     <view class="wd-popover__pos wd-popover__hidden" id="pos">
       <view :class="`wd-popover__container ${customPop}`">
         <view v-if="!slots.content && mode === 'normal'" class="wd-popover__inner">

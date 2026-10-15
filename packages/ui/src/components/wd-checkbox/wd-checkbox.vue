@@ -15,7 +15,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { checkboxProps, type CheckboxExpose } from './types'
 import { useCheckboxGroup } from '../../composables/useCheckboxGroup'
 import { useFormDisabled } from '../../composables/useFormDisabled'
-import { isDef, objToStyle } from '../../common/util'
+import { isDef, objToStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(checkboxProps)
 const emit = defineEmits(['change', 'update:modelValue', 'tap'])
@@ -143,7 +143,7 @@ function toggle() {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle" @tap="toggle">
+  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="toggle">
     <view v-if="$slots.default" :class="['wd-checkbox__label', customLabelClass]" :style="labelStyle">
       <slot />
     </view>

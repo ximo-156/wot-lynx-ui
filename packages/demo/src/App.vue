@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue-lynx'
+import { useToast } from 'wot-lynx-ui'
 
 // 组件通过 wotLynxUI 插件全局注册（Tier 1：基础组件）
 const count = ref(0)
@@ -87,6 +88,251 @@ async function onValidate() {
 function onReset() {
   formRef.value?.reset()
 }
+
+// ---- 导航类组件 Demo 状态（Tier 5 补齐） ----
+// IndexBar 索引数据（anchor 的 index 必填，按此注册右侧索引条）
+const indexBarData = ref([
+  { index: 'A', cities: ['北京', '蚌埠', '保定'] },
+  { index: 'B', cities: ['重庆', '成都'] },
+  { index: 'C', cities: ['长沙', '长春'] },
+  { index: 'D', cities: ['大连', '东莞'] }
+])
+// SortButton 排序状态：-1 升序 / 0 无 / 1 降序
+const sortValue = ref(0)
+const sortResetValue = ref(0)
+const sortDescValue = ref(0)
+const sortLineValue = ref(1)
+// SwiperNav 数据源（image: url + title；icon: icon + title）
+const swiperNavItems = ref([
+  { url: 'https://temp.img1.lynxjs.org/close.png', title: '图片一' },
+  { url: 'https://temp.img1.lynxjs.org/close.png', title: '图片二' },
+  { url: 'https://temp.img1.lynxjs.org/close.png', title: '图片三' }
+])
+const swiperNavIconItems = ref([
+  { icon: 'home', title: '首页' },
+  { icon: 'camera', title: '相机' },
+  { icon: 'image', title: '图片' }
+])
+const swiperNavIndex = ref(-1)
+// Tabbar 选中值（与既有 tabValue 区分）
+const tabbarValue = ref(0)
+const tabbarRoundValue = ref(1)
+// TabbarItem 演示选中值
+const tabbarItemValue = ref(2)
+// Loadmore 状态循环切换：loading -> error -> finished
+const loadmoreState = ref<'loading' | 'error' | 'finished'>('loading')
+function cycleLoadmoreState() {
+  loadmoreState.value = loadmoreState.value === 'loading' ? 'error' : loadmoreState.value === 'error' ? 'finished' : 'loading'
+}
+// Fab 展开状态（v-model:active）
+const fabActive = ref(false)
+const fabActiveLeft = ref(false)
+
+// ---- 展示 / 布局类组件 Demo 状态（Tier 5 补齐） ----
+// Skeleton 骨架屏
+const skeletonLoading = ref(true)
+const skeletonRowCol = ref<Array<number | Record<string, string>>>([
+  { width: '40%' },
+  3,
+  { width: '96px', height: '96px' }
+])
+// CountTo 数字滚动（无 expose 方法，重新播放用 :key 强制重挂载）
+const countToKey = ref(0)
+const countToDone = ref(false)
+function onCountToFinish() {
+  countToDone.value = true
+}
+function replayCountTo() {
+  countToKey.value++
+  countToDone.value = false
+}
+// Backtop 回到顶部（scrollTop 必填，由 scroll-view @scroll 下发）
+const backtopScrollTop = ref(0)
+function onBacktopScroll(e: any) {
+  backtopScrollTop.value = e?.detail?.scrollTop ?? 0
+}
+function onBacktopTap() {
+  console.log('[demo] backtop tap, 回到顶部')
+  backtopScrollTop.value = 0
+}
+// Resize 尺寸监听
+const resizeHeight = ref(60)
+const resizeCount = ref(0)
+function onResize(e: any) {
+  resizeCount.value++
+  console.log('[demo] resize', e)
+}
+function toggleResizeHeight() {
+  resizeHeight.value = resizeHeight.value === 60 ? 140 : 60
+}
+
+// ---- 选择器 / 表单类组件 Demo 状态（Tier 5 补齐） ----
+// Cascader 级联选择
+const cascaderVisible = ref(false)
+const cascaderValue = ref<string[]>([])
+const cascaderOptions = ref([
+  {
+    value: 'zj',
+    text: '浙江省',
+    children: [
+      {
+        value: 'hz',
+        text: '杭州市',
+        children: [
+          { value: 'xh', text: '西湖区' },
+          { value: 'bh', text: '滨江区' }
+        ]
+      },
+      { value: 'nb', text: '宁波市', children: [{ value: 'jb', text: '江北区' }] }
+    ]
+  },
+  {
+    value: 'js',
+    text: '江苏省',
+    children: [
+      {
+        value: 'nj',
+        text: '南京市',
+        children: [
+          { value: 'xw', text: '玄武区' },
+          { value: 'gl', text: '鼓楼区' }
+        ]
+      }
+    ]
+  }
+])
+function cascaderLabel() {
+  let nodes: any[] = cascaderOptions.value
+  const labels: string[] = []
+  for (const val of cascaderValue.value) {
+    const node = nodes.find((item) => item.value === val)
+    if (!node) break
+    labels.push(node.text)
+    nodes = node.children || []
+  }
+  return labels.length ? labels.join(' / ') : '未选择'
+}
+// SelectPicker 下拉选择
+const selectPickerVisible = ref(false)
+const selectPickerValue = ref<string[]>(['fruit'])
+const selectPickerColumns = ref([
+  { value: 'fruit', label: '水果' },
+  { value: 'veg', label: '蔬菜' },
+  { value: 'meat', label: '肉类' },
+  { value: 'drink', label: '饮品' }
+])
+// DropMenu 下拉菜单
+const dropSortValue = ref('')
+const dropPriceValue = ref('')
+const dropSortOptions = ref([
+  { value: 'new', label: '最新发布' },
+  { value: 'sales', label: '销量优先' },
+  { value: 'price', label: '价格从低到高' }
+])
+const dropPriceOptions = ref([
+  { value: '0-50', label: '50 元以下' },
+  { value: '50-100', label: '50 - 100 元' },
+  { value: '100+', label: '100 元以上' }
+])
+const dropSortLabel = ref('')
+const dropPriceLabel = ref('')
+function onSortChange(e: any) {
+  dropSortLabel.value = dropSortOptions.value.find((o) => o.value === e.value)?.label || ''
+}
+function onPriceChange(e: any) {
+  dropPriceLabel.value = dropPriceOptions.value.find((o) => o.value === e.value)?.label || ''
+}
+// DropMenuItem 自定义字段
+const dropCustomValue = ref('')
+const dropCustomOptions = ref([
+  { id: 1, name: '选项一' },
+  { id: 2, name: '选项二' },
+  { id: 3, name: '选项三' }
+])
+const dropDisabledValue = ref('')
+const dropCustomLabel = ref('')
+function onCustomChange(e: any) {
+  dropCustomLabel.value = dropCustomOptions.value.find((o) => o.id === e.value)?.name || ''
+}
+// CalendarView / DateTimePickerView 内嵌视图
+const calendarViewValue = ref<number | null>(null)
+const datetimePickerViewValue = ref(Date.now())
+// ImgCropper 图片裁剪
+const cropperVisible = ref(false)
+const cropperResult = ref('')
+function onCropperConfirm(e: any) {
+  cropperResult.value = `缩放 ${e.scale} · ${e.width}×${e.height}`
+}
+// SwipeAction 滑动操作
+const swipeCells = ref([
+  { title: '单元格一', status: 'close' },
+  { title: '单元格二', status: 'close' },
+  { title: '单元格三', status: 'close' }
+])
+const swipeTip = ref('左右横滑单元格，点击两侧按钮')
+// TableColumn 作用域插槽自定义列
+const tableColData = ref([
+  { name: '张三', status: '进行中', score: 92 },
+  { name: '李四', status: '已完成', score: 85 },
+  { name: '王五', status: '未开始', score: 78 }
+])
+const tableColColumns = ref([
+  { prop: 'name', label: '姓名', width: 80 },
+  { prop: 'status', label: '状态', width: 90 },
+  { prop: 'score', label: '得分', width: 80 }
+])
+
+// ---- 弹层反馈类组件 Demo 状态（Tier 5 补齐） ----
+// Popup 弹出层（实际 API 为 modelValue / update:modelValue，无 visible prop）
+const popupVisible = ref(false)
+const popupPosition = ref<'center' | 'top' | 'bottom' | 'left' | 'right'>('center')
+function openPopup(position: 'center' | 'top' | 'bottom' | 'left' | 'right') {
+  popupPosition.value = position
+  popupVisible.value = true
+}
+// Overlay 遮罩（仅 show prop）
+const overlayVisible = ref(false)
+// Popover 气泡弹出
+const popoverVisible = ref(false)
+const popoverMenu = ref([
+  { iconClass: 'settings', content: '选项一' },
+  { iconClass: 'image', content: '选项二' },
+  { iconClass: 'video', content: '选项三' }
+])
+// Tooltip 文字提示
+const tooltipVisible = ref(false)
+// Tour 新手引导
+const tourVisible = ref(false)
+const tourSteps = ref([
+  { element: '#tour-target-1', title: '第一步', content: '这里是第一步的引导说明' },
+  { element: '#tour-target-2', title: '第二步', content: '这里是第二步的引导说明' }
+])
+// Curtain 幕帘
+const curtainVisible = ref(false)
+// FloatingPanel 浮动面板（无 modelValue，:height 受控 + @height-change 回写）
+const panelHeight = ref(200)
+function onPanelHeightChange(e: any) {
+  panelHeight.value = e.height
+}
+// Toast 轻提示（命令式 hook，与 wd-toast 的 selector 配对）
+const toast = useToast('demo-toast')
+// ImagePreview / VideoPreview 命令式 API（ref + selector）
+const imagePreviewRef = ref<any>(null)
+const previewImages = ref([
+  'https://temp.img1.lynxjs.org/close.png',
+  'https://temp.img1.lynxjs.org/close.png',
+  'https://temp.img1.lynxjs.org/close.png'
+])
+function showImagePreview() {
+  imagePreviewRef.value?.open({ images: previewImages.value, startPosition: 0 })
+}
+const videoPreviewRef = ref<any>(null)
+const demoVideoUrl = 'https://www.w3schools.com/html/mov_bbb.mp4'
+function showVideoPreview() {
+  videoPreviewRef.value?.open({ url: demoVideoUrl, poster: 'https://temp.img1.lynxjs.org/close.png', title: '示例视频' })
+}
+// RootPortal 根节点容器
+const portalBarVisible = ref(false)
 </script>
 
 <template>
@@ -166,7 +412,7 @@ function onReset() {
         <view class="demo-panel">
           <view class="demo-row">
             <wd-icon name="close" size="20" />
-            <wd-icon name="loading" size="24" color="#FF6900" />
+            <wd-icon name="loading" size="24" color="#7F5CFF" />
             <wd-icon name="arrow-left" size="20" />
             <wd-icon name="settings" size="20" color="#FF8800" />
           </view>
@@ -177,7 +423,7 @@ function onReset() {
             <wd-loading type="wave" size="24px" />
           </view>
           <view class="demo-row">
-            <wd-loading type="circular" size="20px" color="#FF6900" text="加载中" />
+            <wd-loading type="circular" size="20px" color="#7F5CFF" text="加载中" />
             <wd-loading type="dots" size="20px" direction="horizontal" text="横向" />
           </view>
         </view>
@@ -437,10 +683,13 @@ function onReset() {
           </view>
         </view>
       </view>
+
+
     </scroll-view>
   </wd-config-provider>
 </template>
 
+<style scoped>
 <style scoped>
 .app-root {
   height: 100%;

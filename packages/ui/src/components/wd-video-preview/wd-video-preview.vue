@@ -51,6 +51,9 @@ function handleAfterLeave() {
 }
 
 function open(video: VideoPreviewOptions) {
+  // 先置 show 再写入 options：overlay 的 :show 才会驱动入场过渡，
+  // 否则命令式打开时遮罩不显示（与 wd-image-preview 的 open 保持一致）
+  state.value.show = true
   previewVideo(video)
 }
 

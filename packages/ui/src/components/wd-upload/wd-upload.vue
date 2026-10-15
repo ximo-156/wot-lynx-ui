@@ -15,7 +15,7 @@ import './index.css'
 import { computed, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
-import { context, deepClone, isDef, isEqual, isImageUrl, isPromise, isVideoUrl, uuid } from '../../common/util'
+import { context, deepClone, isDef, isEqual, isImageUrl, isPromise, isVideoUrl, uuid, parseStyle } from '../../common/util'
 import { callInterceptor } from '../../common/interceptor'
 import { useTranslate } from '../../composables/useTranslate'
 import { useFormDisabled } from '../../composables/useFormDisabled'
@@ -225,7 +225,7 @@ const limitText = computed(() => {
 </script>
 
 <template>
-  <view :class="['wd-upload', customClass]" :style="customStyle">
+  <view :class="['wd-upload', customClass]" :style="parseStyle(customStyle)">
     <!-- 预览列表 -->
     <view
       v-for="(file, index) in uploadFiles"

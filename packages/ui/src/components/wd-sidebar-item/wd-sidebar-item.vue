@@ -13,7 +13,7 @@ import WdBadge from '../wd-badge/wd-badge.vue'
 import { sidebarItemProps } from './types'
 import { useParent } from '../../composables/useParent'
 import { SIDEBAR_KEY } from '../wd-sidebar/types'
-import { isDef } from '../../common/util'
+import { isDef, parseStyle } from '../../common/util'
 
 const props = defineProps(sidebarItemProps)
 const emit = defineEmits(['tap'])
@@ -51,7 +51,7 @@ function handleClick() {
       disabled ? 'wd-sidebar-item--disabled' : '',
       customClass
     ]"
-    :style="customStyle"
+    :style="parseStyle(customStyle)"
     @tap="handleClick"
   >
     <slot name="icon" />

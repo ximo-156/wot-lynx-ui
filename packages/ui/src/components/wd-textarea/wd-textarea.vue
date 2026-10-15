@@ -12,7 +12,7 @@ import './index.css'
 import { computed, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { textareaProps } from './types'
-import { isDef, isString, pause } from '../../common/util'
+import { isDef, isString, pause, parseStyle } from '../../common/util'
 import { useParent } from '../../composables/useParent'
 import { useTranslate } from '../../composables/useTranslate'
 import { useFormDisabled } from '../../composables/useFormDisabled'
@@ -135,7 +135,7 @@ function handleKeyboardheightchange({ detail }: any) {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <view :class="['wd-textarea__body', customTextareaContainerClass]">
       <wd-icon
         v-if="hasPrefixIcon"

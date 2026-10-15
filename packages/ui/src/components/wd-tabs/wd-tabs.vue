@@ -15,7 +15,7 @@ import WdBadge from '../wd-badge/wd-badge.vue'
 import { tabsProps } from './types'
 import { useChildren } from '../../composables/useChildren'
 import { TABS_KEY } from './types'
-import { getRect, objToStyle } from '../../common/util'
+import { getRect, objToStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(tabsProps)
 const emit = defineEmits(['change', 'click', 'update:modelValue'])
@@ -145,7 +145,7 @@ const rootClass = computed(() => {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <view class="wd-tabs__nav">
       <view class="wd-tabs__nav--wrap">
         <scroll-view :scroll-x="innerSlidable" scroll-with-animation :scroll-left="state.scrollLeft" enhanced :show-scrollbar="false">

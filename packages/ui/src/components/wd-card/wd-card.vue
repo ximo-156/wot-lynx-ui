@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { cardProps } from './types'
 
@@ -13,7 +14,7 @@ defineProps(cardProps)
 </script>
 
 <template>
-  <view :class="`wd-card ${type ? `wd-card--${type}` : ''} ${customClass}`" :style="customStyle">
+  <view :class="`wd-card ${type ? `wd-card--${type}` : ''} ${customClass}`" :style="parseStyle(customStyle)">
     <view v-if="title || $slots.title" :class="`wd-card__title ${customTitleClass}`">
       <slot name="title">
         <text v-if="title" class="wd-card__title-text">{{ title }}</text>

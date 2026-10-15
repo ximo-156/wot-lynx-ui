@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
@@ -35,7 +36,7 @@ const rootClass = computed(() => {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <view class="wd-step__header">
       <view class="wd-step__icon">
         <wd-icon v-if="icon" :name="icon" custom-class="wd-step__icon-img" />

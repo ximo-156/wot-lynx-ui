@@ -8,7 +8,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { addUnit } from '../../common/util'
+import { addUnit, parseStyle } from '../../common/util'
 import { passwordInputProps } from './types'
 
 defineProps(passwordInputProps)
@@ -21,7 +21,7 @@ function onTouchStart(event: any) {
 </script>
 
 <template>
-  <view :class="`wd-password-input ${customClass}`" :style="customStyle">
+  <view :class="`wd-password-input ${customClass}`" :style="parseStyle(customStyle)">
     <view class="wd-password-input__security" @touchstart="onTouchStart">
       <view
         v-for="(_, index) in length"

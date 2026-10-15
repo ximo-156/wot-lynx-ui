@@ -13,7 +13,7 @@ import WdLoading from '../wd-loading/wd-loading.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { loadmoreProps } from './types'
 import { useTranslate } from '../../composables/useTranslate'
-import { isDef, isUndefined, omitBy } from '../../common/util'
+import { isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
 
 const props = defineProps(loadmoreProps)
 const emit = defineEmits(['reload', 'tap'])
@@ -34,7 +34,7 @@ function reload() {
 </script>
 
 <template>
-  <view :class="['wd-loadmore', customClass]" :style="customStyle" @tap="reload">
+  <view :class="['wd-loadmore', customClass]" :style="parseStyle(customStyle)" @tap="reload">
     <slot v-if="state === 'finished'" name="finished">
       <wd-divider custom-class="wd-loadmore__divider">{{ finishedText || translate('finished') }}</wd-divider>
     </slot>

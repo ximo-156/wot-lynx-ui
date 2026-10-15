@@ -8,6 +8,11 @@
  * - 数据逻辑（列格式化 / 选中索引 / 级联构建）在 composables/useSelection，
  *   本组件只负责触摸与渲染；
  * - 禁用项自动就近迁移（correctSelectedIndex）。
+ * - **内联样式一律用对象语法**：vue-lynx 的 patchProp 对 `style` 只接受
+ *   对象/数组（内部走 normalizeStyle），字符串值（如 `height: 44px`）
+ *   会被静默丢弃为 {}——本组件的列高、translateY 位移、指示带/遮罩
+ *   尺寸全部依赖内联样式，写成模板字符串会导致「列不滚动、指示带
+ *   消失、行高塌成文本高」（真机与 Web 预览同现，见 CONVENTIONS §19）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -15,7 +20,7 @@ import './index.css'
 import { computed, nextTick, ref, watch } from 'vue-lynx'
 import { pickerViewProps, type PickerOption, type PickerViewExpose } from './types'
 import { useSelection } from '../../composables/useSelection'
-import { addUnit, isArray, isDef, isEqual, isObj } from '../../common/util'
+import { addUnit, isArray, isDef, isEqual, isObj, parseStyle } from '../../common/util'
 
 const props = defineProps(pickerViewProps)
 const emit = defineEmits(['change', 'pickstart', 'pickend', 'update:modelValue'])
@@ -87,11 +92,19 @@ watch(
   { immediate: true, deep: true }
 )
 
-const pickerViewStyle = computed(() => `height: ${addUnit(containerHeight.value)};`)
+const pickerViewStyle = computed(() => ({ height: addUnit(containerHeight.value) }))
 
-function columnTransform(colIndex: number): string {
+/** 根节点样式（customStyle 为字符串，需 parseStyle 归一为对象，CONVENTIONS §19） */
+const pickerStyle = computed(() => parseStyle(props.customStyle))
+
+/** 列内容位移（对象样式：字符串 :style 会被 vue-lynx 静默丢弃，CONVENTIONS §19） */
+function columnTransform(colIndex: number): Record<string, string> {
   const offset = offsets.value[colIndex] || 0
-  return `transform: translateY(${-offset}px);${transitions.value[colIndex] ? 'transition: transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);' : ''}`
+  const style: Record<string, string> = { transform: `translateY(${-offset}px)` }
+  if (transitions.value[colIndex]) {
+    style.transition = 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)'
+  }
+  return style
 }
 
 function getItemClass(disabled: boolean | undefined, colIndex: number, rowIndex: number): string {
@@ -197,13 +210,13 @@ defineExpose<PickerViewExpose>({
 </script>
 
 <template>
-  <view :class="`wd-picker-view ${customClass}`" :style="customStyle">
+  <view :class="`wd-picker-view ${customClass}`" :style="pickerStyle">
     <view class="wd-picker-view__main" :style="pickerViewStyle">
       <!-- 选中指示带 -->
-      <view class="wd-picker-view__indicator" :style="`top: ${padHeight}px; height: ${itemHeight}px;`" />
+      <view class="wd-picker-view__indicator" :style="{ top: addUnit(padHeight), height: addUnit(itemHeight) }" />
       <!-- 上下遮罩 -->
-      <view class="wd-picker-view__mask wd-picker-view__mask--top" :style="`height: ${padHeight}px;`" />
-      <view class="wd-picker-view__mask wd-picker-view__mask--bottom" :style="`height: ${padHeight}px;`" />
+      <view class="wd-picker-view__mask wd-picker-view__mask--top" :style="{ height: addUnit(padHeight) }" />
+      <view class="wd-picker-view__mask wd-picker-view__mask--bottom" :style="{ height: addUnit(padHeight) }" />
 
       <view
         v-for="(col, colIndex) in formatColumns"
@@ -215,16 +228,16 @@ defineExpose<PickerViewExpose>({
         @touchcancel="onTouchEnd(colIndex)"
       >
         <view class="wd-picker-view__column-content" :style="columnTransform(colIndex)">
-          <view class="wd-picker-view__column-pad" :style="`height: ${padHeight}px;`" />
+          <view class="wd-picker-view__column-pad" :style="{ height: addUnit(padHeight) }" />
           <view
             v-for="(row, rowIndex) in col"
             :key="rowIndex"
             :class="getItemClass(row['disabled'], colIndex, rowIndex)"
-            :style="`height: ${itemHeight}px;`"
+            :style="{ height: addUnit(itemHeight) }"
           >
             <text class="wd-picker-view__column-label">{{ row[labelKey] }}</text>
           </view>
-          <view class="wd-picker-view__column-pad" :style="`height: ${padHeight}px;`" />
+          <view class="wd-picker-view__column-pad" :style="{ height: addUnit(padHeight) }" />
         </view>
       </view>
     </view>

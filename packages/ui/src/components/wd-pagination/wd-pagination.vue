@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed } from 'vue-lynx'
 import WdButton from '../wd-button/wd-button.vue'
@@ -35,7 +36,7 @@ function add() {
 </script>
 
 <template>
-  <view v-if="!(hideIfOnePage && totalPageNum === 1)" :class="`wd-pagination ${customClass}`" :style="customStyle">
+  <view v-if="!(hideIfOnePage && totalPageNum === 1)" :class="`wd-pagination ${customClass}`" :style="parseStyle(customStyle)">
     <view class="wd-pagination__content">
       <slot name="prev" :modelValue="modelValue" :totalPageNum="totalPageNum" :total="total" :pageSize="pageSize">
         <wd-button

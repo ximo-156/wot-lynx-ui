@@ -14,7 +14,7 @@ import './index.css'
 import { computed, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { inputProps } from './types'
-import { isDef, isEqual, pause } from '../../common/util'
+import { isDef, isEqual, pause, parseStyle } from '../../common/util'
 import { useParent } from '../../composables/useParent'
 import { useTranslate } from '../../composables/useTranslate'
 import { useFormDisabled } from '../../composables/useFormDisabled'
@@ -187,7 +187,7 @@ function handleClick(event: any) {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle" @tap="handleClick">
+  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
     <view v-if="prefixIcon || $slots.prefix" class="wd-input__prefix">
       <wd-icon
         v-if="prefixIcon && !$slots.prefix"

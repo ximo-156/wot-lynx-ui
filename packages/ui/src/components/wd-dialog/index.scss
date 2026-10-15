@@ -80,6 +80,8 @@
     flex-direction: row;
     align-items: center;
     padding: var(--wd-space-5);
+    /* Lynx 不支持 :not(:last-child)，按钮间距改由容器 gap 统一控制 */
+    column-gap: var(--wd-space-3);
     border-top-width: 1ppx;
     border-top-style: solid;
     border-top-color: var(--wd-border-2);
@@ -95,8 +97,6 @@
     border-radius: 0;
     height: 44px;
 
-    &:not(:last-child) {
-      margin-right: var(--wd-space-3);
-    }
+
   }
 }

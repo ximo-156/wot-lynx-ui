@@ -8,6 +8,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed } from 'vue-lynx'
 import { cellGroupProps } from './types'
@@ -30,7 +31,7 @@ const rootClass = computed(() => {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <view v-if="title || value || $slots.title || $slots.value" class="wd-cell-group__title">
       <view class="wd-cell-group__left">
         <text v-if="!$slots.title">{{ title }}</text>

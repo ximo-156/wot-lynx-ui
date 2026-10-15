@@ -11,7 +11,7 @@ import './index.css'
 
 import { ref } from 'vue-lynx'
 import { resizeProps } from './types'
-import { uuid } from '../../common/util'
+import { uuid, parseStyle } from '../../common/util'
 
 const props = defineProps(resizeProps)
 const emit = defineEmits(['resize'])
@@ -34,7 +34,7 @@ function onScrollHandler() {
 </script>
 
 <template>
-  <view :class="`wd-resize ${customClass}`" :style="customStyle">
+  <view :class="`wd-resize ${customClass}`" :style="parseStyle(customStyle)">
     <view :id="resizeId" :class="`wd-resize__container ${customContainerClass}`">
       <slot />
       <scroll-view class="wd-resize__wrapper" :scroll-y="true" :scroll-top="expandScrollTop" :scroll-x="true" :scroll-left="expandScrollLeft" @scroll="onScrollHandler">

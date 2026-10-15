@@ -17,7 +17,7 @@ import { computed, useSlots } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import { buttonProps } from './types'
-import { isDef, isUndefined, omitBy } from '../../common/util'
+import { isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
 import type { LoadingProps } from '../wd-loading/types'
 
@@ -88,7 +88,9 @@ function handleClick(event: any) {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle" @tap="handleClick">
+  <!-- customStyle 为字符串，需 parseStyle 归一为对象（CONVENTIONS §19：
+       vue-lynx 的 patchProp 对字符串 style 会静默替换为 {}） -->
+  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
     <view class="wd-button__content">
       <wd-loading v-if="loading" v-bind="customLoadingProps" />
       <wd-icon

@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
@@ -41,7 +42,7 @@ function handleClick() {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle" @tap="handleClick">
+  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
     <view class="wd-sort-button__wrapper">
       <view :class="`wd-sort-button__left ${modelValue !== 0 ? 'is-active' : ''}`">
         <text>{{ title }}</text>

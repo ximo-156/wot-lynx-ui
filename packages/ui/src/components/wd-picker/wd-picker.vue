@@ -12,7 +12,7 @@ import './index.css'
 import { getCurrentInstance, onBeforeMount, onMounted, ref, watch } from 'vue-lynx'
 import WdPopup from '../wd-popup/wd-popup.vue'
 import WdPickerView from '../wd-picker-view/wd-picker-view.vue'
-import { deepClone } from '../../common/util'
+import { deepClone, parseStyle } from '../../common/util'
 import { callInterceptor } from '../../common/interceptor'
 import type { PickerOption, PickerViewExpose } from '../wd-picker-view/types'
 import { useTranslate } from '../../composables/useTranslate'
@@ -146,7 +146,7 @@ defineExpose<PickerExpose>({
 </script>
 
 <template>
-  <view :class="`wd-picker ${customClass}`" :style="customStyle">
+  <view :class="`wd-picker ${customClass}`" :style="parseStyle(customStyle)">
     <wd-popup
       v-model="popupShow"
       position="bottom"

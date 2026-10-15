@@ -9,6 +9,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed, ref, watch } from 'vue-lynx'
 import WdPopup from '../wd-popup/wd-popup.vue'
@@ -98,7 +99,7 @@ defineExpose<CascaderExpose>({
 </script>
 
 <template>
-  <view :class="['wd-cascader', customClass]" :style="customStyle">
+  <view :class="['wd-cascader', customClass]" :style="parseStyle(customStyle)">
     <wd-popup
       v-model="pickerShow"
       position="bottom"

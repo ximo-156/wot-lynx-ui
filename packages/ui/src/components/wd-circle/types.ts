@@ -1,6 +1,6 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
-import { ORANGE } from '../../common/theme'
+import { PURPLE } from '../../common/theme'
 
 export type CircleColor = string | Record<string, string | number>
 
@@ -19,7 +19,7 @@ export const circleProps = {
    */
   color: {
     type: [String, Object] as PropType<CircleColor>,
-    default: ORANGE[6]
+    default: PURPLE[6]
   },
   /**
    * 轨道颜色

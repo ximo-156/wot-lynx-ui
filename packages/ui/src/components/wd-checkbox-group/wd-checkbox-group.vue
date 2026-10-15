@@ -13,7 +13,7 @@ import { computed } from 'vue-lynx'
 import { checkboxGroupProps, type CheckboxGroupToggleAllOptions } from './types'
 import { useChildren } from '../../composables/useChildren'
 import { CHECKBOX_GROUP_KEY } from '../../composables/useCheckboxGroup'
-import { checkNumRange, deepClone, isDef } from '../../common/util'
+import { checkNumRange, deepClone, isDef, parseStyle } from '../../common/util'
 
 const props = defineProps(checkboxGroupProps)
 const emit = defineEmits(['change', 'update:modelValue'])
@@ -74,7 +74,7 @@ defineExpose({
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <slot />
   </view>
 </template>

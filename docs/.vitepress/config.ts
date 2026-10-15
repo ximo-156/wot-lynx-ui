@@ -20,6 +20,7 @@ export default defineConfig({
             { text: '快速开始', link: '/guide/quick-start' },
             { text: '真机测试指南', link: '/guide/device-testing' },
             { text: '主题与设计令牌', link: '/guide/theme' },
+            { text: '设计美学研究', link: '/guide/design-research' },
             { text: '高性能实践', link: '/guide/performance' },
             { text: '与 wot-ui 的差异', link: '/guide/differences' }
           ]

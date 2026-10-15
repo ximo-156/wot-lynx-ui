@@ -8,6 +8,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed, onMounted, ref } from 'vue-lynx'
 import WdText from '../wd-text/wd-text.vue'
@@ -70,7 +71,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <view :class="`wd-count-to ${customClass}`" :style="customStyle">
+  <view :class="`wd-count-to ${customClass}`" :style="parseStyle(customStyle)">
     <slot name="prefix">
       <wd-text custom-class="wd-count-to__separator-text" :type="type" :color="color" :text="prefix" />
     </slot>

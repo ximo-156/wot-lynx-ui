@@ -12,7 +12,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { skeletonProps, type SkeletonRowCol } from './types'
-import { isNumber, isObj } from '../../common/util'
+import { isNumber, isObj, parseStyle } from '../../common/util'
 
 const props = defineProps(skeletonProps)
 
@@ -45,7 +45,7 @@ const animationClass = computed(() => {
 </script>
 
 <template>
-  <view :class="`wd-skeleton ${animationClass} ${round ? 'is-round' : ''} ${customClass}`" :style="customStyle">
+  <view :class="`wd-skeleton ${animationClass} ${round ? 'is-round' : ''} ${customClass}`" :style="parseStyle(customStyle)">
     <view v-if="loading" class="wd-skeleton__content">
       <view v-for="(row, index) of parsedRowCols" :key="`row-${index}`" class="wd-skeleton__row">
         <view v-for="(col, idx) of row" :key="`col-${idx}`" :class="col.class" :style="col.style" />

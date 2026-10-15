@@ -16,7 +16,7 @@ import WdCalendarView from '../wd-calendar-view/wd-calendar-view.vue'
 import WdPopup from '../wd-popup/wd-popup.vue'
 import { callInterceptor } from '../../common/interceptor'
 import { formatDate } from '../../common/formatDate'
-import { deepClone, isArray, isEqual } from '../../common/util'
+import { deepClone, isArray, isEqual, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 import { calendarProps, type CalendarExpose } from './types'
 import type { CalendarType } from '../wd-calendar-view/types'
@@ -168,7 +168,7 @@ defineExpose<CalendarExpose>({
 </script>
 
 <template>
-  <view :class="`wd-calendar ${customClass}`" :style="customStyle">
+  <view :class="`wd-calendar ${customClass}`" :style="parseStyle(customStyle)">
     <wd-popup
       v-model="pickerShow"
       position="bottom"

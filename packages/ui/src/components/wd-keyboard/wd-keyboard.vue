@@ -9,6 +9,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed, ref, watch, useSlots } from 'vue-lynx'
 import WdPopup from '../wd-popup/wd-popup.vue'
@@ -157,7 +158,7 @@ function handlePress(text: string, type: NumberKeyType) {
     :root-portal="rootPortal"
     @click-modal="handleClose"
   >
-    <view :class="`wd-keyboard ${customClass}`" :style="customStyle">
+    <view :class="`wd-keyboard ${customClass}`" :style="parseStyle(customStyle)">
       <view v-if="showHeader" class="wd-keyboard__header">
         <slot v-if="showTitle" name="title">
           <text class="wd-keyboard__title">{{ title }}</text>

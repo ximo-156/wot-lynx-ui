@@ -21,7 +21,7 @@ import WdLoading from '../wd-loading/wd-loading.vue'
 import WdButton from '../wd-button/wd-button.vue'
 import { selectPickerProps, type SelectPickerExpose } from './types'
 import { callInterceptor } from '../../common/interceptor'
-import { isArray, isDef } from '../../common/util'
+import { isArray, isDef, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 
 const { translate } = useTranslate('select-picker')
@@ -159,7 +159,7 @@ defineExpose<SelectPickerExpose>({
 </script>
 
 <template>
-  <view :class="`wd-select-picker ${customClass}`" :style="customStyle">
+  <view :class="`wd-select-picker ${customClass}`" :style="parseStyle(customStyle)">
     <wd-popup
       v-model="pickerShow"
       position="bottom"

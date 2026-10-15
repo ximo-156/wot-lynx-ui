@@ -9,7 +9,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { watermarkProps } from './types'
-import { objToStyle } from '../../common/util'
+import { objToStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(watermarkProps)
 
@@ -50,7 +50,7 @@ const textStyle = computed(() => {
 </script>
 
 <template>
-  <view :class="`wd-watermark ${customClass}`" :style="customStyle">
+  <view :class="`wd-watermark ${customClass}`" :style="parseStyle(customStyle)">
     <slot />
     <view class="wd-watermark__layer">
       <view

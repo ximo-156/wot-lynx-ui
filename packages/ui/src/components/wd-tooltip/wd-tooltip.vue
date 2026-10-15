@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed, ref, useSlots } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
@@ -74,7 +75,7 @@ defineExpose<TooltipExpose>({
 </script>
 
 <template>
-  <view :class="`wd-tooltip ${customClass}`" :style="customStyle" id="tooltip" @tap.stop="toggle">
+  <view :class="`wd-tooltip ${customClass}`" :style="parseStyle(customStyle)" id="tooltip" @tap.stop="toggle">
     <view class="wd-tooltip__pos wd-tooltip__hidden" id="pos">
       <view :class="`wd-tooltip__container ${customPop}`">
         <view v-if="!slots.content" class="wd-tooltip__inner">

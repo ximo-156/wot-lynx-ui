@@ -24,10 +24,18 @@
     color: var(--wd-text-3);
   }
 
+  /* 网格：显式行容器（不用 flex-wrap —— Lynx 新引擎下 wrap 的 flex line
+     会被拉伸，行高从 52px 涨到 ~150px；显式行 + 定高彻底规避） */
   @include e(grid) {
     display: flex;
+    flex-direction: column;
+  }
+
+  @include e(row) {
+    display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    align-items: center;
+    height: 52px;
   }
 
   @include e(day) {
@@ -36,7 +44,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 14.2857%;
+    flex-grow: 1;
+    flex-basis: 0;
     height: 52px;
 
     /* 注意：必须用 edeep 生成扁平选择器（.wd-calendar-view__day-text 等）；
@@ -69,8 +78,10 @@
       background-color: var(--wd-color-primary);
     }
 
-    /* 非本月 */
-    &.is-normal {
+    /* 本月之外的补位日（上月末 / 下月初）置灰；
+       注意 is-normal 是「本月普通日」的默认样式（不再置灰——
+       早期把 is-normal 当非本月用，导致所有未选日期全部变淡） */
+    &.is-adjacent {
       .wd-calendar-view__day-text {
         color: var(--wd-text-4);
       }

@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed, ref } from 'vue-lynx'
 import WdOverlay from '../wd-overlay/wd-overlay.vue'
@@ -39,7 +40,7 @@ const showOverlay = computed(() => {
 </script>
 
 <template>
-  <view :class="`wd-drop-menu ${customClass}`" :style="customStyle">
+  <view :class="`wd-drop-menu ${customClass}`" :style="parseStyle(customStyle)">
     <slot />
     <wd-overlay v-if="modal" :show="showOverlay" :lock-scroll="false" :z-index="zIndex - 1" custom-style="background-color: transparent;" />
   </view>

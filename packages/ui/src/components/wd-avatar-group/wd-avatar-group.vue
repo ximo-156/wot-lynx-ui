@@ -11,7 +11,7 @@ import './index.css'
 import { computed, useSlots } from 'vue-lynx'
 import WdAvatar from '../wd-avatar/wd-avatar.vue'
 import { avatarGroupProps } from './types'
-import { addUnit, isDef } from '../../common/util'
+import { addUnit, isDef, parseStyle } from '../../common/util'
 
 const props = defineProps(avatarGroupProps)
 const slots = useSlots()
@@ -35,7 +35,7 @@ const rootClass = computed(() => {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <slot />
     <wd-avatar
       v-if="showCollapse"

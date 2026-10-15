@@ -1,6 +1,6 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp, numericProp } from '../../common/props'
-import { ORANGE } from '../../common/theme'
+import { PURPLE } from '../../common/theme'
 
 export const qrCodeProps = {
   ...baseProps,
@@ -27,11 +27,11 @@ export const qrCodeProps = {
   /**
    * 渐变起始色
    */
-  gradientStartColor: makeStringProp(ORANGE[6]),
+  gradientStartColor: makeStringProp(PURPLE[6]),
   /**
    * 渐变结束色
    */
-  gradientEndColor: makeStringProp(ORANGE[8]),
+  gradientEndColor: makeStringProp('#6E8FFB'),
   /**
    * 纠错等级（当前固定 M）
    */

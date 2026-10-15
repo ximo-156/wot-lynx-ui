@@ -6,12 +6,11 @@
  *   2. semantic（_semantic.scss）— 语义令牌，亮暗主题下指向不同刻度
  *   3. component（各组件 index.scss）— 组件私有令牌，回退到语义令牌
  *
- * 命名规则：--wd-<类别>-<刻度>，如 --wd-orange-6、--wd-space-4。
+ * 命名规则：--wd-<类别>-<刻度>，如 --wd-purple-6、--wd-space-4。
  * 颜色一律使用 8 位十六进制（#RRGGBBAA，Lynx 引擎约定，避免 rgba() 解析差异）。
  *
  * 设计依据（2026-08 调研，详见 docs/guide/design-research.md）：
- *   - 品牌色 = 小米品牌橙 #FF6900（rgb(255,105,0)），来源：mi.com 全球站
- *     官方 Logo SVG fill="#ff6900"（https://www.mi.com/global/hyperos）；
+ *   - 品牌色 = 品牌紫 #7F5CFF（既定品牌色，保持不变）；
  *   - 中性灰阶对齐 Apple systemGray 六档（HIG Color 页）+ 小米 HyperOS
  *     语义灰（--c-fg #1D1D1F / --c-fg-sub #6E6E73 / --c-fg-mute #86868B）；
  *   - 动效缓动取官方曲线：Xiaomi 默认 cubic-bezier(0.25,0.46,0.45,0.94)
@@ -27,18 +26,17 @@ page,
   --wd-black: #000000FF;
   --wd-transparent: transparent;
 
-  /* ===== 品牌橙阶（primary 取 6 档 #FF6900，hsl(24,100%,50%)） =====
-   * 小米 2021 品牌升级官方橙；6 档为基准，5 档供暗色主题提亮。 */
-  --wd-orange-1: #FFF3EDFF;
-  --wd-orange-2: #FFE0CCFF;
-  --wd-orange-3: #FFC599FF;
-  --wd-orange-4: #FFA666FF;
-  --wd-orange-5: #FF8A33FF;
-  --wd-orange-6: #FF6900FF;
-  --wd-orange-7: #DB5900FF;
-  --wd-orange-8: #B74A00FF;
-  --wd-orange-9: #933B00FF;
-  --wd-orange-10: #702D00FF;
+  /* ===== 品牌紫阶（primary 取 6 档 #7F5CFF） ===== */
+  --wd-purple-1: #F1EDFFFF;
+  --wd-purple-2: #E4DBFFFF;
+  --wd-purple-3: #C7B8FFFF;
+  --wd-purple-4: #A98FFFFF;
+  --wd-purple-5: #9279FFFF;
+  --wd-purple-6: #7F5CFFFF;
+  --wd-purple-7: #6B47E8FF;
+  --wd-purple-8: #5533C7FF;
+  --wd-purple-9: #4326A0FF;
+  --wd-purple-10: #2F1B6EFF;
 
   /* ===== 中性灰阶（Apple systemGray 阶梯 + HyperOS 语义灰） =====
    * 1~3 浅底 / 4~5 边框与禁用 / 6~7 次要文字 / 8~10 主文字与深色面。 */
@@ -65,17 +63,17 @@ page,
   --wd-green-9: #004A32FF;
   --wd-green-10: #00301FFF;
 
-  /* ===== 警告色阶（黄，hsl(40) 与品牌橙 hsl(24) 拉开色相） ===== */
-  --wd-amber-1: #FFFAEBFF;
-  --wd-amber-2: #FFF1C2FF;
-  --wd-amber-3: #FDE38AFF;
-  --wd-amber-4: #FAC73FFF;
-  --wd-amber-5: #F5A623FF;
-  --wd-amber-6: #D97E04FF;
-  --wd-amber-7: #B46306FF;
-  --wd-amber-8: #8F4D05FF;
-  --wd-amber-9: #6B3A04FF;
-  --wd-amber-10: #472703FF;
+  /* ===== 警告色阶（琥珀） ===== */
+  --wd-amber-1: #FDF6E9FF;
+  --wd-amber-2: #F9E7C2FF;
+  --wd-amber-3: #F2D08FFF;
+  --wd-amber-4: #E9B45AFF;
+  --wd-amber-5: #DF9A2BFF;
+  --wd-amber-6: #C97F10FF;
+  --wd-amber-7: #A5670CFF;
+  --wd-amber-8: #7F5009FF;
+  --wd-amber-9: #593906FF;
+  --wd-amber-10: #382403FF;
 
   /* ===== 危险色阶（红） ===== */
   --wd-red-1: #FDECECFF;

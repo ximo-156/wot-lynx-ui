@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { stepsProps, STEPS_KEY } from './types'
 import { useChildren } from '../../composables/useChildren'
@@ -18,7 +19,7 @@ linkChildren({ props: props as any })
 </script>
 
 <template>
-  <view :class="`wd-steps ${vertical ? 'is-vertical' : 'is-horizontal'} ${alignCenter ? 'is-align-center' : ''} ${dot ? 'is-dot' : ''} ${customClass}`" :style="customStyle">
+  <view :class="`wd-steps ${vertical ? 'is-vertical' : 'is-horizontal'} ${alignCenter ? 'is-align-center' : ''} ${dot ? 'is-dot' : ''} ${customClass}`" :style="parseStyle(customStyle)">
     <slot />
   </view>
 </template>

@@ -7,6 +7,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed } from 'vue-lynx'
 import { radioGroupProps } from './types'
@@ -36,7 +37,7 @@ function updateValue(value: string | number | boolean | null) {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <slot />
   </view>
 </template>

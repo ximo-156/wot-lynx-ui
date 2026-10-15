@@ -45,15 +45,21 @@ packages/ui/src/components/wd-xxx/
 | 语义令牌 | `styles/tokens/_semantic.scss` | 亮/暗双主题语义别名 | `--wd-color-primary`、`--wd-text-1` |
 | 组件令牌 | 各组件 `index.scss` | 组件私有变量，回退到语义令牌 | `--wd-button-primary-bg` |
 
-**视觉方向**（重写时的设计基准）：
+**视觉方向**（重写时的设计基准，依据 docs/guide/design-research.md 的小米 × 苹果调研）：
 
-- 品牌色：indigo 蓝 `--wd-blue-6`（#4A6DF0），中性冷灰 `--wd-gray-*`；
-- 语义色：成功绿 / 警告琥珀 / 危险红，各 10 档色阶；
-- 圆角偏大（按钮/卡片 8–16px，弹层 16px），传达现代移动端质感；
+- 品牌色：品牌紫 `--wd-purple-6`（#7F5CFF，**既定品牌色，不随设计刷新更改**），
+  中性灰对齐 Apple systemGray 阶梯 + HyperOS 语义灰（`#1D1D1F` / `#6E6E73` / `#8E8E93`）；
+- 语义色：成功绿 / 警告琥珀 / 危险红，各 10 档色阶；警告底文字用
+  `--wd-color-on-warning` 深色（对比度 ≥ 4.5:1）；
+- 圆角偏大（按钮 mini 4 → large 12px，round 变体胶囊 999px；卡片 12–16px，弹层 16–20px），
+  传达现代移动端质感；
 - 文字层级 `--wd-text-1..4` + disabled，图标层级 `--wd-icon-1..4`；
 - 表面层级：`--wd-bg-page`（页面）→ `--wd-bg-container`（卡片）→ `--wd-bg-elevated`（弹层）；
 - **不用 box-shadow**（Lynx 各端表现不一致），层级靠表面色 + `--wd-border-1/2` 描边表达；
-- 动效三档：`--wd-duration-fast/base/slow` + `--wd-ease-out/in-out/spring`。
+  暗色用 Apple base/elevated 双层海拔（弹层自动提亮一档）；
+- 动效三档：`--wd-duration-fast/base/slow`（0.15/0.25/0.35s）+ 官方缓动曲线
+  （`--wd-ease-out` = 小米默认 cubic-bezier(0.25,0.46,0.45,0.94)，
+  `--wd-ease-in-out` = Apple EaseInEaseOut cubic-bezier(0.42,0,0.58,1)）。
 
 **主题机制**：`import 'wot-lynx-ui/theme'` 引入全部令牌；`WdConfigProvider`
 的 `theme="dark"` 给根 view 挂 `.wd-theme-dark` 类切换语义令牌；
@@ -381,4 +387,4 @@ CSS `:active` 伪类 + 对应类名样式（如 `.wd-button:active`、`.wd-cell.
 | 2 | 表单体系：30 个组件全部完成 ✅（form / form-item / input / textarea / input-number / search / switch / radio(-group) / checkbox(-group) / slider / rate / segmented / toast / popup / picker(-view) / datetime-picker(-view) / select-picker / cascader / keyboard / password-input / slide-verify / signature / img-cropper / calendar(-view) / upload，冒烟测试 41 项全绿）|
 | 3 | 展示/布局/导航/弹层：52 个组件全部完成 ✅（Tier 3a 展示反馈 12 + Tier 3b 布局 7 + Tier 3c 导航 9 + Tier 3d 弹层反馈/图形/列表导航 24，含 notify/dialog/action-sheet/popover/tooltip/curtain/loadmore/tour/circle/watermark/table/steps/swiper/collapse/drop-menu/tabbar/fab/floating-panel/swipe-action/video-preview/image-preview/navbar-capsule/sort-button）|
 | 4 | 图形码：qr-code（完整 QR 编码器：Byte 模式/版本自适应/RS 纠错/掩码评估）/ bar-code（Code128）/ table-column / wot-ui 内部占位 | ✅ 完成（编码器 9 项结构测试全绿）|
-| 5 | 收尾：测试重写、文档重写、Demo 更新、README/differences 同步、全量验证 | 待开始 |
+| 5 | 收尾：测试重写、文档重写、Demo 更新、README/differences 同步、全量验证 | ✅ 完成（101/101 组件全部进入 Demo 手机端演示；修复 wd-video-preview 命令式 open() 不显示遮罩、wd-index-bar/anchor 子组件注册失效与锚点跳转、button/progress 字符串样式丢弃、calendar-view 显式行结构等缺陷；新增命令式预览 / 索引栏 / 内联样式回归测试；全量验证 203 项测试 / typecheck / build:css / 双端 build 全绿）|

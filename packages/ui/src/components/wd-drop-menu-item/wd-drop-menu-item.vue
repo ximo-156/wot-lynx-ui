@@ -11,7 +11,7 @@ import { computed } from 'vue-lynx'
 import { dropMenuItemProps } from './types'
 import { useParent } from '../../composables/useParent'
 import { DROP_MENU_KEY } from '../wd-drop-menu/types'
-import { isObj } from '../../common/util'
+import { isObj, parseStyle } from '../../common/util'
 
 const props = defineProps(dropMenuItemProps)
 const emit = defineEmits(['change', 'update:modelValue', 'open', 'close'])
@@ -53,7 +53,7 @@ function select(option: Record<string, any>) {
 </script>
 
 <template>
-  <view :class="`wd-drop-menu-item ${expanded ? 'is-expanded' : ''} ${disabled ? 'is-disabled' : ''} ${customClass}`" :style="customStyle">
+  <view :class="`wd-drop-menu-item ${expanded ? 'is-expanded' : ''} ${disabled ? 'is-disabled' : ''} ${customClass}`" :style="parseStyle(customStyle)">
     <view class="wd-drop-menu-item__title" @tap="toggle">
       <text :class="`wd-drop-menu-item__title-text ${expanded ? 'is-active' : ''}`">{{ expanded && modelValue !== '__open__' ? activeLabel : title }}</text>
     </view>

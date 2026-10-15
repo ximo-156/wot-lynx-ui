@@ -16,7 +16,7 @@ import { computed, useSlots } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { cellProps } from './types'
 import { useCell } from '../../composables/useCell'
-import { addUnit, isDef } from '../../common/util'
+import { addUnit, isDef, parseStyle } from '../../common/util'
 import { uni } from '../../common/uni'
 
 const props = defineProps(cellProps)
@@ -102,7 +102,7 @@ function onClick() {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle" @tap="onClick">
+  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="onClick">
     <view :class="`wd-cell__wrapper wd-cell__wrapper--${cellLayout}`">
       <view v-if="showLeft" class="wd-cell__left" :style="titleWidthStyle">
         <text v-if="required && !hideAsterisk && asteriskPosition === 'start'" class="wd-cell__required wd-cell__required--left">*</text>

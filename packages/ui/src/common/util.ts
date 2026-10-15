@@ -317,6 +317,61 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
 }
 
 /**
+ * Lynx scroll-view 程序化滚动（官方 API：SelectorQuery.invoke('scrollTo')）。
+ *
+ * 背景：Lynx 的 scroll-view 支持 scroll-x / scroll-y / scroll-left / scroll-top
+ * 属性（@lynx-js/web-elements 与真机引擎均已实现），但**不支持**
+ * uni-app 的 scroll-with-animation / show-scrollbar / enhanced 属性——程序化
+ * 定位是瞬时的。需要平滑滚动（轮播翻页、选项卡切换、锚点跳转）时必须走
+ * scrollTo 方法的 smooth 参数。
+ *
+ * @param selector 节点选择器（scroll-view 上的 id）
+ * @param offset 目标滚动偏移（px，横向向右为正 / 纵向向下为正）
+ * @param smooth 是否平滑滚动
+ */
+export function scrollViewTo(selector: string, offset: number, smooth: boolean = true): void {
+  const lynx = (globalThis as any).lynx
+  if (!lynx || !lynx.createSelectorQuery) return
+  try {
+    lynx
+      .createSelectorQuery()
+      .select(selector)
+      .invoke({
+        method: 'scrollTo',
+        params: { offset, smooth }
+      })
+      .exec()
+  } catch {
+    // 运行时不支持 invoke（jsdom 测试环境等）时静默跳过：
+    // 调用方均保留 scroll-left / scroll-top 属性作为定位兜底。
+  }
+}
+
+/**
+ * Lynx scroll-view 子节点滚入可见区（官方 API：SelectorQuery.invoke('scrollIntoView')）。
+ * 比测量偏移再 scrollTo 更稳：无需知道滚动内容与视口的相对位置。
+ *
+ * @param selector 目标子节点选择器
+ * @param block 纵向对齐：start 顶对齐 / center 居中 / end 底对齐
+ */
+export function scrollIntoViewById(selector: string, block: 'start' | 'center' | 'end' = 'start'): void {
+  const lynx = (globalThis as any).lynx
+  if (!lynx || !lynx.createSelectorQuery) return
+  try {
+    lynx
+      .createSelectorQuery()
+      .select(selector)
+      .invoke({
+        method: 'scrollIntoView',
+        params: { scrollIntoViewOptions: { block, inline: 'start' } }
+      })
+      .exec()
+  } catch {
+    // 运行时不支持 invoke（jsdom 测试环境等）时静默跳过
+  }
+}
+
+/**
  * 驼峰转短横线
  */
 export function kebabCase(word: string): string {
@@ -409,6 +464,29 @@ export function objToStyle(styles: Record<string, any> | Record<string, any>[]):
     .filter((key) => styles[key] !== undefined && styles[key] !== null && styles[key] !== '')
     .map((key) => `${kebabCase(key)}:${styles[key]}`)
     .join(';')
+}
+
+/**
+ * style 字符串解析为对象（CONVENTIONS §19）。
+ *
+ * vue-lynx 的 patchProp 对 `style` 只处理对象/数组（内部走
+ * normalizeStyle），字符串值会被静默替换为 {}——消费方的
+ * `custom-style="color: red"`、模板里的 `:style="`height: 44px`"`
+ * 因此全部失效（不报错，只是样式不见）。
+ * 组件根与任何内联样式绑定前，先把字符串过一遍本函数。
+ */
+export function parseStyle(style?: string | Record<string, any> | null): Record<string, any> {
+  if (!style) return {}
+  if (typeof style !== 'string') return style
+  const result: Record<string, string> = {}
+  style.split(';').forEach((declaration) => {
+    const idx = declaration.indexOf(':')
+    if (idx === -1) return
+    const key = declaration.slice(0, idx).trim()
+    const value = declaration.slice(idx + 1).trim()
+    if (key && value) result[key] = value
+  })
+  return result
 }
 
 /**

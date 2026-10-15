@@ -10,7 +10,7 @@ import './index.css'
 import { computed } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { emptyProps } from './types'
-import { isDef } from '../../common/util'
+import { isDef, parseStyle } from '../../common/util'
 
 const props = defineProps(emptyProps)
 
@@ -24,7 +24,7 @@ const iconStyle = computed(() => {
 </script>
 
 <template>
-  <view :class="`wd-empty ${customClass}`" :style="customStyle">
+  <view :class="`wd-empty ${customClass}`" :style="parseStyle(customStyle)">
     <slot name="image">
       <wd-icon :name="icon" :class-prefix="iconPrefix" :css-icon="cssIcon" custom-class="wd-empty__icon" :custom-style="iconStyle" />
     </slot>

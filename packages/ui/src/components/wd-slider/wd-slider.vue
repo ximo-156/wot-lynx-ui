@@ -14,7 +14,7 @@ import './index.css'
 import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { sliderProps, type SliderEmits, type SliderExpose, type SliderMarks, type SliderPopoverVisible, type SliderValue } from './types'
-import { deepClone, getRect, isArray, isDef, isEqual, objToStyle, uuid } from '../../common/util'
+import { deepClone, getRect, isArray, isDef, isEqual, objToStyle, uuid, parseStyle } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useTouch } from '../../composables/useTouch'
 
@@ -300,7 +300,7 @@ defineExpose<SliderExpose>({
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <!-- 最小值文本 -->
     <view v-if="showExtremeValue" class="wd-slider__value wd-slider__value--min">
       <text>{{ min }}</text>

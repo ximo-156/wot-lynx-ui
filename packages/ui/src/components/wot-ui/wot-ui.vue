@@ -5,6 +5,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { wotUiProps } from './types'
 
@@ -12,5 +13,5 @@ defineProps(wotUiProps)
 </script>
 
 <template>
-  <view :class="`wot-ui ${customClass}`" :style="customStyle" />
+  <view :class="`wot-ui ${customClass}`" :style="parseStyle(customStyle)" />
 </template>

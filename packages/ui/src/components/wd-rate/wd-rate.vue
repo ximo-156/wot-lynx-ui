@@ -13,7 +13,7 @@ import './index.css'
 import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { rateProps } from './types'
-import { addUnit, getRect, isDef } from '../../common/util'
+import { addUnit, getRect, isDef, parseStyle } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 
 const props = defineProps(rateProps)
@@ -141,7 +141,7 @@ async function onTouchMove(event: any) {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle" @touchmove="onTouchMove">
+  <view :class="rootClass" :style="parseStyle(customStyle)" @touchmove="onTouchMove">
     <view
       v-for="(rate, index) in rateList"
       :key="index"

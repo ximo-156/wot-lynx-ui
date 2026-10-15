@@ -13,28 +13,30 @@ import './index.css'
 import { computed } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { progressProps } from './types'
-import { isString } from '../../common/util'
+import { isString, parseStyle } from '../../common/util'
 import { WHITE } from '../../common/theme'
 
 const props = defineProps(progressProps)
 
-const rootStyle = computed(() => {
+// 样式一律输出对象（CONVENTIONS §19：vue-lynx 的 patchProp 对字符串 style
+// 会静默替换为 {}，百分比宽度/高度/渐变因此整体失效）。
+const rootStyle = computed<Record<string, string>>(() => {
   const style: Record<string, string> = {}
   const color = isString(props.color) ? props.color : props.color?.left
   if (color) style.background = color
   style.width = `${Math.min(Math.max(props.percentage, 0), 100)}%`
-  return Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ')
+  return style
 })
 
-const trackStyle = computed(() => {
+const trackStyle = computed<Record<string, string>>(() => {
   const style: Record<string, string> = {}
   if (props.trackColor) style['background-color'] = props.trackColor
   style.height = `${props.strokeWidth}px`
-  return Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ')
+  return style
 })
 
-const innerStyle = computed(() => {
-  return `height: ${props.strokeWidth}px;`
+const innerStyle = computed<Record<string, string>>(() => {
+  return { height: `${props.strokeWidth}px` }
 })
 
 const iconName = computed(() => {
@@ -62,11 +64,11 @@ const percentPositionType = computed(() => props.percentPosition?.type || 'outer
       percentage === 0 ? 'is-zero' : '',
       customClass
     ]"
-    :style="customStyle"
+    :style="parseStyle(customStyle)"
   >
     <view class="wd-progress__outer">
       <view class="wd-progress__track" :style="trackStyle">
-        <view class="wd-progress__inner" :style="`${rootStyle}${innerStyle}`">
+        <view class="wd-progress__inner" :style="{ ...rootStyle, ...innerStyle }">
           <template v-if="percentPositionType === 'inner'">
             <view v-if="!hideText" class="wd-progress__label">{{ percentage }}%</view>
             <wd-icon

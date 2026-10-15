@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed } from 'vue-lynx'
 import { collapseProps, COLLAPSE_KEY, type CollapseValue } from './types'
@@ -43,7 +44,7 @@ linkChildren({
 </script>
 
 <template>
-  <view :class="`wd-collapse ${customClass}`" :style="customStyle">
+  <view :class="`wd-collapse ${customClass}`" :style="parseStyle(customStyle)">
     <slot />
     <view v-if="viewmore" :class="`wd-collapse__more ${customMoreSlotClass}`">
       <slot name="more" />

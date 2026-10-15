@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { tabbarProps, TABBAR_KEY } from './types'
 import { useChildren } from '../../composables/useChildren'
@@ -27,7 +28,7 @@ linkChildren({
 </script>
 
 <template>
-  <view :class="`wd-tabbar ${fixed ? 'is-fixed' : ''} ${bordered ? 'is-bordered' : ''} ${safeAreaInsetBottom ? 'is-safe-area' : ''} wd-tabbar--${shape} ${customClass}`" :style="customStyle">
+  <view :class="`wd-tabbar ${fixed ? 'is-fixed' : ''} ${bordered ? 'is-bordered' : ''} ${safeAreaInsetBottom ? 'is-safe-area' : ''} wd-tabbar--${shape} ${customClass}`" :style="parseStyle(customStyle)">
     <slot />
   </view>
 </template>

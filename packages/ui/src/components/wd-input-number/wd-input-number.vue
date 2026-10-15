@@ -12,7 +12,7 @@ import './index.css'
 
 import { computed, ref, watch } from 'vue-lynx'
 import { inputNumberProps, type OperationType } from './types'
-import { addUnit, isDef, isEqual } from '../../common/util'
+import { addUnit, isDef, isEqual, parseStyle } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useParent } from '../../composables/useParent'
 import { callInterceptor } from '../../common/interceptor'
@@ -237,7 +237,7 @@ const rootClass = computed(() => {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <!-- 减号按钮 -->
     <view
       :class="['wd-input-number__action', 'wd-input-number__action--sub', minDisabled || disableMinus ? 'is-disabled' : '']"

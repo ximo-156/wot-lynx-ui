@@ -8,6 +8,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed, ref } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
@@ -81,7 +82,7 @@ const rootClass = computed(() => {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle">
+  <view :class="rootClass" :style="parseStyle(customStyle)">
     <view class="wd-search__block" @tap="handleClick">
       <slot name="prefix" />
       <view class="wd-search__field">

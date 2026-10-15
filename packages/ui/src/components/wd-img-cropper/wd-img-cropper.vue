@@ -14,7 +14,7 @@ import './index.css'
 import { computed, ref } from 'vue-lynx'
 import WdButton from '../wd-button/wd-button.vue'
 import { imgCropperProps, type ImgCropperEmits, type ImgCropperExpose } from './types'
-import { addUnit, objToStyle } from '../../common/util'
+import { addUnit, objToStyle, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 
 const props = defineProps(imgCropperProps)
@@ -120,7 +120,7 @@ defineExpose<ImgCropperExpose>({
 </script>
 
 <template>
-  <view v-if="modelValue" :class="`wd-img-cropper ${customClass}`" :style="customStyle" @touchmove="preventTouchMove">
+  <view v-if="modelValue" :class="`wd-img-cropper ${customClass}`" :style="parseStyle(customStyle)" @touchmove="preventTouchMove">
     <view class="wd-img-cropper__wrapper">
       <!-- 图片 -->
       <image

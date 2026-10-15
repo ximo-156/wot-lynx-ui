@@ -14,7 +14,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { radioProps } from './types'
 import { RADIO_GROUP_KEY, useRadioGroup, type RadioType } from '../../composables/useRadioGroup'
 import { useFormDisabled } from '../../composables/useFormDisabled'
-import { isDef, objToStyle } from '../../common/util'
+import { isDef, objToStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(radioProps)
 const emit = defineEmits(['tap'])
@@ -118,7 +118,7 @@ function handleClick() {
 </script>
 
 <template>
-  <view :class="rootClass" :style="customStyle" @tap="handleClick">
+  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
     <view v-if="$slots.default" :class="['wd-radio__label', customLabelClass]">
       <slot />
     </view>

@@ -6,10 +6,10 @@
   width: 100%;
   margin: 0 var(--wd-space-4);
 
-  /* 卡片堆叠时间距 16px（对齐 wot-ui card-margin-bottom） */
-  &:not(:last-child) {
-    margin-bottom: var(--wd-space-4);
-  }
+  /* 卡片堆叠时间距 16px（对齐 wot-ui card-margin-bottom）。
+     Lynx 的 :not() 不支持 :last-child 等结构性伪类参数，故不做末张剔除——
+     统一间距可预期；需要紧贴底部的场景由消费方用最后一个卡片的 customStyle 覆盖。 */
+  margin-bottom: var(--wd-space-4);
   background-color: var(--wd-bg-container);
   border-radius: var(--wd-radius-lg);
 

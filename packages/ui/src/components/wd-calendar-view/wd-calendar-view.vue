@@ -6,7 +6,11 @@
  *   合并在单一组件内，省去 wot-ui 的 year-panel/month-panel 多层嵌套；
  * - 支持 date / dates / datetime / week / daterange / datetimerange /
  *   weekrange 类型；范围选择带 maxRange 限制与 rangePrompt；
- * - formatter 钩子可改写每个日期格子的展示与禁用态。
+ * - formatter 钩子可改写每个日期格子的展示与禁用态；
+ * - 网格用显式「行容器 × 7 列」结构而非 flex-wrap：Lynx 新 CSS 引擎下
+ *   wrap 容器的 flex line 会被拉伸（行高从 52px 涨到 ~150px，真机可见），
+ *   显式行 + 定高彻底规避（CONVENTICES §15）；
+ * - 内联样式一律对象语法（CONVENTICES §19）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -14,7 +18,7 @@ import './index.css'
 import { computed, ref, watch } from 'vue-lynx'
 import WdPickerView from '../wd-picker-view/wd-picker-view.vue'
 import { calendarViewProps, type CalendarDayItem, type CalendarDayType, type CalendarType } from './types'
-import { padZero } from '../../common/util'
+import { padZero, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 
 const { translate } = useTranslate('calendar-view')
@@ -23,6 +27,9 @@ const props = defineProps(calendarViewProps)
 const emit = defineEmits(['change', 'update:modelValue', 'pickstart', 'pickend'])
 
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六']
+
+/** 行高（显式行 + 内联定高，不依赖 flex-wrap，见文件头说明） */
+const ROW_HEIGHT = 52
 
 /** 当前展示的年月 */
 const displayYear = ref<number>(0)
@@ -68,7 +75,10 @@ const days = computed<CalendarDayItem[]>(() => {
   const month = displayMonth.value
   const firstDay = new Date(year, month - 1, 1)
   const startOffset = (firstDay.getDay() - props.firstDayOfWeek + 7) % 7
-  const gridStart = new Date(year, month - 1, startOffset + 1).getTime()
+  // 网格起点 = 本月 1 号往回退 startOffset 天（如 10 月 1 日是周四、
+  // firstDayOfWeek=0 时起点为 9 月 27 日周日）。曾误写成本月 1 号加上
+  // startOffset，导致每月前 startOffset 天整体消失、整月偏移。
+  const gridStart = new Date(year, month - 1, 1 - startOffset).getTime()
 
   const result: CalendarDayItem[] = []
   for (let i = 0; i < 42; i++) {
@@ -78,12 +88,23 @@ const days = computed<CalendarDayItem[]>(() => {
       text: date.getDate(),
       type: getDayType(date.getTime())
     }
-    if (date.getMonth() + 1 !== month) {
-      item.type = ''
-    }
     result.push(props.formatter ? props.formatter(item) : item)
   }
   return result
+})
+
+/** 是否为本月之外的补位日（上月末 / 下月初）——模板据此加 is-adjacent 置灰 */
+function isAdjacentMonth(item: CalendarDayItem): boolean {
+  return new Date(item.date).getMonth() + 1 !== displayMonth.value
+}
+
+/** 网格按 7 列切分为显式行（不用 flex-wrap，见文件头说明） */
+const dayRows = computed<CalendarDayItem[][]>(() => {
+  const rows: CalendarDayItem[][] = []
+  for (let i = 0; i < days.value.length; i += 7) {
+    rows.push(days.value.slice(i, i + 7))
+  }
+  return rows
 })
 
 /** 日期类型判定 */
@@ -256,23 +277,35 @@ function onPickEnd() {
 </script>
 
 <template>
-  <view :class="`wd-calendar-view ${customClass}`" :style="customStyle">
+  <view :class="`wd-calendar-view ${customClass}`" :style="parseStyle(customStyle)">
     <!-- 周表头 -->
     <view class="wd-calendar-view__weeks">
       <text v-for="(week, index) in weeks" :key="index" class="wd-calendar-view__week">{{ week }}</text>
     </view>
 
-    <!-- 月历网格 -->
+    <!-- 月历网格：显式行结构（row > day × 7），不依赖 flex-wrap；
+         行高内联定高（对象语法，CONVENTIONS §19） -->
     <view class="wd-calendar-view__grid">
       <view
-        v-for="(item, index) in days"
-        :key="index"
-        :class="['wd-calendar-view__day', `is-${item.type || 'normal'}`, { 'is-disabled': item.disabled || isDisabled(item.date) }]"
-        @tap="onDayClick(item)"
+        v-for="(row, rowIndex) in dayRows"
+        :key="rowIndex"
+        class="wd-calendar-view__row"
+        :style="{ height: `${ROW_HEIGHT}px` }"
       >
-        <text class="wd-calendar-view__day-text">{{ item.text }}</text>
-        <text v-if="item.topInfo" class="wd-calendar-view__day-top">{{ item.topInfo }}</text>
-        <text v-if="item.bottomInfo" class="wd-calendar-view__day-bottom">{{ item.bottomInfo }}</text>
+        <view
+          v-for="(item, colIndex) in row"
+          :key="colIndex"
+          :class="[
+            'wd-calendar-view__day',
+            item.type ? `is-${item.type}` : '',
+            { 'is-adjacent': isAdjacentMonth(item), 'is-disabled': item.disabled || isDisabled(item.date) }
+          ]"
+          @tap="onDayClick(item)"
+        >
+          <text class="wd-calendar-view__day-text">{{ item.text }}</text>
+          <text v-if="item.topInfo" class="wd-calendar-view__day-top">{{ item.topInfo }}</text>
+          <text v-if="item.bottomInfo" class="wd-calendar-view__day-bottom">{{ item.bottomInfo }}</text>
+        </view>
       </view>
     </view>
 

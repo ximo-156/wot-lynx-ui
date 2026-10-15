@@ -13,7 +13,7 @@ import './index.css'
 import { computed, onMounted } from 'vue-lynx'
 import { countDownProps, type CountDownExpose } from './types'
 import { useCountDown } from '../../composables/useCountDown'
-import { padZero } from '../../common/util'
+import { padZero, parseStyle } from '../../common/util'
 
 const props = defineProps(countDownProps)
 const emit = defineEmits(['finish', 'change'])
@@ -46,7 +46,7 @@ defineExpose<CountDownExpose>({ start, pause, reset })
 </script>
 
 <template>
-  <view :class="`wd-count-down ${customClass}`" :style="customStyle">
+  <view :class="`wd-count-down ${customClass}`" :style="parseStyle(customStyle)">
     <slot :current="current" v-if="$slots.default" />
     <text v-else class="wd-count-down__text">{{ timeText }}</text>
   </view>

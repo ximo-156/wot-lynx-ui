@@ -2,17 +2,19 @@
  * wd-index-bar — 索引栏
  *
  * Lynx 实现说明：
- * - 经 useChildren 收集 index-anchor 子项，右侧索引条触摸滚动
- *   到对应锚点（scroll-view scrollTop）；
- * - 锚点位置经一次性度量缓存（CONVENTIONS §16）。
+ * - 经 useChildren 收集 index-anchor 子项（子组件 setup 内经 link 注册），
+ *   右侧索引条触摸跳转到对应锚点：官方 scrollIntoView 方法平滑滚动
+ *   （scroll-with-animation 属性 Lynx 不支持，属性定位是瞬时的）；
+ * - scrollIntoView 由节点自身定位最近的可滚动祖先，无需度量内容与
+ *   视口的相对位置（CONVENTIONS §16：热路径不重复 getRect）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, provide, ref } from 'vue-lynx'
+import { computed, ref } from 'vue-lynx'
 import { indexBarProps, indexBarInjectionKey } from './types'
 import { useChildren } from '../../composables/useChildren'
-import { uuid } from '../../common/util'
+import { scrollIntoViewById, uuid } from '../../common/util'
 
 const props = defineProps(indexBarProps)
 
@@ -27,14 +29,19 @@ const state = ref<{ activeIndex: AnchorIndex }>({
   activeIndex: ''
 })
 
-const { children } = useChildren(indexBarInjectionKey as any)
+// linkChildren 的 value 与 useChildren 的 link/unlink/children 合并后
+// provide：子组件（index-anchor）才能经 link 注册自身，同时读 props/anchorState。
+// （曾用第二个 provide 覆盖整个对象，导致 link 丢失、子组件无法注册。）
+const { children, linkChildren } = useChildren(indexBarInjectionKey)
 
-provide(indexBarInjectionKey, {
+linkChildren({
   props: { sticky: props.sticky },
   anchorState: state
 })
 
-const sidebarIndexes = computed(() => children.map((c: any) => c.props?.index).filter((i: any) => i !== undefined))
+// 子组件 props 经 c.$.props 读取（CONVENTIONS §13：运行时 proxy.props 不可靠，
+// 参照 wd-checkbox-group 的 child.$.props 约定）。
+const sidebarIndexes = computed(() => children.map((c: any) => c.$?.props?.index).filter((i: any) => i !== undefined))
 
 function handleTouchStart() {
   scrollState.value.touching = true
@@ -58,6 +65,9 @@ function handleTouchMove(event: any) {
   const target = sidebarIndexes.value[Math.min(Math.max(index, 0), count - 1)]
   if (target !== undefined) {
     state.value.activeIndex = target
+    // 把目标锚点平滑滚入可见区（官方 scrollIntoView；scroll-top 属性
+    // 从未被更新，仅靠属性锚点跳转实际是空转）
+    scrollIntoViewById(`#wd-index-anchor-${target}`, 'start')
   }
 }
 </script>

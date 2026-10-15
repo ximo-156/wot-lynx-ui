@@ -14,7 +14,7 @@ import { reactive, watch } from 'vue-lynx'
 import WdToast from '../wd-toast/wd-toast.vue'
 import { useToast } from '../wd-toast'
 import { formProps, type ErrorMessage, type FormExpose, type FormSchemaIssue } from './types'
-import { isArray, isDef } from '../../common/util'
+import { isArray, isDef, parseStyle } from '../../common/util'
 import { useChildren } from '../../composables/useChildren'
 import { FORM_KEY } from '../../composables/useFormDisabled'
 
@@ -131,7 +131,7 @@ defineExpose<FormExpose>({ validate, reset })
 </script>
 
 <template>
-  <view :class="`wd-form ${customClass}`" :style="customStyle">
+  <view :class="`wd-form ${customClass}`" :style="parseStyle(customStyle)">
     <slot />
     <wd-toast v-if="errorType === 'toast'" selector="wd-form-toast" />
   </view>

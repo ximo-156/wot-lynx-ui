@@ -11,7 +11,7 @@ import { computed } from 'vue-lynx'
 import { tabProps } from './types'
 import { useParent } from '../../composables/useParent'
 import { TABS_KEY } from '../wd-tabs/types'
-import { isDef, objToStyle } from '../../common/util'
+import { isDef, objToStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(tabProps)
 
@@ -39,7 +39,7 @@ const tabBodyStyle = computed(() => {
 </script>
 
 <template>
-  <view :class="`wd-tab ${customClass}`" :style="customStyle">
+  <view :class="`wd-tab ${customClass}`" :style="parseStyle(customStyle)">
     <view :class="['wd-tab__body', { 'wd-tab__body--inactive': !active }]" v-if="shouldBeRender" :style="tabBodyStyle">
       <slot />
     </view>

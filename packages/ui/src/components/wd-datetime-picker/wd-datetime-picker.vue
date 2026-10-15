@@ -13,7 +13,7 @@ import { computed, onBeforeMount, onMounted, ref, watch } from 'vue-lynx'
 import WdPopup from '../wd-popup/wd-popup.vue'
 import WdDatetimePickerView from '../wd-datetime-picker-view/wd-datetime-picker-view.vue'
 import { callInterceptor } from '../../common/interceptor'
-import { isArray } from '../../common/util'
+import { isArray, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 import { datetimePickerProps, type DatetimePickerExpose } from './types'
 
@@ -156,7 +156,7 @@ defineExpose<DatetimePickerExpose>({
 </script>
 
 <template>
-  <view :class="`wd-datetime-picker ${customClass}`" :style="customStyle">
+  <view :class="`wd-datetime-picker ${customClass}`" :style="parseStyle(customStyle)">
     <wd-popup
       v-model="popupShow"
       position="bottom"

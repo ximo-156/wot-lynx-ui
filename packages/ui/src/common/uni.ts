@@ -195,6 +195,7 @@ export const uni: Record<string, any> = {
 
   // ---- 交互反馈 ----
   showToast: (options: any) => degrade('showToast', options),
+  makePhoneCall: (options: any) => degrade('makePhoneCall', options, '拨号请交由宿主处理'),
   showLoading: (options: any) => degrade('showLoading', options),
   hideLoading: () => degrade('hideLoading'),
   showActionSheet: (options: any) => degrade('showActionSheet', options),

@@ -6,6 +6,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
+import { parseStyle } from '../../common/util'
 
 import { computed } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
@@ -22,7 +23,7 @@ const rootClass = computed(() => {
 </script>
 
 <template>
-  <scroll-view scroll-x class="wd-swiper-nav__scroll" :class="rootClass" :style="customStyle">
+  <scroll-view scroll-x class="wd-swiper-nav__scroll" :class="rootClass" :style="parseStyle(customStyle)">
     <view class="wd-swiper-nav__inner">
       <view
         v-for="(item, index) in items"

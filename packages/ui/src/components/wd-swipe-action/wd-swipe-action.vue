@@ -13,7 +13,7 @@ import './index.css'
 import { computed, getCurrentInstance, onMounted, ref } from 'vue-lynx'
 import { swipeActionProps, type SwipeActionPosition, type SwipeActionReason } from './types'
 import { callInterceptor } from '../../common/interceptor'
-import { getRect } from '../../common/util'
+import { getRect, parseStyle } from '../../common/util'
 
 const props = defineProps(swipeActionProps)
 const emit = defineEmits(['update:modelValue', 'click', 'touchstart', 'touchmove', 'touchend', 'touchcancel'])
@@ -123,7 +123,7 @@ function handleClick(position?: SwipeActionPosition) {
 </script>
 
 <template>
-  <view :class="`wd-swipe-action ${disabled ? 'is-disabled' : ''} ${customClass}`" :style="customStyle" @click.stop="handleClick()" @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag" @touchcancel="cancelDrag">
+  <view :class="`wd-swipe-action ${disabled ? 'is-disabled' : ''} ${customClass}`" :style="parseStyle(customStyle)" @click.stop="handleClick()" @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag" @touchcancel="cancelDrag">
     <view class="wd-swipe-action__wrapper" :style="wrapperStyle">
       <view class="wd-swipe-action__left" @click.stop="handleClick('left')">
         <slot name="left" />

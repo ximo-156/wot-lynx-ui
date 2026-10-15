@@ -1,6 +1,6 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeRequiredProp, makeStringProp } from '../../common/props'
-import { ORANGE } from '../../common/theme'
+import { PURPLE } from '../../common/theme'
 
 export type SelectPickerType = 'checkbox' | 'radio'
 
@@ -35,7 +35,7 @@ export const selectPickerProps = {
   /**
    * 加载颜色
    */
-  loadingColor: makeStringProp(ORANGE[6]),
+  loadingColor: makeStringProp(PURPLE[6]),
   /**
    * 点击遮罩是否关闭
    */

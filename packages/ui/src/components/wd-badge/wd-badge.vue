@@ -11,7 +11,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { badgeProps, type BadgeType } from './types'
-import { isDef } from '../../common/util'
+import { isDef, parseStyle } from '../../common/util'
 
 const props = defineProps(badgeProps)
 
@@ -45,7 +45,7 @@ const contentStyle = computed(() => {
 </script>
 
 <template>
-  <view :class="['wd-badge', customClass]" :style="customStyle">
+  <view :class="['wd-badge', customClass]" :style="parseStyle(customStyle)">
     <slot />
     <text
       v-if="shouldShowBadge"
