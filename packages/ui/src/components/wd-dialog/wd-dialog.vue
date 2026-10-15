@@ -86,6 +86,7 @@ const bodyClass = computed(() => {
   const classes = ['wd-dialog__body']
   if (!dialogState.title && !dialogState.msg && !slots.default) classes.push('is-no-title')
   if (dialogState.headerImage) classes.push('is-image')
+  if (dialogState.type === 'prompt') classes.push('is-prompt')
   return classes.join(' ')
 })
 

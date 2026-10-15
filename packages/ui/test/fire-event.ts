@@ -12,6 +12,9 @@ const EVENT_INIT_KEYS = new Set(['bubbles', 'cancelable', 'composed'])
 
 export const eventMap: Record<string, { defaultInit: Record<string, unknown> }> = {
   tap: { defaultInit: {} },
+  // Lynx view 原生 click 事件（部分交互组件根 view 用 @click 而非 @tap，
+  // 见 CONVENTIONS §14：避免与消费方 @tap 同名合并击穿事件注册表）
+  click: { defaultInit: {} },
   longtap: { defaultInit: {} },
   touchstart: { defaultInit: {} },
   touchmove: { defaultInit: {} },

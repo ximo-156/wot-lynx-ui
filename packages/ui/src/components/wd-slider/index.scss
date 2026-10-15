@@ -9,6 +9,16 @@
   @include e(value) {
     font-size: var(--wd-font-sm);
     color: var(--wd-text-3);
+    flex-shrink: 0;
+
+    /* 极值文案与轨道的间距（--with-extreme 时生效） */
+    @include m(min) {
+      margin-right: var(--wd-space-3);
+    }
+
+    @include m(max) {
+      margin-left: var(--wd-space-3);
+    }
   }
 
   @include e(bar) {

@@ -319,12 +319,22 @@ Vue 的 `mergeProps` 会把两个同名 `on*` 监听合并成**数组**，数组
   原生事件名是自然写法；不声明就会落入上面的合并崩溃。已修复范围：根绑
   `@tap` 的全部交互组件（button / cell / icon / input / switch / checkbox /
   radio / tag / text / img / avatar / backtop / loadmore / notify / popover /
-  sidebar-item / sort-button / tabbar-item / tooltip / curtain / grid-item /
-  transition 除外）+ 根绑 touch 的 rate / fab / swipe-action。
-  例外：WdTransition 声明 `tap` emit 会触发 Web 预览渲染异常（已实测回退，
-  待上游修复），消费方勿直接给 WdTransition 绑 `@tap`。
-  回归测试：`packages/ui/test/event-tap-registry.test.ts`、
-  `test/event-merge-props.test.ts`。
+  sidebar-item / sort-button / tabbar-item / tooltip / curtain / grid-item）
+  + 根绑 touch 的 rate / fab / swipe-action。
+- **WdTransition 家族（overlay / popup / backtop / curtain / image-preview /
+  video-preview 等根链最终都落到 transition 根 view）用另一种等价修法**：
+  根 view 的内部点击绑定从 `@tap` 改为 `@click`（Lynx view 原生支持，
+  仓库内 image-preview / swipe-action 已有先例），消费方的 `@tap` 不再与
+  根元素同名碰撞；`transitionend` / `touchmove` 则在 emits 声明并转发。
+  注意：WdTransition 的 emits 里声明 `tap` 会触发 Web 预览渲染异常
+  （实测：仅 `tap` 这个名字触发，`transitionend` 等不会，疑似上游对
+  「emit 名 = 根元素原生事件名」的处理 bug），故用 `@click` 绕开。
+- **回归测试（三份，改事件相关代码必须全绿）**：
+  - `test/event-tap-registry.test.ts` — 各组件父级 @tap 不崩溃且父子均触发；
+  - `test/event-merge-props.test.ts` — 同名监听合并不变量 + touch 事件同类风险；
+  - `test/event-registry-all-components.test.ts` — **全覆盖矩阵**：每个组件
+    × 每个 Lynx 原生事件 × 每个真实元素逐一派发，并对本测试新注册的 sign
+    逐一 `publishEvent`（设备路径等价物；注册表残留数组 sign 即失败）。
 
 ## 15. Lynx 3.x 新 CSS 引擎：默认 linear 布局，flex 属性必须挂在 `display: flex` 上
 

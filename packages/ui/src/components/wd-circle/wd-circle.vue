@@ -12,6 +12,7 @@ import './index.css'
 import { computed, ref, watch } from 'vue-lynx'
 import { circleProps } from './types'
 import { sanitizeSvgContent, uuid } from '../../common/util'
+import { ORANGE } from '../../common/theme'
 import { isObj } from '../../common/util'
 
 const props = defineProps(circleProps)
@@ -28,9 +29,9 @@ const currentColor = computed(() => {
   if (isObj(props.color)) {
     const entries = Object.entries(props.color as Record<string, string | number>)
     const first = entries[0]
-    return first ? String(first[1]) : '#7F5CFF'
+    return first ? String(first[1]) : ORANGE[6]
   }
-  return (props.color as string) || '#7F5CFF'
+  return (props.color as string) || ORANGE[6]
 })
 
 const radius = computed(() => (props.size - props.strokeWidth) / 2)

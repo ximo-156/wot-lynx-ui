@@ -20,7 +20,7 @@
 
   @include m(warning) {
     background-color: var(--wd-color-warning);
-    color: var(--wd-color-on-primary);
+    color: var(--wd-color-on-warning);
   }
 
   @include m(danger) {
@@ -38,12 +38,14 @@
     border-top-right-radius: var(--wd-radius-sm);
   }
 
-  /* floating 变体：悬浮卡片 */
+  /* floating 变体：悬浮卡片
+   * 注意：Lynx 不支持 !important；本规则在源码中位于类型修饰类之后，
+   * 同特异性下后者胜出，无需 !important 即可覆盖 --primary 等类型背景。 */
   @include m(floating) {
     margin: var(--wd-space-3);
     border-radius: var(--wd-radius-md);
-    background-color: var(--wd-bg-elevated) !important;
-    color: var(--wd-text-1) !important;
+    background-color: var(--wd-bg-elevated);
+    color: var(--wd-text-1);
     border-width: 1px;
     border-style: solid;
     border-color: var(--wd-border-1);

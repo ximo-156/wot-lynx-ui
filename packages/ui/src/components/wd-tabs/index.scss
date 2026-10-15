@@ -26,7 +26,9 @@
     padding: var(--wd-space-25) var(--wd-space-4);
     white-space: nowrap;
 
-    @include e(nav-item-text) {
+    /* 注意：必须用 edeep 生成扁平选择器 .wd-tabs__nav-item-text；
+       嵌套 e() 会生成 .wd-tabs__nav-item__nav-item-text，与模板类名不匹配。 */
+    @include edeep(nav-item-text) {
       font-size: var(--wd-font-md);
       color: var(--wd-text-2);
     }

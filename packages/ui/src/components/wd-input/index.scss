@@ -50,6 +50,11 @@
       padding-left: var(--wd-space-1);
     }
 
+    /* 显示字数统计时右侧留白，避免右对齐文字与计数器贴边 */
+    @include m(count) {
+      padding-right: var(--wd-space-2);
+    }
+
     @include when(align-right) {
       text-align: right;
     }

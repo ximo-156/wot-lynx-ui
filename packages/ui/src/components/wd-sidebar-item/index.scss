@@ -30,10 +30,6 @@
       color: var(--wd-text-1);
       font-weight: var(--wd-font-weight-medium);
     }
-
-    &::before {
-      content: '';
-    }
   }
 
   /* 激活指示条（左侧竖线，真实元素不可用伪元素，用 border-left） */

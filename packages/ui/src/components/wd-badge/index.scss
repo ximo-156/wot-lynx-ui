@@ -2,7 +2,7 @@
 
 @include b(badge) {
   position: relative;
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
 
   @include e(content) {

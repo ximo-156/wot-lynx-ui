@@ -15,11 +15,13 @@
     flex-direction: column;
   }
 
+  /* 图标间距挂在图标上（而非消息左侧）：无图标的纯文字 toast 才能保持居中 */
   @include e(icon) {
     color: var(--wd-white);
-    margin-bottom: var(--wd-space-15);
+    margin-right: var(--wd-space-2);
 
     @include m(vertical) {
+      margin-right: 0;
       margin-bottom: var(--wd-space-15);
     }
   }
@@ -30,12 +32,8 @@
     line-height: 20px;
     text-align: center;
 
-    /* 横向排列（图标在左）时消息左侧间距 */
-    margin-left: var(--wd-space-2);
-
     @include m(vertical) {
       margin-top: var(--wd-space-15);
-      margin-left: 0;
     }
   }
 }

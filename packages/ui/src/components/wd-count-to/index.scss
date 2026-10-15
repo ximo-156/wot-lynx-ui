@@ -1,10 +1,15 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(count-to) {
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
   align-items: center;
   font-size: var(--wd-font-md);
   color: var(--wd-text-1);
   font-variant-numeric: tabular-nums;
+
+  /* 前缀/后缀与主数字的间距（custom-class 经 wd-text 根节点生效） */
+  @include edeep(separator-text) {
+    margin: 0 var(--wd-space-05);
+  }
 }

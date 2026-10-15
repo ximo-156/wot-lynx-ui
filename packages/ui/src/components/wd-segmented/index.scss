@@ -20,7 +20,10 @@
     border-radius: var(--wd-radius-xs);
     z-index: 1;
 
-    @include e(item-label) {
+    /* 注意：必须用 edeep 生成扁平选择器 .wd-segmented__item-label；
+       嵌套 e() 会生成 .wd-segmented__item__item-label，与模板类名不匹配，
+       导致整组声明被静默丢弃。 */
+    @include edeep(item-label) {
       font-size: var(--wd-font-sm);
       color: var(--wd-text-2);
     }

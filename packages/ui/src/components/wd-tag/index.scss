@@ -5,7 +5,7 @@
  * 扩展色（volcano/lightblue/cyan/pink/purple）为标签专用装饰色。
  */
 @include b(tag) {
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
@@ -38,29 +38,33 @@
     --wd-tag-bg: var(--wd-color-danger-bg);
   }
 
+  /* ===== 扩展类型令牌 =====
+   * 扩展色（volcano/lightblue/cyan/pink/purple）为标签专用装饰色，
+   * 亮暗双版数值定义在语义层（_semantic.scss 末尾），此处只消费语义令牌，
+   * 避免暗色模式下浅底深字的浅色值失效。 */
   &.is-volcano {
-    --wd-tag-text: #D4480BFF;
-    --wd-tag-bg: #FFF2E8FF;
+    --wd-tag-text: var(--wd-color-volcano);
+    --wd-tag-bg: var(--wd-color-volcano-bg);
   }
 
   &.is-lightblue {
-    --wd-tag-text: #0E79CCFF;
-    --wd-tag-bg: #E6F4FEFF;
+    --wd-tag-text: var(--wd-color-lightblue);
+    --wd-tag-bg: var(--wd-color-lightblue-bg);
   }
 
   &.is-cyan {
-    --wd-tag-text: #08979CFF;
-    --wd-tag-bg: #E6FFFBFF;
+    --wd-tag-text: var(--wd-color-cyan);
+    --wd-tag-bg: var(--wd-color-cyan-bg);
   }
 
   &.is-pink {
-    --wd-tag-text: #C41D7BFF;
-    --wd-tag-bg: #FFF0F6FF;
+    --wd-tag-text: var(--wd-color-pink);
+    --wd-tag-bg: var(--wd-color-pink-bg);
   }
 
   &.is-purple {
-    --wd-tag-text: #6B3FA0FF;
-    --wd-tag-bg: #F6F0FFFF;
+    --wd-tag-text: var(--wd-color-purple);
+    --wd-tag-bg: var(--wd-color-purple-bg);
   }
 
   background-color: var(--wd-tag-bg);
@@ -109,6 +113,11 @@
   &.is-dark {
     background-color: var(--wd-tag-text);
     color: var(--wd-white);
+  }
+
+  /* dark × warning：黄底必须配深色文字（白字对比度不足） */
+  &.is-dark.is-warning {
+    color: var(--wd-text-1);
   }
 
   &.is-plain {

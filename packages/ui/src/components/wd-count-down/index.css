@@ -1,1 +1,1 @@
-.wd-count-down{display:inline-flex;flex-direction:row;align-items:center;font-size:var(--wd-font-md);color:var(--wd-text-1);font-variant-numeric:tabular-nums}
+.wd-count-down{display:flex;flex-direction:row;align-items:center;font-size:var(--wd-font-md);color:var(--wd-text-1);font-variant-numeric:tabular-nums}

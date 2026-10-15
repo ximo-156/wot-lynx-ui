@@ -48,6 +48,11 @@
     font-size: var(--wd-font-lg);
     color: var(--wd-text-1);
 
+    /* 按压缩态（CONVENTIONS §17：可点击元素一律 :active） */
+    &:active {
+      background-color: var(--wd-bg-disabled);
+    }
+
     @include when(border) {
       border-top-width: 1ppx;
       border-top-style: solid;
@@ -56,10 +61,18 @@
 
     @include m(disabled) {
       opacity: 0.5;
+
+      &:active {
+        background-color: transparent;
+      }
     }
 
     @include m(loading) {
       opacity: 0.7;
+
+      &:active {
+        background-color: transparent;
+      }
     }
   }
 

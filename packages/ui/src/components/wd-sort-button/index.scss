@@ -1,7 +1,7 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(sort-button) {
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
 
   @include e(wrapper) {

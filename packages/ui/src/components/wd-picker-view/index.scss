@@ -46,7 +46,9 @@
   }
 
   @include e(column-item) {
-    @include when(active) {
+    /* 选中项：DOM 推 `wd-picker-view__column-item--active`（getItemClass 拼接），
+       必须用 m() 生成 `--active`；when() 生成的 `is-active` 不匹配会被静默丢弃。 */
+    @include m(active) {
       .wd-picker-view__column-label {
         font-weight: var(--wd-font-weight-semibold);
       }

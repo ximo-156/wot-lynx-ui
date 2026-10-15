@@ -22,6 +22,8 @@ import { AbortablePromise } from '../../common/AbortablePromise'
 const props = defineProps(transitionProps)
 const emit = defineEmits([
   'click',
+  'transitionend',
+  'touchmove',
   'before-enter',
   'enter',
   'before-leave',
@@ -176,7 +178,8 @@ function delay(duration: number) {
   })
 }
 
-function onTransitionEnd() {
+function onTransitionEnd(e?: any) {
+  emit('transitionend', e)
   if (transitionEnded.value) return
 
   transitionEnded.value = true
@@ -195,7 +198,10 @@ function handleClick() {
   emit('click')
 }
 
-function noop() {}
+function onTouchMove(e?: any) {
+  // 锁滚由模板修饰符承担，此处仅转发原生事件（CONVENTIONS §14）
+  emit('touchmove', e)
+}
 </script>
 
 <template>
@@ -204,8 +210,8 @@ function noop() {}
     :class="rootClass"
     :style="style"
     @transitionend="onTransitionEnd"
-    @tap="handleClick"
-    @touchmove.stop.prevent="noop"
+    @click="handleClick"
+    @touchmove.stop.prevent="onTouchMove"
   >
     <slot />
   </view>
@@ -214,7 +220,7 @@ function noop() {}
     :class="rootClass"
     :style="style"
     @transitionend="onTransitionEnd"
-    @tap="handleClick"
+    @click="handleClick"
   >
     <slot />
   </view>

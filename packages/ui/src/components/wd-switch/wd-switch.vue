@@ -16,6 +16,7 @@ import WdLoading from '../wd-loading/wd-loading.vue'
 import { switchProps } from './types'
 import { callInterceptor } from '../../common/interceptor'
 import { isDef, isUndefined, omitBy, objToStyle } from '../../common/util'
+import { WHITE } from '../../common/theme'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import type { LoadingProps } from '../wd-loading/types'
 
@@ -112,6 +113,7 @@ function switchValue() {
         :name="innerIcon"
         :class-prefix="classPrefix"
         :css-icon="innerCssIcon"
+        :color="WHITE"
       />
       <text v-else-if="isActive ? activeText : inactiveText" class="wd-switch__inner-text">
         {{ isActive ? activeText : inactiveText }}

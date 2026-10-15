@@ -1,1 +1,1 @@
-.wd-circle{position:relative;display:inline-flex;flex-direction:row;align-items:center;justify-content:center}.wd-circle__text{font-size:var(--wd-font-lg);font-weight:var(--wd-font-weight-semibold);color:var(--wd-text-1)}
+.wd-circle{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:center}.wd-circle__text{font-size:var(--wd-font-lg);font-weight:var(--wd-font-weight-semibold);color:var(--wd-text-1)}

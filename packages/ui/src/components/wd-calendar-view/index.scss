@@ -39,7 +39,10 @@
     width: 14.2857%;
     height: 52px;
 
-    @include e(day-text) {
+    /* 注意：必须用 edeep 生成扁平选择器（.wd-calendar-view__day-text 等）；
+       嵌套 e() 会生成 .wd-calendar-view__day__day-text，与模板类名不匹配，
+       导致日期文本/上标/下标样式被静默丢弃。 */
+    @include edeep(day-text) {
       display: flex;
       flex-direction: row;
       align-items: center;
@@ -51,13 +54,13 @@
       color: var(--wd-text-1);
     }
 
-    @include e(day-top) {
+    @include edeep(day-top) {
       font-size: var(--wd-font-xs);
       color: var(--wd-text-4);
       margin-top: 1px;
     }
 
-    @include e(day-bottom) {
+    @include edeep(day-bottom) {
       position: absolute;
       bottom: 4px;
       width: 4px;

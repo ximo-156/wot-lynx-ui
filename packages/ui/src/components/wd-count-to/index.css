@@ -1,1 +1,1 @@
-.wd-count-to{display:inline-flex;flex-direction:row;align-items:center;font-size:var(--wd-font-md);color:var(--wd-text-1);font-variant-numeric:tabular-nums}
+.wd-count-to{display:flex;flex-direction:row;align-items:center;font-size:var(--wd-font-md);color:var(--wd-text-1);font-variant-numeric:tabular-nums}.wd-count-to .wd-count-to__separator-text{margin:0 var(--wd-space-05)}

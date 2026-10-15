@@ -30,6 +30,19 @@
     margin-left: var(--wd-space-1);
   }
 
+  /* 轨道内图标（wd-icon 经 custom-class 挂载）：12px 白色，与轨道文字对齐 */
+  @include edeep(inner-icon) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-white);
+    margin-right: var(--wd-space-05);
+  }
+
+  /* 滑块内图标（wd-icon 经 custom-class 挂载）：适配 20px 圆形滑块 */
+  @include edeep(action-icon) {
+    font-size: var(--wd-font-sm);
+    color: var(--wd-text-2);
+  }
+
   @include e(action) {
     position: absolute;
     left: 3px;
@@ -40,9 +53,8 @@
     justify-content: center;
     border-radius: 50%;
     background-color: var(--wd-white);
-    border-width: 1px;
-    border-style: solid;
-    border-color: var(--wd-border-2);
+    /* iOS 开关旋钮为纯白无描边；Lynx 无 box-shadow，层级靠与轨道的明度差 */
+    border-width: 0;
     transition: transform var(--wd-duration-base) var(--wd-ease-out);
     z-index: 1;
   }

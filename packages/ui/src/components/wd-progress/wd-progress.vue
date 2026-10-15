@@ -14,6 +14,7 @@ import { computed } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { progressProps } from './types'
 import { isString } from '../../common/util'
+import { WHITE } from '../../common/theme'
 
 const props = defineProps(progressProps)
 
@@ -72,7 +73,7 @@ const percentPositionType = computed(() => props.percentPosition?.type || 'outer
               v-else-if="status"
               custom-class="wd-progress__label wd-progress__icon"
               :name="iconName"
-              :color="isString(color) ? color : ''"
+              :color="isString(color) ? color : WHITE"
             />
           </template>
         </view>

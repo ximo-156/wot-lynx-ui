@@ -37,6 +37,13 @@
     white-space: nowrap;
   }
 
+  /* 条内状态图标（wd-icon 经 custom-class 挂载于 label 之后） */
+  @include edeep(icon) {
+    font-size: var(--wd-font-xs);
+    color: var(--wd-white);
+    margin: 0 var(--wd-space-2) 0 0;
+  }
+
   @include e(text) {
     margin-left: var(--wd-space-2);
     font-size: var(--wd-font-sm);

@@ -7,32 +7,32 @@
  * 保持一致，修改色板时需同步更新。
  */
 
-/** 品牌紫阶（与 --wd-purple-* 对应） */
-export const PURPLE = {
-  1: '#F1EDFF',
-  2: '#E4DBFF',
-  3: '#C7B8FF',
-  4: '#A98FFF',
-  5: '#9279FF',
-  6: '#7F5CFF',
-  7: '#6B47E8',
-  8: '#5533C7',
-  9: '#4326A0',
-  10: '#2F1B6E'
+/** 品牌橙阶（与 --wd-orange-* 对应，基准 6 档 = 小米品牌橙 #FF6900） */
+export const ORANGE = {
+  1: '#FFF3ED',
+  2: '#FFE0CC',
+  3: '#FFC599',
+  4: '#FFA666',
+  5: '#FF8A33',
+  6: '#FF6900',
+  7: '#DB5900',
+  8: '#B74A00',
+  9: '#933B00',
+  10: '#702D00'
 } as const
 
 /** 中性灰阶（与 --wd-gray-* 对应） */
 export const GRAY = {
-  1: '#F7F8FA',
-  2: '#EFF1F5',
-  3: '#E4E7ED',
-  4: '#D3D7E0',
-  5: '#B4BAC7',
-  6: '#8B93A3',
-  7: '#667085',
-  8: '#4A5568',
-  9: '#2D3442',
-  10: '#171B26'
+  1: '#F5F5F7',
+  2: '#EFEFF2',
+  3: '#E4E4E8',
+  4: '#D1D1D6',
+  5: '#AEAEB2',
+  6: '#8E8E93',
+  7: '#6E6E73',
+  8: '#48484A',
+  9: '#2C2C2E',
+  10: '#1D1D1F'
 } as const
 
 /** 成功色阶（与 --wd-green-* 对应） */
@@ -49,18 +49,18 @@ export const GREEN = {
   10: '#00301F'
 } as const
 
-/** 警告色阶（与 --wd-amber-* 对应） */
+/** 警告色阶（与 --wd-amber-* 对应，黄相，与品牌橙拉开色相） */
 export const AMBER = {
-  1: '#FDF6E9',
-  2: '#F9E7C2',
-  3: '#F2D08F',
-  4: '#E9B45A',
-  5: '#DF9A2B',
-  6: '#C97F10',
-  7: '#A5670C',
-  8: '#7F5009',
-  9: '#593906',
-  10: '#382403'
+  1: '#FFFAEB',
+  2: '#FFF1C2',
+  3: '#FDE38A',
+  4: '#FAC73F',
+  5: '#F5A623',
+  6: '#D97E04',
+  7: '#B46306',
+  8: '#8F4D05',
+  9: '#6B3A04',
+  10: '#472703'
 } as const
 
 /** 危险色阶（与 --wd-red-* 对应） */
@@ -82,14 +82,10 @@ export const WHITE = '#FFFFFF'
 /**
  * 兼容别名（过渡期保留）：
  *
- * 设计令牌重构将冷灰阶/橙色阶更名为 GRAY/AMBER（数值为新令牌），组件侧的
- * import 尚在批量迁移中。此处保留旧名导出，避免迁移期间组件因
- * `COOLGREY[6]` / `ORANGE[6]` 读到 undefined 而抛
- * "Cannot read properties of undefined"。
- * 组件全部迁移到新名后，可移除本段。
+ * 历史导出名。ORANGE 曾指向旧橙色概念（现为品牌橙阶），PURPLE 为上一代
+ * 品牌紫阶（已废弃）。组件全部迁移到新名后，可移除本段。
  */
 export const COOLGREY = GRAY
-export const ORANGE = AMBER
 
 /**
  * 语义色的 JS 镜像：svg content 不继承 CSS 变量 / currentColor，
@@ -98,10 +94,10 @@ export const ORANGE = AMBER
  */
 export const THEME_ICON_COLOR = {
   light: GRAY[10],
-  dark: '#F4F6FA'
+  dark: '#F5F5F7'
 } as const
 
 export const THEME_TEXT_COLOR = {
   light: GRAY[10],
-  dark: '#F4F6FA'
+  dark: '#F5F5F7'
 } as const

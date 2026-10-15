@@ -34,6 +34,7 @@ import Loadmore from '../src/components/wd-loadmore/wd-loadmore.vue'
 import SortButton from '../src/components/wd-sort-button/wd-sort-button.vue'
 import Tag from '../src/components/wd-tag/wd-tag.vue'
 import Input from '../src/components/wd-input/wd-input.vue'
+import Overlay from '../src/components/wd-overlay/wd-overlay.vue'
 
 /** 挂载「组件 + 父级 @tap 监听」并派发 tap，返回触发次数 */
 function tapThrough(component: any, props: Record<string, unknown> = {}, selector = '.wd-button'): number {
@@ -105,5 +106,20 @@ describe('事件注册表：组件根 @tap 与父级 @tap 合并崩溃回归（C
 
   it('WdInput：@tap 正常触发', () => {
     expect(tapThrough(Input, { modelValue: '' }, '.wd-input')).toBe(1)
+  })
+})
+
+describe('WdTransition 根 view 改用 @click 后的链路回归', () => {
+  it('WdOverlay：click 经 transition 根 view 仍然触发（tap→click 改造不破坏弹层点击）', () => {
+    let clicks = 0
+    const { container } = render({
+      setup() {
+        return () =>
+          h(Overlay, { show: true, onClick: () => { clicks++ } }, { default: () => h('view', 'x') })
+      }
+    } as any)
+    fireEvent.click(container.querySelector('.wd-overlay') as Element)
+    expect(clicks).toBe(1)
+    cleanup()
   })
 })

@@ -2,7 +2,7 @@
 
 @include b(img) {
   position: relative;
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;

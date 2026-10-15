@@ -2,7 +2,7 @@
 
 @include b(tooltip) {
   position: relative;
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
 
   @include e(pos) {

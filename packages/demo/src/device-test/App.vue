@@ -106,7 +106,7 @@ function resetAll() {
         <text class="card__hint">验证 SVG 图标渲染与四类加载指示器</text>
         <view class="row">
           <wd-icon name="close" size="20" />
-          <wd-icon name="loading" size="24" color="#7F5CFF" />
+          <wd-icon name="loading" size="24" color="#FF6900" />
           <wd-icon name="arrow-left" size="20" />
           <wd-icon name="settings" size="20" color="#FF8800" />
         </view>

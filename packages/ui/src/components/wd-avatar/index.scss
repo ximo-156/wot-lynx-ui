@@ -1,7 +1,7 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(avatar) {
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;

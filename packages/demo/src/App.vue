@@ -166,7 +166,7 @@ function onReset() {
         <view class="demo-panel">
           <view class="demo-row">
             <wd-icon name="close" size="20" />
-            <wd-icon name="loading" size="24" color="#7F5CFF" />
+            <wd-icon name="loading" size="24" color="#FF6900" />
             <wd-icon name="arrow-left" size="20" />
             <wd-icon name="settings" size="20" color="#FF8800" />
           </view>
@@ -177,7 +177,7 @@ function onReset() {
             <wd-loading type="wave" size="24px" />
           </view>
           <view class="demo-row">
-            <wd-loading type="circular" size="20px" color="#7F5CFF" text="加载中" />
+            <wd-loading type="circular" size="20px" color="#FF6900" text="加载中" />
             <wd-loading type="dots" size="20px" direction="horizontal" text="横向" />
           </view>
         </view>

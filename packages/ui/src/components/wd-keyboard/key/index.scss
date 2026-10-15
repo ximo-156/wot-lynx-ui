@@ -39,7 +39,10 @@
     background-color: var(--wd-bg-secondary);
   }
 
-  @include when(active) {
+  /* 按压高亮：DOM 推的是 `wd-key--active`（JS 驱动、滑动可取消），
+     必须用 m() 生成 `.wd-key--active`；误用 when() 会生成 `.wd-key.is-active`
+     与 DOM 类名不匹配，导致按压背景色被静默丢弃。 */
+  @include m(active) {
     background-color: var(--wd-bg-disabled);
   }
 

@@ -17,7 +17,9 @@
   @include e(item-star) {
     color: var(--wd-gray-3);
 
-    @include when(active) {
+    /* 激活星：DOM 推 `wd-rate__item-star--active`（模板 custom-class 拼接），
+       必须用 m() 生成 `--active`；when() 生成的 `is-active` 不匹配会被静默丢弃。 */
+    @include m(active) {
       color: var(--wd-color-primary);
     }
   }
