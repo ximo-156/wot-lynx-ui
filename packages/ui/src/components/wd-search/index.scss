@@ -5,12 +5,14 @@
   flex-direction: row;
   align-items: center;
   width: 100%;
+  padding: var(--wd-space-2) var(--wd-space-3);
 
   @include e(block) {
     display: flex;
     flex-direction: row;
     align-items: center;
     flex-grow: 1;
+    margin-right: var(--wd-space-15);
   }
 
   @include e(field) {

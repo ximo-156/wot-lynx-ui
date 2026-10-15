@@ -106,7 +106,7 @@ function resetAll() {
         <text class="card__hint">验证 SVG 图标渲染与四类加载指示器</text>
         <view class="row">
           <wd-icon name="close" size="20" />
-          <wd-icon name="loading" size="24" color="#4A6DF0" />
+          <wd-icon name="loading" size="24" color="#7F5CFF" />
           <wd-icon name="arrow-left" size="20" />
           <wd-icon name="settings" size="20" color="#FF8800" />
         </view>
@@ -282,7 +282,7 @@ function resetAll() {
 
 .progress__reset-text {
   font-size: 12px;
-  color: #4a6df0;
+  color: #7f5cff;
 }
 
 .progress__bar {
@@ -295,7 +295,7 @@ function resetAll() {
 
 .progress__bar-inner {
   height: 100%;
-  background: #4a6df0;
+  background: #7f5cff;
   border-radius: 3px;
 }
 
@@ -330,8 +330,8 @@ function resetAll() {
 }
 
 .checklist__box--on {
-  background: #4a6df0;
-  border-color: #4a6df0;
+  background: #7f5cff;
+  border-color: #7f5cff;
 }
 
 .checklist__box-tick {

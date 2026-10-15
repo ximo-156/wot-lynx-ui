@@ -17,12 +17,12 @@ page,
 .wd-theme-dark,
 .wd-theme-dark .wd-root-portal {
   /* 品牌色 */
-  --wd-color-primary: var(--wd-blue-5);
-  --wd-color-primary-pressed: var(--wd-blue-4);
-  --wd-color-primary-disabled: var(--wd-blue-8);
-  --wd-color-primary-bg: #4A6DF029;
-  --wd-color-primary-bg-pressed: #4A6DF033;
-  --wd-color-primary-border: #4A6DF04D;
+  --wd-color-primary: var(--wd-purple-5);
+  --wd-color-primary-pressed: var(--wd-purple-4);
+  --wd-color-primary-disabled: var(--wd-purple-8);
+  --wd-color-primary-bg: #7F5CFF29;
+  --wd-color-primary-bg-pressed: #7F5CFF33;
+  --wd-color-primary-border: #7F5CFF4D;
   --wd-color-on-primary: #FFFFFFFF;
 
   /* 危险色 */
@@ -80,12 +80,12 @@ page,
 .wd-theme-light,
 .wd-theme-light .wd-root-portal {
   /* 品牌色 */
-  --wd-color-primary: var(--wd-blue-6);
-  --wd-color-primary-pressed: var(--wd-blue-7);
-  --wd-color-primary-disabled: var(--wd-blue-3);
-  --wd-color-primary-bg: var(--wd-blue-1);
-  --wd-color-primary-bg-pressed: var(--wd-blue-2);
-  --wd-color-primary-border: var(--wd-blue-3);
+  --wd-color-primary: var(--wd-purple-6);
+  --wd-color-primary-pressed: var(--wd-purple-7);
+  --wd-color-primary-disabled: var(--wd-purple-3);
+  --wd-color-primary-bg: var(--wd-purple-1);
+  --wd-color-primary-bg-pressed: var(--wd-purple-2);
+  --wd-color-primary-border: var(--wd-purple-3);
   --wd-color-on-primary: #FFFFFFFF;
 
   /* 危险色 */

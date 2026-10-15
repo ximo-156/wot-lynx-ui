@@ -20,7 +20,7 @@
   }
 
   @include e(tab) {
-    padding: var(--wd-space-1) var(--wd-space-4);
+    padding: 0 var(--wd-space-4);
     border-radius: var(--wd-radius-full);
     font-size: var(--wd-font-sm);
     color: var(--wd-text-2);
@@ -36,12 +36,12 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    padding: var(--wd-space-2) 0;
+    padding: var(--wd-space-15) 0;
   }
 
   @include e(tag) {
     padding: var(--wd-space-1) var(--wd-space-3);
-    margin-right: var(--wd-space-2);
+    margin-right: var(--wd-space-4);
     margin-bottom: var(--wd-space-1);
     border-radius: var(--wd-radius-full);
     background-color: var(--wd-bg-secondary);
@@ -62,13 +62,13 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding: var(--wd-space-2) var(--wd-space-4);
+    padding: 0 var(--wd-space-3) var(--wd-space-4);
   }
 
   @include e(range-item) {
     flex-grow: 1;
     flex-basis: 0;
-    padding: var(--wd-space-2) var(--wd-space-3);
+    padding: var(--wd-space-3) 0;
     border-radius: var(--wd-radius-sm);
     background-color: var(--wd-bg-secondary);
     font-size: var(--wd-font-sm);

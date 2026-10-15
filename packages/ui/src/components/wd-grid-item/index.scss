@@ -13,7 +13,7 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: var(--wd-space-3) var(--wd-space-2);
+    padding: var(--wd-space-3) var(--wd-space-3);
   }
 
   /* 按压缩态（:active 渲染器原生处理） */
@@ -41,7 +41,7 @@
   }
 
   @include e(text) {
-    margin-top: var(--wd-space-2);
+    margin-top: var(--wd-space-1);
     font-size: var(--wd-font-sm);
     color: var(--wd-text-2);
     text-align: center;

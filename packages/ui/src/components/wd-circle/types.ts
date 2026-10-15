@@ -18,7 +18,7 @@ export const circleProps = {
    */
   color: {
     type: [String, Object] as PropType<CircleColor>,
-    default: '#4A6DF0'
+    default: '#7F5CFF'
   },
   /**
    * 轨道颜色

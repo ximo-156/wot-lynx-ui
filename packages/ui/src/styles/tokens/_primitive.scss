@@ -18,17 +18,17 @@ page,
   --wd-black: #000000FF;
   --wd-transparent: transparent;
 
-  /* ===== 品牌蓝阶（indigo 蓝，primary 取 6 档） ===== */
-  --wd-blue-1: #EDF1FFFF;
-  --wd-blue-2: #DCE5FFFF;
-  --wd-blue-3: #BCCEFFFF;
-  --wd-blue-4: #94AEFFFF;
-  --wd-blue-5: #6E8FFBFF;
-  --wd-blue-6: #4A6DF0FF;
-  --wd-blue-7: #3A57CCFF;
-  --wd-blue-8: #2C44A3FF;
-  --wd-blue-9: #1F317AFF;
-  --wd-blue-10: #142252FF;
+  /* ===== 品牌紫阶（primary 取 6 档 #7F5CFF） ===== */
+  --wd-purple-1: #F1EDFFFF;
+  --wd-purple-2: #E4DBFFFF;
+  --wd-purple-3: #C7B8FFFF;
+  --wd-purple-4: #A98FFFFFFF;
+  --wd-purple-5: #9279FFFF;
+  --wd-purple-6: #7F5CFFFF;
+  --wd-purple-7: #6B47E8FF;
+  --wd-purple-8: #5533C7FF;
+  --wd-purple-9: #4326A0FF;
+  --wd-purple-10: #2F1B6EFF;
 
   /* ===== 中性灰阶（冷灰） ===== */
   --wd-gray-1: #F7F8FAFF;
@@ -78,13 +78,17 @@ page,
   --wd-red-9: #661B17FF;
   --wd-red-10: #451210FF;
 
-  /* ===== 间距（4px 基准网格） ===== */
+  /* ===== 间距（4px 基准网格，半步刻度对齐 wot-ui 间距比例） ===== */
+  --wd-space-05: 2px;
   --wd-space-1: 4px;
+  --wd-space-15: 6px;
   --wd-space-2: 8px;
+  --wd-space-25: 10px;
   --wd-space-3: 12px;
   --wd-space-4: 16px;
   --wd-space-5: 20px;
   --wd-space-6: 24px;
+  --wd-space-35: 28px;
   --wd-space-7: 32px;
   --wd-space-8: 40px;
   --wd-space-9: 48px;

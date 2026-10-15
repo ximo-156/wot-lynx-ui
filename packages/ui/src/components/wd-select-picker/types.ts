@@ -34,7 +34,7 @@ export const selectPickerProps = {
   /**
    * 加载颜色
    */
-  loadingColor: makeStringProp('#4A6DF0'),
+  loadingColor: makeStringProp('#7F5CFF'),
   /**
    * 点击遮罩是否关闭
    */

@@ -56,6 +56,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
+    padding: 0 var(--wd-space-2);
   }
 
   @include e(input) {

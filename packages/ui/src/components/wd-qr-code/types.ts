@@ -26,7 +26,7 @@ export const qrCodeProps = {
   /**
    * 渐变起始色
    */
-  gradientStartColor: makeStringProp('#4A6DF0'),
+  gradientStartColor: makeStringProp('#7F5CFF'),
   /**
    * 渐变结束色
    */

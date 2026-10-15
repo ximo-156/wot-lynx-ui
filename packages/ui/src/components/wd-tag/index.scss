@@ -9,7 +9,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 2px var(--wd-space-2);
+  padding: 3px var(--wd-space-15);
   border-radius: var(--wd-radius-xs);
   font-size: var(--wd-font-sm);
   line-height: 18px;
@@ -71,12 +71,12 @@
   }
 
   @include e(icon) {
-    margin-right: 2px;
+    margin-right: var(--wd-space-05);
     color: inherit;
   }
 
   @include e(add) {
-    margin-right: 2px;
+    margin-right: var(--wd-space-05);
     color: inherit;
   }
 
@@ -84,7 +84,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    margin-left: 2px;
+    margin-left: var(--wd-space-05);
   }
 
   @include e(close-icon) {
@@ -133,18 +133,29 @@
 
   /* ===== 尺寸 ===== */
   &.is-small {
-    padding: 1px 6px;
+    padding: 0 var(--wd-space-1);
     font-size: var(--wd-font-xs);
   }
 
+  &.is-medium {
+    padding: 1px var(--wd-space-1);
+    font-size: var(--wd-font-sm);
+  }
+
   &.is-large {
-    padding: 3px 10px;
+    padding: 3px var(--wd-space-15);
     font-size: var(--wd-font-md);
   }
 
   &.is-extra-large {
-    padding: 4px 12px;
+    padding: 3px var(--wd-space-15);
     font-size: var(--wd-font-lg);
+  }
+
+  /* round 变体：水平内边距加大（对齐 wot round-padding） */
+  &.is-round {
+    padding-left: var(--wd-space-3);
+    padding-right: var(--wd-space-3);
   }
 
   /* ===== 圆角 / 禁用 ===== */

@@ -18,7 +18,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: var(--wd-space-6) var(--wd-space-5);
+    padding: var(--wd-space-5) var(--wd-space-5) 0;
   }
 
   @include e(img) {
@@ -32,6 +32,15 @@
     align-items: center;
     justify-content: center;
     margin-bottom: var(--wd-space-2);
+  }
+
+  /* 标题与内容间距 16px（prompt 模式 8px），对齐 wot-ui */
+  .wd-dialog__title + .wd-dialog__content {
+    margin-top: var(--wd-space-4);
+  }
+
+  .wd-dialog__body.is-prompt .wd-dialog__title + .wd-dialog__content {
+    margin-top: var(--wd-space-2);
   }
 
   @include e(icon) {
@@ -61,7 +70,7 @@
   }
 
   @include e(input-error) {
-    margin-top: var(--wd-space-1);
+    padding-top: var(--wd-space-2);
     font-size: var(--wd-font-sm);
     color: var(--wd-color-danger);
   }
@@ -70,6 +79,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    padding: var(--wd-space-5);
     border-top-width: 1ppx;
     border-top-style: solid;
     border-top-color: var(--wd-border-2);
@@ -84,5 +94,9 @@
     flex-basis: 0;
     border-radius: 0;
     height: 44px;
+
+    &:not(:last-child) {
+      margin-right: var(--wd-space-3);
+    }
   }
 }

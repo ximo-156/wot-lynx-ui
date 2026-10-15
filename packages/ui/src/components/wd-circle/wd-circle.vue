@@ -28,9 +28,9 @@ const currentColor = computed(() => {
   if (isObj(props.color)) {
     const entries = Object.entries(props.color as Record<string, string | number>)
     const first = entries[0]
-    return first ? String(first[1]) : '#4A6DF0'
+    return first ? String(first[1]) : '#7F5CFF'
   }
-  return (props.color as string) || '#4A6DF0'
+  return (props.color as string) || '#7F5CFF'
 })
 
 const radius = computed(() => (props.size - props.strokeWidth) / 2)

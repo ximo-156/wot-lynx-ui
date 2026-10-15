@@ -10,7 +10,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: var(--wd-space-3) var(--wd-space-4);
+    padding: var(--wd-space-4);
   }
 
   @include e(title) {
@@ -30,7 +30,7 @@
   }
 
   @include e(body) {
-    padding: 0 var(--wd-space-4) var(--wd-space-3);
+    padding: var(--wd-space-3) var(--wd-space-4);
     font-size: var(--wd-font-md);
     color: var(--wd-text-2);
   }

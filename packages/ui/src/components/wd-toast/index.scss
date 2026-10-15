@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   max-width: 70%;
-  padding: var(--wd-space-3) var(--wd-space-4);
+  padding: var(--wd-space-4);
   background-color: var(--wd-gray-9);
   border-radius: var(--wd-radius-md);
   color: var(--wd-white);
@@ -17,10 +17,10 @@
 
   @include e(icon) {
     color: var(--wd-white);
-    margin-bottom: var(--wd-space-2);
+    margin-bottom: var(--wd-space-15);
 
     @include m(vertical) {
-      margin-bottom: var(--wd-space-2);
+      margin-bottom: var(--wd-space-15);
     }
   }
 
@@ -30,8 +30,12 @@
     line-height: 20px;
     text-align: center;
 
+    /* 横向排列（图标在左）时消息左侧间距 */
+    margin-left: var(--wd-space-2);
+
     @include m(vertical) {
-      margin-top: var(--wd-space-2);
+      margin-top: var(--wd-space-15);
+      margin-left: 0;
     }
   }
 }

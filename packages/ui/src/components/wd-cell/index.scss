@@ -16,7 +16,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding: var(--wd-space-3) var(--wd-space-4);
+    padding: var(--wd-space-3);
     min-height: 48px;
 
     @include m(vertical) {
@@ -39,7 +39,7 @@
   }
 
   @include e(label) {
-    margin-top: 2px;
+    margin-top: var(--wd-space-1);
     font-size: var(--wd-font-sm);
     color: var(--wd-text-3);
   }
@@ -47,10 +47,10 @@
   @include e(required) {
     color: var(--wd-color-danger);
     font-size: var(--wd-font-md);
-    margin-right: 2px;
+    margin-right: var(--wd-space-1);
 
     @include m(left) {
-      margin-left: 2px;
+      margin-left: var(--wd-space-1);
     }
   }
 
@@ -93,21 +93,22 @@
   }
 
   @include e(arrow-right) {
-    margin-left: var(--wd-space-1);
+    margin-left: var(--wd-space-2);
     color: var(--wd-icon-4);
   }
 
   @include e(prefix) {
-    margin-right: var(--wd-space-2);
+    margin-right: var(--wd-space-1);
   }
 
   @include e(suffix) {
     margin-left: var(--wd-space-2);
   }
 
-  /* 垂直布局：右侧内容左对齐并占满 */
+  /* 垂直布局：右侧内容左对齐并占满，顶部间距 16px（对齐 wot-ui） */
   .wd-cell__wrapper--vertical .wd-cell__right {
     justify-content: flex-start;
+    margin-top: var(--wd-space-4);
   }
 
   /* 大尺寸 */

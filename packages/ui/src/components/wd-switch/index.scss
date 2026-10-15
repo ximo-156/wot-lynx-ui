@@ -13,6 +13,7 @@
     justify-content: center;
     width: 100%;
     height: 100%;
+    padding: var(--wd-space-05) var(--wd-space-2);
     border-radius: var(--wd-radius-full);
     background-color: var(--wd-gray-4);
     transition: background-color var(--wd-duration-fast) var(--wd-ease-out);
@@ -23,6 +24,10 @@
     font-size: var(--wd-font-xs);
     color: var(--wd-white);
     padding: 0 var(--wd-space-2);
+
+    /* 激活态文字与滑块间距 4px（对齐 wot-ui switch-spacing） */
+    margin-right: var(--wd-space-1);
+    margin-left: var(--wd-space-1);
   }
 
   @include e(action) {

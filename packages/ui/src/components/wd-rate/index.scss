@@ -11,6 +11,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
+    margin-right: var(--wd-space-15);
   }
 
   @include e(item-star) {

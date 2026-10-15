@@ -16,7 +16,7 @@
   }
 
   @include e(text) {
-    margin-top: var(--wd-space-2);
+    margin-top: var(--wd-space-15);
     font-size: var(--wd-font-sm);
     color: var(--wd-text-2);
   }
@@ -27,6 +27,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
+    padding: var(--wd-space-05);
 
     /* circular：border 圆环 + 旋转 */
     @include m(circular) {

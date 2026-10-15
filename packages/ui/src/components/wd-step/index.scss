@@ -41,7 +41,7 @@
 
   @include e(description) {
     margin-top: var(--wd-space-1);
-    margin-left: var(--wd-space-6);
+    padding: 0 var(--wd-space-05);
     font-size: var(--wd-font-sm);
     color: var(--wd-text-3);
   }

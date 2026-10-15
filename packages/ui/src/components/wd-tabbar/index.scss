@@ -25,7 +25,8 @@
   }
 
   @include m(round) {
-    margin: var(--wd-space-3);
+    margin-left: var(--wd-space-4);
+    margin-right: var(--wd-space-4);
     border-radius: var(--wd-radius-full);
     overflow: hidden;
   }

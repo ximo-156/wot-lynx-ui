@@ -33,7 +33,7 @@
 
   /* button 类型 */
   @include when(button) {
-    padding: var(--wd-space-2) var(--wd-space-4);
+    padding: var(--wd-space-15) var(--wd-space-4);
     border-radius: var(--wd-radius-sm);
     border-width: 1px;
     border-style: solid;

@@ -14,6 +14,8 @@
     margin-bottom: var(--wd-space-2);
   }
 
+  /* 预览项间距 0 8 8 0（对齐 wot-ui upload-preview-margin） */
+
   @include e(status-content) {
     position: relative;
     width: 100%;
@@ -50,7 +52,7 @@
     justify-content: center;
     width: 100%;
     height: 100%;
-    padding: var(--wd-space-2);
+    padding: 0 var(--wd-space-2);
   }
 
   @include e(file-icon) {
@@ -112,6 +114,7 @@
     justify-content: center;
     width: 20px;
     height: 20px;
+    padding: var(--wd-space-05);
     border-bottom-left-radius: var(--wd-radius-sm);
     background-color: var(--wd-mask-bg);
   }

@@ -5,6 +5,7 @@
   flex-direction: row;
   align-items: center;
   width: 100%;
+  margin: var(--wd-space-4) 0;
   color: var(--wd-text-3);
   font-size: var(--wd-font-sm);
 
@@ -45,6 +46,7 @@
     flex-direction: column;
     width: 1ppx;
     height: 100%;
+    margin: 0 var(--wd-space-2);
     align-self: stretch;
 
     .wd-divider__line {

@@ -95,7 +95,12 @@
   }
 
   @include e(icon) {
-    margin-right: var(--wd-space-1);
+    margin-right: var(--wd-space-15);
+  }
+
+  /* 加载指示器间距 6px（对齐 wot-ui button-loading-spacing） */
+  .wd-button__loading {
+    margin-right: var(--wd-space-15);
   }
 
   /* 仅图标：正方形（Lynx 无 aspect-ratio，按尺寸给显式宽度） */
@@ -131,24 +136,24 @@
 
   @include m(small) {
     height: 32px;
-    padding-left: var(--wd-space-4);
-    padding-right: var(--wd-space-4);
+    padding-left: var(--wd-space-3);
+    padding-right: var(--wd-space-3);
     border-radius: var(--wd-radius-sm);
     font-size: var(--wd-font-sm);
   }
 
   @include m(medium) {
-    height: 36px;
-    padding-left: var(--wd-space-5);
-    padding-right: var(--wd-space-5);
+    height: 40px;
+    padding-left: var(--wd-space-4);
+    padding-right: var(--wd-space-4);
     border-radius: var(--wd-radius-sm);
     font-size: var(--wd-font-md);
   }
 
   @include m(large) {
     height: 44px;
-    padding-left: var(--wd-space-6);
-    padding-right: var(--wd-space-6);
+    padding-left: var(--wd-space-5);
+    padding-right: var(--wd-space-5);
     border-radius: var(--wd-radius-md);
     font-size: var(--wd-font-lg);
   }

@@ -7,7 +7,7 @@
   align-items: stretch;
   background-color: var(--wd-bg-secondary);
   border-radius: var(--wd-radius-sm);
-  padding: 2px;
+  padding: var(--wd-space-1);
 
   @include e(item) {
     display: flex;
@@ -16,7 +16,7 @@
     justify-content: center;
     flex-grow: 1;
     flex-basis: 0;
-    padding: var(--wd-space-2) var(--wd-space-3);
+    padding: var(--wd-space-05) var(--wd-space-3);
     border-radius: var(--wd-radius-xs);
     z-index: 1;
 

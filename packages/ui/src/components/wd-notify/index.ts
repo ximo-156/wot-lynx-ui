@@ -2,6 +2,24 @@ import { inject, provide, ref } from 'vue-lynx'
 import type { NotifyProps } from './types'
 import { deepMerge, isString } from '../../common/util'
 
+const notifyPropsDefaults: NotifyProps = {
+  customStyle: '',
+  customClass: '',
+  type: 'danger',
+  color: '',
+  zIndex: 99,
+  visible: false,
+  message: '',
+  selector: '',
+  duration: 3000,
+  position: 'top',
+  safeHeight: undefined,
+  background: '',
+  rootPortal: false,
+  closable: false,
+  variant: 'filled'
+}
+
 let timer: ReturnType<typeof setTimeout> | null = null
 let currentOptions = getDefaultOptions()
 const notifyDefaultOptionKey = '__NOTIFY_OPTION__'
@@ -57,22 +75,4 @@ function getDefaultOptions(): NotifyProps {
   return {
     ...notifyPropsDefaults
   }
-}
-
-const notifyPropsDefaults: NotifyProps = {
-  customStyle: '',
-  customClass: '',
-  type: 'danger',
-  color: '',
-  zIndex: 99,
-  visible: false,
-  message: '',
-  selector: '',
-  duration: 3000,
-  position: 'top',
-  safeHeight: undefined,
-  background: '',
-  rootPortal: false,
-  closable: false,
-  variant: 'filled'
 }

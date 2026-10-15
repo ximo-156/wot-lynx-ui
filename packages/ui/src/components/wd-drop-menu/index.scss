@@ -8,3 +8,8 @@
   width: 100%;
   background-color: var(--wd-bg-container);
 }
+
+/* 菜单项内边距 12px（对齐 wot-ui drop-menu-option-padding） */
+.wd-drop-menu__title {
+  padding: var(--wd-space-3);
+}
