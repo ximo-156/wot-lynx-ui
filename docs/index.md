@@ -22,7 +22,7 @@ features:
     details: 基于 Lynx 双线程架构，Vue 运行在后台线程、渲染在主线程；细线边框使用 1ppx 物理像素，按压缩态由渲染器原生处理。
   - icon: 🧩
     title: API 兼容
-    details: wd-* 组件命名、props、slots、events 与 wot-ui 对齐；图标由 iconfont 转换为 302 个原生 SVG，免字体加载。
+    details: wd-* 组件命名、props、slots、events 与 wot-ui 对齐；内置 180 个 .ttf 字体图标，随包发布、无网络请求。
   - icon: 📦
     title: 开箱即用
     details: 发布预编译 CSS，消费者无需安装 Sass 工具链；组件源码分发，Rspeedy 直接编译，天然 Tree-shaking。

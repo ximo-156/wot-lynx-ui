@@ -95,9 +95,9 @@ export const testSections: TestSection[] = [
   {
     id: 'display',
     title: '展示组件 Icon / Loading / Text / Divider',
-    hint: '验证 SVG 图标/四类 Loading/文本模式/分割线/轮播与选项卡',
+    hint: '验证内置字体图标/四类 Loading/文本模式/分割线/轮播与选项卡',
     items: [
-      { id: 'display-icon', name: '内置 SVG 图标', expect: '内置图标清晰渲染（无字体加载闪烁），color/size 实时生效' },
+      { id: 'display-icon', name: '内置字体图标', expect: '内置 180 个图标清晰渲染（.ttf 随包，无网络请求），color/size 实时生效' },
       { id: 'display-loading', name: '四类 Loading', expect: 'circular 圆环 / spinner 十二点 / dots 三点 / wave 四柱 动画正确' },
       { id: 'display-text', name: 'Text 文本', expect: '语义四色正确；price 千分位 / phone 脱敏 / date 格式化；lines=N 行数省略' },
       { id: 'display-divider', name: 'Divider 分割线', expect: 'center/left/right 位置与虚线样式正确' },

@@ -1,10 +1,10 @@
 /**
- * 内置图标注册表回归测试 — src/icons/registry.ts 与 wd-icon 的多集合渲染。
+ * 内置图标注册表回归测试 — src/icons/registry.ts 与 wd-icon 的字体渲染。
  *
  * 覆盖：
- * - wot 集（data.ts，SVG path）存量行为：不带前缀的名字优先命中 wot 集；
- * - iconfont 集（sets/iconfont.ts，.ttf 字体）：非重名图标直接用，重名图标
- *   （如 menu）经 `集合键:图标名` 寻址；渲染为 <text> 字形（Lynx 无 ::before）；
+ * - 内置单集合 iconfont（sets/iconfont.ts，180 个，.ttf 字体）：不带前缀
+ *   直接解析，渲染为 <text> 字形（Lynx 无 ::before）；
+ * - `集合键:图标名` 寻址（如 iconfont:menu）精确命中指定集合；
  * - registerIconSet 扩展入口：运行时注册新集合（SVG / 字体）即可用。
  */
 import { describe, it, expect } from 'vitest'
@@ -23,40 +23,28 @@ import type { FontIconSet, IconSet, SvgIconSet } from '../src/icons/types'
 const glyphOf = (hex: string) => String.fromCharCode(parseInt(hex, 16))
 
 describe('icons/registry', () => {
-  it('内置两个集合：wot（302，SVG）+ iconfont（180，字体）', () => {
+  it('内置单集合：iconfont（180，.ttf 字体）', () => {
     const sets = listIconSets()
-    expect(sets.map((s) => s.key)).toEqual(['wot', 'iconfont'])
-    expect(sets[0].count).toBe(302)
-    expect(sets[1].count).toBe(180)
+    expect(sets.map((s) => s.key)).toEqual(['iconfont'])
+    expect(sets[0].count).toBe(180)
   })
 
-  it('存量 wot 图标不带前缀即可解析（SVG 行为不变）', () => {
+  it('内置图标不带前缀即可解析（字体渲染）', () => {
     const icon = resolveIcon('close')
-    expect(icon).not.toBeNull()
-    expect(icon!.type).toBe('svg')
-    expect(icon!.setKey).toBe('wot')
-    expect(icon!.paths).toHaveLength(1)
-    expect(hasIcon('check-circle')).toBe(true)
-  })
-
-  it('iconfont 集非重名图标直接可用（字体回退查找）', () => {
-    const icon = resolveIcon('pdf')
     expect(icon).not.toBeNull()
     expect(icon!.type).toBe('font')
     expect(icon!.setKey).toBe('iconfont')
     if (icon!.type !== 'font') throw new Error('unreachable')
     expect(icon!.fontFamily).toBe('wd-iconfont')
     expect(icon!.unicode).toMatch(/^[0-9a-f]{4}$/)
+    expect(hasIcon('pdf')).toBe(true)
   })
 
-  it('重名图标：不带前缀命中 wot 集，带 iconfont: 前缀命中字体集', () => {
-    expect(resolveIcon('menu')!.setKey).toBe('wot')
+  it('带 iconfont: 前缀同样命中内置集合', () => {
     const prefixed = resolveIcon('iconfont:menu')
     expect(prefixed).not.toBeNull()
     expect(prefixed!.type).toBe('font')
     expect(prefixed!.setKey).toBe('iconfont')
-    // 两套字形不同（wot 是 SVG path，iconfont 是字体码点）
-    expect(resolveIcon('menu')!.type).toBe('svg')
   })
 
   it('未知名字 / 未知集合键 / 空值均返回 null', () => {
@@ -72,8 +60,8 @@ describe('icons/registry', () => {
     expect(hasIcon('https://example.com/a.png')).toBe(false)
   })
 
-  it('listIcons 去重：全量名单 = 302 + 146（34 个重名只保留 wot 字形）', () => {
-    expect(listIcons()).toHaveLength(302 + 146)
+  it('listIcons：全量名单 = 180', () => {
+    expect(listIcons()).toHaveLength(180)
     expect(listIcons('iconfont')).toHaveLength(180)
     expect(listIcons('no-such-set')).toEqual([])
   })
@@ -129,15 +117,7 @@ describe('icons/registry', () => {
 })
 
 describe('WdIcon 渲染', () => {
-  it('wot SVG 图标：content 含 1 个 path', () => {
-    const { container } = render(Icon, { name: 'close', size: 20 })
-    const content = container.querySelector('svg')!.getAttribute('content')!
-    expect((content.match(/<path/g) || []).length).toBe(1)
-    expect(content).toContain('viewBox="0 0 1024 1024"')
-    cleanup()
-  })
-
-  it('iconfont 字体图标：渲染 text 字形（非 svg）', () => {
+  it('内置字体图标：渲染 text 字形（非 svg）', () => {
     const { container } = render(Icon, { name: 'pdf', size: 24 })
     expect(container.querySelector('svg')).toBeNull()
     const text = container.querySelector('text')
@@ -154,6 +134,20 @@ describe('WdIcon 渲染', () => {
     const text = container.querySelector('text')
     expect(text).not.toBeNull()
     expect(text!.textContent).toBe(glyphOf('e6b2'))
+    cleanup()
+  })
+
+  it('扩展注册的 SVG 集合：渲染 svg content', () => {
+    registerIconSet({
+      key: 'test-render-svg',
+      type: 'svg',
+      viewBox: '0 0 24 24',
+      paths: { 'render-star': 'M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z' }
+    })
+    const { container } = render(Icon, { name: 'render-star', size: 20 })
+    const content = container.querySelector('svg')!.getAttribute('content')!
+    expect((content.match(/<path/g) || []).length).toBe(1)
+    expect(content).toContain('viewBox="0 0 24 24"')
     cleanup()
   })
 

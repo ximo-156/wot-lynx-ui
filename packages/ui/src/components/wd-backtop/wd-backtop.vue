@@ -44,7 +44,7 @@ function handleBacktop() {
     >
       <slot>
         <view class="wd-backtop__content">
-          <wd-icon custom-class="wd-backtop__backicon" name="to-top" :custom-style="iconStyle" />
+          <wd-icon custom-class="wd-backtop__backicon" name="top" :custom-style="iconStyle" />
           <text v-if="text" class="wd-backtop__text">{{ text }}</text>
         </view>
       </slot>

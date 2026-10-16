@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue-lynx'
-import { useToast } from 'wot-lynx-ui'
+import { computed, ref } from 'vue-lynx'
+import { listIcons, useToast } from 'wot-lynx-ui'
 
 // 组件通过 wotLynxUI 插件全局注册（Tier 1：基础组件）
 const count = ref(0)
@@ -25,6 +25,11 @@ const calendarVisible = ref(false)
 const calendarValue = ref<number | null>(null)
 const keyboardVisible = ref(false)
 const payValue = ref('')
+// ---- Keyboard 键盘 Demo 状态（默认数字键盘 / 自定义键盘 / 车牌键盘） ----
+const customKeyboardVisible = ref(false)
+const customKeyboardValue = ref('')
+const carKeyboardVisible = ref(false)
+const carKeyboardValue = ref('')
 const verifyPassed = ref(false)
 const uploadFiles = ref<any[]>([])
 const tabValue = ref(0)
@@ -52,37 +57,12 @@ const actionSheetRef = ref<any>(null)
 const notifyRef = ref<any>(null)
 const asVisible = ref(false)
 
-// iconfont 集图标画廊：非重名图标直接用；与 wot 集重名的带 iconfont: 前缀寻址
-const iconfontGallery = ref<string[]>([
-  'pdf',
-  'image-text',
-  'keyboard-26',
-  'mobile-phone',
-  'scanning',
-  'sign-out',
-  'survey',
-  'task',
-  'training',
-  'warning',
-  'operation',
-  'modular',
-  'navigation',
-  'add-bold',
-  'arrow-left-bold',
-  'close-bold',
-  'arrow-up-filling',
-  'comment-filling',
-  'favorite-filling',
-  'setting-filling',
-  'folder-filling',
-  'home-filling',
-  'top-filling',
-  'iconfont:menu',
-  'iconfont:history',
-  'iconfont:home',
-  'iconfont:user',
-  'iconfont:close'
-])
+// 内置图标画廊：全部 180 个图标经 wd-pagination 分页展示（每页 30 个 = 5 列 × 6 行）
+const allIcons = listIcons()
+const iconPageSize = 30
+const iconTotalPage = Math.ceil(allIcons.length / iconPageSize)
+const iconPage = ref(1)
+const pagedIcons = computed(() => allIcons.slice((iconPage.value - 1) * iconPageSize, iconPage.value * iconPageSize))
 
 function showDemoDialog() {
   dialogRef.value?.alert({ title: '提示', msg: '这是一个对话框' })
@@ -143,7 +123,7 @@ const swiperNavItems = ref([
 const swiperNavIconItems = ref([
   { icon: 'home', title: '首页' },
   { icon: 'camera', title: '相机' },
-  { icon: 'image', title: '图片' }
+  { icon: 'picture', title: '图片' }
 ])
 const swiperNavIndex = ref(-1)
 // Tabbar 选中值（与既有 tabValue 区分）
@@ -327,9 +307,9 @@ const overlayVisible = ref(false)
 // Popover 气泡弹出
 const popoverVisible = ref(false)
 const popoverMenu = ref([
-  { iconClass: 'settings', content: '选项一' },
-  { iconClass: 'image', content: '选项二' },
-  { iconClass: 'video', content: '选项三' }
+  { iconClass: 'setting', content: '选项一' },
+  { iconClass: 'picture', content: '选项二' },
+  { iconClass: 'film', content: '选项三' }
 ])
 // Tooltip 文字提示
 const tooltipVisible = ref(false)
@@ -425,7 +405,7 @@ const portalBarVisible = ref(false)
 
           <text class="demo-panel__label">图标与状态</text>
           <view class="demo-row">
-            <wd-button type="primary" icon="settings">设置</wd-button>
+            <wd-button type="primary" icon="setting">设置</wd-button>
             <wd-button type="primary" loading>加载中</wd-button>
             <wd-button disabled>禁用</wd-button>
             <wd-button type="danger" round>圆角</wd-button>
@@ -442,20 +422,14 @@ const portalBarVisible = ref(false)
       <view class="demo-section">
         <text class="demo-section__title">Icon 图标 / Loading 加载</text>
         <view class="demo-panel">
-          <text class="demo-panel__label">wot 集（302 个，与 wot-ui 对齐）</text>
-          <view class="demo-row">
-            <wd-icon name="close" size="20" />
-            <wd-icon name="loading" size="24" color="#7F5CFF" />
-            <wd-icon name="arrow-left" size="20" />
-            <wd-icon name="settings" size="20" color="#FF8800" />
+          <text class="demo-panel__label">内置图标（{{ allIcons.length }} 个，wd-pagination 分页展示）</text>
+          <wd-grid :column="5">
+            <wd-grid-item v-for="name in pagedIcons" :key="name" :icon="name" :text="name" />
+          </wd-grid>
+          <view class="demo-row" style="justify-content: center; margin-top: 4px">
+            <wd-pagination v-model="iconPage" :total-page="iconTotalPage" show-icon />
           </view>
-          <text class="demo-panel__label">iconfont 集（180 个内置；非重名直接用，重名带 iconfont: 前缀）</text>
-          <view class="demo-row">
-            <view v-for="name in iconfontGallery" :key="name" class="demo-icon-item">
-              <wd-icon :name="name" size="24" />
-              <text class="demo-icon-item__name">{{ name }}</text>
-            </view>
-          </view>
+          <text class="demo-panel__label">Loading 加载</text>
           <view class="demo-row">
             <wd-loading type="circular" size="24px" />
             <wd-loading type="spinner" size="24px" />
@@ -475,7 +449,7 @@ const portalBarVisible = ref(false)
         <view class="demo-panel">
           <wd-cell-group title="基础用法" border>
             <wd-cell title="单元格" value="内容" />
-            <wd-cell title="图标 + 箭头" prefix-icon="settings" is-link value="跳转" />
+            <wd-cell title="图标 + 箭头" prefix-icon="setting" is-link value="跳转" />
             <wd-cell title="描述文本" label="这是描述信息" value="内容" />
           </wd-cell-group>
           <wd-cell-group title="卡片分组" insert>
@@ -558,12 +532,6 @@ const portalBarVisible = ref(false)
           <text class="demo-panel__label">PickerView（内嵌）</text>
           <wd-picker-view v-model="pickerValue" :columns="pickerColumns" />
 
-          <text class="demo-panel__label">Keyboard + PasswordInput</text>
-          <view class="demo-row">
-            <wd-password-input :model-value="payValue" :length="6" />
-            <wd-button size="small" @tap="keyboardVisible = true">弹出键盘</wd-button>
-          </view>
-
           <text class="demo-panel__label">SlideVerify / Signature / Upload</text>
           <view class="demo-row">
             <wd-slide-verify v-model="verifyPassed" />
@@ -573,6 +541,36 @@ const portalBarVisible = ref(false)
           </view>
           <view class="demo-row">
             <wd-upload v-model:file-list="uploadFiles" :limit="3" action="" />
+          </view>
+        </view>
+      </view>
+
+      <!-- Keyboard 键盘（独立成节：数字 / 自定义 / 车牌三种模式） -->
+      <view class="demo-section">
+        <text class="demo-section__title">Keyboard 键盘</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">默认数字键盘 + PasswordInput（支付密码场景，maxlength=6）</text>
+          <view class="demo-row">
+            <wd-password-input :model-value="payValue" :length="6" />
+            <wd-button type="primary" size="small" @tap="keyboardVisible = true">弹出键盘</wd-button>
+          </view>
+
+          <text class="demo-panel__label">自定义键盘（mode="custom"，extraKey 左侧小数点，右侧删除/关闭）</text>
+          <view class="demo-row">
+            <wd-input v-model="customKeyboardValue" placeholder="点右侧按钮弹起自定义键盘" readonly style="flex: 1" />
+            <wd-button size="small" @tap="customKeyboardVisible = true">弹起键盘</wd-button>
+          </view>
+          <view class="demo-row">
+            <text class="demo-tag">已输入：{{ customKeyboardValue || '（空）' }}</text>
+          </view>
+
+          <text class="demo-panel__label">车牌键盘（mode="car"，autoSwitchLang 输入首位后自动切换英文）</text>
+          <view class="demo-row">
+            <wd-input v-model="carKeyboardValue" placeholder="点右侧按钮弹起车牌键盘" readonly style="flex: 1" />
+            <wd-button size="small" @tap="carKeyboardVisible = true">弹起键盘</wd-button>
+          </view>
+          <view class="demo-row">
+            <text class="demo-tag">车牌：{{ carKeyboardValue || '（空）' }}</text>
           </view>
         </view>
       </view>
@@ -600,6 +598,8 @@ const portalBarVisible = ref(false)
         @confirm="(e: any) => console.log('[demo] calendar confirm', e)"
       />
       <wd-keyboard v-model="payValue" v-model:visible="keyboardVisible" />
+      <wd-keyboard v-model="customKeyboardValue" v-model:visible="customKeyboardVisible" mode="custom" extra-key="." close-text="关闭" />
+      <wd-keyboard v-model="carKeyboardValue" v-model:visible="carKeyboardVisible" mode="car" :maxlength="8" auto-switch-lang />
 
       <!-- 展示 / 布局 / 导航（Tier 3） -->
       <view class="demo-section">
@@ -638,11 +638,11 @@ const portalBarVisible = ref(false)
             <wd-pagination v-model="pageValue" :total-page="5" />
             <wd-count-down :time="60000" format="mm:ss" />
           </view>
-          <wd-notice-bar text="这是一条通知栏提示" prefix="sound" />
+          <wd-notice-bar text="这是一条通知栏提示" prefix="notification" />
           <wd-card title="卡片标题" style="margin-top: 8px">卡片内容</wd-card>
           <wd-grid :column="3" style="margin-top: 8px">
-            <wd-grid-item icon="image" text="图片" />
-            <wd-grid-item icon="video" text="视频" />
+            <wd-grid-item icon="picture" text="图片" />
+            <wd-grid-item icon="film" text="视频" />
             <wd-grid-item icon="file" text="文件" />
           </wd-grid>
         </view>
@@ -792,13 +792,13 @@ const portalBarVisible = ref(false)
           <text class="demo-panel__label">基础用法（v-model + bordered + change 事件）</text>
           <wd-tabbar v-model="tabbarValue" bordered @change="(e: any) => console.log('[demo] tabbar change', e)">
             <wd-tabbar-item title="首页" icon="home" />
-            <wd-tabbar-item title="消息" icon="message" />
+            <wd-tabbar-item title="消息" icon="comment" />
             <wd-tabbar-item title="我的" icon="user" />
           </wd-tabbar>
           <text class="demo-panel__label">圆角形状（shape="round"）+ 自定义激活色</text>
           <wd-tabbar v-model="tabbarRoundValue" shape="round" active-color="#7F5CFF" style="margin-top: 8px">
-            <wd-tabbar-item title="首页" icon="home" active-icon="home-fill" />
-            <wd-tabbar-item title="消息" icon="message" />
+            <wd-tabbar-item title="首页" icon="home" active-icon="home-filling" />
+            <wd-tabbar-item title="消息" icon="comment" />
             <wd-tabbar-item title="我的" icon="user" />
           </wd-tabbar>
           <view class="demo-row">
@@ -812,9 +812,9 @@ const portalBarVisible = ref(false)
         <view class="demo-panel">
           <text class="demo-panel__label">icon / active-icon / value 徽标 / is-dot 圆点 / max 上限</text>
           <wd-tabbar v-model="tabbarItemValue">
-            <wd-tabbar-item title="首页" icon="home" active-icon="home-fill" />
+            <wd-tabbar-item title="首页" icon="home" active-icon="home-filling" />
             <wd-tabbar-item title="相机" icon="camera" />
-            <wd-tabbar-item title="消息" icon="message" :value="8" />
+            <wd-tabbar-item title="消息" icon="comment" :value="8" />
             <wd-tabbar-item title="通知" icon="notification" is-dot />
             <wd-tabbar-item title="我的" icon="user" :name="99" :value="150" :max="99" />
           </wd-tabbar>
@@ -922,10 +922,10 @@ const portalBarVisible = ref(false)
           <text class="demo-panel__label">icon / iconSize 自定义</text>
           <view class="demo-row" style="align-items: flex-start">
             <wd-empty icon="delete" :icon-size="56" tip="购物车是空的" style="flex: 1" />
-            <wd-empty icon="settings" :icon-size="56" tip="没有搜索结果" style="flex: 1" />
+            <wd-empty icon="setting" :icon-size="56" tip="没有搜索结果" style="flex: 1" />
           </view>
           <text class="demo-panel__label">底部插槽</text>
-          <wd-empty tip="还没有订单" icon="image" :icon-size="56">
+          <wd-empty tip="还没有订单" icon="picture" :icon-size="56">
             <template #bottom>
               <wd-button size="small" type="primary">去下单</wd-button>
             </template>
@@ -1565,20 +1565,6 @@ const portalBarVisible = ref(false)
 
 .demo-row--block {
   display: block;
-}
-
-.demo-icon-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 72px;
-  gap: 4px;
-}
-
-.demo-icon-item__name {
-  font-size: 10px;
-  color: #8b93a3;
-  text-align: center;
 }
 
 .demo-tag {

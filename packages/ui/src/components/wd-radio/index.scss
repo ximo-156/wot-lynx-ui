@@ -22,6 +22,44 @@
     color: var(--wd-text-4);
   }
 
+  /* 未选中态空心圆/方：内置图标集无对应字形，经边框绘制（currentColor 跟随 color） */
+  @include e(icon--empty) {
+    width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    border-width: 1px;
+    border-style: solid;
+    border-color: currentColor;
+  }
+
+  @include e(icon--circle) {
+    border-radius: 10px;
+  }
+
+  @include e(icon--square) {
+    border-radius: 5px;
+  }
+
+  /* dot 类型选中态：空心圆 + 圆心实心点 */
+  @include e(icon--dot) {
+    width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    border-width: 1px;
+    border-style: solid;
+    border-color: currentColor;
+    border-radius: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(icon--dot-inner) {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    background-color: currentColor;
+  }
+
   /* 图标在右 */
   @include m(right) {
     flex-direction: row-reverse;

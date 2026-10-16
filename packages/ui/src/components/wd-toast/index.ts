@@ -107,8 +107,8 @@ export const getToastOptionKey = (selector: string) => {
 }
 
 export const toastIcon = {
-  success: 'check-circle',
-  warning: 'exclamation-circle',
-  info: 'info-circle',
-  error: 'close-circle'
+  success: 'success',
+  warning: 'warning',
+  info: 'prompt',
+  error: 'error'
 }

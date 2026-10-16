@@ -258,7 +258,7 @@ const limitText = computed(() => {
         />
         <view v-else-if="isVideo(file)" class="wd-upload__video" @tap="onPreview(file, index)">
           <image v-if="file.thumb" :src="file.thumb" :mode="imageMode" class="wd-upload__picture" />
-          <wd-icon name="play-circle-fill" custom-class="wd-upload__video-play" />
+          <wd-icon name="play" custom-class="wd-upload__video-play" />
         </view>
         <view v-else class="wd-upload__file" @tap="onPreview(file, index)">
           <wd-icon name="file" custom-class="wd-upload__file-icon" />
@@ -284,7 +284,7 @@ const limitText = computed(() => {
 
     <!-- 上传按钮 -->
     <view v-if="showUpload && !isDisabled && !disabled" class="wd-upload__upload" @tap="handleChoose">
-      <wd-icon name="plus" custom-class="wd-upload__add" />
+      <wd-icon name="add" custom-class="wd-upload__add" />
       <text v-if="limitText" class="wd-upload__limit">{{ limitText }}</text>
     </view>
   </view>

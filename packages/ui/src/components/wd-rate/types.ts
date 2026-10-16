@@ -50,15 +50,15 @@ export const rateProps = {
   /**
    * 未选中图标
    * 类型: string
-   * 默认值: star-fill
+   * 默认值: favorite-filling
    */
-  icon: makeStringProp('star-fill'),
+  icon: makeStringProp('favorite-filling'),
   /**
    * 选中图标
    * 类型: string
-   * 默认值: star-fill
+   * 默认值: favorite-filling
    */
-  activeIcon: makeStringProp('star-fill'),
+  activeIcon: makeStringProp('favorite-filling'),
   /**
    * 图标类名前缀
    */

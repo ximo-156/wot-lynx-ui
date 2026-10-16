@@ -151,7 +151,7 @@ wot-lynx-ui/
 │   │   │   ├── components/       # 102 个 wd-* 组件（types.ts + .vue + index.scss + index.css）
 │   │   │   ├── composables/      # 组合式函数（useParent/useChildren/useTouch...）
 │   │   │   ├── common/           # 工具函数 / props / 日期格式化（dayjs）/ vue-lynx Transition 兼容层
-│   │   │   ├── icons/            # 482 个内置图标（registry 注册表：wot SVG 集 302 + iconfont 字体集 180，含 .ttf）
+│   │   │   ├── icons/            # 180 个内置图标（registry 注册表：iconfont 字体集，含 .ttf）
 │   │   │   ├── locale/           # 16 种语言
 │   │   │   └── styles/           # 主题变量 / mixin / BEM
 │   │   ├── test/                 # 双线程测试环境与用例（vitest）
@@ -171,7 +171,7 @@ wot-lynx-ui/
 | `WdSwipeAction` 横滑 | 后台线程响应式：方向判定后更新容器 `transform`，宽度限制与阈值状态机均在后台线程完成 |
 | 按压缩态 | CSS `:active`（渲染器原生处理） |
 | 细线边框 | `1ppx` 物理像素 |
-| 图标 | SVG path + 原生 `<svg>` |
+| 图标 | 内置 .ttf 字体（180 个，`<text>` 字形，随包发布无网络请求）；可 `registerIconSet` 注册 SVG path 集 |
 | 弹层 | `position: fixed` 自动提升至根节点 |
 
 ## 与 wot-ui 的差异
@@ -180,7 +180,7 @@ Lynx 是原生渲染引擎，与 Web/小程序运行时有本质差异，以下�
 
 | 能力 | wot-ui | wot-lynx-ui |
 | --- | --- | --- |
-| 图标 | iconfont 字体 | 双形态：wot 集 302 个走 SVG path + 原生 `<svg>`；iconfont 集 180 个走 .ttf 字体 + `<text>` 字形（482 个内置，可 `registerIconSet` 扩展） |
+| 图标 | iconfont 字体 | 内置 .ttf 字体（180 个，`<text>` 字形，随包发布无网络请求）；可 `registerIconSet` 注册 SVG path 集扩展 |
 | 按压缩态 | `hover-class` | CSS `:active` 伪类（渲染器原生处理） |
 | 细线边框 | `::after` + scale(0.5) | 原生 `border` + `1ppx` 物理像素 |
 | 伪元素装饰 | `::before` / `::after` | 模板真实元素（`__bar` / `__hairline` 等类名） |

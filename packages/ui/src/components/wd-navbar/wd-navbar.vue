@@ -38,7 +38,7 @@ function handleClickRight() {
           <slot name="capsule" />
         </view>
         <view v-else-if="!$slots.left" :class="`wd-navbar__left ${leftDisabled ? 'is-disabled' : ''}`" @tap="handleClickLeft">
-          <wd-icon v-if="leftArrow" name="left" custom-class="wd-navbar__arrow" />
+          <wd-icon v-if="leftArrow" name="arrow-left-bold" custom-class="wd-navbar__arrow" />
           <text v-if="leftText" class="wd-navbar__text">{{ leftText }}</text>
         </view>
         <view v-else :class="`wd-navbar__left ${leftDisabled ? 'is-disabled' : ''}`" @tap="handleClickLeft">

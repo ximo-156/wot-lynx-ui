@@ -96,7 +96,7 @@ function submit() {
     />
     <view v-else-if="dynamic" class="wd-tag__text" :style="textStyle" @tap.stop="handleAdd">
       <slot name="add">
-        <wd-icon name="plus" custom-class="wd-tag__add" />
+        <wd-icon name="add" custom-class="wd-tag__add" />
         <text>{{ translate('add') }}</text>
       </slot>
     </view>

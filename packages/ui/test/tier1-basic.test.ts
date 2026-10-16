@@ -21,6 +21,7 @@ import Overlay from '../src/components/wd-overlay/wd-overlay.vue'
 import RootPortal from '../src/components/wd-root-portal/wd-root-portal.vue'
 import Text from '../src/components/wd-text/wd-text.vue'
 import Transition from '../src/components/wd-transition/wd-transition.vue'
+import { registerIconSet } from '../src/icons/registry'
 
 describe('Tier 1 基础组件', () => {
   describe('渲染冒烟', () => {
@@ -134,8 +135,23 @@ describe('Tier 1 基础组件', () => {
       cleanup()
     })
 
-    it('WdIcon 渲染内置图标的 svg content（过白名单安全网）', () => {
+    it('WdIcon 渲染内置字体图标（码点字形经 text 子节点）', () => {
       const { container } = render(Icon, { name: 'close', size: 20 })
+      const text = container.querySelector('text')
+      expect(text).not.toBeNull()
+      // close -> e679
+      expect(text!.textContent).toBe(String.fromCharCode(0xe679))
+      cleanup()
+    })
+
+    it('WdIcon 注册 SVG 集后渲染 svg content（过白名单安全网）', () => {
+      registerIconSet({
+        key: 'tier1-svg',
+        type: 'svg',
+        viewBox: '0 0 1024 1024',
+        paths: { 'tier1-close': 'M512 0h1024v1024H512z' }
+      })
+      const { container } = render(Icon, { name: 'tier1-close', size: 20 })
       const svg = container.querySelector('svg')
       expect(svg).not.toBeNull()
       expect(svg!.getAttribute('content')).toContain('<path')

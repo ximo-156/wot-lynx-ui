@@ -184,7 +184,7 @@ function handleKeyboardheightchange({ detail }: any) {
         @keyboardheightchange="handleKeyboardheightchange"
       />
       <view v-if="readonly" class="wd-textarea__readonly-mask" />
-      <wd-icon v-if="showClear" custom-class="wd-textarea__clear" name="close-circle" @tap="handleClear" />
+      <wd-icon v-if="showClear" custom-class="wd-textarea__clear" name="close-bold" @tap="handleClear" />
     </view>
     <view v-if="showWordCount" class="wd-textarea__count">
       <text>{{ currentLength }}/{{ maxlength }}</text>

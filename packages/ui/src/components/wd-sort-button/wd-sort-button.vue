@@ -48,8 +48,8 @@ function handleClick() {
         <text>{{ title }}</text>
       </view>
       <view class="wd-sort-button__right">
-        <wd-icon name="caret-up" :custom-class="`wd-sort-button__icon-up ${modelValue === -1 ? 'wd-sort-button__icon-up--active' : ''}`" />
-        <wd-icon name="caret-down" :custom-class="`wd-sort-button__icon-down ${modelValue === 1 ? 'wd-sort-button__icon-down--active' : ''}`" />
+        <wd-icon name="arrow-up-filling" :custom-class="`wd-sort-button__icon-up ${modelValue === -1 ? 'wd-sort-button__icon-up--active' : ''}`" />
+        <wd-icon name="arrow-down-filling" :custom-class="`wd-sort-button__icon-down ${modelValue === 1 ? 'wd-sort-button__icon-down--active' : ''}`" />
       </view>
     </view>
   </view>

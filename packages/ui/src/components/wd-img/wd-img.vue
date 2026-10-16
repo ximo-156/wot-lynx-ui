@@ -62,12 +62,12 @@ function handleClick(event: any) {
     />
     <view v-if="status === 'loading' && showLoading" class="wd-img__loading">
       <slot name="loading">
-        <wd-icon name="image" custom-class="wd-img__loading-icon" />
+        <wd-icon name="picture" custom-class="wd-img__loading-icon" />
       </slot>
     </view>
     <view v-if="status === 'error' && showError" class="wd-img__error">
       <slot name="error">
-        <wd-icon name="image-failloading" custom-class="wd-img__error-icon" />
+        <wd-icon name="error" custom-class="wd-img__error-icon" />
       </slot>
     </view>
   </view>

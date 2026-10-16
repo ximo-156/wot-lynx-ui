@@ -109,17 +109,35 @@ describe('事件注册表：组件根 @tap 与父级 @tap 合并崩溃回归（C
   })
 })
 
-describe('WdTransition 根 view 改用 @click 后的链路回归', () => {
-  it('WdOverlay：click 经 transition 根 view 仍然触发（tap→click 改造不破坏弹层点击）', () => {
+describe('WdTransition 根 view @tap 链路回归', () => {
+  // 2026-10-16 订正：Lynx 引擎只向 view 派发 tap，不派发 click。e2931b8 曾把
+  // 根 view 内部绑定改为 @click 规避同名合并，导致遮罩/弹层点击全端失效
+  // （真机复报，见 overlay-tap-regression.test.ts）。现根 view 绑 @tap 并经
+  // emits 声明转发，消费方的 @tap 作为组件事件被消费，不再穿透合并。
+  it('WdOverlay：tap 经 transition 根 view 触发（click/tap 双轨 emit）', () => {
     let clicks = 0
+    let taps = 0
     const { container } = render({
       setup() {
         return () =>
-          h(Overlay, { show: true, onClick: () => { clicks++ } }, { default: () => h('view', 'x') })
+          h(
+            Overlay,
+            {
+              show: true,
+              onClick: () => {
+                clicks++
+              },
+              onTap: () => {
+                taps++
+              }
+            },
+            { default: () => h('view', 'x') }
+          )
       }
     } as any)
-    fireEvent.click(container.querySelector('.wd-overlay') as Element)
+    fireEvent.tap(container.querySelector('.wd-overlay') as Element)
     expect(clicks).toBe(1)
+    expect(taps).toBe(1)
     cleanup()
   })
 })

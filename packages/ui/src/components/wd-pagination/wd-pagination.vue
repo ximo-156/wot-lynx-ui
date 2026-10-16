@@ -46,7 +46,7 @@ function add() {
           size="small"
           :disabled="modelValue <= 1"
           custom-class="wd-pagination__nav"
-          :icon="showIcon ? 'left' : ''"
+          :icon="showIcon ? 'arrow-left-bold' : ''"
           :text="showIcon ? '' : prevText || translate('prev')"
           @click="sub"
         />
@@ -66,7 +66,7 @@ function add() {
           size="small"
           :disabled="modelValue >= totalPageNum"
           custom-class="wd-pagination__nav"
-          :icon="showIcon ? 'right' : ''"
+          :icon="showIcon ? 'arrow-right-bold' : ''"
           :text="showIcon ? '' : nextText || translate('next')"
           @click="add"
         />

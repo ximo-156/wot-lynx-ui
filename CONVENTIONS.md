@@ -190,28 +190,31 @@ composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
 
 ## 8. wd-icon 与 SVG 硬约束
 
-- 内置图标经图标注册表 `src/icons/registry.ts` 组织，**两种渲染形态并存**：
-  - wot 集（`src/icons/data.ts`，302 个，与 wot-ui 对齐，组件内部图标默认取此）：
-    SVG path 数据，经原生 `svg` 元素的 content 渲染——色板无关的通用字形数据，
-    重写时保留；
-  - iconfont 集（`src/icons/sets/iconfont.ts`，180 个，移动端成套图标）：
-    **.ttf 字体图标**（`src/icons/fonts/iconfont.ttf` + 同目录 `iconfont.css` 的
-    `@font-face`，族名 `wd-iconfont`），由 `scripts/generate-iconfont.mjs` 从
-    iconfont.cn 导出物生成（码点取自 `iconfont.json` 的 `glyphs[].unicode`，
-    `--check` 校验 TS 模块与字体字节）。
+- 内置图标经图标注册表 `src/icons/registry.ts` 组织，**单一内置集合**：
+  iconfont 集（`src/icons/sets/iconfont.ts`，180 个，移动端成套图标）：
+  **.ttf 字体图标**（`src/icons/fonts/iconfont.ttf` + 同目录 `iconfont.css` 的
+  `@font-face`，族名 `wd-iconfont`），由 `scripts/generate-iconfont.mjs` 从
+  iconfont.cn 导出物生成（码点取自 `iconfont.json` 的 `glyphs[].unicode`，
+  `--check` 校验 TS 模块与字体字节）。
+- 组件内部用到的图标一律从这 180 个中挑选（navbar / pagination 左箭头取
+  `arrow-left-bold`，rate 星星取 `favorite-filling`，empty 默认图取
+  `folder-close` 等）；内置集没有对应字形的形态用 CSS 绘制——radio /
+  checkbox 的未选中空心圆/方与 dot 选中态圆心点，经边框 + `currentColor`
+  实现（见 `wd-radio` / `wd-checkbox`）。
 - 字体渲染的 Lynx 约束：CSS 不支持 `::before/::after`，经典
   `.icon-x::before { content: '\e6a3' }` 写法不可用；wd-icon 字体模式把码点
   字形直接作为 `<text>` 子节点渲染，显式设置 `font-family / font-size / color /
   line-height`（Lynx text 不依赖继承）。字体文件由 Rspeedy 资产管线产出静态
   地址，随包发布、无网络请求。
-- 寻址规则：name 不带前缀按注册顺序回退查找（**wot 优先**，存量行为不变）；
-  带 `集合键:图标名` 前缀（如 `iconfont:menu`）精确命中指定集合，用于取用与
-  wot 集重名的字形（34 个）。新增一套图标：实现 `IconSet` 接口（`src/icons/types.ts`，
+- 寻址规则：name 不带前缀按注册顺序回退查找（内置集优先，存量行为不变）；
+  带 `集合键:图标名` 前缀（如 `iconfont:menu`）精确命中指定集合（注册了多套
+  集时消歧）。新增一套图标：实现 `IconSet` 接口（`src/icons/types.ts`，
   SVG 集 / 字体集联合类型）并 `registerIconSet()`，wd-icon 无需改动；
   回归见 `test/icons-registry.test.ts`。
-- `<wd-icon name="close" :size="20" color="#f00" />`：命中 SVG 集时渲染
-  `<svg :content>`（多 path 图标输出多个 `path`，fill 统一注入）；命中字体集时
-  渲染 `<text>` 字形；name 含 `/` 时按图片渲染 `<image>`；`css-icon` 走 CSS 类名模式。
+- `<wd-icon name="close" :size="20" color="#f00" />`：命中内置字体集时渲染
+  `<text>` 字形；命中扩展注册的 SVG 集时渲染 `<svg :content>`（多 path 图标
+  输出多个 `path`，fill 统一注入）；name 含 `/` 时按图片渲染 `<image>`；
+  `css-icon` 走 CSS 类名模式。
 - 默认颜色 `var(--wd-icon-1)`。组件内使用图标时，如需跟随文字色，显式传 `:color`
   （Lynx 的 svg content 与字体字形均不继承 CSS currentColor，需 JS 侧用
   `common/theme.ts` 常量计算）。
@@ -351,19 +354,32 @@ Vue 的 `mergeProps` 会把两个同名 `on*` 监听合并成**数组**，数组
   sidebar-item / sort-button / tabbar-item / tooltip / curtain / grid-item）
   + 根绑 touch 的 rate / fab / swipe-action。
 - **WdTransition 家族（overlay / popup / backtop / curtain / image-preview /
-  video-preview 等根链最终都落到 transition 根 view）用另一种等价修法**：
-  根 view 的内部点击绑定从 `@tap` 改为 `@click`（Lynx view 原生支持，
-  仓库内 image-preview / swipe-action 已有先例），消费方的 `@tap` 不再与
-  根元素同名碰撞；`transitionend` / `touchmove` 则在 emits 声明并转发。
-  注意：WdTransition 的 emits 里声明 `tap` 会触发 Web 预览渲染异常
-  （实测：仅 `tap` 这个名字触发，`transitionend` 等不会，疑似上游对
-  「emit 名 = 根元素原生事件名」的处理 bug），故用 `@click` 绕开。
-- **回归测试（三份，改事件相关代码必须全绿）**：
+  video-preview 等根链最终都落到 transition 根 view）与其余交互组件同法**：
+  根 view 的内部点击绑定 `@tap`，并在 emits 声明 `'tap'` 转发；消费方绑
+  `@tap` 时作为组件事件被消费，不再穿透到根元素与内部绑定合并。
+  **`@click` 在 Lynx 是死事件，严禁在 view 上使用**（2026-10-16 真机订，
+  详见下条）。
+- **【订正 2026-10-16】Lynx view 不存在 `click` 事件，只派发 `tap`**。
+  e2931b8 曾以「Lynx view 原生支持 click」为由，把 WdTransition 根 view 的
+  内部点击从 `@tap` 改为 `@click` 来规避合并崩溃——该前提是错误的：引擎
+  只派发 `tap`（`bindtap`），`@lynx-js/react` 的 `LynxEventType` 联合类型
+  没有 `click`，`@lynx-js/web-core` 的 `W3cEventNameToLynx` 更把 DOM `click`
+  映射成 `tap` 再分发。后果是遮罩/弹层点击在真机与 Web 预览**全端失效**
+  （遮罩常驻关不掉），且 `fire-event.ts` 的 `fireEvent.click` 会在 jsdom
+  里合成 `bindEvent:click` 让测试假绿。现行正确写法：根 view 绑 `@tap` +
+  emits 声明转发；WdOverlay 再把 tap 重新 emit 为 `click` / `tap` 双轨
+  （`click` 保持 wot-ui API 对齐）。回归：`test/overlay-tap-regression.test.ts`
+  按真机语义用 `fireEvent.tap` 断言关闭。同理，其余组件里直接绑在裸 view
+  上的 `@click`（pagination / fab / form-item / image-preview 关闭按钮 /
+  video-preview 关闭按钮 / swipe-action 选项按钮）均为死链接，应改 `@tap`。
+- **回归测试（四份，改事件相关代码必须全绿）**：
   - `test/event-tap-registry.test.ts` — 各组件父级 @tap 不崩溃且父子均触发；
   - `test/event-merge-props.test.ts` — 同名监听合并不变量 + touch 事件同类风险；
   - `test/event-registry-all-components.test.ts` — **全覆盖矩阵**：每个组件
     × 每个 Lynx 原生事件 × 每个真实元素逐一派发，并对本测试新注册的 sign
     逐一 `publishEvent`（设备路径等价物；注册表残留数组 sign 即失败）。
+  - `test/overlay-tap-regression.test.ts` — 遮罩/弹层 **tap** 关闭（真机
+    事件语义；`fireEvent.click` 合成事件不构成真机行为，勿用于断言关闭）。
 
 ## 15. Lynx 3.x 新 CSS 引擎：默认 linear 布局，flex 属性必须挂在 `display: flex` 上
 

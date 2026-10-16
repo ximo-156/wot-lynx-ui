@@ -2,7 +2,7 @@
  * wd-rate — 评分
  *
  * Lynx 实现说明：
- * - 星星经 wd-icon 渲染（star-fill），半星用左半裁剪容器叠加；
+ * - 星星经 wd-icon 渲染（favorite-filling），半星用左半裁剪容器叠加；
  * - 滑动评分：星星矩形一次性度量并缓存（num/space 变化时失效），
  *   touchmove 热路径只读缓存（CONVENTIONS §16）；
  * - 横向排列容器显式 display: flex。

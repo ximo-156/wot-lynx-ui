@@ -42,11 +42,11 @@ const innerStyle = computed<Record<string, string>>(() => {
 const iconName = computed(() => {
   switch (props.status) {
     case 'success':
-      return 'check-circle'
+      return 'success'
     case 'danger':
-      return 'close-circle'
+      return 'error'
     case 'warning':
-      return 'exclamation-circle'
+      return 'warning'
     default:
       return ''
   }

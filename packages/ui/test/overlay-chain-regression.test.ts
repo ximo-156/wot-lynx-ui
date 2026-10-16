@@ -5,6 +5,11 @@
  * 1. wd-popup 在 wd-overlay 上绑 @tap，而 WdOverlay 只 emit 'click'
  *    （WdTransition 根 view 自 e2931b8 起内部点击用 @click，CONVENTIONS §14）
  *    → 遮罩点击关闭是死链，popup 打开后只能靠关闭按钮退出；
+ *    【2026-10-16 订正】上述「对齐 @click」并未真正修复：Lynx 引擎只向 view
+ *    派发 tap、不派发 click，遮罩点击依旧全端失效（用户真机复报）。真正的
+ *    根因是 @click 本身，修法见 wd-transition / wd-overlay：根 view 绑
+ *    @tap 并经 emits 转发，overlay 再重新 emit 为 click/tap。本文件 缺陷①
+ *    改用 fireEvent.tap（真机派发的事件）锁定。
  * 2. wd-transition 用「键的增减」表达 display 状态（隐藏时写入 display:none，
  *    入场后从样式对象里删掉该键），但 Lynx SetStyle / __SetInlineStyles 是
  *    合并语义（引擎 PAPI 镜像与 Web 预览运行时均 Object.assign 逐属性合并），
@@ -51,7 +56,7 @@ function firstMatch(container: Element, selector: string): Element | null {
 }
 
 describe('弹层链路回归（真机测试缺陷锁定）', () => {
-  it('缺陷①：popup 遮罩点击可关闭（@click 对齐 WdOverlay 的 emit）', async () => {
+  it('缺陷①：popup 遮罩 tap 可关闭（transition 根 view @tap → overlay 重 emit）', async () => {
     const show = ref(false)
     const updates: boolean[] = []
     const { container } = render({
@@ -81,7 +86,8 @@ describe('弹层链路回归（真机测试缺陷锁定）', () => {
     expect(mask, '遮罩应渲染').not.toBeNull()
     expect(isHidden(mask), '遮罩应可见（缺陷②连带锁定）').toBe(false)
 
-    fireEvent.click(mask!)
+    // 真机派发的是 tap（Lynx view 无 click 事件）
+    fireEvent.tap(mask!)
     await settle()
     expect(updates, '点击遮罩应触发 update:modelValue(false)').toContain(false)
     expect(isHidden(firstMatch(container, '.wd-popup-wrapper > .wd-transition')), '关闭后弹层内容应隐藏').toBe(true)

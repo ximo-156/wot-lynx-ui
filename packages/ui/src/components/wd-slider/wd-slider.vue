@@ -343,7 +343,7 @@ defineExpose<SliderExpose>({
               <view class="wd-slider__dot-popover-arrow" />
             </view>
             <view class="wd-slider__dot-slider">
-              <wd-icon name="multiple-horizontal" size="14px" color="#8B93A3" />
+              <wd-icon name="drag" size="14px" color="#8B93A3" />
             </view>
           </view>
 
@@ -364,7 +364,7 @@ defineExpose<SliderExpose>({
               <view class="wd-slider__dot-popover-arrow" />
             </view>
             <view class="wd-slider__dot-slider">
-              <wd-icon name="multiple-horizontal" size="14px" color="#8B93A3" />
+              <wd-icon name="drag" size="14px" color="#8B93A3" />
             </view>
           </view>
         </view>

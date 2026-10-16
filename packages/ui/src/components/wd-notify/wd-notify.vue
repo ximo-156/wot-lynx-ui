@@ -62,10 +62,10 @@ const rootStyle = computed(() => {
 
 const iconName = computed(() => {
   const map: Record<NotifyType, string> = {
-    primary: 'info-circle',
-    success: 'check-circle',
-    warning: 'exclamation-circle',
-    danger: 'close-circle'
+    primary: 'prompt',
+    success: 'success',
+    warning: 'warning',
+    danger: 'error'
   }
   return map[state.value.type] || ''
 })

@@ -3,12 +3,12 @@
  *
  * Lynx 实现说明：
  * - 内置图标经图标注册表（icons/registry.ts）解析，两种渲染形态：
- *   - SVG 集（wot 集 302 个）：经原生 svg 元素的 content 属性渲染，
- *     content 标记过 sanitizeSvgContent 安全网（SVG 元素白名单，见 CONVENTIONS §8）；
- *   - 字体集（iconfont 集 180 个）：.ttf 字体图标（fonts/iconfont.ttf），
+ *   - 内置 iconfont 集（180 个）：.ttf 字体图标（fonts/iconfont.ttf），
  *     Lynx CSS 不支持 ::before/::after，码点字形直接作为 text 子节点渲染；
- * - 寻址：不带前缀按注册顺序回退（wot 优先）；带 `集合键:图标名` 前缀
- *   （如 `iconfont:menu`）精确命中指定集合，取用与 wot 集重名的字形；
+ *   - SVG 集（registerIconSet 扩展注册）：经原生 svg 元素的 content 渲染，
+ *     content 标记过 sanitizeSvgContent 安全网（SVG 元素白名单，见 CONVENTIONS §8）；
+ * - 寻址：不带前缀按注册顺序回退（内置集优先）；带 `集合键:图标名` 前缀
+ *   （如 `iconfont:menu`）精确命中指定集合；
  * - svg content 不继承 CSS 变量/currentColor，未传 color 时按主题取
  *   --wd-icon-1 的对应值（common/theme.ts 镜像常量）；
  * - name 含 '/' 按图片渲染原生 image 元素；cssIcon 走 CSS 类名模式。

@@ -31,12 +31,21 @@
     padding-top: var(--wd-space-2);
   }
 
+  /* 按键区：显式行容器（不用 flex-wrap —— Lynx 新引擎下 wrap 的 flex line
+     会被拉伸；且 flex-basis:0 时按键假设主尺寸为 0 永不换行，会全部挤成
+     一行。行切分见 wd-keyboard.vue 的 keyRows，行内宽度由 wd-key-wrapper 的
+     flex-grow 分配：普通键 1、wider 键 2） */
   @include e(keys) {
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
     flex-grow: 3;
     flex-basis: 0;
+  }
+
+  @include e(row) {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
   }
 
   @include e(sidebar) {

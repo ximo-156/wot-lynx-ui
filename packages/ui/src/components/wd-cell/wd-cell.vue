@@ -52,6 +52,17 @@ const cellValueAlign = computed(() => {
   return isDef(props.valueAlign) ? props.valueAlign : cell.valueAlign?.value || 'right'
 })
 
+/** is-link 箭头图标：arrowDirection（left/up/down/right）映射到内置图标名字形 */
+const arrowIcon = computed(() => {
+  const map: Record<string, string> = {
+    left: 'arrow-left-bold',
+    up: 'arrow-up-bold',
+    down: 'arrow-down-bold',
+    right: 'arrow-right-bold'
+  }
+  return map[props.arrowDirection] || 'arrow-right-bold'
+})
+
 const showLeft = computed(() => {
   const hasPrefix = slots.prefix || props.prefixIcon
   const hasTitle = (slots.title && props.useTitleSlot) || props.title
@@ -139,7 +150,7 @@ function onClick() {
           <wd-icon
             v-if="isLink"
             custom-class="wd-cell__arrow-right"
-            :name="arrowDirection"
+            :name="arrowIcon"
             :class-prefix="iconPrefix"
           />
           <slot v-else name="suffix">

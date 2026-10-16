@@ -279,7 +279,7 @@ const safeAreaText = computed(() => {
         <text class="card__hint">{{ testSections[5].hint }}</text>
         <wd-cell-group title="基础用法" border>
           <wd-cell title="单元格" value="内容" />
-          <wd-cell title="图标 + 箭头" prefix-icon="settings" is-link value="跳转" />
+          <wd-cell title="图标 + 箭头" prefix-icon="setting" is-link value="跳转" />
           <wd-cell title="描述文本" label="这是描述信息" value="内容" />
         </wd-cell-group>
         <wd-cell-group title="卡片分组" insert>
@@ -299,8 +299,8 @@ const safeAreaText = computed(() => {
         <view class="row">
           <wd-icon name="close" size="20" />
           <wd-icon name="loading" size="24" color="#7F5CFF" />
-          <wd-icon name="arrow-left" size="20" />
-          <wd-icon name="settings" size="20" color="#FF8800" />
+          <wd-icon name="arrow-left-bold" size="20" />
+          <wd-icon name="setting" size="20" color="#FF8800" />
         </view>
         <view class="row">
           <wd-loading type="circular" size="24px" />

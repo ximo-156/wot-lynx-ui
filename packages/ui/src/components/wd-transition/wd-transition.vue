@@ -22,8 +22,14 @@
  *   transition-duration 承载（enter / leave 可分设，随阶段钩子切换）；
  * - 卸载后不再派发生命周期事件（alive 守卫，真机 9902 removeNode 防护，
  *   见 test/transition-unmount-abort.test.ts）；
- * - 根视图内部点击绑定 @click 而非 @tap（CONVENTIONS §14：避免与消费方
- *   在父组件根节点上的同名 tap 事件合并触发真机崩溃）；
+ * - 根视图内部点击绑定 @tap 而非 @click：Lynx 引擎（含 web-core 的
+ *   W3cEventNameToLynx click→tap 映射）只向 view 派发 tap，click 事件
+ *   不存在——e2931b8 曾改绑 @click 规避消费方 @tap 同名合并崩溃，结果
+ *   遮罩/弹层点击在全端失效（真机 2026-10-16 核实，见
+ *   test/overlay-tap-regression.test.ts）。合并崩溃的正确修法是
+ *   CONVENTIONS §14 的「根 view 原生事件名同时声明为 emit 并转发」：
+ *   本组件 emits 声明 'tap' 并由根 view 转发，消费方绑 @tap 时作为
+ *   组件事件被消费、不再穿透到根元素与内部绑定合并；
  * - disableTouchMove 时才注册 touchmove 监听（withModifiers 包装，
  *   与 @touchmove.stop.prevent 编译产物一致：catchEvent 绑定 +
  *   stopPropagation）。未加锁时不注册——避免每次触摸都跨线程派发
@@ -42,7 +48,7 @@ const vShowLynx = vShow
 
 const props = defineProps(transitionProps)
 const emit = defineEmits([
-  'click',
+  'tap',
   'transitionend',
   'touchmove',
   'before-enter',
@@ -148,8 +154,8 @@ function onPhase(event: PhaseEvent, phase: 'enter' | 'leave') {
   emit(event)
 }
 
-function handleClick() {
-  emit('click')
+function handleTap(e?: any) {
+  emit('tap', e)
 }
 
 function onTouchMove(e?: any) {
@@ -190,7 +196,7 @@ const touchmoveLocked = computed(() =>
       :class="rootClass"
       :style="rootStyle"
       :onTouchmove="touchmoveLocked"
-      @click="handleClick"
+      @tap="handleTap"
     >
       <slot />
     </view>
@@ -201,7 +207,7 @@ const touchmoveLocked = computed(() =>
       :class="rootClass"
       :style="rootStyle"
       :onTouchmove="touchmoveLocked"
-      @click="handleClick"
+      @tap="handleTap"
     >
       <slot v-if="!lazyRender || everShown" />
     </view>

@@ -45,11 +45,11 @@ export const slideVerifyProps = {
   /**
    * 滑块图标
    */
-  icon: makeStringProp('double-right'),
+  icon: makeStringProp('arrow-double-right'),
   /**
    * 成功图标
    */
-  successIcon: makeStringProp('check-circle-fill'),
+  successIcon: makeStringProp('success-filling'),
   /**
    * 图标类名前缀
    */

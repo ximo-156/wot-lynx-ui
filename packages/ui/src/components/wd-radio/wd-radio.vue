@@ -3,7 +3,9 @@
  *
  * Lynx 实现说明：
  * - 经 useRadioGroup 从 wd-radio-group 继承配置（组件 props 优先）；
- * - 图标用 wd-icon 渲染（check-circle-fill 等内置 SVG）；
+ * - 选中态图标用 wd-icon 渲染（success-filling 等内置图标，取自内置
+ *   iconfont 集 180 个）；未选中态为空心圆/方，内置集无对应字形，
+ *   经 CSS 边框绘制（border-color 取 currentColor，跟随 color）；
  * - 禁用态经 useFormDisabled 贯通 form；@tap 通知 group 更新。
  */
 <script lang="ts" setup>
@@ -37,16 +39,17 @@ const iconValue = computed(() => {
   let icon = ''
   switch (typeValue.value) {
     case 'circle':
-      icon = isChecked.value ? 'check-circle-fill' : 'uncheck-circle'
+      icon = isChecked.value ? 'success-filling' : ''
       break
     case 'square':
-      icon = isChecked.value ? 'check-square-fill' : 'uncheck-square'
+      icon = isChecked.value ? 'check-item-filling' : ''
       break
     case 'dot':
-      icon = isChecked.value ? 'check-circle-radio-fill' : 'uncheck-circle'
+      // dot 选中态（圆心实心点）与未选中态（空心圆）内置集均无对应字形，走 CSS 绘制
+      icon = ''
       break
     case 'button':
-      icon = isChecked.value ? 'check' : ''
+      icon = isChecked.value ? 'select' : ''
       break
     default:
       break
@@ -131,7 +134,16 @@ function handleClick() {
     </template>
     <view v-else class="wd-radio__shape">
       <slot name="icon" :is-checked="isChecked">
-        <wd-icon custom-class="wd-radio__icon" :custom-style="iconStyle" :name="iconValue" />
+        <wd-icon v-if="iconValue" custom-class="wd-radio__icon" :custom-style="iconStyle" :name="iconValue" />
+        <view v-else-if="isChecked" class="wd-radio__icon wd-radio__icon--dot" :style="parseStyle(iconStyle)">
+          <view class="wd-radio__icon--dot-inner" />
+        </view>
+        <view
+          v-else
+          class="wd-radio__icon wd-radio__icon--empty"
+          :class="typeValue === 'square' ? 'wd-radio__icon--square' : 'wd-radio__icon--circle'"
+          :style="parseStyle(iconStyle)"
+        />
       </slot>
     </view>
   </view>

@@ -36,7 +36,7 @@ function handleHome() {
 <template>
   <view :class="`wd-navbar-capsule ${border ? 'is-border' : ''} ${customClass}`" :style="rootStyle">
     <view v-if="showBack" class="wd-navbar-capsule__item" @tap="handleBack">
-      <wd-icon name="left" custom-class="wd-navbar-capsule__icon" />
+      <wd-icon name="arrow-left-bold" custom-class="wd-navbar-capsule__icon" />
     </view>
     <view v-if="showBack && showHome" class="wd-navbar-capsule__divider" />
     <view v-if="showHome" class="wd-navbar-capsule__item" @tap="handleHome">

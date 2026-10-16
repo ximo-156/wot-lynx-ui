@@ -87,12 +87,12 @@ const rootClass = computed(() => {
       <slot name="prefix" />
       <view class="wd-search__field">
         <view v-if="!placeholderLeft" :style="coverStyle" class="wd-search__cover" @tap="closeCover">
-          <wd-icon name="search-line" custom-class="wd-search__search-icon" />
+          <wd-icon name="search" custom-class="wd-search__search-icon" />
           <text :class="`wd-search__placeholder-txt ${placeholderClass}`">{{ placeholder || translate('search') }}</text>
         </view>
         <wd-icon
           v-if="showInput || inputValue || placeholderLeft"
-          name="search-line"
+          name="search"
           custom-class="wd-search__search-left-icon"
         />
         <input
@@ -111,7 +111,7 @@ const rootClass = computed(() => {
           :maxlength="maxlength"
           :focus="isFocused"
         />
-        <wd-icon v-if="inputValue" custom-class="wd-search__clear-icon" name="close-circle-fill" @tap="handleClear" />
+        <wd-icon v-if="inputValue" custom-class="wd-search__clear-icon" name="close-bold" @tap="handleClear" />
         <slot name="input-suffix" />
       </view>
     </view>

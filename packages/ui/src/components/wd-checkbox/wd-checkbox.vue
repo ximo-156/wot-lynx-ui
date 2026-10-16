@@ -43,21 +43,22 @@ const isButton = computed(() => typeValue.value === 'button')
 
 const iconValue = computed(() => {
   if (props.indeterminate && !isButton.value) {
-    return 'minus-circle-fill'
+    return 'minus-circle'
   }
   let icon = ''
   switch (typeValue.value) {
     case 'circle':
-      icon = isChecked.value ? 'check-circle-fill' : 'uncheck-circle'
+      icon = isChecked.value ? 'success-filling' : ''
       break
     case 'square':
-      icon = isChecked.value ? 'check-square-fill' : 'uncheck-square'
+      icon = isChecked.value ? 'check-item-filling' : ''
       break
     case 'dot':
-      icon = isChecked.value ? 'check-circle-radio-fill' : 'uncheck-circle'
+      // dot 选中态（圆心实心点）与未选中态（空心圆）内置集均无对应字形，走 CSS 绘制
+      icon = ''
       break
     case 'button':
-      icon = isChecked.value ? 'check' : ''
+      icon = isChecked.value ? 'select' : ''
       break
     default:
       break
@@ -156,7 +157,16 @@ function toggle() {
     </template>
     <view v-else class="wd-checkbox__shape">
       <slot name="icon" :is-checked="isChecked">
-        <wd-icon custom-class="wd-checkbox__icon" :custom-style="iconStyle" :name="iconValue" />
+        <wd-icon v-if="iconValue" custom-class="wd-checkbox__icon" :custom-style="iconStyle" :name="iconValue" />
+        <view v-else-if="isChecked" class="wd-checkbox__icon wd-checkbox__icon--dot" :style="parseStyle(iconStyle)">
+          <view class="wd-checkbox__icon--dot-inner" />
+        </view>
+        <view
+          v-else
+          class="wd-checkbox__icon wd-checkbox__icon--empty"
+          :class="typeValue === 'square' ? 'wd-checkbox__icon--square' : 'wd-checkbox__icon--circle'"
+          :style="parseStyle(iconStyle)"
+        />
       </slot>
     </view>
   </view>

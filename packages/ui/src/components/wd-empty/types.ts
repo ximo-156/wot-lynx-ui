@@ -6,7 +6,7 @@ export const emptyProps = {
   /**
    * 图标名称
    */
-  icon: makeStringProp('empty'),
+  icon: makeStringProp('folder-close'),
   /**
    * 图标类名前缀
    */

@@ -37,7 +37,7 @@ export const fabProps = {
   /**
    * 未激活图标
    */
-  inactiveIcon: makeStringProp('plus'),
+  inactiveIcon: makeStringProp('add'),
   /**
    * 激活图标
    */

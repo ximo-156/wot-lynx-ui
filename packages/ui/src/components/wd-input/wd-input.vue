@@ -236,11 +236,11 @@ function handleClick(event: any) {
     />
     <view v-if="readonly" class="wd-input__readonly-mask" />
     <view v-if="showClear || showPassword || suffixIcon || showWordCount || $slots.suffix" class="wd-input__suffix">
-      <wd-icon v-if="showClear" custom-class="wd-input__clear" name="close-circle" @tap="handleClear" />
+      <wd-icon v-if="showClear" custom-class="wd-input__clear" name="close-bold" @tap="handleClear" />
       <wd-icon
         v-if="showPassword"
         custom-class="wd-input__icon"
-        :name="isPwdVisible ? 'eye' : 'eye-invisible'"
+        :name="isPwdVisible ? 'browse' : 'eye-close'"
         @tap="togglePwdVisible"
       />
       <view v-if="showWordCount" class="wd-input__count">

@@ -6,9 +6,10 @@
  * - position: fixed 由引擎提升至页面根节点，无需 teleport；
  * - 锁滚经 overlay 的 disable-touch-move 链路，禁止在包裹层补绑
  *   @touchmove="noop"（CONVENTIONS §14 事件注册表崩溃）。
- * - 遮罩点击关闭必须绑 @click：WdOverlay 只 emit 'click'（其 transition 根 view
- *   的内部点击绑定自 e2931b8 起为 @click，CONVENTIONS §14），绑 @tap 是死链——
- *   overlay 不声明 'tap' emit，监听不会落到任何处理器上。
+ * - 遮罩点击关闭绑 @click / @tap 均可：WdOverlay 把 transition 根 view 的
+ *   引擎原生 tap 重新 emit 为 click 与 tap（Lynx view 不派发 click，只派发
+ *   tap，CONVENTIONS §14）。e2931b8 一度要求只绑 @click，但 click 在全端
+ *   都不会派发，遮罩点击是死链——2026-10-16 真机核实后已订正。
  */
 <script lang="ts" setup>
 import './index.css'

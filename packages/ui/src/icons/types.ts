@@ -15,7 +15,7 @@ interface IconSetBase {
   key: string
 }
 
-/** SVG path 图标集（wot 集：与 wot-ui 对齐的通用图标） */
+/** SVG path 图标集（扩展用：运行时可注册自定义 SVG 字形） */
 export interface SvgIconSet extends IconSetBase {
   type: 'svg'
   /** 该集合统一的 SVG viewBox（如 '0 0 1024 1024'） */
@@ -24,7 +24,7 @@ export interface SvgIconSet extends IconSetBase {
   paths: Record<string, IconPaths>
 }
 
-/** 字体图标集（iconfont 集：经 .ttf 字体渲染） */
+/** 字体图标集（内置 iconfont 集：经 .ttf 字体渲染） */
 export interface FontIconSet extends IconSetBase {
   type: 'font'
   /** @font-face 声明的字体族名（见 src/icons/fonts/iconfont.css） */
