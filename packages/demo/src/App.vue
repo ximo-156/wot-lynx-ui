@@ -52,6 +52,38 @@ const actionSheetRef = ref<any>(null)
 const notifyRef = ref<any>(null)
 const asVisible = ref(false)
 
+// iconfont 集图标画廊：非重名图标直接用；与 wot 集重名的带 iconfont: 前缀寻址
+const iconfontGallery = ref<string[]>([
+  'pdf',
+  'image-text',
+  'keyboard-26',
+  'mobile-phone',
+  'scanning',
+  'sign-out',
+  'survey',
+  'task',
+  'training',
+  'warning',
+  'operation',
+  'modular',
+  'navigation',
+  'add-bold',
+  'arrow-left-bold',
+  'close-bold',
+  'arrow-up-filling',
+  'comment-filling',
+  'favorite-filling',
+  'setting-filling',
+  'folder-filling',
+  'home-filling',
+  'top-filling',
+  'iconfont:menu',
+  'iconfont:history',
+  'iconfont:home',
+  'iconfont:user',
+  'iconfont:close'
+])
+
 function showDemoDialog() {
   dialogRef.value?.alert({ title: '提示', msg: '这是一个对话框' })
 }
@@ -410,11 +442,19 @@ const portalBarVisible = ref(false)
       <view class="demo-section">
         <text class="demo-section__title">Icon 图标 / Loading 加载</text>
         <view class="demo-panel">
+          <text class="demo-panel__label">wot 集（302 个，与 wot-ui 对齐）</text>
           <view class="demo-row">
             <wd-icon name="close" size="20" />
             <wd-icon name="loading" size="24" color="#7F5CFF" />
             <wd-icon name="arrow-left" size="20" />
             <wd-icon name="settings" size="20" color="#FF8800" />
+          </view>
+          <text class="demo-panel__label">iconfont 集（180 个内置；非重名直接用，重名带 iconfont: 前缀）</text>
+          <view class="demo-row">
+            <view v-for="name in iconfontGallery" :key="name" class="demo-icon-item">
+              <wd-icon :name="name" size="24" />
+              <text class="demo-icon-item__name">{{ name }}</text>
+            </view>
           </view>
           <view class="demo-row">
             <wd-loading type="circular" size="24px" />
@@ -1363,7 +1403,9 @@ const portalBarVisible = ref(false)
           <view class="demo-row">
             <wd-button size="small" @tap="toast.success('保存成功')">success</wd-button>
             <wd-button size="small" @tap="toast.error('操作失败')">error</wd-button>
-            <wd-button size="small" @tap="toast.loading('加载中')">loading</wd-button>
+            <!-- loading 命令式语义为 cover + duration 0（需调用方主动 close）；遮罩会挡住
+                 下方 close 按钮，演示页降级为两秒自动收起，避免把页面永久挡住 -->
+            <wd-button size="small" @tap="toast.loading({ msg: '加载中', duration: 2000 })">loading</wd-button>
           </view>
           <view class="demo-row">
             <wd-button size="small" @tap="toast.warning('请注意规范')">warning</wd-button>
@@ -1523,6 +1565,20 @@ const portalBarVisible = ref(false)
 
 .demo-row--block {
   display: block;
+}
+
+.demo-icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 72px;
+  gap: 4px;
+}
+
+.demo-icon-item__name {
+  font-size: 10px;
+  color: #8b93a3;
+  text-align: center;
 }
 
 .demo-tag {

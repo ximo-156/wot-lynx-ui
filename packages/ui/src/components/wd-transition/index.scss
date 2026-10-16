@@ -6,71 +6,73 @@
   flex-direction: column;
 
   /* ===== fade ===== */
-  &--fade-enter,
+  &--fade-enter-from,
   &--fade-leave-to {
     opacity: 0;
   }
 
   /* ===== fade 方向 ===== */
-  &--fade-up-enter,
+  &--fade-up-enter-from,
   &--fade-up-leave-to {
     opacity: 0;
     transform: translateY(20px);
   }
 
-  &--fade-down-enter,
+  &--fade-down-enter-from,
   &--fade-down-leave-to {
     opacity: 0;
     transform: translateY(-20px);
   }
 
-  &--fade-left-enter,
+  &--fade-left-enter-from,
   &--fade-left-leave-to {
     opacity: 0;
     transform: translateX(20px);
   }
 
-  &--fade-right-enter,
+  &--fade-right-enter-from,
   &--fade-right-leave-to {
     opacity: 0;
     transform: translateX(-20px);
   }
 
   /* ===== slide 方向（全程位移，不透明度不变） ===== */
-  &--slide-up-enter,
+  &--slide-up-enter-from,
   &--slide-up-leave-to {
     transform: translateY(100%);
   }
 
-  &--slide-down-enter,
+  &--slide-down-enter-from,
   &--slide-down-leave-to {
     transform: translateY(-100%);
   }
 
-  &--slide-left-enter,
+  &--slide-left-enter-from,
   &--slide-left-leave-to {
     transform: translateX(100%);
   }
 
-  &--slide-right-enter,
+  &--slide-right-enter-from,
   &--slide-right-leave-to {
     transform: translateX(-100%);
   }
 
   /* ===== zoom ===== */
-  &--zoom-in-enter,
+  &--zoom-in-enter-from,
   &--zoom-in-leave-to {
     opacity: 0;
     transform: scale(0.8);
   }
 
-  &--zoom-out-enter,
+  &--zoom-out-enter-from,
   &--zoom-out-leave-to {
     opacity: 0;
     transform: scale(1.2);
   }
 
-  /* 激活态：统一过渡属性（时长由内联 transition-duration 控制） */
+  /* 激活态：统一过渡属性（时长由根视图内联 transition-duration 控制，
+     此处仅兜底默认值；类名遵循 Vue Transition 约定：-enter-from /
+     -enter-active / -enter-to / -leave-from / -leave-active / -leave-to） */
   &--fade-enter-active,
   &--fade-leave-active,
   &--fade-up-enter-active,
@@ -95,5 +97,6 @@
   &--zoom-out-leave-active {
     transition-property: opacity, transform;
     transition-timing-function: var(--wd-ease-out);
+    transition-duration: 300ms;
   }
 }

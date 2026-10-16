@@ -20,7 +20,7 @@ function renderWithExposed(comp: any, props: Record<string, any>, target: Ref<an
   } as any)
 }
 
-/** 等待过渡入场（pause 约 33ms 一帧，enter 需 2 帧置类名） */
+/** 等待过渡入场（框架 Transition：类名同步置位，双 rAF 后切入 to 态） */
 async function waitEnterFrames() {
   await pause()
   await pause()
@@ -38,7 +38,7 @@ describe('命令式预览 open() 回归', () => {
     const overlay = container.querySelector('.wd-overlay')
     expect(overlay, 'overlay 应渲染').not.toBeNull()
     expect(
-      overlay!.classList.contains('wd-transition--fade-enter-active'),
+      overlay!.classList.contains('fade-enter-active'),
       'overlay 应处于 fade 入场态'
     ).toBe(true)
     cleanup()
@@ -51,7 +51,7 @@ describe('命令式预览 open() 回归', () => {
     previewRef.value.open({ url: 'https://example.com/a.mp4' })
     await waitEnterFrames()
     previewRef.value.close()
-    // leave 为异步状态机：先 await enterPromise，再逐帧推进类名
+    // leave 为异步状态机：逐帧推进类名（from → to），duration 定时器收尾
     await pause()
     await pause()
     await pause()
@@ -59,8 +59,8 @@ describe('命令式预览 open() 回归', () => {
     const overlay = container.querySelector('.wd-overlay')
     expect(overlay, 'overlay 应渲染').not.toBeNull()
     expect(
-      overlay!.classList.contains('wd-transition--fade-leave') ||
-        overlay!.classList.contains('wd-transition--fade-leave-active'),
+      overlay!.classList.contains('fade-leave-from') ||
+        overlay!.classList.contains('fade-leave-active'),
       'overlay 应处于 fade 离场态'
     ).toBe(true)
     cleanup()
@@ -80,7 +80,7 @@ describe('命令式预览 open() 回归', () => {
     const overlay = container.querySelector('.wd-overlay')
     expect(overlay, 'overlay 应渲染').not.toBeNull()
     expect(
-      overlay!.classList.contains('wd-transition--fade-enter-active'),
+      overlay!.classList.contains('fade-enter-active'),
       'overlay 应处于 fade 入场态'
     ).toBe(true)
     cleanup()

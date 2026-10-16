@@ -6,6 +6,9 @@
  * - position: fixed 由引擎提升至页面根节点，无需 teleport；
  * - 锁滚经 overlay 的 disable-touch-move 链路，禁止在包裹层补绑
  *   @touchmove="noop"（CONVENTIONS §14 事件注册表崩溃）。
+ * - 遮罩点击关闭必须绑 @click：WdOverlay 只 emit 'click'（其 transition 根 view
+ *   的内部点击绑定自 e2931b8 起为 @click，CONVENTIONS §14），绑 @tap 是死链——
+ *   overlay 不声明 'tap' emit，监听不会落到任何处理器上。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -77,7 +80,7 @@ function noop() {}
         :lock-scroll="lockScroll"
         :duration="duration"
         :custom-style="modalStyle"
-        @tap="handleClickModal"
+        @click="handleClickModal"
       />
       <wd-transition
         :lazy-render="lazyRender"
@@ -108,7 +111,7 @@ function noop() {}
       :lock-scroll="lockScroll"
       :duration="duration"
       :custom-style="modalStyle"
-      @tap="handleClickModal"
+      @click="handleClickModal"
     />
     <wd-transition
       :lazy-render="lazyRender"

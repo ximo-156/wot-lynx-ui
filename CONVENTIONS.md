@@ -23,6 +23,9 @@
 3. **原生性能**：能用 CSS（`:active`、transition、animation）解决的不用 JS；高频交互（拖动、滑动）在后台线程用响应式实现（禁止 Main Thread Script，见 §9）。
 4. **为 Lynx 而写**：不是"把 Web 代码改到能跑"，而是按 Lynx 渲染引擎的约束与能力设计实现（文本必须 `<text>`、无伪元素、linear 布局等，见 §4/§5/§14）。
 5. **渐进增强**：平台不支持的能力（canvas、渐变 SVG 等）给出降级方案并在文件头注释说明。
+6. **成熟方案优先**：通用能力（时间格式化、过渡动画状态机等）优先使用市面成熟方案
+   （dayjs、vue-lynx 内置 Transition 等），不自研通用逻辑；自研只用于 Lynx 平台特化
+   适配层（如 wd-transition 对框架 Transition 的显隐契约 / 事件映射）。
 
 ## 2. 目录与文件规范
 
@@ -170,8 +173,9 @@ import { useUpload } from '../../composables/useUpload'
 import { addUnit, isDef, objToStyle, getRect, getSystemInfo, deepMerge, ... } from '../../common/util'
 import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp, makeNumericProp, numericProp } from '../../common/props'
 import { callInterceptor } from '../../common/interceptor'
-import { formatDate, getMonthDays, getFirstDayOfWeek } from '../../common/formatDate'
+import { formatDate, getMonthDays, getFirstDayOfWeek } from '../../common/formatDate'  // 基于 dayjs
 import { AbortablePromise } from '../../common/AbortablePromise'
+import { Transition } from '../../common/lynxTransition'  // vue-lynx 内置 Transition（含 props 兼容补齐）
 import { BLUE, GRAY, GREEN, AMBER, RED } from '../../common/theme'
 
 // 全局配置契约（composable 层自有，禁止组件反向依赖）
@@ -186,12 +190,31 @@ composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
 
 ## 8. wd-icon 与 SVG 硬约束
 
-- **不使用 iconfont**。内置图标 = 从 wot-ui iconfont 提取的 SVG path
-  （`src/icons/data.ts`，302 个，色板无关的通用字形数据，重写时保留）。
-- `<wd-icon name="close" :size="20" color="#f00" />`：name 命中内置图标时渲染
-  `<svg :content>`；name 含 `/` 时按图片渲染 `<image>`；`css-icon` 走 CSS 类名模式。
+- 内置图标经图标注册表 `src/icons/registry.ts` 组织，**两种渲染形态并存**：
+  - wot 集（`src/icons/data.ts`，302 个，与 wot-ui 对齐，组件内部图标默认取此）：
+    SVG path 数据，经原生 `svg` 元素的 content 渲染——色板无关的通用字形数据，
+    重写时保留；
+  - iconfont 集（`src/icons/sets/iconfont.ts`，180 个，移动端成套图标）：
+    **.ttf 字体图标**（`src/icons/fonts/iconfont.ttf` + 同目录 `iconfont.css` 的
+    `@font-face`，族名 `wd-iconfont`），由 `scripts/generate-iconfont.mjs` 从
+    iconfont.cn 导出物生成（码点取自 `iconfont.json` 的 `glyphs[].unicode`，
+    `--check` 校验 TS 模块与字体字节）。
+- 字体渲染的 Lynx 约束：CSS 不支持 `::before/::after`，经典
+  `.icon-x::before { content: '\e6a3' }` 写法不可用；wd-icon 字体模式把码点
+  字形直接作为 `<text>` 子节点渲染，显式设置 `font-family / font-size / color /
+  line-height`（Lynx text 不依赖继承）。字体文件由 Rspeedy 资产管线产出静态
+  地址，随包发布、无网络请求。
+- 寻址规则：name 不带前缀按注册顺序回退查找（**wot 优先**，存量行为不变）；
+  带 `集合键:图标名` 前缀（如 `iconfont:menu`）精确命中指定集合，用于取用与
+  wot 集重名的字形（34 个）。新增一套图标：实现 `IconSet` 接口（`src/icons/types.ts`，
+  SVG 集 / 字体集联合类型）并 `registerIconSet()`，wd-icon 无需改动；
+  回归见 `test/icons-registry.test.ts`。
+- `<wd-icon name="close" :size="20" color="#f00" />`：命中 SVG 集时渲染
+  `<svg :content>`（多 path 图标输出多个 `path`，fill 统一注入）；命中字体集时
+  渲染 `<text>` 字形；name 含 `/` 时按图片渲染 `<image>`；`css-icon` 走 CSS 类名模式。
 - 默认颜色 `var(--wd-icon-1)`。组件内使用图标时，如需跟随文字色，显式传 `:color`
-  （Lynx 的 svg content 不继承 CSS currentColor，需 JS 侧用 `common/theme.ts` 常量计算）。
+  （Lynx 的 svg content 与字体字形均不继承 CSS currentColor，需 JS 侧用
+  `common/theme.ts` 常量计算）。
 
 ### SVG content 元素白名单（真机硬约束）
 

@@ -233,7 +233,9 @@ const safeAreaText = computed(() => {
           <wd-button size="small" @tap="showAlert">Dialog 提示</wd-button>
           <wd-button size="small" @tap="showConfirm">Dialog 确认</wd-button>
           <wd-button size="small" @tap="toast.show('操作成功')">Toast</wd-button>
-          <wd-button size="small" @tap="toast.loading('加载中')">Toast 加载</wd-button>
+          <!-- loading 命令式语义为 cover + duration 0（需调用方主动 close）；测试页无
+               常驻关闭入口，遮罩会连点两秒自动收起，避免把页面永久挡住 -->
+          <wd-button size="small" @tap="toast.loading({ msg: '加载中', duration: 2000 })">Toast 加载</wd-button>
         </view>
         <text class="tag">事件：{{ overlayEvent }}</text>
         <ChecklistBox :items="testSections[3].items" :checked="checked" @toggle="toggle" />

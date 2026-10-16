@@ -3,6 +3,7 @@
  *
  * Lynx 实现说明：基于 wd-popup（bottom + round）；
  * 支持菜单列表（actions）与宫格面板（panels 分组）两种形态。
+ * 命令式 API 经 defineExpose({ open / close }) 暴露（受控 modelValue 通道）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -56,6 +57,13 @@ function close() {
   emit('update:modelValue', false)
   emit('close')
 }
+
+/** 命令式打开（ref.open()）：与 v-model 受控通道同一出口 */
+function open() {
+  emit('update:modelValue', true)
+}
+
+defineExpose({ open, close })
 
 function handleClickModal() {
   emit('click-modal')

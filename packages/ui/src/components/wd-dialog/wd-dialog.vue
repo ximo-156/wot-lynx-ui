@@ -5,7 +5,10 @@
  * - 基于 wd-popup（zoom-in 过渡）；alert / confirm / prompt 三类型；
  * - prompt 模式经 wd-input 收集输入，inputPattern / inputValidate
  *   校验（经 common/interceptor）；
- * - 命令式 API 经 useDialog(selector) 驱动（模块级注入单例）。
+ * - 命令式 API 双通道：useDialog(selector) 模块级注入单例，以及实例方法
+ *   defineExpose({ alert / confirm / prompt / show / close })——两者写入同一
+ *   个 messageOption ref（页面未调用 useDialog 时为本组件 inject 的兜底 ref），
+ *   与 wd-notify 的「useNotify / defineExpose 双通道」同设计。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -15,11 +18,11 @@ import WdPopup from '../wd-popup/wd-popup.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdInput from '../wd-input/wd-input.vue'
 import WdButton from '../wd-button/wd-button.vue'
-import { dialogProps, type DialogResult } from './types'
+import { dialogProps, type DialogOptions, type DialogOptionsWithCallBack, type DialogResult, type DialogType } from './types'
 import { defaultOptions, getDialogDefaultOptionKey } from '.'
 import { callInterceptor } from '../../common/interceptor'
 import { useTranslate } from '../../composables/useTranslate'
-import { isDef } from '../../common/util'
+import { deepMerge, isDef, isString } from '../../common/util'
 
 const props = defineProps(dialogProps)
 const emit = defineEmits(['update:modelValue', 'confirm', 'cancel', 'close', 'open'])
@@ -158,6 +161,36 @@ function handleCancel() {
   const cb = (messageOption.value as any)?.cancel
   if (typeof cb === 'function') cb(result)
 }
+
+/**
+ * 命令式打开（与 useDialog(selector) 同一注入通道，逻辑对齐其 createMethod）。
+ *
+ * 写入 messageOption 即被上方 watch 消费并 Object.assign 进 dialogState；
+ * 页面未调用 useDialog 时，inject 的兜底 ref 由本组件持有，写入同样生效。
+ * 字符串入参视为 title（与 useDialog 一致）。
+ */
+function open(type: DialogType, options: DialogOptions | string) {
+  const dialogOptions = deepMerge({ type }, isString(options) ? { title: options } : options) as DialogOptionsWithCallBack
+  if (dialogOptions.cancelButtonProps === undefined && dialogOptions.showCancelButton === undefined) {
+    dialogOptions.showCancelButton = type === 'confirm' || type === 'prompt'
+  }
+  const next = deepMerge(defaultOptions, dialogOptions)
+  next.show = true
+  messageOption.value = next
+}
+
+/** 命令式关闭 */
+function close() {
+  messageOption.value = { ...defaultOptions, show: false }
+}
+
+defineExpose({
+  show: (options: DialogOptions | string) => open('alert', options),
+  alert: (options: DialogOptions | string) => open('alert', options),
+  confirm: (options: DialogOptions | string) => open('confirm', options),
+  prompt: (options: DialogOptions | string) => open('prompt', options),
+  close
+})
 </script>
 
 <template>

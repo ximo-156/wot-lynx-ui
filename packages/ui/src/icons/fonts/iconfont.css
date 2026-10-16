@@ -1,0 +1,16 @@
+/*
+ * 内置 iconfont 字体（180 个图标，与 sets/iconfont.ts 的码点映射一一对应）。
+ *
+ * Lynx 注意事项：
+ * - Lynx CSS 不支持 ::before/::after 伪元素，经典 iconfont 的
+ *   `.icon-x::before { content: '\e6a3' }` 写法不可用；本库改为把码点对应的
+ *   字形直接作为 <text> 子节点渲染（见 wd-icon.vue 的字体模式）；
+ * - 字体文件随包发布（package.json files 含 src），构建时由 Rspeedy 的
+ *   资产管线解析 url() 并产出可访问地址。
+ */
+@font-face {
+  font-family: 'wd-iconfont';
+  src: url('./iconfont.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}

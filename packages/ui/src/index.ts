@@ -266,6 +266,11 @@ export type { UploadProps } from './components/wd-upload/types'
 export { useToast, getToastOptionKey, toastIcon } from './components/wd-toast'
 export type { Toast as ToastApi, ToastOptions } from './components/wd-toast/types'
 
+// 内置图标注册表：扩展一套图标（另一个 iconfont 导出或手写 path）后经
+// registerIconSet 注册，即可通过 `<wd-icon name="xxx" />` / `name="key:xxx"` 使用
+export { registerIconSet, resolveIcon, hasIcon, listIcons, listIconSets } from './icons/registry'
+export type { IconPaths, IconSet, ResolvedIcon } from './icons/types'
+
 export type { ButtonProps } from './components/wd-button/types'
 export type { CellProps } from './components/wd-cell/types'
 export type { CellGroupProps } from './components/wd-cell-group/types'

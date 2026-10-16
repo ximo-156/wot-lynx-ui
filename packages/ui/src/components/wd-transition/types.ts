@@ -35,6 +35,9 @@ export const transitionProps = {
    * 弹层内容懒渲染，触发展示时才渲染内容
    * 类型: boolean
    * 默认值: false
+   *
+   * destroy=true 时随 show 以 v-if 挂载，懒渲染天然成立；
+   * destroy=false 时根视图常驻，内容在首次展示后才渲染（slot 门控）。
    */
   lazyRender: makeBooleanProp(false),
   /**
@@ -42,12 +45,17 @@ export const transitionProps = {
    * 类型: TransitionName | TransitionName[]
    * 可选值: 'fade' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'zoom-in' | 'zoom-out'
    * 默认值: 'fade'
+   *
+   * 数组形式仅取首个元素（底层框架 Transition 仅支持单 name）。
    */
   name: [String, Array] as PropType<TransitionName | TransitionName[]>,
   /**
-   * 是否在动画结束时销毁子节点（display: none）
+   * 是否在动画结束时销毁子节点
    * 类型: boolean
    * 默认值: true
+   *
+   * true：leave 落地后子视图卸载（v-if 语义）；
+   * false：子视图常驻，leave 落地后经 v-show 置 display:none。
    */
   destroy: makeBooleanProp(true),
   /**

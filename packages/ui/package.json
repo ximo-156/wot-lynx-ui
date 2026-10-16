@@ -61,5 +61,8 @@
     "type": "git",
     "url": "https://github.com/wot-lynx-ui/wot-lynx-ui.git"
   },
-  "homepage": "https://wot-lynx-ui.github.io"
+  "homepage": "https://wot-lynx-ui.github.io",
+  "dependencies": {
+    "dayjs": "^1.11.23"
+  }
 }

@@ -2,22 +2,43 @@
  * wd-transition — 过渡动画
  *
  * Lynx 实现说明：
- * - 自实现的 CSS 过渡状态机（before-enter → enter → enter-to →
- *   before-leave → leave → leave-to），用 AbortablePromise 保证
- *   show 频繁切换时旧动画可被中止，不残留类名；
- * - 帧间隔经 common/util 的 pause()（约 33ms 一帧）驱动，
- *   离开动画落地经 duration 定时器兜底（transitionend 在部分
- *   Lynx 版本不可靠，双通道取先到者）；
- * - disableTouchMove 时根视图绑定 @touchmove.stop.prevent 锁滚
- *   （CONVENTIONS §14：禁止在包裹层上再补裸 noop 监听）。
+ * - 动画引擎为 vue-lynx 内置 Transition（Vue BaseTransition 的 Lynx 移植：
+ *   类名状态机 + 双 rAF 帧调度 + transitionend / duration 双通道收尾），
+ *   本组件只做薄适配（props / 事件映射 / 显隐契约），不再自研状态机。
+ *   历史自研实现（pause() 帧驱动 + AbortablePromise 中止调度 + 卸载 abort
+ *   兜底）已随本次重构移除，相关真机防护由框架与 alive 守卫承接；
+ * - 显隐契约（保持历史行为）：
+ *   - destroy=true + lazyRender=true：子视图随 show 以 v-if 挂载，leave
+ *     落地后由框架卸载（懒渲染天然成立；初始挂载即展示时播放入场）；
+ *   - 其余组合（lazyRender=false 或 destroy=false）：子视图常驻，
+ *     v-show 控制显隐，leave 落地后由 vShow 指令置 display:none；
+ *     lazyRender=true 时内容首次展示后才渲染（slot 门控）；
+ * - 模板不能用 Transition 内建组件 / v-show 内建立法：二者是编译器内建，
+ *   在非 vue-lynx 编译环境（vitest / Web 预览）会解析到 @vue/runtime-dom
+ *   的 DOM 版实现（依赖 el.style 等 DOM 属性，在 Lynx 元素上直接抛错）。
+ *   这里经 setup 导入改名（LynxTransition / vShowLynx）按普通组件 /
+ *   自定义指令解析，双端一致；
+ * - 过渡时长：框架只按 duration 定时器判定收尾，视觉时长由根视图内联
+ *   transition-duration 承载（enter / leave 可分设，随阶段钩子切换）；
+ * - 卸载后不再派发生命周期事件（alive 守卫，真机 9902 removeNode 防护，
+ *   见 test/transition-unmount-abort.test.ts）；
+ * - 根视图内部点击绑定 @click 而非 @tap（CONVENTIONS §14：避免与消费方
+ *   在父组件根节点上的同名 tap 事件合并触发真机崩溃）；
+ * - disableTouchMove 时才注册 touchmove 监听（withModifiers 包装，
+ *   与 @touchmove.stop.prevent 编译产物一致：catchEvent 绑定 +
+ *   stopPropagation）。未加锁时不注册——避免每次触摸都跨线程派发
+ *   （CONVENTIONS §14 / §16 触摸热路径）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue-lynx'
-import { isObj, isPromise, parseStyle, pause } from '../../common/util'
+import { computed, onBeforeUnmount, ref, watch, withModifiers, vShow } from 'vue-lynx'
+import { isObj, parseStyle } from '../../common/util'
+import { Transition as LynxTransition } from '../../common/lynxTransition'
 import { transitionProps, type TransitionName } from './types'
-import { AbortablePromise } from '../../common/AbortablePromise'
+
+/** v-show 的显式指令引用（避开编译器内建解析，见文件头说明） */
+const vShowLynx = vShow
 
 const props = defineProps(transitionProps)
 const emit = defineEmits([
@@ -26,189 +47,105 @@ const emit = defineEmits([
   'touchmove',
   'before-enter',
   'enter',
+  'after-enter',
   'before-leave',
   'leave',
-  'after-leave',
-  'after-enter'
+  'after-leave'
 ])
 
-/** 预设动画名 → 各阶段类名 */
-function getClassNames(name?: TransitionName | TransitionName[]) {
-  const transitionClass = (transitionName: string, phase: string) =>
-    `wd-transition--${transitionName}-${phase}`
-
-  let enter = `${props.enterClass} ${props.enterActiveClass}`
-  let enterTo = `${props.enterToClass} ${props.enterActiveClass}`
-  let leave = `${props.leaveClass} ${props.leaveActiveClass}`
-  let leaveTo = `${props.leaveToClass} ${props.leaveActiveClass}`
-
-  const names = Array.isArray(name) ? name : name ? [name] : []
-  for (const item of names) {
-    enter = `${transitionClass(item, 'enter')} ${transitionClass(item, 'enter-active')} ${enter}`
-    enterTo = `${transitionClass(item, 'enter-to')} ${transitionClass(item, 'enter-active')} ${enterTo}`
-    leave = `${transitionClass(item, 'leave')} ${transitionClass(item, 'leave-active')} ${leave}`
-    leaveTo = `${transitionClass(item, 'leave-to')} ${transitionClass(item, 'leave-active')} ${leaveTo}`
-  }
-
-  return { enter, 'enter-to': enterTo, leave, 'leave-to': leaveTo }
-}
-
-/** 初始化是否完成（懒渲染） */
-const inited = ref<boolean>(false)
-/** 是否占据布局 */
-const display = ref<boolean>(false)
-/** 当前动画状态：enter / leave */
-const status = ref<string>('')
-/** 动画是否已结束（transitionend 幂等） */
-const transitionEnded = ref<boolean>(false)
-/** 动画持续时间 ms */
-const currentDuration = ref<number>(300)
-/** 当前过渡类名 */
-const classes = ref<string>('')
-/** enter 主 promise（leave 需等其完成，保证顺序执行） */
-const enterPromise = ref<AbortablePromise<void> | null>(null)
-/** enter 阶段调度 promise */
-const enterSchedule = ref<AbortablePromise<unknown> | null>(null)
-/** leave 阶段调度 promise */
-const leaveSchedule = ref<AbortablePromise<unknown> | null>(null)
-
-/** 根节点样式（对象语法：字符串 :style 会被 vue-lynx 静默丢弃，CONVENTIONS §19） */
-const style = computed<Record<string, string>>(() => {
-  const result: Record<string, string> = { 'transition-duration': `${currentDuration.value}ms` }
-  if (!display.value && props.destroy) result.display = 'none'
-  return { ...result, ...parseStyle(props.customStyle) }
-})
-
-const rootClass = computed(() => {
-  return `wd-transition ${props.customClass} ${classes.value}`
-})
-
-const isShow = computed(() => {
-  return !props.lazyRender || inited.value
-})
-
-onBeforeMount(() => {
-  if (props.show) {
-    enter()
-  }
-})
-
-/**
- * 卸载时中止全部动画调度（CONVENTIONS §16 / 真机 9902 崩溃防护）。
- *
- * enter()/leave() 的链式 await 由 pause()/delay() 的 setTimeout 驱动，
- * abort() 只 reject 不清定时器；若不在此中止，父组件（popup / dialog /
- * toast / overlay 等整条弹层链）在 leave 动画飞行中同步卸载时，
- * 挂起的帧定时器到期后仍会在已销毁实例上写 classes/display/transitionEnded
- * 并 emit('after-leave') —— vue-lynx 在已销毁树上继续 patch，产生晚到的
- * remove/insert 配对，真机表现为
- * java.lang.RuntimeException: Trying to remove unknown ui signature（9902）。
- */
+/** 卸载后停止派发生命周期事件（9902 防护：晚到写入已销毁实例会触发真机崩溃） */
+const alive = ref(true)
 onBeforeUnmount(() => {
-  abortSchedules()
+  alive.value = false
 })
 
+/** 是否曾展示过（v-show 分支 + lazyRender 时的内容门控） */
+const everShown = ref(false)
 watch(
   () => props.show,
-  (newVal) => {
-    if (newVal) {
-      abortSchedules()
-      enter()
-    } else {
-      leave()
-    }
-  }
+  (val) => {
+    if (val) everShown.value = true
+  },
+  { immediate: true }
 )
 
-function abortSchedules() {
-  isPromise(enterPromise.value) && enterPromise.value.abort()
-  isPromise(enterSchedule.value) && enterSchedule.value.abort()
-  isPromise(leaveSchedule.value) && leaveSchedule.value.abort()
-  enterPromise.value = null
-  enterSchedule.value = null
-  leaveSchedule.value = null
+/** v-if 分支条件：随 show 挂载 / leave 后卸载（懒渲染 + 销毁语义） */
+const useVif = computed(() => props.destroy && props.lazyRender)
+
+/**
+ * name 历史支持数组（框架 Transition 仅接受单 name，取首个元素）。
+ * 传 undefined 时由框架回退其内部默认（'v'，无对应样式即无动画）。
+ */
+const transitionName = computed<TransitionName | undefined>(() => {
+  const name = props.name
+  return Array.isArray(name) ? name[0] : name
+})
+
+/** 自定义类名 prop：空串时传 undefined，让框架按 name 生成默认类名 */
+const orUndefined = (value: string) => value || undefined
+
+/**
+ * 传给框架的 duration：归一为 number | { enter, leave }（boolean 视为 0，
+ * 即无动画——框架 normalizeDuration 对 boolean 同样落到 0，保持一致）。
+ */
+const durationForFramework = computed<number | { enter: number; leave: number }>(() => {
+  const duration = props.duration
+  if (typeof duration === 'number') return duration
+  if (isObj(duration)) {
+    return { enter: phaseDurationOf('enter'), leave: phaseDurationOf('leave') }
+  }
+  return 0
+})
+
+/** 取某阶段时长（ms）；duration 为 boolean 时视为 0（无动画） */
+function phaseDurationOf(phase: 'enter' | 'leave'): number {
+  const duration = props.duration
+  if (isObj(duration)) {
+    const value = (duration as Record<string, number>)[phase]
+    return typeof value === 'number' ? value : 0
+  }
+  return typeof duration === 'number' ? duration : 0
 }
 
-function enter() {
-  enterPromise.value = new AbortablePromise<void>(async (resolve) => {
-    const classNames = getClassNames(props.name)
-    const duration = isObj(props.duration) ? (props.duration as Record<string, number>).enter : (props.duration as number)
-    status.value = 'enter'
-    emit('before-enter')
-    enterSchedule.value = pause()
-    await enterSchedule.value
-    emit('enter')
-    classes.value = classNames.enter
-    currentDuration.value = duration
-    enterSchedule.value = pause()
-    await enterSchedule.value
-    inited.value = true
-    display.value = true
-    enterSchedule.value = pause()
-    await enterSchedule.value
-    enterSchedule.value = null
-    transitionEnded.value = false
-    classes.value = classNames['enter-to']
-    resolve()
-  })
-}
+/** 当前阶段时长（驱动根视图内联 transition-duration，随阶段钩子切换） */
+const phaseDuration = ref<number>(phaseDurationOf('enter'))
 
-async function leave() {
-  // enter 尚未完成时，直接按当前帧结束，避免类名残留
-  if (!enterPromise.value) {
-    transitionEnded.value = false
-    return onTransitionEnd()
+const rootClass = computed(() => `wd-transition ${props.customClass}`)
+
+/**
+ * 根视图样式（对象语法：字符串 :style 会被 vue-lynx 静默丢弃，CONVENTIONS §19）。
+ *
+ * v-show 分支必须显式携带 display: Lynx 的 SetStyle 是合并语义（引擎 PAPI
+ * 镜像与 Web 预览运行时均逐属性 Object.assign，「删键」不会清除元素上已
+ * 应用的内联属性），而 vShow 指令显示态只重发 el._style、隐藏态才追加
+ * display:none——若 el._style 本身不含 display，隐藏态打上的 display:none
+ * 在入场后永远残留（遮罩 / toast 内容入场后仍不可见，即真机测试缺陷②）。
+ * 让 el._style 常带可见值，vShow 重发时即可覆盖残留（取值与 .wd-transition
+ * 的 display:flex 类声明一致；customStyle 仍可覆盖）。
+ */
+const rootStyle = computed<Record<string, string>>(() => {
+  const style: Record<string, string> = { 'transition-duration': `${phaseDuration.value}ms` }
+  if (!useVif.value) style.display = 'flex'
+  return { ...style, ...parseStyle(props.customStyle) }
+})
+
+type PhaseEvent = 'before-enter' | 'enter' | 'after-enter' | 'before-leave' | 'leave' | 'after-leave'
+
+/**
+ * 框架生命周期钩子 → 组件事件。
+ * appear 钩子（初始挂载即展示）映射到同名 enter 事件——vue-lynx 的
+ * Transition 不做 Vue DOM 那样的 appear→enter 回退，需显式接线。
+ */
+function onPhase(event: PhaseEvent, phase: 'enter' | 'leave') {
+  if (!alive.value) return
+  if (event === 'before-enter' || event === 'before-leave') {
+    phaseDuration.value = phaseDurationOf(phase)
   }
-  try {
-    await enterPromise.value
-    if (!display.value) return
-    const classNames = getClassNames(props.name)
-    const duration = isObj(props.duration) ? (props.duration as Record<string, number>).leave : (props.duration as number)
-    status.value = 'leave'
-    emit('before-leave')
-    currentDuration.value = duration
-    leaveSchedule.value = pause()
-    await leaveSchedule.value
-    emit('leave')
-    classes.value = classNames.leave
-    leaveSchedule.value = pause()
-    await leaveSchedule.value
-    transitionEnded.value = false
-    classes.value = classNames['leave-to']
-    leaveSchedule.value = delay(currentDuration.value)
-    await leaveSchedule.value
-    leaveSchedule.value = null
-    onTransitionEnd()
-    enterPromise.value = null
-  } catch (error) {
-    // 被中止（show 再次切换）时静默退出
+  if (event === 'after-enter' || event === 'after-leave') {
+    // 与历史实现保持一致：transitionend 先于 after-* 派发
+    emit('transitionend')
   }
-}
-
-/** duration 定时器 promise 化（transitionend 兜底） */
-function delay(duration: number) {
-  return new AbortablePromise<void>((resolve) => {
-    const timer = setTimeout(() => {
-      clearTimeout(timer)
-      resolve()
-    }, duration)
-  })
-}
-
-function onTransitionEnd(e?: any) {
-  emit('transitionend', e)
-  if (transitionEnded.value) return
-
-  transitionEnded.value = true
-  if (status.value === 'leave') {
-    emit('after-leave')
-  } else if (status.value === 'enter') {
-    emit('after-enter')
-  }
-
-  if (!props.show && display.value) {
-    display.value = false
-  }
+  emit(event)
 }
 
 function handleClick() {
@@ -216,29 +153,57 @@ function handleClick() {
 }
 
 function onTouchMove(e?: any) {
-  // 锁滚由模板修饰符承担，此处仅转发原生事件（CONVENTIONS §14）
+  // 锁滚由 withModifiers 的 stop 修饰符承担，此处仅转发原生事件（CONVENTIONS §14）
   emit('touchmove', e)
 }
+
+/** 锁滚监听：与模板 @touchmove.stop.prevent 的编译产物等价（catchEvent + stopPropagation） */
+const touchmoveLocked = computed(() =>
+  props.disableTouchMove ? withModifiers(onTouchMove, ['stop', 'prevent']) : undefined
+)
 </script>
 
 <template>
-  <view
-    v-if="isShow && disableTouchMove"
-    :class="rootClass"
-    :style="style"
-    @transitionend="onTransitionEnd"
-    @click="handleClick"
-    @touchmove.stop.prevent="onTouchMove"
+  <LynxTransition
+    :appear="useVif"
+    :name="transitionName"
+    :duration="durationForFramework"
+    :enter-from-class="orUndefined(enterClass)"
+    :enter-active-class="orUndefined(enterActiveClass)"
+    :enter-to-class="orUndefined(enterToClass)"
+    :leave-from-class="orUndefined(leaveClass)"
+    :leave-active-class="orUndefined(leaveActiveClass)"
+    :leave-to-class="orUndefined(leaveToClass)"
+    @before-enter="onPhase('before-enter', 'enter')"
+    @enter="onPhase('enter', 'enter')"
+    @after-enter="onPhase('after-enter', 'enter')"
+    @before-leave="onPhase('before-leave', 'leave')"
+    @leave="onPhase('leave', 'leave')"
+    @after-leave="onPhase('after-leave', 'leave')"
+    @before-appear="onPhase('before-enter', 'enter')"
+    @appear="onPhase('enter', 'enter')"
+    @after-appear="onPhase('after-enter', 'enter')"
   >
-    <slot />
-  </view>
-  <view
-    v-else-if="isShow"
-    :class="rootClass"
-    :style="style"
-    @transitionend="onTransitionEnd"
-    @click="handleClick"
-  >
-    <slot />
-  </view>
+    <!-- v-if 分支（destroy + lazyRender）：随 show 挂载，leave 落地后由框架卸载 -->
+    <view
+      v-if="useVif && show"
+      :class="rootClass"
+      :style="rootStyle"
+      :onTouchmove="touchmoveLocked"
+      @click="handleClick"
+    >
+      <slot />
+    </view>
+    <!-- v-show 分支（其余组合）：常驻 + v-show 显隐；内容懒渲染经 slot 门控 -->
+    <view
+      v-else-if="!useVif"
+      v-show-lynx="show"
+      :class="rootClass"
+      :style="rootStyle"
+      :onTouchmove="touchmoveLocked"
+      @click="handleClick"
+    >
+      <slot v-if="!lazyRender || everShown" />
+    </view>
+  </LynxTransition>
 </template>
