@@ -155,7 +155,29 @@ function toKebab(key: string): string {
 // ---------------------------------------------------------------------------
 // nodeOps —— Lynx 原生元素即建即用（未知元素在 DOM 中合法）
 // ---------------------------------------------------------------------------
+/**
+ * 静态内容插入 —— 编译器会把无动态绑定的模板段提升为静态 vnode，挂载时
+ * 经 nodeOps.insertStaticContent 一次性插入。用 <template> 解析 HTML 串，
+ * 返回首尾节点供运行时打锚点。
+ */
+function insertStaticContent(
+  content: string,
+  parent: RendererElement,
+  anchor?: RendererNode | null
+): [RendererNode, RendererNode] {
+  const tpl = document.createElement('template')
+  tpl.innerHTML = content
+  const nodes = Array.from(tpl.content.childNodes) as RendererNode[]
+  const first = nodes[0]
+  const last = nodes[nodes.length - 1]
+  for (const node of nodes) {
+    ;(parent as Element).insertBefore(node as Node, (anchor as Node) || null)
+  }
+  return [first, last]
+}
+
 const nodeOps: any = {
+  insertStaticContent,
   createElement: (tag: string): RendererElement => document.createElement(tag),
   createText: (text: string): RendererNode => document.createTextNode(text),
   createComment: (text: string): RendererNode => document.createComment(text),
@@ -184,6 +206,22 @@ const nodeOps: any = {
 let installed = false
 
 /**
+ * v-show-lynx 指令垫片。
+ *
+ * 组件库中 wd-transition 使用 `v-show-lynx`（vue-lynx 编译期的显隐指令，
+ * 语义为 display:none 切换）。文档站用标准 vue 编译器编译组件源码，该
+ * 指令无法解析（运行期 warn + 无效果），这里补一个等价的 DOM 实现。
+ */
+const vShowLynx = {
+  beforeMount(el: Element, binding: { value: unknown }) {
+    ;(el as HTMLElement).style.display = binding.value ? '' : 'none'
+  },
+  updated(el: Element, binding: { value: unknown }) {
+    ;(el as HTMLElement).style.display = binding.value ? '' : 'none'
+  }
+}
+
+/**
  * 注入浏览器预览所需的 Lynx 宿主全局：
  * - SystemInfo：getSystemInfo() 的取值来源（common/util.ts），未注入时
  *   回退 375×812 —— 与预览手机框一致，这里显式声明以免歧义；
@@ -207,5 +245,7 @@ export function installLynxGlobals(): void {
 // createApp —— 用自定义渲染器建树，供预览壳挂载真实组件
 // ---------------------------------------------------------------------------
 export function createLynxApp(rootComponent: Component, rootProps?: Record<string, unknown>): App {
-  return createRenderer(nodeOps).createApp(rootComponent, rootProps)
+  const app = createRenderer(nodeOps).createApp(rootComponent, rootProps)
+  app.directive('show-lynx', vShowLynx as any)
+  return app
 }

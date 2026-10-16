@@ -11,12 +11,5 @@ export default {
   enhanceApp({ app }) {
     // 组件文档页中以 <h5-preview name="button" /> 形式使用
     app.component('H5Preview', H5Preview)
-    // 临时调试：捕获 VitePress 应用的未处理错误
-    app.config.errorHandler = (err: unknown, _instance: unknown, info: string) => {
-      const pre = document.createElement('pre')
-      pre.id = 'vp-error'
-      pre.textContent = `VP-ERR [${info}]: ${(err as Error)?.stack || err}`
-      document.body.appendChild(pre)
-    }
   }
 }

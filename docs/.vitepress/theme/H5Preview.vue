@@ -66,6 +66,7 @@ export default defineComponent({
         app = createLynxApp(Shell as Component)
         // 挂载后的响应式渲染异常也走降级提示，避免白屏
         app.config.errorHandler = (err: unknown) => {
+          console.error('[H5Preview] demo error', err)
           status.value = 'error'
           errorMessage.value = `演示渲染失败：${(err as Error)?.message || err}`
         }
