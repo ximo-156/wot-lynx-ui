@@ -1,10 +1,55 @@
 import { defineConfig } from 'vitepress'
+import path from 'node:path'
+
+const here = __dirname
+const uiSrc = path.resolve(here, '../../packages/ui/src')
+
+/**
+ * Lynx 原生元素集合（与 packages/ui/vitest.config.ts 的 LYNX_NATIVE_TAGS 对齐）。
+ * 文档站的 H5 预览直接编译组件库源码，view / text / scroll-view 等标签必须
+ * 声明为自定义元素，否则会被当作未注册组件而不渲染。
+ */
+const LYNX_NATIVE_TAGS = new Set([
+  'view',
+  'text',
+  'image',
+  'scroll-view',
+  'list',
+  'swiper',
+  'swiper-item',
+  'input',
+  'textarea',
+  'svg',
+  'video',
+  'canvas'
+])
 
 export default defineConfig({
   title: 'wot-lynx-ui',
   description: '基于 Vue Lynx 的 wot-ui 适配组件库 — 原生性能、样式一致、API 兼容',
   lang: 'zh-CN',
   base: '/',
+  // H5 预览：组件库源码以「Lynx 原生元素即自定义元素」的方式在浏览器编译渲染
+  vue: {
+    template: {
+      compilerOptions: {
+        isCustomElement: (tag: string) => LYNX_NATIVE_TAGS.has(tag)
+      }
+    }
+  },
+  vite: {
+    resolve: {
+      alias: [
+        // vue-lynx → 浏览器 DOM 渲染垫片（docs/.vitepress/theme/lynx-dom.ts）
+        { find: /^vue-lynx$/, replacement: path.resolve(here, 'theme/lynx-dom.ts') },
+        // wot-lynx-ui 工作区包（docs 未安装该依赖，按源码路径别名，与其 exports 对齐）
+        { find: /^wot-lynx-ui$/, replacement: path.join(uiSrc, 'index.ts') },
+        { find: /^wot-lynx-ui\/theme$/, replacement: path.join(uiSrc, 'styles/theme/index.css') },
+        { find: /^wot-lynx-ui\/components\/(.+)$/, replacement: path.join(uiSrc, 'components/$1') },
+        { find: /^wot-lynx-ui\/styles\/(.+)$/, replacement: path.join(uiSrc, 'styles/$1') }
+      ]
+    }
+  },
   themeConfig: {
     logo: '/logo.svg',
     nav: [

@@ -315,3 +315,65 @@ Lynx 的 `SET_STYLE` 走 BG → MT 的 `__SetInlineStyles(el, styleObject)`（�
   - `SET_STYLE` 的调用链在 `vue-lynx` 运行时源码中逐级核实：BG `pushOp(SET_STYLE, id, styleObject)`（`internal/dist/ops.js:16`）→ MT `__SetInlineStyles(el, value)`（`main-thread/dist/ops-apply.js:124-131`）。**逐属性合并的语义**由仓库自身的真机结论佐证（`test/overlay-chain-regression.test.ts:13-18`、`wd-swipe-action.vue:51-59`），本人未在真机复测该引擎行为。
   - 完整测试套件已跑通（结果见第七节）。
 - 局限：本报告为静态审查 + 单测佐证，**未做真机验证**。第三节标注的样式脏值问题建议在真机或 Web 预览上按「条件由真转假」的路径实测确认后再合并修复；`wd-picker-view` 的拖动跟手问题建议优先真机复现（表现最直观）。
+
+---
+
+## 九、修复执行结果（2026-10-16）
+
+按第六节的优先级逐条落地。每处修复都以「临时还原 → 对应用例必须失败」验证过有效性（见文末）。
+
+### 已修复清单
+
+| 编号 | 位置 | 修复要点 |
+| --- | --- | --- |
+| P0-1 | `common/util.ts` `isObj` / `deepMerge` | `isObj` 只认 `[object Object]`（去掉 `typeof === 'object'` 兜底）；`deepMerge` 数组整体替换、可置 null |
+| P0-2 | `common/util.ts` `debounce` | leading 执行后清空 `lastArgs`，单次调用不再触发两次 |
+| P0-3 | `wd-segmented.vue` | 无条件写 `transform`（选中首项 `left===0` 也要归位） |
+| P0-4 | `wd-tabs.vue` | `onMounted` 补调 `updateLineStyle()` |
+| 样式脏值 | `wd-picker-view` / `wd-toast` / `wd-fab` / `wd-floating-panel` | transition / top+bottom / transform 两态都显式写 |
+| BUG-1 | `wd-notice-bar.vue` | `initMarquee()` 补 `stopVerticalScroll()` |
+| BUG-2 | `wd-form-item.vue` | `validateByTrigger` 与 async watcher 均加 try/catch |
+| BUG-3 | `wd-upload.vue` | 先浅拷贝再补默认值，不再改写消费方 prop |
+| BUG-4 | `wd-form-item.vue` | 必填星号只由显式 `required` 决定 |
+| BUG-5 | `useFormDisabled.ts` | `isDef(props.disabled)` 短路，支持 `disabled=false` 覆盖表单级禁用 |
+| BUG-6 | `common/clickoutside.ts` | `exposed?.close?.()` + `removeFromQueue` 判空 |
+| BUG-7 | `wd-swipe-action.vue` | 宽度落地后补齐「早到的展开态」 |
+| BUG-10 | `wd-calendar-view.vue` | 起点高亮与 `allowSameDay` 解耦；`allowSameDay` 落到点击守卫 |
+| PERF-1 | `wd-picker-view.vue` | 行高/留白/指示带样式提为复用对象；列 transform 用 computed 数组；行 class 改字符串拼接 |
+| PERF-2 | `wd-calendar-view.vue` | 时间列提为 computed（原为模板内联，每次重渲染新建 144 个对象） |
+| PERF-3 | `wd-rate.vue` | 加「已尝试度量」一次性标志 + `isAlive` 守卫，热路径不再反复 getRect |
+| PERF-4 | `useChildren.ts` | 索引 Map 替代比较器内 O(N) 线性查找 |
+| PERF-6 | `wd-watermark.vue` | 平铺节点总数上限 1000 |
+| P2-1 | `wd-fab.vue` | `disabled` 参与拖拽/toggle；`clampToViewport` 加 `isAlive`、删死 `.catch` |
+| P2-2 | `wd-sticky`（types + 组件） | `offsetTop` 去掉默认值 + `isDef`（区分「未传」与「显式 0」） |
+| P2-3 | `wd-notify/index.ts` | `closeNotify` 赋新对象，不再原地改 `visible` 污染全局默认值 |
+| P2-4 | `wd-count-to.vue` | 删除死代码；`toFixed` 直出，消除大数科学计数法 |
+| P2-5 | `useRaf.ts` | `cancel()` 置空句柄 |
+| P2-6 | `wd-upload.vue` | 预览 `:key` 改用 `file.uid` |
+| P2-7 | `wd-slider.vue` | `validStep` 恢复纯函数，告警移到 `step` watch |
+| P2-8/9 | `common/util.ts` | `closest([])` 早返回；`isEqual` 支持普通对象 |
+| P2-13 | `wd-calendar-view.vue` | 删除未使用的 `isSameWeek` |
+| §6-6 | `test/no-main-thread-script.test.ts` | 读盘 + 去注释缓存到 describe 作用域，8 个用例 20ms 内通过 |
+
+> P2-10（`styleToObject`/`objToStyle` 重复与死代码）与 P2-12（`wd-tabs` 未完成实现）由同期的「样式漏斗」重构一并处理。
+
+### 新增回归测试
+
+| 文件 | 用例数 | 锁定内容 |
+| --- | --- | --- |
+| `test/util-merge.test.ts` | 18 | P0-1 / P0-2 / `isEqual` / `closest` |
+| `test/style-merge-regression.test.ts` | 4 | segmented / picker-view / toast / fab 的样式脏值 |
+| `test/bugfix-range-and-expand.test.ts` | 4 | BUG-7（编程展开）、BUG-10（区间高亮 + allowSameDay 守卫） |
+| `test/perf-guards.test.ts` | 3 | PERF-6（水印节点上限）、PERF-2（时间列）、PERF-1（picker 样式复用） |
+| `test/bugfix-p2-cleanup.test.ts` | 4 | P2-2（sticky offsetTop 语义）、P2-4（count-to 格式化） |
+
+### 验证
+
+- `vue-tsc --noEmit`：**0 错误**。
+- 全量 `vitest run`：**32 文件 / 330 项通过，0 失败**（第七节的 7 个超时失败已随 MTS 守卫测试的缓存修复消失）。
+- 有效性证明：对 BUG-7、BUG-10、PERF-6、P2-2 四处，均以「临时还原修复 → 对应用例必须失败」验证（还原后分别得到 `translateX(0px)`、缺 `is-start`、2546 个节点、`top: 50px` 的失败输出）。
+
+### 复查时对本文档原判断的两处修正
+
+- **P2-2（sticky）**：原建议「直接用 `isDef`」不完整——`offsetTop` 原默认值为 `0`，直接改 `isDef` 会让父级 `sticky-box` 的偏移彻底失效。正确做法是去掉 prop 默认值（`undefined`）再配 `isDef`，已按此实施。
+- **P2-7（validStep）**：`wd-input-number.vue` 实际并无 `validStep` computed（文档把 slider 的写法误记到 input-number）；仅 `wd-slider.vue` 需要修。

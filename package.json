@@ -9,11 +9,14 @@
     "build:device-test": "pnpm --filter wot-lynx-demo run build:device-test",
     "build:css": "pnpm --filter wot-lynx-ui run build:css",
     "build:ui": "pnpm --filter wot-lynx-ui run build",
+    "gen:index": "node scripts/gen-index.mjs",
+    "check:index": "node scripts/gen-index.mjs --check",
+    "lint:conventions": "node scripts/review-lint.mjs",
     "typecheck": "pnpm --filter wot-lynx-ui run typecheck",
     "test": "pnpm --filter wot-lynx-ui run test",
     "docs:dev": "pnpm --filter wot-lynx-ui-docs run dev",
     "docs:build": "pnpm --filter wot-lynx-ui-docs run build",
-    "verify": "pnpm build:css && pnpm typecheck && pnpm test && pnpm build:demo"
+    "verify": "pnpm check:index && pnpm build:css && pnpm typecheck && pnpm test && pnpm build:demo"
   },
   "packageManager": "pnpm@10.24.0",
   "engines": {

@@ -136,7 +136,11 @@ function getDayType(time: number): CalendarDayType {
   if (isRangeType.value && Array.isArray(value)) {
     const [start, end] = value
     if (!start) return fallbackCurrent(time)
-    if (isSameDay(start, time) && (!end || props.allowSameDay)) return 'start'
+    // 起点高亮与 allowSameDay 无关：参考实现里 date == startDate 一律返回 'start'
+    // （allowSameDay 只决定「点击同一天能否成区间」，见 onDayClick）。
+    // 旧写法 (!end || props.allowSameDay) 在默认 allowSameDay=false 时，会把
+    // 已完成区间的起点判为非 start，导致起点格子不高亮。
+    if (isSameDay(start, time)) return 'start'
     if (end && isSameDay(end, time)) return 'end'
     if (end && time > start && time < end) return 'middle'
     return fallbackCurrent(time)
@@ -158,15 +162,6 @@ function isDisabled(time: number): boolean {
   return time < props.minDate || time > props.maxDate
 }
 
-/** 周序号（同周判定用） */
-function isSameWeek(time: number, target: number): boolean {
-  const d = new Date(time)
-  const t = new Date(target)
-  const weekStart = (d.getDay() - props.firstDayOfWeek + 7) % 7
-  const targetWeekStart = (t.getDay() - props.firstDayOfWeek + 7) % 7
-  return time - weekStart * 86400000 === target - targetWeekStart * 86400000
-}
-
 /** 点击日期 */
 function onDayClick(item: CalendarDayItem) {
   if (item.disabled || isDisabled(item.date)) return
@@ -181,6 +176,12 @@ function onDayClick(item: CalendarDayItem) {
     // 第二次点击永远重新开始，确认按钮永远置灰。
     // （month / monthrange 暂按日粒度回落，见 isRangeType 注释。）
     const arr = Array.isArray(value) ? [...value] : []
+    // allowSameDay 的语义落点：默认 false 时禁止「点击与起点同一天」成区间
+    // （对齐 wot-ui 的 handleDateRangeChange 守卫）。用真值判断而非 isDef：
+    // pending 哨兵 [start, 0] 的终点是 0，isDef(0) 为 true 会误判为已有终点。
+    const hasStart = arr.length > 0 && !!arr[0]
+    const hasEnd = hasStart && !!arr[1]
+    if (!props.allowSameDay && hasStart && !hasEnd && isSameDay(arr[0], item.date)) return
     if (arr.length === 0 || !isDef(arr[1])) {
       innerValue.value = [item.date, 0]
     } else {
@@ -287,6 +288,21 @@ const timeValue = computed(() => {
   return [d.getHours(), d.getMinutes(), ...(props.hideSecond ? [] : [d.getSeconds()])]
 })
 
+/**
+ * 时间列数据（仅依赖 hideSecond）。
+ *
+ * 旧实现把该表达式内联在模板里：任何一次重渲染（每点选一个日期都会重渲染）
+ * 都会重建 24+60+60 = 144 个对象并生成新数组引用；而 wd-picker-view 对
+ * columns 是 `deep: true` 的 watch，新引用会连带触发列重建与重新格式化。
+ * 提到 computed 后仅在 hideSecond 变化时重建一次。
+ */
+const timeColumns = computed(() => {
+  const hours = Array.from({ length: 24 }, (_, i) => ({ label: padZero(i), value: i }))
+  const minutes = Array.from({ length: 60 }, (_, i) => ({ label: padZero(i), value: i }))
+  const seconds = Array.from({ length: 60 }, (_, i) => ({ label: padZero(i), value: i }))
+  return props.hideSecond ? [hours, minutes] : [hours, minutes, seconds]
+})
+
 function onTimeChange({ selectedValues }: any) {
   const base = Array.isArray(innerValue.value) ? innerValue.value[0] : innerValue.value
   if (!base) return
@@ -355,11 +371,7 @@ function onPickEnd() {
     <!-- 时间面板（datetime 类型） -->
     <view v-if="hasTime" class="wd-calendar-view__time">
       <wd-picker-view
-        :columns="[
-          Array.from({ length: 24 }, (_, i) => ({ label: padZero(i), value: i })),
-          Array.from({ length: 60 }, (_, i) => ({ label: padZero(i), value: i })),
-          ...(hideSecond ? [] : [Array.from({ length: 60 }, (_, i) => ({ label: padZero(i), value: i }))])
-        ]"
+        :columns="timeColumns"
         :model-value="timeValue"
         :item-height="timeItemHeight"
         :visible-item-count="timeVisibleItemCount"

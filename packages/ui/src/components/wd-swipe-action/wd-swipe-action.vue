@@ -82,10 +82,15 @@ onMounted(() => {
   getRect(`.${instanceId}__left`, false, proxy).then((data) => {
     if (!isAlive()) return
     leftWidth.value = Number(data.width) || 0
+    // 补齐「早到的展开态」：modelValue 在宽度落地前被置为 left/right 时，
+    // changeState 因宽度为 0 会静默失效（offsetX 停在 0），而 watch 不会再
+    // 触发——编程展开永远不生效。宽度就位且尚未发生位移时补一次。
+    if (props.modelValue === 'left' && offsetX.value === 0) swipeMove(leftWidth.value)
   })
   getRect(`.${instanceId}__right`, false, proxy).then((data) => {
     if (!isAlive()) return
     rightWidth.value = Number(data.width) || 0
+    if (props.modelValue === 'right' && offsetX.value === 0) swipeMove(-rightWidth.value)
   })
 })
 

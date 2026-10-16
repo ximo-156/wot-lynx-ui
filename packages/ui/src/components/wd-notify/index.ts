@@ -76,7 +76,10 @@ export function useNotify(selector: string = '') {
   const closeNotify = () => {
     clearNotifyTimer()
     if (notifyOption.value !== None && isAlive()) {
-      notifyOption.value.visible = false
+      // 赋新对象而非原地改 visible：首次使用前 notifyOption.value 就是模块级
+      // currentOptions 本体，原地写 visible=false 会把全局默认值一起改掉
+      // （与 useToast 的 deepMerge 赋新对象保持一致）。
+      notifyOption.value = deepMerge(notifyOption.value, { visible: false }) as NotifyProps
     }
   }
 

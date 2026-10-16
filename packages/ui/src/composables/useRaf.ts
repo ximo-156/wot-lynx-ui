@@ -54,6 +54,8 @@ export function useRaf(callback: RafCallback, onError?: (error: unknown) => void
     } else if (isDef(requestRef.value)) {
       clearTimeout(requestRef.value)
     }
+    // 置空句柄：否则后续 cancel() 会对同一个陈旧句柄重复 clearTimeout
+    requestRef.value = null
   }
 
   onUnmounted(() => {

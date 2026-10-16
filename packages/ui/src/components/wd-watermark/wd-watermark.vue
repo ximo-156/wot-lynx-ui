@@ -38,14 +38,25 @@ onMounted(() => {
   })
 })
 
+/** 平铺节点总数上限：小尺寸水印 + 大容器（整页水印）时防止铺出数千节点 */
+const MAX_TILES = 1000
+
 /** 平铺网格：单元占位含 gutter，按容器尺寸算行列数铺满整个容器 */
 const tiles = computed(() => {
   const unitWidth = Math.max(props.width + props.gutterX, 1)
   const unitHeight = Math.max(props.height + props.gutterY, 1)
   const containerWidth = containerSize.value.width || FALLBACK_WIDTH
   const containerHeight = containerSize.value.height || FALLBACK_HEIGHT
-  const cols = Math.max(1, Math.ceil(containerWidth / unitWidth))
-  const rows = Math.max(1, Math.ceil(containerHeight / unitHeight))
+  let cols = Math.max(1, Math.ceil(containerWidth / unitWidth))
+  let rows = Math.max(1, Math.ceil(containerHeight / unitHeight))
+  // 节点数超限时按同一比例缩小行列（等比 → 间距均匀），把总量钳到上限。
+  // 代价是极端参数（单元极小 + 容器极大）下右下角可能留白；相比无上限时
+  // 数千节点导致的渲染冻结，这是有意的取舍。
+  if (cols * rows > MAX_TILES) {
+    const scale = Math.sqrt(MAX_TILES / (cols * rows))
+    cols = Math.max(1, Math.floor(cols * scale))
+    rows = Math.max(1, Math.floor(rows * scale))
+  }
   const result: Array<{ col: number; row: number }> = []
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {

@@ -53,6 +53,18 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
 describe('组件库源码不得使用 Main Thread Script', () => {
   const files = collectSourceFiles(SRC_DIR)
 
+  // 读盘 + 去注释**只做一次**并缓存到 describe 作用域。
+  //
+  // 旧实现把 readFileSync + stripComments 写在 it.each 的回调里：7 个用例各自
+  // 重读全库 ~350 个源码文件并跑一遍正则替换，单用例耗时超过 vitest 默认的 5s
+  // 超时 → 7 个用例全部「超时失败」（不是断言失败）。后果是这条守卫在 CI 上
+  // 要么假红、要么被当作 flaky 忽略，CONVENTIONS §10「禁止 MTS」实际处于
+  // 无人看守状态。缓存后单用例只对内存中的字符串跑一次正则。
+  const sources = files.map((file) => ({
+    file,
+    code: stripComments(readFileSync(file, 'utf8'))
+  }))
+
   it('覆盖率：收集器不应漏扫 src 下的源码文件', () => {
     // 重写期间组件数量动态变化，断言「磁盘文件数 == 收集器文件数」，
     // 即收集逻辑始终覆盖全部源码（全部 102 个组件重写完成后约 350 个文件）。
@@ -75,8 +87,13 @@ describe('组件库源码不得使用 Main Thread Script', () => {
   it.each(FORBIDDEN_PATTERNS.map((p) => [p.hint, p.pattern] as const))(
     '不存在 %s',
     (_hint, pattern) => {
-      const offenders = files.filter((file) => pattern.test(stripComments(readFileSync(file, 'utf8'))))
-      expect(offenders.map((f) => path.relative(SRC_DIR, f))).toEqual([])
+      const offenders = sources
+        .filter(({ code }) => {
+          pattern.lastIndex = 0
+          return pattern.test(code)
+        })
+        .map(({ file }) => path.relative(SRC_DIR, file))
+      expect(offenders).toEqual([])
     }
   )
 })

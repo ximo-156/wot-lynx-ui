@@ -158,6 +158,9 @@ function genDoc(name) {
   lines.push('')
   lines.push(`${title.split(' ').slice(1).join(' ') || title}组件，API 与 wot-ui 对齐；样式基于 \`--wd-*\` 设计令牌。`)
   lines.push('')
+  // H5 预览标记（组件文档页内嵌手机预览，见 docs/.vitepress/theme/H5Preview.vue）
+  lines.push(`<h5-preview name="${name.replace('wd-', '')}" />`)
+  lines.push('')
 
   if (existsSync(typesPath)) {
     const props = parseProps(typesPath)

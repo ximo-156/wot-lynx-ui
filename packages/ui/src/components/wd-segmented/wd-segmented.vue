@@ -13,13 +13,29 @@ import './index.css'
 
 import { computed, getCurrentInstance, onMounted, reactive, watch } from 'vue-lynx'
 import { segmentedProps, type SegmentedExpose, type SegmentedOption } from './types'
-import { addUnit, filterStyle, getRect, isEqual, isObj, pause, parseStyle } from '../../common/util'
+import { addUnit, getRect, isEqual, isObj, pause, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { uni } from '../../common/uni'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(segmentedProps)
 const emit = defineEmits(['update:value', 'change', 'click'])
 const isAlive = useAlive()
+
+/**
+ * 滑块可切换的全部样式键 + 中性值（CONVENTIONS §20）。
+ *
+ * Lynx 的 SetStyle 是逐属性合并语义：省略某个键不会清除元素上已应用的内联属性。
+ * 经 Style Funnel 统一下发后，无论条件如何翻转，键集始终完整——
+ * 选中首项（位移为 0）时 `transform` 仍写 `translateX(0px)`，滑块必然归位。
+ */
+const SLIDER_STYLE = defineStyleKeys({
+  position: 'absolute',
+  width: '0px',
+  'z-index': '0',
+  transform: 'translateX(0px)',
+  transition: 'none'
+})
 
 const state = reactive({
   activeIndex: 0,
@@ -63,22 +79,15 @@ function updateActiveStyle(animation: boolean = true) {
     if (!isAlive()) return
     const rect = rects[state.activeIndex]
     if (!rect) return
-    const style: Record<string, string> = {
-      position: 'absolute',
-      width: addUnit(rect.width!),
-      'z-index': '0'
-    }
     const left = rects.slice(0, state.activeIndex).reduce((prev, curr) => prev + Number(curr.width), 0)
-    // transform 必须**无条件**写入：Lynx 的 SetStyle 是逐属性合并语义（引擎 PAPI
-    // 镜像与 Web 预览运行时均 Object.assign），省略某个键不会清除元素上已应用的
-    // 内联属性。旧实现写作 `if (left) { style.transform = ... }`，在选中首项
-    // （left === 0）时省略 transform，上一次的位移残留 → 滑块停在上一个选项下方。
+    // 经 Style Funnel 下发：键集恒完整（transform 无条件写入 translateX(left)，
+    // 归零时写 translateX(0px) 而非省略），从根上消除 SetStyle 合并语义下的脏值残留。
     // 同类缺陷参见 wd-transition 的 display、wd-swipe-action 的 transition。
-    style.transform = `translateX(${left}px)`
-    if (animation) {
-      style.transition = 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)'
-    }
-    state.activeStyle = filterStyle(style)
+    state.activeStyle = resolveStyle(SLIDER_STYLE, {
+      width: addUnit(rect.width!),
+      transform: `translateX(${left}px)`,
+      transition: animation ? 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)' : 'none'
+    })
   })
 }
 

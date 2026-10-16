@@ -171,6 +171,7 @@ import { usePopover } from '../../composables/usePopover'
 import { useUpload } from '../../composables/useUpload'
 
 import { addUnit, isDef, objToStyle, getRect, getSystemInfo, deepMerge, ... } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'  // Style Funnel（§20）
 import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp, makeNumericProp, numericProp } from '../../common/props'
 import { callInterceptor } from '../../common/interceptor'
 import { formatDate, getMonthDays, getFirstDayOfWeek } from '../../common/formatDate'  // 基于 dayjs
@@ -474,4 +475,83 @@ vue-lynx 的 `patchProp`（`runtime/dist/node-ops.js`）对 `style` 只处理
   `position: absolute` 装饰元素（如 picker 选中指示带）若排在兄弟节点
   **之前**，会连文字一起盖掉。此类元素须排在内容节点**之后**，并保持
   z-index 低于内容（真机按 z-index 绘制，两个平台才都不出问题）。
+
+## 20. 内联样式出口唯一：Style Funnel（禁止条件写样式）
+
+### 根因
+
+Lynx 的 `SET_STYLE` 经后台线程 `pushOp` → 主线程 `__SetInlineStyles(el, value)`
+下发，语义是**逐属性合并**（Object.assign）：新对象里**没有出现的键，不会清除**
+元素上已经应用的内联属性。
+
+因此「条件写样式」是本库最容易复发的缺陷类型——只要某个键在某一帧被省略，
+上一帧的值就残留。仓库已为此付出 **6 次**代价：
+
+| 组件 | 脏值 | 表现 |
+| --- | --- | --- |
+| `wd-transition` | `display` | 元素永久 `display:none`，toast / 遮罩全不可见（2026-10-15 真机核实） |
+| `wd-swipe-action` | `transition` | 跟手时段未显式写 `none` → 上次落位过渡残留，拖动不跟手 |
+| `wd-segmented` | `transform` | `if (left)` 为 0 时省略 → 选中首项滑块不归位 |
+| `wd-picker-view` | `transition` | 首次拖动跟手、之后每次拖动都带缓动 |
+| `wd-toast` | `top` / `bottom` | position 由 top 切 bottom 时 `top` 残留 → 上下同时存在 |
+| `wd-fab` | `transform` | 位移归零时省略 → 旧位移残留 |
+
+### 规则
+
+1. **禁止**在组件里写 `if (cond) { style.x = … }` 或 `if (cond) style.x = …`
+   —— 省略键等于保留旧值。
+2. 需要「条件切换」的样式，一律经 `common/style.ts` 的
+   **`defineStyleKeys` + `resolveStyle`** 输出：先声明该元素**可能被切换的全部键
+   及其中性值**，之后任何一帧都输出**完整键集**。
+
+```ts
+// ✅ 正确
+const LINE_STYLE = defineStyleKeys({ transform: 'translateX(0px)' })
+
+const lineStyle = computed(() =>
+  resolveStyle(LINE_STYLE, { transform: `translateX(${offset.value}px)` })
+)
+
+// ❌ 错误：offset 为 0 时省略 transform → 旧位移残留
+const lineStyle = computed(() => {
+  const style: Record<string, string> = {}
+  if (offset.value) style.transform = `translateX(${offset.value}px)`
+  return style
+})
+```
+
+3. **中性值必须是「视觉上等同于不设置」的合法取值**：`translateX(0px)` /
+   `none` / `flex` / `0px`。
+   **不要**用 `inherit` 去兜底可能被 CSS 类声明的属性（如 `font-size`）——
+   `inherit` 会把内联值变成父级取值，反而覆盖掉类里的声明。
+4. 消费方传入的 `customStyle` 仍按 §19 经 `parseStyle()` 归一，与
+   `resolveStyle` 的结果合并：`{ ...resolveStyle(...), ...parseStyle(customStyle) }`。
+
+### 守护
+
+- `scripts/review-lint.mjs` 的 `style/conditional-key-write` 与
+  `style/conditional-key-write-inline` 两条规则扫描上述反模式（定级 `warn`，
+  存量按 `review-lint.baseline.json` 登记）。
+  定级为 `warn` 而非 `error` 是刻意的：该规则命中的是缺陷的**必要条件**，
+  `if (a) { style.top = … } else if (b) { style.top = … }` 这类「各分支都写
+  同一个键」的安全写法同样会被命中（全库约 5/59 属此类）。按本仓库「宁可漏报
+  也不制造噪音」的门禁原则先观察，**待存量组件全部迁移到 Style Funnel 后
+  再收紧为 `error`**。
+- 纯函数单测见 `test/style-funnel.test.ts`；渲染层回归见
+  `test/inline-style-regression.test.ts` 与真机验收清单。
+
+### 迁移状态
+
+- 已完成：`wd-segmented`（参考实现）、`wd-picker-view`、`wd-toast`、`wd-fab`、
+  `wd-transition`、`wd-swipe-action`（后五者在此前修复中以「显式写中性值」的
+  等价手法处理）。
+- 待迁移（存量 59 处，已登记 baseline）：`wd-text` / `wd-icon` / `wd-col` /
+  `wd-gap` / `wd-steps` / `wd-divider` / `wd-avatar(-group)` / `wd-badge` /
+  `wd-loading` / `wd-curtain` / `wd-tour` / `wd-watermark` / `wd-skeleton` /
+  `wd-slider` / `wd-tag` / `wd-progress` / `wd-img` / `wd-img-cropper` /
+  `wd-navbar(-capsule)` / `wd-notice-bar` / `wd-notify` / `wd-signature` /
+  `wd-slide-verify` 等。
+  这些组件的条件写样式目前多为「prop 由有值变为无值」才触发，风险相对低；
+  迁移须先有视觉回归兜底（见 ARCHITECTURE.md Phase 1）。
+
 

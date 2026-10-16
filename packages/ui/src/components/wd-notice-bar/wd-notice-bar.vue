@@ -99,6 +99,10 @@ function startMarquee() {
 /** 一次性度量文本与容器宽度，文本超出时才启动跑马灯（CONVENTIONS §16） */
 function initMarquee() {
   stopMarquee()
+  // 纵向定时器必须一并停止：watch 在 direction 由 vertical 切到 horizontal 时
+  // 走本函数，旧实现只 stopMarquee → 2s 间隔的纵向定时器继续改 currentIndex
+  // （污染 handleClick 上报的 index，且定时器常驻到组件卸载）。
+  stopVerticalScroll()
   if (!canMarquee.value) return
   Promise.all([getRect(`#${instanceId}-wrap`), getRect(`#${instanceId}-text`)]).then((rects) => {
     if (!isAlive()) return

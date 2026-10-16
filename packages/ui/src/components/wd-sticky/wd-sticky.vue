@@ -15,14 +15,15 @@ import './index.css'
 
 import { computed, inject } from 'vue-lynx'
 import { stickyProps } from './types'
-import { filterStyle, parseStyle } from '../../common/util'
+import { filterStyle, isDef, parseStyle } from '../../common/util'
 import { STICKY_BOX_OFFSET_KEY } from '../wd-sticky-box/types'
 
 const props = defineProps(stickyProps)
 
 /** 父级 sticky-box 下发的默认吸顶偏移（未显式传 offsetTop 时使用） */
 const boxOffset = inject(STICKY_BOX_OFFSET_KEY, computed(() => 0))
-const resolvedOffsetTop = computed(() => (props.offsetTop ? props.offsetTop : boxOffset.value))
+// 用 isDef 而非真值判断：offsetTop=0 是合法值（贴顶），不得被当作未传
+const resolvedOffsetTop = computed(() => (isDef(props.offsetTop) ? props.offsetTop : boxOffset.value))
 
 const rootClass = computed(() => {
   const classes = ['wd-sticky']

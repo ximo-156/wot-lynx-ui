@@ -196,6 +196,41 @@ const RULES = [
     message: 'touchmove 热路径禁止 getRect（异步跨线程查询会摧毁跟手性）—— 应一次性度量并缓存'
   },
 
+  // ================= §20 样式出口唯一（Style Funnel） =================
+  //
+  // 这两条规则检测的是缺陷的**必要条件**而非充分条件：`if (a) { style.top = … } else
+  // if (b) { style.top = … }` 这类「各分支都写同一个键」的写法是安全的，但同样会被命中。
+  // 全库约 5/59 属此类（wd-toast 的 position 分支、wd-transition 的 v-show display）。
+  //
+  // 按本脚本的设计原则「宁可漏报交由人工，也不要制造噪音让人绕过门禁」，故定级 warn：
+  // 存量按 baseline 登记、增量在 PR 中可见。待存量组件全部迁移到 Style Funnel
+  // （Phase 1，需先有视觉回归兜底）后，再收紧为 error。
+  {
+    id: 'style/conditional-key-write',
+    ref: '§20',
+    severity: 'warn',
+    ext: ['.vue', '.ts'],
+    dirs: ['packages/ui/src'],
+    kind: 'line',
+    // `if (cond) {` / `} else if (cond) {`，且紧随其后（下一个非空行）就是样式键写入
+    pattern: /^\s*\}?\s*(?:else\s+)?if\s*\(.*\)\s*\{?\s*$/,
+    lookahead: /(?:^|[^.\w$])(?:style|styles)\s*(?:\[[^\]]*\]|\.[A-Za-z_$][\w$]*)\s*=/,
+    message:
+      '条件写样式：Lynx 的 SetStyle 是逐属性合并语义，省略的键不会清除已应用的内联属性 → 条件由真转假时旧值残留（已致 wd-segmented / wd-picker-view / wd-toast / wd-fab / wd-transition / wd-swipe-action 六处缺陷）。改用 common/style.ts 的 resolveStyle + defineStyleKeys 输出完整键集'
+  },
+  {
+    id: 'style/conditional-key-write-inline',
+    ref: '§20',
+    severity: 'warn',
+    ext: ['.vue', '.ts'],
+    dirs: ['packages/ui/src'],
+    kind: 'line',
+    // 单行内联写法：`if (cond) style.x = …`
+    pattern: /^\s*(?:else\s+)?if\s*\([^)]*\)\s+(?:style|styles)\s*(?:\[[^\]]*\]|\.[A-Za-z_$][\w$]*)\s*=/,
+    message:
+      '条件写样式（内联形式）：同上，省略键不会清除旧内联值。改用 resolveStyle + defineStyleKeys'
+  },
+
   // ================= §5 SCSS =================
   {
     id: 'scss/no-pseudo-element',
@@ -435,9 +470,23 @@ function checkFile(file, raw) {
     })
 
     if (rule.kind === 'line') {
-      code.split('\n').forEach((text, idx) => {
+      const codeLines = code.split('\n')
+      // lookahead：命中 pattern 后，再要求「下一个非空代码行」命中该正则。
+      // 用于识别跨行的 `if (cond) {` + 紧邻的 `style.x = …` 组合（§20）。
+      const nextNonEmpty = (from) => {
+        for (let j = from + 1; j < codeLines.length; j++) {
+          if (codeLines[j].trim() !== '') return codeLines[j]
+        }
+        return ''
+      }
+      codeLines.forEach((text, idx) => {
         rule.pattern.lastIndex = 0
-        if (rule.pattern.test(text)) push(idx + 1)
+        if (!rule.pattern.test(text)) return
+        if (rule.lookahead) {
+          rule.lookahead.lastIndex = 0
+          if (!rule.lookahead.test(nextNonEmpty(idx))) return
+        }
+        push(idx + 1)
       })
     } else if (rule.kind === 'tag') {
       for (const { tag, attrs, index } of parseTags(code)) {

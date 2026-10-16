@@ -122,6 +122,10 @@ onMounted(() => {
   state.value.activeIndex = activeIndex.value
   renderedSet.value.add(state.value.activeIndex)
   state.value.inited = true
+  // 首帧后必须补一次指示线度量：watch(modelValue, { immediate: true }) 在
+  // setup 阶段就发起了 getRect，此时节点尚未挂载 → 度量到零矩形，指示线宽度
+  // 为 0 / 位置错位；旧实现此后只在 modelValue 变化时更新，首屏指示线一直失效。
+  updateLineStyle()
 })
 
 function isRendered(index: number): boolean {

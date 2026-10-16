@@ -29,11 +29,11 @@ let rafRunning = false
 
 const timeText = computed(() => {
   const decimals = Number(props.decimals) || 0
-  let value = current.value.toFixed(decimals)
-  value = String(Number(value)) // 去掉多余的 0
-  if (decimals > 0) {
-    value = current.value.toFixed(decimals)
-  }
+  // toFixed 是唯一有效路径：旧实现先 `String(Number(toFixed))` 再被
+  // decimals>0 分支覆盖——decimals>0 时前两行为死代码；decimals===0 时
+  // `Number()` 中转会把大数转成科学计数法（如 1e21）。直接 toFixed 既保留
+  // 原有效行为，又消除该风险（toFixed(0) 始终给出完整整数串）。
+  const value = current.value.toFixed(decimals)
   const parts = value.split('.')
   let intPart = parts[0]
   const decimalPart = parts[1] ? props.decimal + parts[1] : ''

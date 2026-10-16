@@ -97,6 +97,15 @@ const pickerViewStyle = computed(() => ({ height: addUnit(containerHeight.value)
 /** 根节点样式（customStyle 为字符串，需 parseStyle 归一为对象，CONVENTIONS §19） */
 const pickerStyle = computed(() => parseStyle(props.customStyle))
 
+/**
+ * 复用型样式对象：行高 / 上下留白 / 指示带在整列（乃至整组件）内是同一个值，
+ * 提到 computed 后全列共用同一对象引用，避免每行每帧新建对象——3 列 × 60 行
+ * 的渲染热路径上这是上百次分配（CONVENTIONS §16）。
+ */
+const itemHeightStyle = computed(() => ({ height: addUnit(props.itemHeight) }))
+const padHeightStyle = computed(() => ({ height: addUnit(padHeight.value) }))
+const indicatorStyle = computed(() => ({ top: addUnit(padHeight.value), height: addUnit(props.itemHeight) }))
+
 /** 列落位过渡（与落位吸附时长一致） */
 const COLUMN_TRANSITION = 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)'
 
@@ -108,20 +117,30 @@ const COLUMN_TRANSITION = 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)'
  * 拖动时省略 → 上一次落位应用的 0.2s 过渡残留，表现为「首次拖动跟手、之后每次
  * 拖动都带缓动不跟手」。与 wd-swipe-action 跟手时段显式写 `transition: 'none'`
  * 是同一处理。
+ *
+ * 提为 computed 数组：仅在 offsets / transitions 变化时重算一次，避免无关重渲染
+ * （选中索引变化、父级更新）时每列重复建对象。
  */
-function columnTransform(colIndex: number): Record<string, string> {
-  const offset = offsets.value[colIndex] || 0
-  return {
-    transform: `translateY(${-offset}px)`,
-    transition: transitions.value[colIndex] ? COLUMN_TRANSITION : 'none'
-  }
-}
+const columnStyles = computed<Array<Record<string, string>>>(() =>
+  formatColumns.value.map((_, colIndex) => {
+    const offset = offsets.value[colIndex] || 0
+    return {
+      transform: `translateY(${-offset}px)`,
+      transition: transitions.value[colIndex] ? COLUMN_TRANSITION : 'none'
+    }
+  })
+)
+
+/** 行 class 常量：用字符串拼接替代「每行新建数组 + join」 */
+const ITEM_CLASS = 'wd-picker-view__column-item'
+const ITEM_CLASS_DISABLED = ' wd-picker-view__column-item--disabled'
+const ITEM_CLASS_ACTIVE = ' wd-picker-view__column-item--active'
 
 function getItemClass(disabled: boolean | undefined, colIndex: number, rowIndex: number): string {
-  const classes = ['wd-picker-view__column-item']
-  if (disabled) classes.push('wd-picker-view__column-item--disabled')
-  if (selectedIndex.value[colIndex] === rowIndex) classes.push('wd-picker-view__column-item--active')
-  return classes.join(' ')
+  let className = ITEM_CLASS
+  if (disabled) className += ITEM_CLASS_DISABLED
+  if (selectedIndex.value[colIndex] === rowIndex) className += ITEM_CLASS_ACTIVE
+  return className
 }
 
 /** 列内容最大位移 */
@@ -251,8 +270,8 @@ defineExpose<PickerViewExpose>({
   <view :class="`wd-picker-view ${customClass}`" :style="pickerStyle">
     <view class="wd-picker-view__main" :style="pickerViewStyle">
       <!-- 上下遮罩（盖在文字上形成渐隐；须排在列之前，见下方注释） -->
-      <view class="wd-picker-view__mask wd-picker-view__mask--top" :style="{ height: addUnit(padHeight) }" />
-      <view class="wd-picker-view__mask wd-picker-view__mask--bottom" :style="{ height: addUnit(padHeight) }" />
+      <view class="wd-picker-view__mask wd-picker-view__mask--top" :style="padHeightStyle" />
+      <view class="wd-picker-view__mask wd-picker-view__mask--bottom" :style="padHeightStyle" />
 
       <view
         v-for="(col, colIndex) in formatColumns"
@@ -263,24 +282,24 @@ defineExpose<PickerViewExpose>({
         @touchend="onTouchEnd(colIndex)"
         @touchcancel="onTouchEnd(colIndex)"
       >
-        <view class="wd-picker-view__column-content" :style="columnTransform(colIndex)">
-          <view class="wd-picker-view__column-pad" :style="{ height: addUnit(padHeight) }" />
+        <view class="wd-picker-view__column-content" :style="columnStyles[colIndex]">
+          <view class="wd-picker-view__column-pad" :style="padHeightStyle" />
           <view
             v-for="(row, rowIndex) in col"
             :key="rowIndex"
             :class="getItemClass(row['disabled'], colIndex, rowIndex)"
-            :style="{ height: addUnit(itemHeight) }"
+            :style="itemHeightStyle"
           >
             <text class="wd-picker-view__column-label">{{ row[labelKey] }}</text>
           </view>
-          <view class="wd-picker-view__column-pad" :style="{ height: addUnit(padHeight) }" />
+          <view class="wd-picker-view__column-pad" :style="padHeightStyle" />
         </view>
       </view>
 
       <!-- 选中指示带：必须排在列之后 + z-index 低于列。Web 预览的绘制
            不遵循 z-index（按 DOM 逆序绘制），排在最前会连底色带文字一起
            盖掉；真机按 z-index 绘制，indicator(1) < column(2) 同样在下方。 -->
-      <view class="wd-picker-view__indicator" :style="{ top: addUnit(padHeight), height: addUnit(itemHeight) }" />
+      <view class="wd-picker-view__indicator" :style="indicatorStyle" />
     </view>
   </view>
 </template>

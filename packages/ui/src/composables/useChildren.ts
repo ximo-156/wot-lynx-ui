@@ -36,32 +36,42 @@ export function flattenVNodes(children: VNode) {
   return result
 }
 
-const findVNodeIndex = (vnodes: VNode[], vnode: VNode) => {
-  const index = vnodes.indexOf(vnode)
-  if (index === -1) {
-    return vnodes.findIndex((item) => vnode.key !== undefined && vnode.key !== null && item.type === vnode.type && item.key === vnode.key)
-  }
-  return index
-}
-
 export function sortChildren(
   parent: ComponentInternalInstance,
   publicChildren: ComponentPublicInstance[],
   internalChildren: ComponentInternalInstance[]
 ) {
   const vnodes = parent && parent.subTree && parent.subTree.children ? flattenVNodes(parent.subTree) : []
-  internalChildren.sort((a, b) => findVNodeIndex(vnodes, a.vnode) - findVNodeIndex(vnodes, b.vnode))
+
+  // 索引映射：把原先比较器内的 O(N) 线性查找（indexOf / findIndex）降为 O(1)，
+  // 避免收集 N 个子组件（每次 link 都调用本函数）时退化为 O(N²) 次查找。
+  const vnodeIndexMap = new Map<VNode, number>()
+  for (let i = 0; i < vnodes.length; i++) {
+    // 只记录首次出现，与 Array.prototype.indexOf 语义一致
+    if (!vnodeIndexMap.has(vnodes[i])) vnodeIndexMap.set(vnodes[i], i)
+  }
+  const indexOfVNode = (vnode: VNode): number => {
+    const direct = vnodeIndexMap.get(vnode)
+    if (direct !== undefined) return direct
+    // 兼容回退：按 type + key 匹配（与旧 findVNodeIndex 的兜底分支等价）
+    return vnodes.findIndex((item) => vnode.key !== undefined && vnode.key !== null && item.type === vnode.type && item.key === vnode.key)
+  }
+
+  internalChildren.sort((a, b) => indexOfVNode(a.vnode) - indexOfVNode(b.vnode))
 
   const orderedPublicChildren = internalChildren.map((item) => item.proxy!)
 
-  publicChildren.sort((a, b) => {
-    const getIndex = (comp: ComponentPublicInstance) => {
-      const uid = comp.$.uid
-      return orderedPublicChildren.findIndex((i) => i.$.uid === uid)
-    }
+  const orderMap = new Map<number, number>()
+  for (let i = 0; i < orderedPublicChildren.length; i++) {
+    const comp = orderedPublicChildren[i]
+    // 只记录首次出现，与旧 getIndex 的 findIndex 语义一致
+    if (comp && !orderMap.has(comp.$.uid)) orderMap.set(comp.$.uid, i)
+  }
 
-    const indexA = getIndex(a)
-    const indexB = getIndex(b)
+  publicChildren.sort((a, b) => {
+    // 未命中返回 -1（与旧 findIndex 一致）
+    const indexA = orderMap.get(a.$.uid) ?? -1
+    const indexB = orderMap.get(b.$.uid) ?? -1
     return indexA - indexB
   })
 }

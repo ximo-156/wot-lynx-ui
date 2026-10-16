@@ -60,18 +60,30 @@ const transitionStyle = computed(() => {
     'text-align': 'center',
     'pointer-events': 'none'
   }
+  // top / bottom / transform 必须**每个分支都显式写全**：Lynx 的 SetStyle 是逐属性
+  // 合并语义，省略的键不会清除元素上已应用的内联属性。wd-transition 默认走 v-show
+  // 分支（元素常驻、不卸载），同一实例从 position='top' 切到 'bottom' 时若不重置，
+  // 会同时存在 top 与 bottom → 位置错乱；从 'middle' 切到其他位置时
+  // translateY(-50%) 同样会残留。（`auto` 用法同 wd-slider 的 `right: auto`。）
   if (position.value === 'top') {
     style.top = '10%'
+    style.bottom = 'auto'
+    style.transform = 'none'
     style['align-items'] = 'flex-start'
   } else if (position.value === 'bottom') {
+    style.top = 'auto'
     style.bottom = '10%'
+    style.transform = 'none'
     style['align-items'] = 'flex-end'
   } else if (position.value === 'middle-top') {
     // 偏上居中：贴合顶部但不贴边（wot-ui 语义），水平居中
     style.top = '20%'
+    style.bottom = 'auto'
+    style.transform = 'none'
     style['align-items'] = 'center'
   } else {
     style.top = '50%'
+    style.bottom = 'auto'
     style.transform = 'translateY(-50%)'
     style['align-items'] = 'center'
   }

@@ -35,13 +35,20 @@ const modelValue = ref<SliderValue>(getInitValue())
 
 const scope = computed(() => props.max - props.min)
 
-const validStep = computed(() => {
-  if (props.step <= 0) {
-    console.warn('[wot-lynx-ui] warning(wd-slider): step must be greater than 0')
-    return 1
-  }
-  return props.step
-})
+// computed 必须保持纯函数：step<=0 时 calcByStep 会在 touchmove / 长按 100ms
+// 定时器热路径上反复求值，原地 console.warn 会刷屏。告警移到 step 变化时
+// 触发一次（含首次），computed 只负责取值。
+const validStep = computed(() => (props.step > 0 ? props.step : 1))
+
+watch(
+  () => props.step,
+  (step) => {
+    if (step <= 0) {
+      console.warn('[wot-lynx-ui] warning(wd-slider): step must be greater than 0')
+    }
+  },
+  { immediate: true }
+)
 
 const currentValue = computed<[number, number]>(() => {
   if (props.range && isArray(modelValue.value)) {

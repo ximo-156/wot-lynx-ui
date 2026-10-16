@@ -37,8 +37,9 @@ export function useFormDisabled(props: { disabled?: boolean | null }) {
   const formItem = inject<FormItemDisabledProvide | null>(FORM_ITEM_DISABLED_KEY, null)
 
   return computed(() => {
-    if (props.disabled) {
-      return true
+    // 显式传 false 也要短路：否则禁用的表单里无法单独启用某个字段
+    if (isDef(props.disabled)) {
+      return props.disabled
     }
     if (formItem && isDef(formItem.disabled.value)) {
       return formItem.disabled.value

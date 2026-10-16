@@ -60,7 +60,15 @@ function shouldTrigger(event: FormValidateEvent): boolean {
 
 async function validateByTrigger(event: FormValidateEvent): Promise<void> {
   if (!props.prop || !shouldTrigger(event)) return
-  await form.value?.validate?.(props.prop)
+  // schema.validate 由消费方提供，可能同步抛错或返回被拒绝的 Promise。
+  // 本函数在下方 watch 的 async 回调中被 await（回调本身没有 catch），异常
+  // 会漂成未处理的 Promise 拒绝 → 真机 Sentry USER_RUNTIME_ERROR。
+  // 校验失败属可预期输入问题，兜底告警即可，不应打断渲染路径。
+  try {
+    await form.value?.validate?.(props.prop)
+  } catch (error) {
+    console.error('[wot-lynx-ui] wd-form-item 校验执行失败（已兜底，未向上抛出）', error)
+  }
 }
 
 const propValue = computed(() => {
@@ -71,7 +79,13 @@ const propValue = computed(() => {
 watch(
   () => propValue.value,
   async () => {
-    await validateByTrigger('change')
+    // try/catch：schema.validate 抛错或拒绝时不得冒泡成未处理的 Promise 拒绝
+    // （真机 Sentry USER_RUNTIME_ERROR，见 CONVENTIONS 的崩溃防护约定）
+    try {
+      await validateByTrigger('change')
+    } catch (error) {
+      console.error('[wd-form-item] change 校验失败:', error)
+    }
   },
   { deep: true }
 )
@@ -127,8 +141,11 @@ const formItemHideAsterisk = computed(() => {
   return isDef(props.hideAsterisk) ? props.hideAsterisk : form.value?.props.hideAsterisk
 })
 
+// 必填星号仅由显式 required 决定：旧实现「传了 prop 就显示星号」会给所有
+// 绑定字段错误地加星号（wot-ui 语义是由校验规则的 required 决定，本库的
+// schema 为自定义 validate 函数、无规则元数据，故退化为显式 prop）
 const isRequired = computed(() => {
-  return isDef(props.required) ? props.required : Boolean(props.prop)
+  return isDef(props.required) ? props.required : false
 })
 
 const showPlaceholder = computed(() => {

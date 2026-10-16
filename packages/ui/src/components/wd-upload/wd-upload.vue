@@ -64,10 +64,13 @@ watch(
   (val) => {
     const { statusKey } = props
     if (isEqual(val, uploadFiles.value)) return
+    // 先浅拷贝再补默认值：不得直接改写消费方传入的 prop 对象
+    // （deep watch 内改写被监听 props 还有自触发循环风险）
     const uploadFileList: UploadFileItem[] = (val as UploadFileItem[]).map((item) => {
-      item[statusKey] = item[statusKey] || 'success'
-      item.response = item.response || ''
-      return { ...item, uid: context.id++ }
+      const copy = { ...item, uid: context.id++ } as UploadFileItem
+      copy[statusKey] = copy[statusKey] || 'success'
+      copy.response = copy.response || ''
+      return copy
     })
     uploadFiles.value = uploadFileList
   },
@@ -270,10 +273,10 @@ const limitText = computed(() => {
 
 <template>
   <view :class="['wd-upload', customClass]" :style="parseStyle(customStyle)">
-    <!-- 预览列表 -->
+    <!-- 预览列表：key 用 file.uid 而非 index——删除中间项时 index 会错配复用 -->
     <view
       v-for="(file, index) in uploadFiles"
-      :key="index"
+      :key="file.uid"
       :class="['wd-upload__preview', customPreviewClass]"
     >
       <view class="wd-upload__status-content">

@@ -15,16 +15,27 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { rateProps } from './types'
 import { addUnit, getRect, isDef, parseStyle } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(rateProps)
 const emit = defineEmits(['update:modelValue', 'change', 'touchmove'])
 const isDisabled = useFormDisabled(props)
+const isAlive = useAlive()
 const { proxy } = getCurrentInstance() as any
 
 const rateList = ref<Array<string>>([])
 
 /** 星星矩形缓存（left/right/width），挂载后与 num/space 变化时刷新 */
 let itemRects: Array<{ left: number; right: number; width: number }> = []
+
+/**
+ * 是否已在当前「几何代次」内发起过度量。
+ * 度量不可用（宿主无 createSelectorQuery / 节点未渲染 / all 模式返回 []）时
+ * itemRects 恒为空数组，若无该标志，onTouchMove 会在**每个 touchmove** 都发起
+ * 一次跨线程 SelectorQuery（CONVENTIONS §16 明令禁止）。num/space 变化会
+ * 重置该标志（几何失效，需重新度量）。
+ */
+let rectsRequested = false
 
 const iconStyle = computed(() => {
   if (!props.color) return ''
@@ -62,11 +73,11 @@ watch(
 )
 
 watch([() => props.num, () => props.space], () => {
-  refreshRects()
+  refreshRects(true)
 })
 
 onMounted(() => {
-  refreshRects()
+  refreshRects(true)
 })
 
 const isActive = (rate: string) => rate !== '0'
@@ -100,8 +111,20 @@ function computeRateList() {
   rateList.value = tempRateList
 }
 
-async function refreshRects() {
-  itemRects = await getRect('.wd-rate__item', true, proxy)
+/**
+ * 刷新星星矩形缓存。
+ * @param force 几何失效（num/space 变化、挂载）时强制重新度量；
+ *   缺省为非强制——touchmove 热路径下每个代次最多尝试一次，
+ *   避免度量不可用时每个 touchmove 都发起跨线程查询。
+ */
+async function refreshRects(force = false) {
+  if (force) rectsRequested = false
+  if (rectsRequested) return
+  rectsRequested = true
+  const rects = await getRect('.wd-rate__item', true, proxy)
+  // 回调晚于卸载落地时丢弃：在已销毁树上写模块级缓存会触发晚到 patch（9902）
+  if (!isAlive()) return
+  itemRects = rects
 }
 
 function handleClick(index: number, isHalf: boolean) {

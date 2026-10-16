@@ -26,7 +26,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:css": "node ../../scripts/build-css.mjs",
-    "build": "node ../../scripts/build-css.mjs"
+    "build": "node ../../scripts/build-css.mjs",
+    "gen:index": "node ../../scripts/gen-index.mjs"
   },
   "keywords": [
     "vue",

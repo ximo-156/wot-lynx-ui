@@ -10,7 +10,7 @@ import './index.css'
 
 import { parseStyle } from '../../common/util'
 
-import { computed, ref } from 'vue-lynx'
+import { computed, ref, watch } from 'vue-lynx'
 import { floatingPanelProps } from './types'
 
 const props = defineProps(floatingPanelProps)
@@ -27,12 +27,22 @@ const anchors = computed(() => {
 })
 
 const panelStyle = computed<Record<string, string>>(() => {
-  const style: Record<string, string> = { height: `${currentHeight.value}px` }
-  if (!dragging.value) {
-    style.transition = `height ${props.duration}ms cubic-bezier(0.645, 0.045, 0.355, 1)`
+  // transition 必须显式写 none：Lynx SetStyle 是逐属性合并语义，
+  // 省略键不会清除元素上已应用的过渡（拖拽会不跟手）
+  const style: Record<string, string> = {
+    height: `${currentHeight.value}px`,
+    transition: dragging.value ? 'none' : `height ${props.duration}ms cubic-bezier(0.645, 0.045, 0.355, 1)`
   }
   return { ...style, ...parseStyle(props.customStyle) }
 })
+
+// 外部 height 变化时同步（拖拽中的回写不覆盖用户手势）
+watch(
+  () => props.height,
+  (val) => {
+    if (!dragging.value) currentHeight.value = val
+  }
+)
 
 function onTouchStart(event: any) {
   dragging.value = true
