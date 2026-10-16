@@ -21,10 +21,20 @@ export function addUnit(num: number | string) {
 }
 
 /**
- * 判断 target 是否对象
+ * 判断 target 是否为**普通对象**（plain object）。
+ *
+ * 注意：这里刻意**不**使用 `typeof value === 'object'` 兜底——该写法会让
+ * `null` 与数组同样返回 true（`typeof null === 'object'`、
+ * `typeof [] === 'object'`），而本函数的语义是「可安全按键取值的对象」。
+ *
+ * 历史上这个宽松判定导致 `deepMerge` 把数组与 null 误判为「可递归合并的
+ * 对象」，产生两类真实缺陷（见 test/util-merge.test.ts）：
+ *   - 数组覆盖失效：{ buttons: [1,2,3] } 被 { buttons: [9] } 合并成 [9,2,3]；
+ *   - 无法置空：deepMerge({ a: { x: 1 } }, { a: null }) 结果仍是 { a: { x: 1 } }。
+ * 命令式弹层（wd-dialog / wd-toast / wd-notify）的选项合并全部依赖本函数。
  */
 export function isObj(value: any): value is object {
-  return Object.prototype.toString.call(value) === '[object Object]' || typeof value === 'object'
+  return Object.prototype.toString.call(value) === '[object Object]'
 }
 
 /**
@@ -131,12 +141,23 @@ export const range = (num: number, min: number, max: number): number => {
 }
 
 /**
- * 两个值是否相等
+ * 两个值是否相等（支持基本类型、数组与普通对象的结构比较）
+ *
+ * 注意：只做「数组 / 普通对象 / 基本类型」三类；Date、RegExp、Map、Set、
+ * 函数一律退化为引用比较。函数与类实例**不应**参与结构比较（引用语义正确）。
  */
 export const isEqual = (value1: any, value2: any): boolean => {
   if (value1 === value2) return true
   if (isArray(value1) && isArray(value2) && value1.length === value2.length) {
     return value1.every((item, index) => isEqual(item, value2[index]))
+  }
+  // 普通对象：键集合一致且逐键值相等。
+  // 旧实现只做 `===` 与数组浅比较，导致任意两个内容相同的对象恒判不等——
+  // 依赖它做「无变化则跳过」的守卫（如 wd-upload 的 fileList 比对）会永久失效。
+  if (isObj(value1) && isObj(value2)) {
+    const keys1 = Object.keys(value1 as Record<string, any>)
+    const keys2 = Object.keys(value2 as Record<string, any>)
+    return keys1.length === keys2.length && keys1.every((key) => isEqual((value1 as any)[key], (value2 as any)[key]))
   }
   return false
 }
@@ -669,7 +690,12 @@ export function deepMerge<T extends Record<string, any>>(target: T, source: Reco
     if (Object.prototype.hasOwnProperty.call(source, key)) {
       const sourceValue = source[key]
       const targetValue = result[key]
-      if (isObj(sourceValue) && isObj(targetValue)) {
+      if (isArray(sourceValue)) {
+        // 数组按「整体替换」处理。数组同样是对象，若走下面的深合并分支会按
+        // index 逐位覆盖、保留 target 的尾部元素（[1,2,3] 被 [9] 覆盖后得到
+        // [9,2,3]）。deepClone 一份避免结果与入参共享引用。
+        result[key] = deepClone(sourceValue)
+      } else if (isObj(sourceValue) && isObj(targetValue)) {
         result[key] = deepMerge(targetValue as Record<string, any>, sourceValue)
       } else {
         result[key] = sourceValue
@@ -718,6 +744,14 @@ export interface DebounceOptions {
 
 /**
  * 防抖
+ *
+ * leading / trailing 语义对齐 lodash：
+ * - leading=true 时首次调用立即执行；
+ * - trailing=true 时**仅在 wait 窗口内被调用超过一次**才在窗口末尾补一次。
+ *
+ * 旧实现在 leading 立即执行后仍无条件执行 trailing，导致「单次调用触发两次」，
+ * 调用方（如提交类操作）会重复执行。修复方式：leading 消费掉本次调用后清空
+ * lastArgs，使窗口末尾的 trailing 分支没有可执行的参数。
  */
 export function debounce<T extends (...args: any[]) => any>(func: T, wait: number, options: DebounceOptions = {}): T {
   let timeout: ReturnType<typeof setTimeout> | null = null
@@ -733,6 +767,8 @@ export function debounce<T extends (...args: any[]) => any>(func: T, wait: numbe
     if (timeout === null) {
       if (leading) {
         invoke(args)
+        // 本次调用已被 leading 消费：清空参数，避免窗口末尾再触发一次
+        lastArgs = null
       }
       timeout = setTimeout(() => {
         timeout = null
@@ -828,8 +864,12 @@ export function easingFn(t: number = 0, b: number = 0, c: number = 0, d: number 
 
 /**
  * 寻找最接近目标值的元素
+ *
+ * 空数组返回 undefined（旧实现直接 reduce 无初值，会抛
+ * "Reduce of empty array with no initial value"）。
  */
-export function closest(arr: number[], target: number) {
+export function closest(arr: number[], target: number): number | undefined {
+  if (arr.length === 0) return undefined
   return arr.reduce((prev, curr) => (Math.abs(curr - target) < Math.abs(prev - target) ? curr : prev))
 }
 

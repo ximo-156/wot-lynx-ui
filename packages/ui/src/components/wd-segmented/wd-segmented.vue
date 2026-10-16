@@ -69,9 +69,12 @@ function updateActiveStyle(animation: boolean = true) {
       'z-index': '0'
     }
     const left = rects.slice(0, state.activeIndex).reduce((prev, curr) => prev + Number(curr.width), 0)
-    if (left) {
-      style.transform = `translateX(${left}px)`
-    }
+    // transform 必须**无条件**写入：Lynx 的 SetStyle 是逐属性合并语义（引擎 PAPI
+    // 镜像与 Web 预览运行时均 Object.assign），省略某个键不会清除元素上已应用的
+    // 内联属性。旧实现写作 `if (left) { style.transform = ... }`，在选中首项
+    // （left === 0）时省略 transform，上一次的位移残留 → 滑块停在上一个选项下方。
+    // 同类缺陷参见 wd-transition 的 display、wd-swipe-action 的 transition。
+    style.transform = `translateX(${left}px)`
     if (animation) {
       style.transition = 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)'
     }

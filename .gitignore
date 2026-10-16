@@ -19,11 +19,3 @@ docs/components/*
 .preview/*
 .vscode/*
 .pnpm-store/*
-wot-lynx-ui-项目申报书.md
-
-# 构建与检查脚本 —— 必须入库，CI 依赖它们
-#   scripts/build-css.mjs  : pnpm build:css / verify 的入口，缺失会导致 verify 无法运行
-#   scripts/review-lint.mjs: 规范检查门禁（见 contributing/code-review/05-自动化门禁与CI配置.md）
-scripts/*
-!scripts/build-css.mjs
-!scripts/review-lint.mjs

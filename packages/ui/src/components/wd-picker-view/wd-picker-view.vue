@@ -97,14 +97,24 @@ const pickerViewStyle = computed(() => ({ height: addUnit(containerHeight.value)
 /** 根节点样式（customStyle 为字符串，需 parseStyle 归一为对象，CONVENTIONS §19） */
 const pickerStyle = computed(() => parseStyle(props.customStyle))
 
-/** 列内容位移（对象样式：字符串 :style 会被 vue-lynx 静默丢弃，CONVENTIONS §19） */
+/** 列落位过渡（与落位吸附时长一致） */
+const COLUMN_TRANSITION = 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)'
+
+/**
+ * 列内容位移（对象样式：字符串 :style 会被 vue-lynx 静默丢弃，CONVENTIONS §19）。
+ *
+ * transition 必须**两态都显式写**（拖动中写 `none`）：Lynx 的 SetStyle 是逐属性
+ * 合并语义，省略该键不会清除元素上已应用的过渡。旧实现只在落位态写 transition，
+ * 拖动时省略 → 上一次落位应用的 0.2s 过渡残留，表现为「首次拖动跟手、之后每次
+ * 拖动都带缓动不跟手」。与 wd-swipe-action 跟手时段显式写 `transition: 'none'`
+ * 是同一处理。
+ */
 function columnTransform(colIndex: number): Record<string, string> {
   const offset = offsets.value[colIndex] || 0
-  const style: Record<string, string> = { transform: `translateY(${-offset}px)` }
-  if (transitions.value[colIndex]) {
-    style.transition = 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)'
+  return {
+    transform: `translateY(${-offset}px)`,
+    transition: transitions.value[colIndex] ? COLUMN_TRANSITION : 'none'
   }
-  return style
 }
 
 function getItemClass(disabled: boolean | undefined, colIndex: number, rowIndex: number): string {
