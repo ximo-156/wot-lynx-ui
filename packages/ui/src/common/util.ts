@@ -227,6 +227,19 @@ export interface RectResult {
   [key: string]: any
 }
 
+/** DOM 元素的度量矩形（getRect 的 DOM 兜底路径使用，字段与 RectResult 一致） */
+function toDomRect(el: Element): RectResult {
+  const r = el.getBoundingClientRect()
+  return {
+    left: r.left,
+    top: r.top,
+    right: r.right,
+    bottom: r.bottom,
+    width: r.width,
+    height: r.height
+  }
+}
+
 /**
  * 按 key 去重的告警——同一个问题只提示一次。
  *
@@ -271,16 +284,59 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
      * 被 Lynx Sentry 上报为 USER_RUNTIME_ERROR 并导致整张卡片崩溃：
      * "unhandled rejection: createSelectorQuery is not available"。
      */
+    let settled = false
+    const settle = (value: any) => {
+      if (settled) return
+      settled = true
+      resolve(value)
+    }
     const resolveUnavailable = () => {
       warnSelectorQueryUnavailable()
-      resolve(all ? [] : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 })
+      settle(all ? [] : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 })
+    }
+
+    /**
+     * DOM 度量兜底：Web 预览（或任何提供 DOM 的宿主）中元素位于 lynx-view 的
+     * shadow root 内；组件代码可能运行在 iframe（后台线程 realm），此时其
+     * document 是 iframe 文档，须回退到父文档查找。真机无 DOM，不走此路径。
+     */
+    const domMeasure = (): boolean => {
+      if (typeof document === 'undefined') return false
+      try {
+        const docs: any[] = [document]
+        try {
+          const parentDoc = (globalThis as any).parent?.document
+          if (parentDoc && parentDoc !== document) docs.push(parentDoc)
+        } catch {
+          // 跨 Origin 父文档：忽略
+        }
+        for (const doc of docs) {
+          const host = doc.querySelector('lynx-view')
+          const root: any = host && host.shadowRoot ? host.shadowRoot : doc
+          if (all) {
+            const els = Array.from(root.querySelectorAll(selector)) as Element[]
+            settle(els.map((el) => toDomRect(el)))
+            return true
+          }
+          const el = root.querySelector(selector) as Element | null
+          if (el) {
+            settle(toDomRect(el))
+            return true
+          }
+        }
+      } catch {
+        // DOM 度量失败（选择器不合法等）：返回 false 由调用方兜底
+      }
+      return false
     }
 
     const lynx = (globalThis as any).lynx
     if (!lynx || !lynx.createSelectorQuery) {
       // 宿主运行时未提供 createSelectorQuery（旧版 Lynx 引擎 / 未注册 SelectorQuery
-      // 模块的宿主）时按"测量不可用"兜底，调用方以零矩形保持默认布局。
-      resolveUnavailable()
+      // 模块的宿主 / Web 预览）时，若处于 DOM 环境则退回 DOM 度量——比零矩形兜底
+      // 更能保持交互可用（slider 拖动、swipe-action 操作区宽度、index-bar 定位、
+      // tour 目标定位、popover 定位等在无 SelectorQuery 的宿主上同样工作）。
+      if (!domMeasure()) resolveUnavailable()
       return
     }
     const query = lynx.createSelectorQuery()
@@ -289,9 +345,9 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
         // all 模式：无匹配节点时返回空数组而非 reject。
         // 调用方（rate/tabs/segmented 等）均直接遍历结果，空数组是合法的"无节点"语义；
         // reject 会导致调用方缺少 catch 时产生未处理的 Promise 拒绝。
-        resolve(isArray(rect) ? rect : [])
+        settle(isArray(rect) ? rect : [])
       } else if (rect) {
-        resolve(rect)
+        settle(rect)
       } else {
         // 选择器未命中节点（节点未渲染 / 选择器写错）：与"测量不可用"同一兜底，
         // 避免未处理拒绝崩溃整张卡片。
@@ -299,18 +355,34 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
       }
     }
     const nodesRef = all ? query.selectAll(selector) : query.select(selector)
+    // 超时竞速：个别运行时（如 Web 预览注入的空实现 SelectorQuery）的
+    // createSelectorQuery 存在但永不回调 success/fail——不竞速会让 Promise
+    // 永久挂起，所有依赖度量的交互（slider/tour/popover…）全部失效。
+    // 真机查询在一两帧内回调，不会触发该兜底。
+    const timer = setTimeout(() => {
+      if (settled) return
+      if (!domMeasure()) resolveUnavailable()
+    }, 600)
+    const done = () => clearTimeout(timer)
     try {
       nodesRef
         .invoke({
           method: 'boundingClientRect',
-          success: (res: RectResult) => handleResult(res),
-          fail: () => resolveUnavailable()
+          success: (res: RectResult) => {
+            done()
+            handleResult(res)
+          },
+          fail: () => {
+            done()
+            resolveUnavailable()
+          }
         })
         .exec()
     } catch (error) {
       // 运行时不支持 SelectorQuery.invoke（如 jsdom 测试环境）时，
-      // 返回零尺寸矩形而非 reject，避免调用方缺少 catch 时产生未处理拒绝。
+      // 返回零尺寸矩形而非 reject，避免调用方缺少 catch 时产生未处理的 Promise 拒绝。
       // 真机 Lynx 引擎实现了 invoke，不会走到该分支。
+      done()
       resolveUnavailable()
     }
   })

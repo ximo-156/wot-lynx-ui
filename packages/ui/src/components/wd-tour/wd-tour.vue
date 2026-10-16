@@ -181,7 +181,10 @@ function skip() {
 </script>
 
 <template>
-  <view v-if="modelValue" class="wd-tour">
+  <!-- 度量失败（目标未命中/不可度量）时整体不渲染：根 view 是 position:fixed
+       全屏容器，空渲染会挡住整个页面的交互（Web 预览等无度量能力的环境下
+       必须保持页面可用，真机度量正常时不受影响） -->
+  <view v-if="modelValue && step && measured" class="wd-tour">
     <!-- 高亮框（兼遮罩挖洞）：box-shadow spread 形成遮罩，目标区透出 -->
     <view v-if="step && measured" class="wd-tour__highlight" :style="highlightStyle" />
     <!-- 提示气泡：定位由内联样式驱动 -->

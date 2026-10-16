@@ -7,11 +7,12 @@
 ## 特性
 
 - **🎨 全新设计系统** — `--wd-*` 三层令牌体系（原始色阶/间距/圆角 → 亮暗语义令牌 → 组件令牌），小米 HyperOS 生命感美学 × 苹果 HIG 合成设计：品牌紫 `#7F5CFF`、Apple systemGray 中性阶梯、大圆角现代质感、base/elevated 暗色海拔；换肤只需覆盖 CSS 变量（设计依据见[设计美学研究](./docs/guide/design-research.md)）
-- **⚡ 原生性能** — Lynx 双线程架构：Vue 运行在后台线程，渲染在主线程；拖动/滑动等高频交互在后台线程以响应式实现，跟手时段禁用 CSS transition、落位时恢复；细线边框使用 `1ppx` 物理像素；图标使用原生 SVG 渲染
-- **🧩 API 兼容** — `wd-*` 组件名、props、slots、events 与 wot-ui 对齐，迁移成本低
+- **⚡ 原生性能** — Lynx 双线程架构：Vue 运行在后台线程，渲染在主线程；拖动/滑动等高频交互在后台线程以响应式实现，跟手时段禁用 CSS transition、落位时恢复；细线边框使用 `1ppx` 物理像素；图标使用原生字体渲染
+- **🧩 API 兼容** — 101 个 `wd-*` 组件的名称、props、slots、events 与 wot-ui 对齐，迁移成本低
 - **📦 开箱即用** — 发布预编译 CSS，消费者无需安装 Sass 工具链；组件以源码分发，由 Rspeedy 直接编译，天然支持 Tree-shaking
 - **🌗 主题系统** — CSS 变量驱动的亮色/暗色主题，`wd-config-provider` 全局配置
-- **🧪 可测试** — 基于 @lynx-js/testing-environment 的 Vue Lynx 双线程测试环境，组件测试与真实渲染行为一致
+- **🧰 命令式 API** — `useToast` / `useDialog` / `useNotify` / `useImagePreview` 等弹层命令式调用；`uni` 兼容层支持宿主经 `configureUniAdapter` 注入路由等能力
+- **🧪 可测试** — 基于 @lynx-js/testing-environment 的 Vue Lynx 双线程测试环境，27 个测试文件覆盖组件渲染、交互回归与构建约束
 
 ## 快速开始
 
@@ -114,31 +115,40 @@ createApp(App).use(wotLynxUI)
 
 ## 文档
 
-- [组件文档](./docs/)（VitePress）
-- [Demo 应用](./packages/demo/)（`pnpm dev:demo`）
+- [组件文档](./docs/components/)（VitePress，101 个组件）
+- 指南：
+  [快速开始](./docs/guide/quick-start.md) ·
+  [主题与设计令牌](./docs/guide/theme.md) ·
+  [内置图标](./docs/guide/icons.md) ·
+  [高性能实践](./docs/guide/performance.md) ·
+  [与 wot-ui 的差异](./docs/guide/differences.md) ·
+  [真机测试指南](./docs/guide/device-testing.md) ·
+  [设计美学研究](./docs/guide/design-research.md)
+- [Demo 应用](./packages/demo/)（`pnpm dev:demo`，覆盖全部 101 个组件）
 - [重写规范](./CONVENTIONS.md)（为 Lynx 重写的完整约定）
 
 ## 真机测试
 
-仓库内置**真机测试 Demo**（59 个测试项的清单页），支持 Lynx Explorer 扫码直接在真机验证：
+仓库内置**真机测试 Demo**（8 个分组 / 35 个测试项的清单页），支持 Lynx Explorer 扫码直接在真机验证：
 
 ```bash
 pnpm dev:device-test   # 启动后扫描终端中的 device-test 二维码
 ```
 
-测试页覆盖：按钮按压缩态、Slider/SwipeAction 拖动跟手、弹层、表单键盘、长列表滚动、亮暗主题等。
+测试页按清单逐项验证：按钮按压缩态、Slider/SwipeAction 拖动跟手、弹层、表单键盘、长列表滚动、亮暗主题等，勾选后顶部实时显示完成进度。
 详见[真机测试指南](./docs/guide/device-testing.md)。
 
 ## 开发
 
 ```bash
-pnpm install          # 安装依赖
+pnpm install          # 安装依赖（Node.js >= 20）
 pnpm build:css        # 编译 SCSS → CSS（组件样式）
 pnpm dev:demo         # 启动 Demo（Rspeedy dev server）
 pnpm build:demo       # 构建 Demo（web + lynx 双端）
 pnpm typecheck        # 类型检查
 pnpm test             # 单元测试（Vue Lynx 双线程环境）
 pnpm docs:dev         # 文档站
+pnpm verify           # 一键校验：CSS 编译 + 类型检查 + 测试 + Demo 构建
 ```
 
 ## 目录结构
@@ -148,17 +158,18 @@ wot-lynx-ui/
 ├── packages/
 │   ├── ui/                       # wot-lynx-ui 组件库（源码分发）
 │   │   ├── src/
-│   │   │   ├── components/       # 102 个 wd-* 组件（types.ts + .vue + index.scss + index.css）
+│   │   │   ├── components/       # 101 个 wd-* 组件（types.ts + .vue + index.scss + index.css）
 │   │   │   ├── composables/      # 组合式函数（useParent/useChildren/useTouch...）
-│   │   │   ├── common/           # 工具函数 / props / 日期格式化（dayjs）/ vue-lynx Transition 兼容层
+│   │   │   ├── common/           # 工具函数 / props / 日期格式化（dayjs）/ vue-lynx Transition 兼容层 / uni 兼容层
 │   │   │   ├── icons/            # 180 个内置图标（registry 注册表：iconfont 字体集，含 .ttf）
 │   │   │   ├── locale/           # 16 种语言
 │   │   │   └── styles/           # 主题变量 / mixin / BEM
-│   │   ├── test/                 # 双线程测试环境与用例（vitest）
+│   │   ├── plugin/               # Rspeedy 标签兼容插件（wd-* → PascalCase）
+│   │   ├── test/                 # 双线程测试环境与用例（vitest，27 个测试文件）
 │   │   └── vitest.config.ts
-│   └── demo/                     # Vue Lynx Demo 应用（Rspeedy，双端构建）
-├── docs/                         # VitePress 文档站（102 个组件文档）
-├── scripts/                      # CSS 编译
+│   └── demo/                     # Vue Lynx Demo 应用（Rspeedy，双端构建，含 device-test 真机测试入口）
+├── docs/                         # VitePress 文档站（8 篇指南 + 101 个组件文档）
+├── scripts/                      # CSS 编译 / 图标生成 / 文档生成
 ├── CONVENTIONS.md                # Lynx 重写规范
 └── README.md
 ```

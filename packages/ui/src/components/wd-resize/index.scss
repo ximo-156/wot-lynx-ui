@@ -3,10 +3,11 @@
 @include b(resize) {
   width: 100%;
 
-  /* 容器脱离文档流：插槽内容驱动其尺寸，不受父容器固宽固高限制（对齐 wot-ui） */
+  /* 容器保持在文档流：宽度 100%（跟随父级），高度由插槽内容驱动；
+     探测 scroll-view 绝对定位铺满容器（见 wrapper） */
   @include e(container) {
-    position: absolute;
-    min-width: 1px;
+    position: relative;
+    width: 100%;
     min-height: 1px;
   }
 
@@ -23,7 +24,7 @@
   }
 
   /* expand 探测占位：100000px（远超任何容器，用于检测变大） */
-  @include m(placeholder) {
+  @include e(placeholder) {
     @include when(expand) {
       height: 100000px;
       width: 100000px;

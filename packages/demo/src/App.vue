@@ -1050,7 +1050,9 @@ const portalBarVisible = ref(false)
         <view class="demo-panel">
           <text class="demo-panel__label">内容尺寸变化时触发 resize</text>
           <wd-resize @resize="onResize">
-            <view :style="`height: ${resizeHeight}px; background: #edf1ff; border-radius: 8px; padding: 12px`">
+            <!-- 对象语法：字符串 :style 会被 vue-lynx 静默丢弃（CONVENTIONS §19），
+                 高度变化必须真实生效才能触发 wd-resize -->
+            <view :style="{ height: `${resizeHeight}px`, background: '#edf1ff', 'border-radius': '8px', padding: '12px' }">
               <text class="demo-tag">高度 {{ resizeHeight }}px · resize 触发 {{ resizeCount }} 次</text>
             </view>
           </wd-resize>
