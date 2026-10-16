@@ -161,7 +161,7 @@ defineExpose<PickerExpose>({
       :safe-area-inset-bottom="safeAreaInsetBottom"
       :root-portal="rootPortal"
       custom-class="wd-picker__popup"
-      @cancel="onCancel"
+      @close="onCancel"
     >
       <view class="wd-picker__wraper">
         <view class="wd-picker__toolbar">

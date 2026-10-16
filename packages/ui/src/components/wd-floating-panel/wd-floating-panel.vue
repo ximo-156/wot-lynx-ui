@@ -66,7 +66,15 @@ function onTouchEnd() {
     <view class="wd-floating-panel__header" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
       <view class="wd-floating-panel__handle" />
     </view>
-    <scroll-view scroll-y class="wd-floating-panel__content" :show-scrollbar="showScrollbar">
+    <scroll-view
+      scroll-y
+      class="wd-floating-panel__content"
+      :show-scrollbar="showScrollbar"
+      @touchstart="contentDraggable ? onTouchStart : undefined"
+      @touchmove="contentDraggable ? onTouchMove : undefined"
+      @touchend="contentDraggable ? onTouchEnd : undefined"
+      @touchcancel="contentDraggable ? onTouchEnd : undefined"
+    >
       <slot />
     </scroll-view>
   </view>

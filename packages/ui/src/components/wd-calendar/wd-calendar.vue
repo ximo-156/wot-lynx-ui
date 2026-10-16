@@ -29,11 +29,14 @@ const { translate } = useTranslate('calendar')
 
 const pickerShow = ref<boolean>(false)
 const calendarValue = ref<null | number | number[]>(null)
+/** 打开时的值快照：非确认关闭时回滚（取消不回滚到旧值） */
 const lastCalendarValue = ref<null | number | number[]>(null)
 const confirmBtnDisabled = ref<boolean>(true)
 const currentTab = ref<number>(0)
 const currentType = ref<CalendarType>('date')
 const activeShortcutIndex = ref<number>(-1)
+/** 确认路径标记：确认关闭时不派发 cancel、不回滚未提交值 */
+const isConfirming = ref<boolean>(false)
 
 const isRangeType = computed(() => currentType.value.indexOf('range') > -1)
 
@@ -108,7 +111,19 @@ watch(
 
 watch(pickerShow, (val) => {
   emit('update:visible', val)
-  if (!val) {
+  if (val) {
+    // 打开时快照当前值：非确认关闭时回滚到此快照；
+    // 同时复位确认标记（beforeConfirm 未决期间用户已取消时防止残留）
+    isConfirming.value = false
+    lastCalendarValue.value = deepClone(calendarValue.value)
+    emit('open')
+  } else if (isConfirming.value) {
+    // 确认路径：不清标志位外的任何状态，由 onConfirm 负责复位
+    isConfirming.value = false
+  } else {
+    // 取消 / 点遮罩关闭：恢复快照，丢弃未提交的选择（参考实现 handleClosed）
+    calendarValue.value = deepClone(lastCalendarValue.value)
+    confirmBtnDisabled.value = getConfirmBtnStatus(calendarValue.value)
     emit('cancel')
   }
 })
@@ -130,17 +145,37 @@ function handleTypeChange(tab: { type: CalendarType; label: string }) {
 }
 
 function handleShortcutClick(index: number) {
-  const item = props.shortcuts[index]
+  // 设置激活的快捷选项
   activeShortcutIndex.value = index
-  if (props.onShortcutsClick) {
-    props.onShortcutsClick(item)
+
+  if (props.onShortcutsClick && typeof props.onShortcutsClick === 'function') {
+    // 参考实现的入参形状为 { item, index }，返回值即新的选中值
+    calendarValue.value = deepClone(
+      props.onShortcutsClick({
+        item: props.shortcuts[index],
+        index
+      })
+    )
+    confirmBtnDisabled.value = getConfirmBtnStatus(calendarValue.value)
+  }
+
+  // showConfirm=false 时无确认入口，选完即自动确认
+  if (!props.showConfirm) {
+    onConfirm()
   }
 }
 
 function handleChange({ value }: any) {
   calendarValue.value = value
   confirmBtnDisabled.value = getConfirmBtnStatus(value)
+  // 用户手动切换日期时重置快捷选项激活状态
+  activeShortcutIndex.value = -1
   emit('change', { value })
+
+  // showConfirm=false 时无确认入口，选完即自动确认
+  if (!props.showConfirm && !confirmBtnDisabled.value) {
+    onConfirm()
+  }
 }
 
 function onConfirm() {
@@ -150,6 +185,9 @@ function onConfirm() {
       // beforeConfirm 可返回未决 Promise：期间组件/页面可能已卸载，
       // done 落地时不得在已销毁树上写 ref（真机 9902 晚到 patch 家族）。
       if (!isAlive()) return
+      // 先打确认标记再关：watch(pickerShow) 据此跳过 cancel 与回滚
+      //（此前确认时 cancel 与 confirm 会同时触发）
+      isConfirming.value = true
       pickerShow.value = false
       emit('update:modelValue', calendarValue.value)
       emit('confirm', { value: calendarValue.value })
@@ -182,9 +220,11 @@ defineExpose<CalendarExpose>({
       :z-index="zIndex"
       :root-portal="rootPortal"
       custom-class="wd-calendar__popup"
-      @cancel="close"
+      @close="close"
     >
       <view class="wd-calendar__header">
+        <!-- 弹层标题（title prop 此前从未渲染） -->
+        <text v-if="title" class="wd-calendar__title">{{ title }}</text>
         <!-- 类型切换 -->
         <view v-if="showTypeSwitch" class="wd-calendar__tabs">
           <view

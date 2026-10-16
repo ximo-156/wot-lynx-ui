@@ -70,7 +70,8 @@ const percentPositionType = computed(() => props.percentPosition?.type || 'outer
       <view class="wd-progress__track" :style="trackStyle">
         <view class="wd-progress__inner" :style="{ ...rootStyle, ...innerStyle }">
           <template v-if="percentPositionType === 'inner'">
-            <view v-if="!hideText" class="wd-progress__label">{{ percentage }}%</view>
+            <!-- 文本包 text：Lynx view 内裸文本不渲染（CONVENTIONS §4） -->
+            <text v-if="!hideText" class="wd-progress__label">{{ percentage }}%</text>
             <wd-icon
               v-else-if="status"
               custom-class="wd-progress__label wd-progress__icon"

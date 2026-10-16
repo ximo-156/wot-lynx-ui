@@ -12,6 +12,14 @@
     padding: var(--wd-space-2) var(--wd-space-4) 0;
   }
 
+  @include e(title) {
+    padding: var(--wd-space-2) 0;
+    font-size: var(--wd-font-md);
+    font-weight: var(--wd-font-weight-medium);
+    color: var(--wd-text-1);
+    text-align: center;
+  }
+
   @include e(tabs) {
     display: flex;
     flex-direction: row;

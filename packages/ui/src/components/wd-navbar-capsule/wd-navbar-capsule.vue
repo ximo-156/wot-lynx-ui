@@ -36,11 +36,12 @@ function handleHome() {
 <template>
   <view :class="`wd-navbar-capsule ${border ? 'is-border' : ''} ${customClass}`" :style="rootStyle">
     <view v-if="showBack" class="wd-navbar-capsule__item" @tap="handleBack">
-      <wd-icon name="arrow-left-bold" custom-class="wd-navbar-capsule__icon" />
+      <!-- color 必须显式传给 wd-icon：字体字形自带内联 color，根 view 的 color 继承不到 -->
+      <wd-icon name="arrow-left-bold" custom-class="wd-navbar-capsule__icon" :color="color" />
     </view>
     <view v-if="showBack && showHome" class="wd-navbar-capsule__divider" />
     <view v-if="showHome" class="wd-navbar-capsule__item" @tap="handleHome">
-      <wd-icon name="home" custom-class="wd-navbar-capsule__icon" />
+      <wd-icon name="home" custom-class="wd-navbar-capsule__icon" :color="color" />
     </view>
   </view>
 </template>

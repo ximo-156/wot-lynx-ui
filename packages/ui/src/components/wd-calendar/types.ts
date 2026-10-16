@@ -6,7 +6,13 @@ export type CalendarBeforeConfirm = (value: number | number[] | null) => boolean
 
 export type CalendarInnerDisplayFormat = (value: number, rangeType: 'start' | 'end', type: CalendarType) => string
 
-export type CalendarOnShortcutsClick = (item: Record<string, any>) => void
+export type CalendarOnShortcutsClickOption = {
+  item: Record<string, any>
+  index: number
+}
+
+/** 快捷选项点击回调：入参 { item, index }，返回新的选中值 */
+export type CalendarOnShortcutsClick = (option: CalendarOnShortcutsClickOption) => number | number[]
 
 export const calendarProps = {
   ...baseProps,

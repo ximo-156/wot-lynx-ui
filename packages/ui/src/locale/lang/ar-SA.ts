@@ -103,7 +103,9 @@ export default {
     all: 'الجميع'
   },
   upload: {
-    error: 'فشل التحميل'
+    error: 'فشل التحميل',
+    file: 'ملف',
+    retry: 'إعادة المحاولة'
   },
   input: {
     placeholder: 'الرجاء إدخال المعلومات...'

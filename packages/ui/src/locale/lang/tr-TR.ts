@@ -108,7 +108,9 @@ export default {
     all: 'Hepsi'
   },
   upload: {
-    error: 'Yükleme başarısız'
+    error: 'Yükleme başarısız',
+    file: 'Dosya',
+    retry: 'Tekrar deneyin'
   },
   input: {
     placeholder: 'Lütfen girin...'

@@ -9,15 +9,23 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, useSlots } from 'vue-lynx'
+import { computed, inject, onMounted, ref, useSlots } from 'vue-lynx'
 import WdBadge from '../wd-badge/wd-badge.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { gridItemProps } from './types'
 import { uni } from '../../common/uni'
+import { GRID_CONFIG_KEY } from '../wd-grid/types'
+import { filterStyle, getRect, parseStyle, uuid } from '../../common/util'
 
 const props = defineProps(gridItemProps)
 const slots = useSlots()
 const emit = defineEmits(['click', 'tap'])
+
+/** 父级 grid 下发的 square/border/clickable 配置（无父级 grid 时全 false） */
+const gridConfig = inject(
+  GRID_CONFIG_KEY,
+  computed(() => ({ square: false, border: false, clickable: false }))
+)
 
 const hasIcon = computed(() => Boolean(props.icon || props.cssIcon || slots.icon))
 
@@ -33,15 +41,42 @@ function isDef(value: any): boolean {
   return value !== undefined && value !== null
 }
 
+/** 实例唯一类名（square 模式度量用） */
+const instanceId = `wd-grid-item-${uuid()}`
+
+/** 正方形格子的实测高度（0 表示未度量/非正方形模式） */
+const squareHeight = ref(0)
+
+onMounted(() => {
+  if (!gridConfig.value.square) return
+  getRect(`.${instanceId}`)
+    .then((rect) => {
+      if (rect && rect.width) squareHeight.value = rect.width
+    })
+    .catch(() => {})
+})
+
 const rootClass = computed(() => {
   const classes = ['wd-grid-item']
+  if (gridConfig.value.square) {
+    classes.push('is-square')
+    // 实例唯一类名：getRect 的静态类名选择器只会命中页面第一个节点，
+    // 同页多个 grid-item 需要实例级选择器才能度量到自身（同 usePopover 方案）
+    classes.push(instanceId)
+  }
+  if (gridConfig.value.border) classes.push('is-border')
   if (props.customClass) classes.push(props.customClass)
   return classes.join(' ')
 })
 
+// 对象语法：字符串 :style 会被 vue-lynx patchProp 静默丢弃（CONVENTIONS §19）
 const rootStyle = computed(() => {
-  const vars = '--wd-grid-item-column: var(--wd-grid-column, 4);'
-  return `${vars}${props.customStyle || ''}`
+  return filterStyle({
+    '--wd-grid-item-column': 'var(--wd-grid-column, 4)',
+    // 正方形格子：Lynx 无 aspect-ratio，挂载后度量宽度写入高度（一次性，CONVENTIONS §16）
+    ...(squareHeight.value ? { height: `${squareHeight.value}px` } : {}),
+    ...parseStyle(props.customStyle)
+  })
 })
 
 function click() {

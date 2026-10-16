@@ -10,7 +10,7 @@
 import './index.css'
 import { parseStyle } from '../../common/util'
 
-import { computed, ref } from 'vue-lynx'
+import { computed, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { searchProps } from './types'
 import { useTranslate } from '../../composables/useTranslate'
@@ -24,6 +24,24 @@ const inputValue = computed(() => props.modelValue)
 
 const isFocused = ref<boolean>(false)
 const showInput = ref<boolean>(false)
+
+// focus prop 驱动 input 显隐与聚焦（进入页面即聚焦弹键盘的用法）。
+// 此前模板只绑内部 isFocused、props.focus 从未被读取：传 focus=true 时
+// 连 input 元素都不渲染（showInput 初始 false），prop 完全死亡。
+watch(
+  () => props.focus,
+  (newValue) => {
+    if (newValue) {
+      // 禁用态不抢焦（与 wot-ui 一致）：保持封面占位
+      if (props.disabled) return
+      showInput.value = true
+      isFocused.value = true
+    } else {
+      isFocused.value = false
+    }
+  },
+  { immediate: true }
+)
 
 const coverStyle = computed<Record<string, string>>(() => {
   return props.placeholderLeft ? ({ display: 'none' } as Record<string, string>) : ({} as Record<string, string>)

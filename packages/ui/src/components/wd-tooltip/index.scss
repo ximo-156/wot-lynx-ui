@@ -32,16 +32,17 @@
     color: var(--wd-white);
   }
 
-  @include e(arrow) {
-    position: absolute;
-    width: 0;
-    height: 0;
-    border-left-width: 5px;
-    border-left-style: solid;
-    border-left-color: transparent;
-    border-right-width: 5px;
-    border-right-style: solid;
-    border-right-color: transparent;
+  /* 箭头四方向三角形：补全 up/down/left/right（此前无方向规则 → 箭头不可见） */
+  @include triangleArrow(5px, var(--wd-gray-9));
+
+  /* 点击空白关闭的透明全屏 backdrop */
+  @include e(backdrop) {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
   }
 
   @include e(close-icon) {
@@ -49,6 +50,8 @@
   }
 
   @include e(target) {
+    position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: row;
   }

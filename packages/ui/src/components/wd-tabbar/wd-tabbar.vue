@@ -17,8 +17,11 @@ const emit = defineEmits(['change', 'update:modelValue'])
 const { linkChildren } = useChildren(TABBAR_KEY)
 
 function setChange(child: { name: string | number }) {
+  // 点已激活项早退（wot-ui 同）：不重复 update:modelValue / change
+  if (child.name === props.modelValue) return
   emit('update:modelValue', child.name)
-  emit('change', { name: child.name })
+  // change 载荷与 wot-ui 一致：{ value }
+  emit('change', { value: child.name })
 }
 
 linkChildren({

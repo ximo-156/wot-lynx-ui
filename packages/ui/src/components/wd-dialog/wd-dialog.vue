@@ -47,6 +47,8 @@ const dialogState = reactive({
   actionLayout: props.actionLayout,
   showErr: props.showErr,
   inputError: props.inputError,
+  inputPattern: props.inputPattern,
+  inputValidate: props.inputValidate,
   headerImage: props.headerImage,
   icon: props.icon,
   iconColor: props.iconColor,
@@ -113,7 +115,9 @@ function getCancelText(): string {
 
 function toggleModal(action: 'confirm' | 'cancel' | 'modal' | 'close') {
   if (action === 'modal') {
-    if (props.closeOnClickModal) {
+    // 统一读 dialogState：命令式选项（closeOnClickModal）只进 dialogState，
+    // 读 props 会让命令式 closeOnClickModal:true 时 cancel 回调不触发。
+    if (dialogState.closeOnClickModal) {
       handleCancel()
     }
     return
@@ -127,15 +131,16 @@ function toggleModal(action: 'confirm' | 'cancel' | 'modal' | 'close') {
 
 function onConfirm() {
   if (dialogState.type === 'prompt') {
-    // 输入校验
+    // 输入校验统一读 dialogState：命令式选项（inputPattern / inputValidate /
+    // inputError）只进 dialogState，读 props 会跳过命令式校验。
     const value = String(inputVal.value)
-    const pattern = props.inputPattern
+    const pattern = dialogState.inputPattern
     if (pattern && !pattern.test(value)) {
       dialogState.showErr = true
-      dialogState.inputError = props.inputError || translate('inputNoValidate')
+      dialogState.inputError = dialogState.inputError || translate('inputNoValidate')
       return
     }
-    callInterceptor(props.inputValidate ? () => props.inputValidate!(value) : undefined, {
+    callInterceptor(dialogState.inputValidate ? () => dialogState.inputValidate!(value) : undefined, {
       args: [],
       done: () => confirm(value)
     })

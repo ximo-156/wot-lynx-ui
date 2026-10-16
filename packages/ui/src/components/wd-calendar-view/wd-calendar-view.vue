@@ -18,7 +18,7 @@ import './index.css'
 import { computed, ref, watch } from 'vue-lynx'
 import WdPickerView from '../wd-picker-view/wd-picker-view.vue'
 import { calendarViewProps, type CalendarDayItem, type CalendarDayType, type CalendarType } from './types'
-import { padZero, parseStyle } from '../../common/util'
+import { isDef, padZero, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 
 const { translate } = useTranslate('calendar-view')
@@ -38,7 +38,12 @@ const displayMonth = ref<number>(0)
 /** 内部选中值 */
 const innerValue = ref<number | number[] | null>(null)
 
-const isRangeType = computed(() => props.type === 'daterange' || props.type === 'datetimerange' || props.type === 'weekrange')
+/**
+ * 是否区间类型。
+ * 注意：month / monthrange 的"按月粒度"选择尚未实现（wot-ui 有独立
+ * month-panel），当前回落为按日粒度处理，见 onDayClick 分支注释。
+ */
+const isRangeType = computed(() => props.type === 'daterange' || props.type === 'datetimerange' || props.type === 'weekrange' || props.type === 'monthrange')
 const isMultipleType = computed(() => props.type === 'dates')
 const hasTime = computed(() => props.type === 'datetime' || props.type === 'datetimerange')
 
@@ -107,28 +112,40 @@ const dayRows = computed<CalendarDayItem[][]>(() => {
   return rows
 })
 
+/** 今天判定（is-current 高亮用） */
+function isToday(time: number): boolean {
+  const d = new Date(time)
+  const now = new Date()
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+}
+
+/** 无选中态时回退：今天返回 'current' */
+function fallbackCurrent(time: number): CalendarDayType {
+  return isToday(time) ? 'current' : ''
+}
+
 /** 日期类型判定 */
 function getDayType(time: number): CalendarDayType {
   const value = innerValue.value
-  if (value === null || value === undefined) return ''
+  if (value === null || value === undefined) return fallbackCurrent(time)
 
   if (isMultipleType.value && Array.isArray(value)) {
-    return value.some((v) => isSameDay(v, time)) ? 'multiple-selected' : ''
+    return value.some((v) => isSameDay(v, time)) ? 'multiple-selected' : fallbackCurrent(time)
   }
 
   if (isRangeType.value && Array.isArray(value)) {
     const [start, end] = value
-    if (!start) return ''
-    if (isSameDay(start, time) && (!end || props.allowSameDay)) return end ? 'start' : 'start'
+    if (!start) return fallbackCurrent(time)
+    if (isSameDay(start, time) && (!end || props.allowSameDay)) return 'start'
     if (end && isSameDay(end, time)) return 'end'
     if (end && time > start && time < end) return 'middle'
-    return ''
+    return fallbackCurrent(time)
   }
 
   if (typeof value === 'number') {
-    return isSameDay(value, time) ? 'selected' : ''
+    return isSameDay(value, time) ? 'selected' : fallbackCurrent(time)
   }
-  return ''
+  return fallbackCurrent(time)
 }
 
 function isSameDay(a: number, b: number): boolean {
@@ -157,8 +174,14 @@ function onDayClick(item: CalendarDayItem) {
   const value = innerValue.value
 
   if (isRangeType.value) {
+    // 区间选择状态机：innerValue 为 [start, 0] 表示"已选起点、未选终点"
+    // （pending 哨兵），[start, end] 为已完成区间。
+    // 判定必须是"尚未形成可完成区间才重新开始"——曾用 arr.length === 2
+    // 判定，pending 的 [start, 0] 长度同样为 2，被误判为已完成区间，
+    // 第二次点击永远重新开始，确认按钮永远置灰。
+    // （month / monthrange 暂按日粒度回落，见 isRangeType 注释。）
     const arr = Array.isArray(value) ? [...value] : []
-    if (arr.length === 0 || arr.length === 2) {
+    if (arr.length === 0 || !isDef(arr[1])) {
       innerValue.value = [item.date, 0]
     } else {
       let start = arr[0]
@@ -167,7 +190,11 @@ function onDayClick(item: CalendarDayItem) {
         ;[start, end] = [end, start]
       }
       if (props.maxRange && (end - start) / 86400000 + 1 > props.maxRange) {
-        emit('change', { value: innerValue.value, error: 'max-range' })
+        // 超出最大可选天数：只重置为新的起点并提示，不发出半截区间
+        //（change 只发完整值；pending 状态经 update:modelValue 同步视图）
+        console.warn(translate('rangePrompt', props.maxRange))
+        innerValue.value = [item.date, 0]
+        emit('update:modelValue', innerValue.value)
         return
       }
       innerValue.value = [start, withDefaultTime(end)]
@@ -186,13 +213,22 @@ function onDayClick(item: CalendarDayItem) {
     if (type === 'week') {
       innerValue.value = weekStart
     } else {
+      // weekrange 与 daterange 同一套状态机（pending 哨兵 [start, 0]），
+      // 判定同步修正：只有未形成可完成区间时才重新开始。
       const arr = Array.isArray(value) ? [...value] : []
-      if (arr.length === 0 || arr.length === 2) {
+      if (arr.length === 0 || !isDef(arr[1])) {
         innerValue.value = [weekStart, 0]
       } else {
         let start = arr[0]
         let end = weekStart
         if (end < start) [start, end] = [end, start]
+        if (props.maxRange && (end - start) / 86400000 / 7 + 1 > props.maxRange) {
+          // 超出最大可选周数：只重置为新的起点并提示，不发出半截区间
+          console.warn(translate('rangePromptWeek', props.maxRange))
+          innerValue.value = [weekStart, 0]
+          emit('update:modelValue', innerValue.value)
+          return
+        }
         innerValue.value = [start, end]
       }
     }

@@ -44,12 +44,10 @@ const pickerValue = ref<Array<Numeric>>([])
 /** 列数据：依赖 innerValue */
 const columns = computed(() => {
   const { formatter, columnFormatter } = props
-  // 原始列（type/values 形式）先过 columnFormatter，再映射为 label/value 形式
-  let rawColumns = getOriginColumns()
-  if (columnFormatter) {
-    rawColumns = columnFormatter(rawColumns)
-  }
-  return rawColumns.map((column) => {
+  // 先映射为 label/value 列，再交给 columnFormatter——与 wot-ui 一致：
+  // columnFormatter 收到的是映射后的列数组（PickerOption[][]），
+  // 而非原始 {type, values} 形式（此前传原始列，钩子拿不到 label）。
+  const mappedColumns = getOriginColumns().map((column) => {
     return column.values.map((value) => {
       return {
         label: formatter ? formatter(column.type, padZero(value)) : padZero(value),
@@ -57,6 +55,7 @@ const columns = computed(() => {
       }
     })
   })
+  return columnFormatter ? columnFormatter(mappedColumns) : mappedColumns
 })
 
 watch(
@@ -209,12 +208,16 @@ function updateInnerValue(indexes: Array<string | number>): string | number {
 function correctValue(value: string | number | Date): string | number {
   const isDateType = props.type !== 'time'
   if (isDateType && !isValidDate(value)) {
+    // 是Date类型，但入参不可用，使用最小时间戳代替
     value = props.minDate
   } else if (!isDateType && !value) {
+    // 非Date类型，无入参，使用最小小时代替
     value = props.useSecond ? `${padZero(props.minHour)}:00:00` : `${padZero(props.minHour)}:00`
   }
 
+  // 当type为time时
   if (!isDateType) {
+    // 非Date类型，直接走此逻辑
     let [hour, minute, second = '00'] = (isString(value) ? value : value.toString()).split(':')
     hour = padZero(range(Number(hour), props.minHour, props.maxHour))
     minute = padZero(range(Number(minute), props.minMinute, props.maxMinute))
@@ -222,14 +225,26 @@ function correctValue(value: string | number | Date): string | number {
     return props.useSecond ? `${hour}:${minute}:${second}` : `${hour}:${minute}`
   }
 
-  if (isDateType) {
-    const date = new Date(value)
-    const max = new Date(props.maxDate)
-    const min = new Date(props.minDate)
-    if (date.getTime() > max.getTime()) return props.maxDate
-    if (date.getTime() < min.getTime()) return props.minDate
+  // date type：钳制到 [minDate, maxDate]。
+  //
+  // 不能用 isValidDate + new Date(value) 的组合：Number.isNaN(字符串) 恒为
+  // false，isValidDate 会放过数字字符串（types.ts 允许 [String, Number]），
+  // 而 new Date("1700000000000") 是 Invalid Date，year 取到 NaN 后
+  // times(NaN) 的 Array(NaN) 直接抛 RangeError: Invalid array length
+  // （挂载即崩）。
+  //
+  // 也不能像参考实现那样直接 Number(value)：日期字符串（"2024-01-01"）会被
+  // Number() 归一为 NaN 而丢失。这里先按 Date 解析（覆盖时间戳 / 日期字符串
+  // / Date 实例），解析失败再按数值兜底（覆盖数字字符串），都失败回落 minDate。
+  const parsed = new Date(value as any)
+  let timestamp = parsed.getTime()
+  if (Number.isNaN(timestamp)) {
+    timestamp = Number(value)
+    if (Number.isNaN(timestamp)) {
+      return props.minDate
+    }
   }
-  return value as string | number
+  return Math.min(Math.max(timestamp, props.minDate), props.maxDate)
 }
 
 function onPickStart() {

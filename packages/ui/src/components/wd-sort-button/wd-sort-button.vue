@@ -1,8 +1,8 @@
 /*
  * wd-sort-button — 排序按钮
  *
- * Lynx 实现说明：三态循环（无 → 升序 → 降序 → 无），
- * descFirst 时降序优先；allowReset 控制是否回到无排序。
+ * Lynx 实现说明：三态循环（默认 无 → 降序 → 升序 → 无），
+ * descFirst 时升序优先；allowReset 控制是否回到无排序。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -22,18 +22,34 @@ const rootClass = computed(() => {
   return classes.join(' ')
 })
 
+/**
+ * 处理点击事件，按排序循环切换排序方向（与 wot-ui 对齐）：
+ * descFirst 开启时循环：0 → -1(升) → 1(降) → (allowReset ? 0 : -1)
+ * descFirst 关闭时循环：0 → 1(降) → -1(升) → (allowReset ? 0 : 1)
+ *
+ * 曾把降序当作首态且 allowReset=false 时仍会回到 0（第三态无守卫），
+ * 三态方向与 wot-ui 相反。
+ */
 function handleClick() {
-  const order: SortButtonValue[] = props.descFirst
-    ? [1, -1, 0]
-    : [-1, 1, 0]
-  const current = props.modelValue as SortButtonValue
-  const next: SortButtonValue = props.allowReset
-    ? order[(order.indexOf(current) + 1) % order.length]
-    : current === 0
-      ? order[0]
-      : current === order[0]
-        ? order[1]
-        : 0
+  const value = props.modelValue as SortButtonValue
+  let next: SortButtonValue
+  if (props.descFirst) {
+    if (value === 0) {
+      next = -1
+    } else if (value === -1) {
+      next = 1
+    } else {
+      next = props.allowReset ? 0 : -1
+    }
+  } else {
+    if (value === 0) {
+      next = 1
+    } else if (value === 1) {
+      next = -1
+    } else {
+      next = props.allowReset ? 0 : 1
+    }
+  }
   emit('update:modelValue', next)
   emit('change', { value: next } as SortButtonChangeDetail)
   emit('click')

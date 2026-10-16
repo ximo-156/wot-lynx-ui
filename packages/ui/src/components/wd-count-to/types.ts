@@ -59,3 +59,13 @@ export const countToProps = {
 }
 
 export type CountToProps = ExtractPropTypes<typeof countToProps>
+
+/** 命令式 API（defineExpose，与 wot-ui 的 CountToExpose 对齐） */
+export type CountToExpose = {
+  /** 开始计数 */
+  start: () => void
+  /** 暂停计数 */
+  pause: () => void
+  /** 重置计数，若 autoStart 为 true，重置后会自动开始计数 */
+  reset: () => void
+}

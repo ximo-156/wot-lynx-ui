@@ -221,17 +221,39 @@ function placeFunctional(matrix: (boolean | null)[][], size: number, version: nu
     if (!reserved[size - 1 - i][8]) setFn(size - 1 - i, 8, false)
   }
 
-  // 版本信息（v7+）
+  // 版本信息（v7+）：BCH(18,6) 版本位，生成多项式 0x1F25（ISO/IEC 18004 §7.9）
+  // 历史版本只预留位置不写入（全 false），解码器读到的版本信息恒为 0，
+  // v7+ 的码（UTF-8 ≥107 字节）全部不可解码（jsQR 实证：v1-v6 正常、
+  // v8/v9/v10 失败，写回正确版本位后立即解码成功）。
   if (version >= 7) {
+    const vBits = versionInfoBits(version)
     for (let i = 0; i < 18; i++) {
       const r = Math.floor(i / 3)
       const c = size - 11 + (i % 3)
-      setFn(r, c, false)
-      setFn(c, r, false)
+      setFn(r, c, vBits[i] === 1) // 右上块（rows 0-5 × cols size-11..size-9）
+      setFn(c, r, vBits[i] === 1) // 左下块（rows size-11..size-9 × cols 0-5）
     }
   }
 
   return reserved
+}
+
+/**
+ * 版本信息位（BCH(18,6)，generator 0x1F25）。
+ * 返回 18 位、低位在前（i=0 为 bit0），与放置循环的 i=0..17 对应：
+ * 放置几何（右上 rows 0-5 × cols size-11..size-9，左下为其转置）下，
+ * i=17 的位置承载 18 位值的最高位（jsQR/ZXing 均按此序读取，
+ * 已双解码器实证：v8/v9/v10 精确解码）。
+ */
+function versionInfoBits(version: number): number[] {
+  let rem = version
+  for (let i = 0; i < 12; i++) {
+    rem = (rem << 1) ^ ((rem >>> 11) * 0x1f25)
+  }
+  const bits = (version << 12) | (rem & 0xfff)
+  const result: number[] = []
+  for (let i = 0; i < 18; i++) result.push((bits >>> i) & 1)
+  return result
 }
 
 /** 数据位放置（Z 字形） */

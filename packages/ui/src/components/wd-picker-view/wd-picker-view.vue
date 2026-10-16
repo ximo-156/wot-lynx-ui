@@ -120,13 +120,35 @@ function maxOffset(colIndex: number): number {
   return Math.max(0, (count - 1) * props.itemHeight)
 }
 
-/** 由位移反推索引（含禁用项修正） */
+/**
+ * 由位移反推索引：仅做 round + 边界钳制。
+ * 禁用项的就近迁移不在此处做——统一由 correctSelected（经 selectedIndex
+ * 变更链路）处理，避免同一修正出现两份逻辑。
+ */
 function offsetToIndex(colIndex: number, offset: number): number {
   const count = formatColumns.value[colIndex]?.length || 0
   if (count === 0) return 0
   let index = Math.round(offset / props.itemHeight)
   index = Math.min(Math.max(index, 0), count - 1)
   return index
+}
+
+/**
+ * 级联模式且 columns 为树形数据（首项为带 children 的对象）时才需要
+ * 在列变化后重建后续列；普通二维列数据无 children 可重建。
+ */
+function isCascadeTree(): boolean {
+  if (!props.cascade) return false
+  const first = (props.columns as any[])[0]
+  return !isArray(first) && isObj(first)
+}
+
+/** 级联重建：变化列之后的子列按参考实现重建并写回（含自动选中首个可用项） */
+function rebuildCascadeColumns(columnIndex: number) {
+  if (!isCascadeTree()) return
+  const rebuilt = updateCascadeColumns(props.columns as PickerOption[], columnIndex)
+  formatColumns.value = rebuilt.columns
+  selectedIndex.value = rebuilt.selectedIndex
 }
 
 function onTouchStart(event: any, colIndex: number) {
@@ -152,10 +174,14 @@ function onTouchMove(event: any, colIndex: number) {
   if (props.immediateChange) {
     const index = offsetToIndex(colIndex, Math.min(Math.max(offset, 0), max))
     if (selectedIndex.value[colIndex] !== index) {
+      const origin = [...selectedIndex.value]
       const next = [...selectedIndex.value]
       next[colIndex] = index
       selectedIndex.value = correctSelected(next)
-      emitChange(getChangeColumnIndex(selectedIndex.value, next))
+      // 级联模式：父列变化后重建后续子列（曾只重置选中索引，子列永远
+      // 显示旧 children——wd-cascader 因此完全不可用）
+      rebuildCascadeColumns(colIndex)
+      emitChange(getChangeColumnIndex(selectedIndex.value, origin))
     }
   }
 }
@@ -175,6 +201,8 @@ function onTouchEnd(colIndex: number) {
   selectedIndex.value = correctSelected(next)
   // 禁用项迁移后位移跟随
   offsets.value[colIndex] = selectedIndex.value[colIndex] * props.itemHeight
+  // 级联模式：父列变化后重建后续子列
+  rebuildCascadeColumns(colIndex)
   emit('pickend')
   emitChange(getChangeColumnIndex(selectedIndex.value, origin))
 }

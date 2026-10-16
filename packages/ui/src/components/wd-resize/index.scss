@@ -3,17 +3,36 @@
 @include b(resize) {
   width: 100%;
 
+  /* 容器脱离文档流：插槽内容驱动其尺寸，不受父容器固宽固高限制（对齐 wot-ui） */
   @include e(container) {
-    position: relative;
-    width: 100%;
+    position: absolute;
+    min-width: 1px;
+    min-height: 1px;
   }
 
+  /* 探测 scroll-view：绝对定位铺满容器、隐藏、置于底层，不拦截交互 */
   @include e(wrapper) {
     position: absolute;
-    left: 0;
     top: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: -9999;
+    overflow: hidden;
+    visibility: hidden;
+  }
+
+  /* expand 探测占位：100000px（远超任何容器，用于检测变大） */
+  @include m(placeholder) {
+    @include when(expand) {
+      height: 100000px;
+      width: 100000px;
+    }
+
+    /* shrink 探测占位：250%（随容器伸缩，用于检测变小） */
+    @include when(shrink) {
+      height: 250%;
+      width: 250%;
+    }
   }
 }

@@ -21,7 +21,8 @@ const emit = defineEmits(['finish', 'change'])
 const { current, start, pause, reset } = useCountDown({
   time: props.time,
   millisecond: props.millisecond,
-  onChange: (value) => emit('change', { current: value }),
+  // change 载荷与 wot-ui 一致：直接发 CurrentTime 对象（不再外包一层 current）
+  onChange: (value) => emit('change', value),
   onFinish: () => emit('finish')
 })
 

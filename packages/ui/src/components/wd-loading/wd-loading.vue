@@ -77,8 +77,9 @@ function staggerDelay(index: number, step: number): Record<string, string> {
         </view>
       </view>
     </view>
+    <!-- 兜底文本包 text：Lynx view 内裸文本不渲染（CONVENTIONS §4） -->
     <view v-if="$slots.default || text" class="wd-loading__text">
-      <slot>{{ text }}</slot>
+      <slot><text>{{ text }}</text></slot>
     </view>
   </view>
 </template>

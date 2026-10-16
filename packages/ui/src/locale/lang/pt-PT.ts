@@ -103,7 +103,9 @@ export default {
     all: 'Todos'
   },
   upload: {
-    error: 'Falha ao carregar'
+    error: 'Falha ao carregar',
+    file: 'Arquivo',
+    retry: 'Tentar novamente'
   },
   input: {
     placeholder: 'Por favor insira...'

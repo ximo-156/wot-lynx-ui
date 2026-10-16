@@ -9,6 +9,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { rowProps } from './types'
+import { filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(rowProps)
 
@@ -18,8 +19,12 @@ const rootClass = computed(() => {
   return classes.join(' ')
 })
 
+// 对象语法：字符串 :style 会被 vue-lynx patchProp 静默丢弃（CONVENTIONS §19）
 const rootStyle = computed(() => {
-  return `${props.customStyle || ''}${props.gutter ? `--wd-row-gutter: ${props.gutter / 2}px;` : ''}`
+  return filterStyle({
+    ...(props.gutter ? { '--wd-row-gutter': `${props.gutter / 2}px` } : {}),
+    ...parseStyle(props.customStyle)
+  })
 })
 </script>
 

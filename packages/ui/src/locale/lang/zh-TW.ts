@@ -50,7 +50,7 @@ export default {
   search: { search: '搜索', cancel: '取消' },
   steps: { wait: '未開始', finished: '已完成', process: '進行中', failed: '失敗' },
   tabs: { all: '全部' },
-  upload: { error: '上傳失敗' },
+  upload: { error: '上傳失敗', file: '文件', retry: '重試' },
   input: { placeholder: '請輸入...' },
   selectPicker: { title: '請選擇', placeholder: '請選擇', select: '確認', confirm: '確認', filterPlaceholder: '搜索' },
   tag: { placeholder: '請輸入', add: '新增標籤' },

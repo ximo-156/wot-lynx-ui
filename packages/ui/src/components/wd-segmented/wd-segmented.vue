@@ -88,6 +88,8 @@ function updateValue(newValue: string | number, option: string | number | Segmen
 
 /** 根据当前值更新激活索引，未匹配时回落第一项 */
 function updateCurrentIndex() {
+  // options 为空数组时早退：否则会 emit update:value=undefined
+  if (!props.options.length) return
   const index = props.options.findIndex((option) => isEqual(optionValue(option), props.value))
   if (index >= 0) {
     state.activeIndex = index

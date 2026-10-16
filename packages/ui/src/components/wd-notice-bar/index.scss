@@ -34,6 +34,14 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+
+    /* 横向跑马灯：文本按自然宽度排版不压缩（flex 子项默认 flex-shrink:1，
+       会被容器按比例压缩导致宽度度量失真，CONVENTIONS §19），溢出由 wrap 裁剪 */
+    &.is-marquee {
+      .wd-notice-bar__text {
+        flex-shrink: 0;
+      }
+    }
   }
 
   @include e(text) {

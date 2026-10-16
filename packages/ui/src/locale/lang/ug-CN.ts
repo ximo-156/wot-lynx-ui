@@ -107,7 +107,9 @@ export default {
     all: 'ھەممىسى'
   },
   upload: {
-    error: 'يوللاش مەغلۇپ بولدى'
+    error: 'يوللاش مەغلۇپ بولدى',
+    file: 'ھۆججەت',
+    retry: 'قايتا سىناڭ'
   },
   input: {
     placeholder: 'كىرگۈزۈڭ...'

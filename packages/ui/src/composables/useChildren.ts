@@ -88,6 +88,9 @@ export function useChildren<
 
     const unlink = (child: ComponentInternalInstance) => {
       const index = internalChildren.indexOf(child)
+      // 未注册（重复 unlink / link 前卸载的异常路径）时 indexOf 为 -1，
+      // splice(-1, 1) 会误删最后一个子组件
+      if (index === -1) return
       publicChildren.splice(index, 1)
       internalChildren.splice(index, 1)
     }

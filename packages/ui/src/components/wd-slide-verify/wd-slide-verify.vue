@@ -6,6 +6,7 @@
  *   落位用 transform + transition 回弹（不用 MTS，CONVENTIONS §10）；
  * - 轨道宽度挂载后一次性度量并缓存，touchmove 热路径只读缓存
  *   （CONVENTIONS §16）；
+ * - 滑块 touchmove 带 .stop.prevent：竖向拖动时避免页面滚动接手势；
  * - 容错像素 tolerance 内视为通过。
  */
 <script lang="ts" setup>
@@ -132,7 +133,7 @@ function onTouchEnd() {
       <view
         class="wd-slide-verify__button"
         @touchstart="onTouchStart"
-        @touchmove="onTouchMove"
+        @touchmove.stop.prevent="onTouchMove"
         @touchend="onTouchEnd"
         @touchcancel="onTouchEnd"
       >

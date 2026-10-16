@@ -9,7 +9,13 @@ export type DatetimePickerViewFilter = (props: { type: DatetimePickerViewColumnT
 
 export type DatetimePickerViewFormatter = (type: DatetimePickerViewColumnType, value: string) => string
 
-export type DatetimePickerViewColumnFormatter = (columns: Array<{ type: DatetimePickerViewColumnType; values: number[] }>) => Array<{ type: DatetimePickerViewColumnType; values: number[] }>
+/**
+ * 列格式化：收到的是**映射后**的列数组（每列为 { label, value } 选项），
+ * 与 wot-ui 对齐；返回值替换整列数据。
+ */
+export type DatetimePickerViewColumnFormatter = (
+  columns: Array<Array<{ label: string; value: number }>>
+) => Array<Array<{ label: string; value: number }>>
 
 export const datetimePickerViewProps = {
   ...baseProps,

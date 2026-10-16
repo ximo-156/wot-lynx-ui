@@ -12,10 +12,11 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, onMounted, ref } from 'vue-lynx'
+import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue-lynx'
 import { signatureProps, type SignatureEmits, type SignatureExpose } from './types'
 import { getRect, sanitizeSvgContent, uuid, filterStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(signatureProps)
 const emit = defineEmits<SignatureEmits>()
@@ -34,13 +35,36 @@ const currentStroke = ref<number[] | null>(null)
 const isDrawing = ref<boolean>(false)
 const canvasRect = ref<{ left: number; top: number }>({ left: 0, top: 0 })
 const { proxy } = getCurrentInstance() as any
+const isAlive = useAlive()
 
 onMounted(() => {
-  // 画布位置一次性度量，触摸坐标以此为基准（CONVENTIONS §16）
-  getRect(`#${canvasId.value}`, false, proxy).then((data) => {
-    canvasRect.value = { left: Number(data.left) || 0, top: Number(data.top) || 0 }
-  })
+  measureCanvas()
 })
+
+watch([() => props.width, () => props.height], () => {
+  measureCanvas()
+})
+
+/**
+ * 画布位置 + 尺寸一次性度量（CONVENTIONS §16）。
+ *
+ * viewBox 与 confirm() 导出共用这里的实测值：index.scss 的画布是
+ * width:100% / height:200px，此前硬编码 300×200 的 viewBox 会在
+ * x>300 的区域把笔画裁掉（真机屏宽 ≥375px）。度量不可用（零矩形，
+ * 如 createSelectorQuery 缺失）时保留默认值兜底。
+ */
+function measureCanvas() {
+  getRect(`#${canvasId.value}`, false, proxy).then((data) => {
+    // 度量回调晚于组件卸载落地时丢弃：在已销毁树上写 ref 会触发
+    // vue-lynx 继续 patch，产生晚到的 remove/insert（真机 9902 removeNode 家族）。
+    if (!isAlive()) return
+    canvasRect.value = { left: Number(data.left) || 0, top: Number(data.top) || 0 }
+    const width = Number(data.width) || 0
+    const height = Number(data.height) || 0
+    if (width > 0) canvasWidth.value = width
+    if (height > 0) canvasHeight.value = height
+  })
+}
 
 const currentStep = computed(() => strokes.value.length)
 
@@ -144,7 +168,7 @@ defineExpose<SignatureExpose>({
 <template>
   <view class="wd-signature">
     <view class="wd-signature__content">
-      <view class="wd-signature__content-canvas" :style="canvasStyle">
+      <view :id="canvasId" class="wd-signature__content-canvas" :style="canvasStyle">
         <svg :content="svgContent" />
       </view>
       <!-- 触摸层 -->
@@ -159,16 +183,16 @@ defineExpose<SignatureExpose>({
     <view class="wd-signature__footer">
       <slot name="footer" :clear="clear" :confirm="confirm" :current-step="currentStep" :revoke="revoke" :restore="restore">
         <view class="wd-signature__footer-button" @tap="revoke">
-          <text>{{ revokeText || translate('revoke') }}</text>
+          <text>{{ revokeText || translate('revokeText') }}</text>
         </view>
         <view class="wd-signature__footer-button" @tap="restore">
-          <text>{{ restoreText || translate('restore') }}</text>
+          <text>{{ restoreText || translate('restoreText') }}</text>
         </view>
         <view class="wd-signature__footer-button" @tap="clear">
-          <text>{{ clearText || translate('clear') }}</text>
+          <text>{{ clearText || translate('clearText') }}</text>
         </view>
         <view class="wd-signature__footer-button wd-signature__footer-button--confirm" @tap="confirm">
-          <text>{{ confirmText || translate('confirm') }}</text>
+          <text>{{ confirmText || translate('confirmText') }}</text>
         </view>
       </slot>
     </view>

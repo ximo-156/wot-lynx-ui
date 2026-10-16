@@ -103,7 +103,9 @@ export default {
     all: 'Tous'
   },
   upload: {
-    error: 'Échec du téléchargement'
+    error: 'Échec du téléchargement',
+    file: 'Fichier',
+    retry: 'Réessayer'
   },
   input: {
     placeholder: 'Veuillez entrer des informations...'

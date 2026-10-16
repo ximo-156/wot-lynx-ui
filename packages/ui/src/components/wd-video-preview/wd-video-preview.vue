@@ -74,7 +74,7 @@ defineExpose<VideoPreviewExpose>({
     @enter="handleEnter"
     @after-leave="handleAfterLeave"
   >
-    <view :class="videoClass" @click.stop="">
+    <view :class="videoClass" @tap.stop>
       <video
         v-if="state.visible"
         :id="videoId"
@@ -88,7 +88,7 @@ defineExpose<VideoPreviewExpose>({
         :enable-progress-gesture="false"
       />
     </view>
-    <view :class="`wd-video-preview__close wd-video-preview__close--${options.closePosition}`" @click.stop="close">
+    <view :class="`wd-video-preview__close wd-video-preview__close--${options.closePosition}`" @tap.stop="close">
       <wd-icon name="close" custom-class="wd-video-preview__close-icon" />
     </view>
   </wd-overlay>

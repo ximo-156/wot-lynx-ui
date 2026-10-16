@@ -28,9 +28,12 @@ const expanded = computed(() => {
 })
 
 function handleClick() {
-  emit('click')
+  // 禁用态早退：不再先 emit('click') 再 return
   if (props.disabled) return
-  collapse.value?.toggle(String(props.name), !expanded.value)
+  emit('click')
+  // 传原始 name（保留数字/字符串类型），toggle 内部统一转 String 比较；
+  // name 未传时回落空串（与 modelValue 默认 '' 对齐）
+  collapse.value?.toggle(props.name ?? '', !expanded.value)
 }
 </script>
 

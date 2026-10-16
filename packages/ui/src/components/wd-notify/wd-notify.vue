@@ -49,6 +49,41 @@ watch(
   { deep: true }
 )
 
+// 声明式 props 同步：state 初始为 props 快照（ref({ ...props })），此前无 watch，
+// 挂载后 :visible/:message/:type/:duration 等声明式变更全部无效。此处把关键
+// props 的后续变更汇入 state（visible 变化可开/关），与命令式通道并存。
+watch(
+  () => [
+    props.visible,
+    props.message,
+    props.type,
+    props.duration,
+    props.color,
+    props.background,
+    props.position,
+    props.zIndex,
+    props.safeHeight,
+    props.closable,
+    props.variant
+  ],
+  () => {
+    if (!isAlive()) return
+    applyOptions({
+      visible: props.visible,
+      message: props.message,
+      type: props.type,
+      duration: props.duration,
+      color: props.color,
+      background: props.background,
+      position: props.position,
+      zIndex: props.zIndex,
+      safeHeight: props.safeHeight,
+      closable: props.closable,
+      variant: props.variant
+    })
+  }
+)
+
 const popupStyle = computed(() => {
   return `background-color: transparent;${state.value.safeHeight ? `padding-top: ${state.value.safeHeight}px;` : ''}`
 })

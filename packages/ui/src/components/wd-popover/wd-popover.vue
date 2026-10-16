@@ -8,7 +8,7 @@
 import './index.css'
 import { parseStyle } from '../../common/util'
 
-import { computed, ref, useSlots } from 'vue-lynx'
+import { computed, onMounted, ref, useSlots, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import { popoverProps, type PopoverExpose, type PopoverMenuItem } from './types'
@@ -45,8 +45,41 @@ function toFloatingPlacement(placement: string): any {
 // 按 placement/offset 初始化与更新定位。
 // 第三个参数为 BEM 类名前缀（popover），节点度量走 usePopover 生成的实例唯一 id
 // （静态 id 在同页多实例下会撞引擎 id 注册表，见 usePopover.ids 注释）。
-popover.init(toFloatingPlacement(props.placement), props.visibleArrow, 'popover')
-popover.control(toFloatingPlacement(props.placement), props.offset as any)
+//
+// ① 初始化定位移到 onMounted：setup 同步执行时目标节点尚未渲染，getRect 取不到
+//    尺寸（width/height=0），此前在 setup 里同步算一次导致定位恒为 0 且之后无
+//    重算。onMounted 时 DOM 就绪，度量可拿到真实尺寸。
+const placement = computed(() => toFloatingPlacement(props.placement))
+
+function controlPosition() {
+  popover.control(placement.value, props.offset as any)
+}
+
+/** 重新度量目标/气泡尺寸并重算定位 */
+function refreshPosition() {
+  popover.init(placement.value, props.visibleArrow, 'popover')
+  controlPosition()
+}
+
+onMounted(() => {
+  refreshPosition()
+})
+
+// ② / ⑥ 打开时重新定位：normal 模式下隐藏副本与真实内容同尺寸，updatePosition
+//    的尺寸比对不会触发重算，故打开时显式 control 一次强制重算。
+watch(showPopover, (val) => {
+  if (val) {
+    refreshPosition()
+  }
+})
+
+// ③ placement 变化时重新定位。
+watch(
+  () => props.placement,
+  () => {
+    controlPosition()
+  }
+)
 
 const showStyle = computed(() => popover.showStyle.value)
 
@@ -76,6 +109,8 @@ function close() {
 
 function menuClick(index: number) {
   emit('menuclick', { index, item: (props.content as PopoverMenuItem[])[index] })
+  // 选中菜单项后关闭气泡（同步内部状态与 v-model）
+  close()
 }
 
 function updatePosition() {
@@ -94,6 +129,9 @@ defineExpose<PopoverExpose>({ open, close, updatePosition })
         </view>
       </view>
     </view>
+    <!-- ⑤ 点击空白关闭：透明全屏 backdrop 捕获气泡外 tap（Lynx 无全局 click，
+         module 级 clickoutside/useQueue 队列未接全局监听，故用自包含 backdrop） -->
+    <view v-if="showPopover" class="wd-popover__backdrop" @tap.stop="close" />
     <wd-transition
       custom-class="wd-popover__pos"
       :custom-style="popover.popStyle.value"

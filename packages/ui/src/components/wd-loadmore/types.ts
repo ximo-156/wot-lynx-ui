@@ -1,15 +1,15 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
-import { baseProps, makeStringProp } from '../../common/props'
+import { baseProps } from '../../common/props'
 import type { LoadingProps } from '../wd-loading/types'
 
-export type LoadMoreState = 'loading' | 'error' | 'finished' | 'loading'
+export type LoadMoreState = 'loading' | 'error' | 'finished'
 
 export const loadmoreProps = {
   ...baseProps,
   /**
-   * 状态
+   * 状态（无默认值：不传时不渲染任何状态内容，与 wot-ui 一致）
    */
-  state: makeStringProp<LoadMoreState>('loading'),
+  state: String as PropType<LoadMoreState>,
   /**
    * 加载中文字
    */

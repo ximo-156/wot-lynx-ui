@@ -40,6 +40,39 @@ const carKeyboardLang = computed({
 
 const keys = computed(() => (props.mode !== 'car' ? (props.mode === 'custom' ? genCustomKeys() : genDefaultKeys()) : genCarKeys()))
 
+/**
+ * 每行槽位数：普通键占 1 槽，wider 键（车牌键盘的中英切换 / 删除键、
+ * 自定义键盘加宽的 0 键）占 2 槽。
+ */
+const KEY_ROW_SLOTS = 3
+
+/**
+ * 按键按 3 槽一行切分成显式行。
+ *
+ * Lynx 新 CSS 引擎下 flex-wrap 的 flex line 会被拉伸（参照 wd-calendar-view：
+ * 行高从 52px 涨到 ~150px），且 flex-basis:0 时所有按键假设主尺寸为 0、
+ * 永不换行——12 个键全部挤成一行。故与 calendar-view 一样用显式行容器，
+ * 行内再用 flex-grow 分配宽度（普通键 grow:1、wider 键 grow:2），
+ * Web / Lynx 两端布局一致。
+ */
+const keyRows = computed(() => {
+  const rows: Key[][] = []
+  let row: Key[] = []
+  let slots = 0
+  for (const key of keys.value) {
+    const need = key.wider ? 2 : 1
+    if (slots + need > KEY_ROW_SLOTS) {
+      rows.push(row)
+      row = []
+      slots = 0
+    }
+    row.push(key)
+    slots += need
+  }
+  if (row.length) rows.push(row)
+  return rows
+})
+
 const showClose = computed(() => {
   return Boolean(props.closeText && (props.mode === 'default' || props.mode === 'car'))
 })
@@ -125,7 +158,9 @@ function handlePress(text: string, type: NumberKeyType) {
     }
   }
 
-  const value = props.modelValue
+  // Vue 只对 undefined 应用 prop 默认值，显式传入的 null 不套用：
+  // 直接对 null 调用 slice/length 会抛未捕获 TypeError，故入口统一归一。
+  const value = String(props.modelValue ?? '')
   if (type === 'delete') {
     emit('delete')
     const newValue = value.slice(0, value.length - 1)
@@ -170,7 +205,9 @@ function handlePress(text: string, type: NumberKeyType) {
       <template v-if="mode !== 'car'">
         <view class="wd-keyboard__body">
           <view class="wd-keyboard__keys">
-            <wd-key v-for="(key, keyIndex) in keys" :key="`${key.type}-${key.text}-${keyIndex}`" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
+            <view v-for="(row, rowIndex) in keyRows" :key="`row-${rowIndex}`" class="wd-keyboard__row">
+              <wd-key v-for="(key, keyIndex) in row" :key="`${key.type}-${key.text}-${keyIndex}`" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
+            </view>
           </view>
           <view v-if="mode === 'custom'" class="wd-keyboard__sidebar">
             <wd-key v-if="showDeleteKey" large :text="deleteText" type="delete" @press="handlePress" />
@@ -181,7 +218,9 @@ function handlePress(text: string, type: NumberKeyType) {
       <template v-else>
         <view class="wd-keyboard__body">
           <view class="wd-keyboard__keys">
-            <wd-key v-for="(key, keyIndex) in keys" :key="`${key.type}-${key.text}-${keyIndex}`" :text="key.text" :type="key.type" :wider="key.wider" is-car @press="handlePress" />
+            <view v-for="(row, rowIndex) in keyRows" :key="`row-${rowIndex}`" class="wd-keyboard__row">
+              <wd-key v-for="(key, keyIndex) in row" :key="`${key.type}-${key.text}-${keyIndex}`" :text="key.text" :type="key.type" :wider="key.wider" is-car @press="handlePress" />
+            </view>
           </view>
         </view>
       </template>

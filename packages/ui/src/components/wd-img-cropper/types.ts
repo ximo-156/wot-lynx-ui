@@ -26,10 +26,9 @@ export const imgCropperProps = {
    * 确认按钮文字
    */
   confirmButtonText: String,
-  /**
-   * 是否禁用旋转
-   */
-  disabledRotate: makeBooleanProp(false),
+  // 注意：wot-ui 的 disabledRotate（是否禁用旋转）在本降级版中未实现——
+  // 组件没有旋转 UI（旋转能力仅经 expose 的 setRotate 以编程方式提供），
+  // 该 prop 已从定义中删除，避免"声明但完全不生效"的无效 API。
   /**
    * 导出文件类型
    */

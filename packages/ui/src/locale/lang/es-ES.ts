@@ -103,7 +103,9 @@ export default {
     all: 'Todos'
   },
   upload: {
-    error: 'Error al Subir'
+    error: 'Error al Subir',
+    file: 'Archivo',
+    retry: 'Reintentar'
   },
   input: {
     placeholder: 'Por favor ingrese información...'

@@ -103,7 +103,9 @@ export default {
     all: '모두'
   },
   upload: {
-    error: '업로드 오류'
+    error: '업로드 오류',
+    file: '파일',
+    retry: '재시도'
   },
   input: {
     placeholder: '정보를 입력해주세요...'

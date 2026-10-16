@@ -28,6 +28,10 @@ const itemWidth = ref(0)
 /** 用户正在滑动（滚动事件防抖标记，避免与 scroll-left 程序定位互搏） */
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 const userScrolling = ref(false)
+/** 自动播放定时器 */
+let playTimer: ReturnType<typeof setInterval> | null = null
+/** 循环切换到首页时禁用一帧动画（避免倒滑全部页面） */
+const wrapNoAnim = ref(false)
 
 watch(
   () => props.current,
@@ -57,18 +61,47 @@ const indicators = computed(() => Array.from({ length: itemCount.value }, (_, i)
 /** 滚动位置（当前页偏移） */
 const scrollLeft = computed(() => current.value * itemWidth.value)
 
+/** 自动播放是否应运行 */
+const shouldAutoplay = computed(() => props.autoplay && props.interval > 0 && itemCount.value > 1)
+
+function startAutoplay() {
+  stopAutoplay()
+  if (!shouldAutoplay.value) return
+  playTimer = setInterval(() => {
+    if (!isAlive()) return
+    // 用户正在滑动时跳过本轮，避免与手势互搏
+    if (userScrolling.value) return
+    next()
+  }, props.interval)
+}
+
+function stopAutoplay() {
+  if (playTimer) {
+    clearInterval(playTimer)
+    playTimer = null
+  }
+}
+
+watch(shouldAutoplay, (val) => {
+  if (val) startAutoplay()
+  else stopAutoplay()
+})
+
 onMounted(() => {
   getRect('.wd-swiper__scroll', false, proxy).then((data) => {
     // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive()) return
     const width = Number(data.width) || 0
     itemWidth.value = width / Math.max(props.displayMultipleItems, 1)
+    // 度量完成后布局才稳定，此时启动自动播放
+    startAutoplay()
   })
 })
 
-// 防抖定时器不得活过组件：卸载后 250ms 到期的回调会写 userScrolling，
+// 防抖定时器与播放定时器不得活过组件：卸载后到期的回调会写 ref，
 // 在已销毁树上继续 patch（真机 9902 晚到 patch 家族）。
 onUnmounted(() => {
+  stopAutoplay()
   if (scrollTimer) {
     clearTimeout(scrollTimer)
     scrollTimer = null
@@ -77,7 +110,9 @@ onUnmounted(() => {
 
 function onScroll(e: any) {
   const left = Number(e.detail?.scrollLeft || 0)
-  const index = Math.round(left / Math.max(itemWidth.value, 1))
+  // itemWidth 未度量（0）时不换算：round(任意值/1) 会产生离谱 index
+  if (itemWidth.value <= 0) return
+  const index = Math.round(left / itemWidth.value)
   if (index !== current.value) {
     current.value = index
     emit('update:current', index)
@@ -98,14 +133,31 @@ function onClick(index: number) {
 
 function next() {
   const total = itemCount.value || 1
+  if (current.value === total - 1) {
+    if (!props.circular) return
+    // 循环：禁用一帧滚动动画，避免从末页倒滑回首页
+    wrapNoAnim.value = true
+    setTimeout(() => {
+      if (isAlive()) wrapNoAnim.value = false
+    }, 50)
+  }
   current.value = (current.value + 1) % total
   emit('update:current', current.value)
+  emit('change', { current: current.value })
 }
 
 function prev() {
   const total = itemCount.value || 1
+  if (current.value === 0) {
+    if (!props.circular) return
+    wrapNoAnim.value = true
+    setTimeout(() => {
+      if (isAlive()) wrapNoAnim.value = false
+    }, 50)
+  }
   current.value = (current.value - 1 + total) % total
   emit('update:current', current.value)
+  emit('change', { current: current.value })
 }
 
 defineExpose<SwiperExpose>({ next, prev })
@@ -117,7 +169,7 @@ defineExpose<SwiperExpose>({ next, prev })
       scroll-x
       :show-scrollbar="false"
       :scroll-left="scrollLeft"
-      :scroll-with-animation="true"
+      :scroll-with-animation="!wrapNoAnim"
       class="wd-swiper__scroll"
       @scroll="onScroll"
     >

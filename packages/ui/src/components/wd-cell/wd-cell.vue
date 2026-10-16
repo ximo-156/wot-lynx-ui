@@ -131,7 +131,7 @@ function onClick() {
           <slot v-if="useTitleSlot && $slots.title" name="title" />
           <text v-else-if="title" :class="customTitleClass">{{ title }}</text>
           <slot v-if="useLabelSlot && $slots.label" name="label" />
-          <view v-else-if="label" :class="`wd-cell__label ${customLabelClass}`">{{ label }}</view>
+          <view v-else-if="label" :class="`wd-cell__label ${customLabelClass}`"><text>{{ label }}</text></view>
         </view>
         <text v-if="required && !hideAsterisk && asteriskPosition === 'end'" class="wd-cell__required">*</text>
       </view>
@@ -145,7 +145,8 @@ function onClick() {
               { 'wd-cell__value--ellipsis': ellipsis, 'wd-cell__placeholder': showPlaceholder }
             ]"
           >
-            <slot>{{ showPlaceholder ? placeholder : value }}</slot>
+            <!-- 兜底内容包 text：Lynx view 内裸文本不渲染（CONVENTIONS §4） -->
+            <slot><text>{{ showPlaceholder ? placeholder : value }}</text></slot>
           </view>
           <wd-icon
             v-if="isLink"

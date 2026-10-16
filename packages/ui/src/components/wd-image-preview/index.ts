@@ -26,7 +26,9 @@ export function useImagePreview(selector: string = '') {
     }
   }
 
-  return { previewImage, closeImagePreview }
+  // 暴露注入的 option ref：组件侧需 watch 它才能消费页面级
+  // useImagePreview(selector).previewImage() 命令式调用（对齐 wd-notify）。
+  return { previewImage, closeImagePreview, options }
 }
 
 export const getImagePreviewOptionKey = (selector: string) => {

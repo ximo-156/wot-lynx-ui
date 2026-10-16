@@ -26,6 +26,8 @@ import { parseStyle } from '../../common/util'
 const props = defineProps(popupProps)
 const emit = defineEmits([
   'update:modelValue',
+  'click-modal',
+  'close',
   'before-enter',
   'enter',
   'after-enter',
@@ -59,12 +61,26 @@ const style = computed<Record<string, string>>(() => {
 })
 
 function handleClickModal() {
+  // 遮罩点击事件（wot-ui 契约）：无论 closeOnClickModal 与否都派发，
+  // 由消费方自行决定是否关闭——wd-keyboard / wd-dialog / wd-action-sheet
+  // 经此同步受控状态（缺失时点遮罩只改写 v-model 的 show，props.visible
+  // 不同步，再次触发打不开，见 keyboard 重开回归）。
+  emit('click-modal')
   if (props.closeOnClickModal) {
-    emit('update:modelValue', false)
+    close()
   }
 }
 
+/**
+ * 关闭流程：更新受控状态的同时派发 'close'。
+ *
+ * 消费方（picker / datetime-picker / cascader / select-picker / calendar）
+ * 依赖关闭通知执行取消态复位（重置内部未提交值、回滚快照）——此前它们绑的
+ * 是 '@cancel'，而 wd-popup 的 defineEmits 既无 'cancel' 也无 'close'，
+ * 监听穿透 $attrs 落到根原生元素上成为死监听，遮罩关闭时不派发任何事件。
+ */
 function close() {
+  emit('close')
   emit('update:modelValue', false)
 }
 

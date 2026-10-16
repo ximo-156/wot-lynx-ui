@@ -8,21 +8,19 @@
   bottom: 0;
   z-index: 1000;
 
-  @include e(mask) {
+  /* 高亮框：position / 宽高 / 圆角由内联样式（度量目标元素）驱动；
+     遮罩经 box-shadow spread 形成（见 wd-tour.vue），此处仅描边。 */
+  @include e(highlight) {
     position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    background-color: #00000099;
+    box-sizing: border-box;
+    border-width: 2px;
+    border-style: solid;
+    border-color: var(--wd-color-primary);
   }
 
+  /* 提示气泡：left / top / width 由内联样式驱动，不再写死 */
   @include e(bubble) {
     position: absolute;
-    left: 50%;
-    top: 40%;
-    transform: translate(-50%, -50%);
-    width: 280px;
     padding: var(--wd-space-3);
     background-color: var(--wd-bg-elevated);
     border-radius: var(--wd-radius-lg);

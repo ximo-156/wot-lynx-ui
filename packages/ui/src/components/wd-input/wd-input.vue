@@ -19,6 +19,7 @@ import { useParent } from '../../composables/useParent'
 import { useTranslate } from '../../composables/useTranslate'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { FORM_ITEM_VALIDATE_KEY } from '../../composables/useFormItemValidate'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(inputProps)
 const emit = defineEmits([
@@ -38,6 +39,7 @@ const emit = defineEmits([
 const { translate } = useTranslate('input')
 const { parent: formItemValidate } = useParent(FORM_ITEM_VALIDATE_KEY)
 const isDisabled = useFormDisabled(props)
+const isAlive = useAlive()
 
 const isPwdVisible = ref<boolean>(false)
 const clearing = ref<boolean>(false)
@@ -110,12 +112,20 @@ function getInitValue() {
   return formatted
 }
 
-function formatValue(value: string | number) {
+/**
+ * 值归一：null 与 undefined 一视同仁归一为 ''。
+ *
+ * Vue 只对 undefined 应用 prop 默认值，显式传入的 null 不套用：此前
+ * null 会被原样返回，模板 `:value="String(inputValue)"` 渲染出字面量
+ * "null"，maxlength 场景下 `value.toString()` 还会直接抛 TypeError。
+ */
+function formatValue(value: string | number | null | undefined) {
+  const normalized = isDef(value) ? value : ''
   const { maxlength } = props
-  if (isDef(maxlength) && Number(maxlength) !== -1 && String(value).length > Number(maxlength)) {
-    return value.toString().slice(0, Number(maxlength))
+  if (isDef(maxlength) && Number(maxlength) !== -1 && String(normalized).length > Number(maxlength)) {
+    return normalized.toString().slice(0, Number(maxlength))
   }
-  return value
+  return normalized
 }
 
 function isValueEqual(value1: number | string, value2: number | string) {
@@ -134,6 +144,9 @@ async function handleClear() {
     focused.value = false
   }
   await pause()
+  // 暂停窗口内组件可能已卸载：续写在已销毁树上 patch 会产生晚到的
+  // remove/insert（真机 9902 removeNode 家族）。与 wd-textarea 保持一致。
+  if (!isAlive()) return
   if (props.focusWhenClear) {
     focused.value = true
     focusing.value = true
@@ -145,6 +158,7 @@ async function handleClear() {
 async function handleBlur() {
   // 等待 150ms，确保 clear 执行完毕
   await pause(150)
+  if (!isAlive()) return
   if (clearing.value) {
     clearing.value = false
     return

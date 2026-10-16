@@ -1,6 +1,13 @@
-import type { ExtractPropTypes } from 'vue-lynx'
+import type { ExtractPropTypes, InjectionKey } from 'vue-lynx'
 import { baseProps, makeNumberProp, makeStringProp, numericProp } from '../../common/props'
 import type { AvatarShape } from '../wd-avatar/types'
+
+/** 父子通信契约：group 经 useChildren 收集子头像，avatar 经 useParent 注册 */
+export type AvatarGroupProvide = {
+  props: Record<string, any>
+}
+
+export const AVATAR_GROUP_KEY: InjectionKey<AvatarGroupProvide> = Symbol('wd-avatar-group')
 
 export const avatarGroupProps = {
   ...baseProps,

@@ -66,6 +66,10 @@ const transitionStyle = computed(() => {
   } else if (position.value === 'bottom') {
     style.bottom = '10%'
     style['align-items'] = 'flex-end'
+  } else if (position.value === 'middle-top') {
+    // 偏上居中：贴合顶部但不贴边（wot-ui 语义），水平居中
+    style.top = '20%'
+    style['align-items'] = 'center'
   } else {
     style.top = '50%'
     style.transform = 'translateY(-50%)'

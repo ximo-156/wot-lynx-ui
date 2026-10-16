@@ -107,7 +107,9 @@ export default {
     all: '全部'
   },
   upload: {
-    error: '上传失败'
+    error: '上传失败',
+    file: '文件',
+    retry: '重试'
   },
   input: {
     placeholder: '请输入...'

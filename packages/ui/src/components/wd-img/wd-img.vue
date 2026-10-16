@@ -2,20 +2,32 @@
  * wd-img — 图片
  *
  * Lynx 实现说明：基于原生 image 元素，加载 / 错误态经插槽定制；
- * 圆形与圆角经 border-radius 实现。
+ * 圆形与圆角经 border-radius 实现；enablePreview 时点击经
+ * common/uni 兼容层调 uni.previewImage（宿主可注入，未注入时降级
+ * warning，不崩溃）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref } from 'vue-lynx'
+import { computed, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { imgProps } from './types'
 import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
+import { uni } from '../../common/uni'
 
 const props = defineProps(imgProps)
 const emit = defineEmits(['load', 'error', 'click', 'tap'])
 
 const status = ref<'loading' | 'success' | 'error'>('loading')
+
+// src 变化时复位加载态：否则旧 src 失败后换成有效 URL，image 仍被 v-if
+// 藏起，永久停留在错误占位
+watch(
+  () => props.src,
+  () => {
+    status.value = 'loading'
+  }
+)
 
 const rootClass = computed(() => {
   const classes = ['wd-img']
@@ -43,6 +55,10 @@ function handleError(event: any) {
 }
 
 function handleClick(event: any) {
+  // 预览（与 wot-ui 一致）：加载成功后才允许预览，地址取 previewSrc || src
+  if (props.enablePreview && props.src && status.value === 'success') {
+    uni.previewImage({ urls: [props.previewSrc || props.src] })
+  }
   emit('click', event)
   emit('tap', event)
 }

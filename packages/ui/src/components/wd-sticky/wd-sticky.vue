@@ -1,57 +1,47 @@
 /*
  * wd-sticky — 粘性布局
  *
- * Lynx 实现说明：基于 wd-resize 监听内容尺寸，
- * 滚动出视口时切换 position: sticky / fixed；
- * Lynx 的 position: sticky 支持有限，主要靠 fixed + 位移计算。
+ * Lynx 实现说明：
+ * - 采用 Lynx 渲染器原生支持的 position: sticky（与 wd-index-anchor
+ *   同一方案）：吸顶元素保持在文档流内，滚动容器滚动到阈值位置时
+ *   由渲染器原生贴住 offsetTop 处，无需 JS 滚动联动；
+ * - 历史实现（fixed + 滚动联动）因 Lynx 的 scroll 事件不向子组件
+ *   冒泡、fixed 永假而完全不工作，已移除；
+ * - customStyle 经 parseStyle 归一后与内置样式合并（对象语法，
+ *   CONVENTIONS §19：字符串 :style 会被 vue-lynx 静默丢弃）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref } from 'vue-lynx'
-import WdResize from '../wd-resize/wd-resize.vue'
+import { computed, inject } from 'vue-lynx'
 import { stickyProps } from './types'
-import { uuid, filterStyle } from '../../common/util'
+import { filterStyle, parseStyle } from '../../common/util'
+import { STICKY_BOX_OFFSET_KEY } from '../wd-sticky-box/types'
 
 const props = defineProps(stickyProps)
 
-const styckyId = ref<string>(`wd-sticky-${uuid()}`)
-const stickyTop = ref<number>(0)
-const fixed = ref<boolean>(false)
+/** 父级 sticky-box 下发的默认吸顶偏移（未显式传 offsetTop 时使用） */
+const boxOffset = inject(STICKY_BOX_OFFSET_KEY, computed(() => 0))
+const resolvedOffsetTop = computed(() => (props.offsetTop ? props.offsetTop : boxOffset.value))
+
+const rootClass = computed(() => {
+  const classes = ['wd-sticky']
+  if (props.customClass) classes.push(props.customClass)
+  return classes.join(' ')
+})
 
 const rootStyle = computed(() => {
-  return `${props.customStyle || ''}display: inline-block;`
+  return filterStyle({
+    position: 'sticky',
+    top: `${resolvedOffsetTop.value}px`,
+    'z-index': String(props.zIndex),
+    ...parseStyle(props.customStyle)
+  })
 })
-
-const stickyStyle = computed(() => {
-  const style: Record<string, string> = {}
-  if (fixed.value) {
-    style.position = 'fixed'
-    style.top = `${props.offsetTop}px`
-    style.left = '0'
-    style.right = '0'
-    style['z-index'] = String(props.zIndex)
-  }
-  return filterStyle(style)
-})
-
-const containerStyle = computed<Record<string, string>>(() => {
-  return {}
-})
-
-function handleResize() {
-  // 尺寸变化时的扩展位（滚动联动由页面 scroll-view 驱动）
-}
 </script>
 
 <template>
-  <view :style="rootStyle">
-    <view :class="`wd-sticky ${customClass}`" :style="stickyStyle" :id="styckyId">
-      <view class="wd-sticky__container" :style="containerStyle">
-        <wd-resize @resize="handleResize" custom-style="display: inline-block;">
-          <slot />
-        </wd-resize>
-      </view>
-    </view>
+  <view :class="rootClass" :style="rootStyle">
+    <slot />
   </view>
 </template>

@@ -4,6 +4,8 @@
  * Lynx 实现说明：
  * - 加减按钮 + 原生 input 元素；长按连续步进经 touchstart/touchend +
  *   定时器实现（不用 Main Thread Script，CONVENTIONS §10）；
+ * - 长按已步进时 tap 去重（部分平台长按抬起后仍补发 tap），长按拖动
+ *   期间 @touchmove.stop.prevent 阻止页面滚动；
  * - 数值经 normalizeValue 统一走步进/边界/精度规则；
  * - beforeChange 拦截器经 common/interceptor 下发。
  */
@@ -49,11 +51,16 @@ onUnmounted(() => {
 
 const minDisabled = computed(() => {
   const val = toNumber(inputValue.value)
+  // allowNull 且值为空时 toNumber 返回 NaN：NaN 与任何数字的比较恒为
+  // false，边界禁用态不呈现，点击后还会 emit 空串。空值按「已在边界」
+  // 处理，禁用步进。
+  if (Number.isNaN(val)) return true
   return isDisabled.value || val <= props.min || addStep(val, -props.step) < props.min
 })
 
 const maxDisabled = computed(() => {
   const val = toNumber(inputValue.value)
+  if (Number.isNaN(val)) return true
   return isDisabled.value || val >= props.max || addStep(val, props.step) > props.max
 })
 
@@ -194,10 +201,33 @@ function handleClick(type: OperationType) {
 const disableMinus = computed(() => props.disableMinus)
 const disablePlus = computed(() => props.disablePlus)
 
+/**
+ * 长按连续步进是否已执行过步进（tap 去重标志）。
+ *
+ * 部分平台在长按抬起后仍会补发一次 tap：@tap.stop 与长按定时器叠加无
+ * 去重时，每次长按结束都会额外步进一次。touchstart 重置标志，长按
+ * 定时器首个步进置位，tap 消费后跳过当次。
+ */
+let longPressStepped = false
+
+/** 加减按钮 tap：长按已步进过时跳过当次，避免重复步进 */
+function handleActionTap(type: OperationType) {
+  if (longPressStepped) {
+    longPressStepped = false
+    return
+  }
+  handleClick(type)
+}
+
+/** 阻止长按拖动期间页面滚动（模板层 @touchmove.stop.prevent 承担） */
+function preventTouchMove() {}
+
 /** 长按连续步进 */
 function handleTouchStart(type: OperationType) {
+  longPressStepped = false
   if (!props.longPress || isDisabled.value) return
   longPressTimer = setTimeout(() => {
+    longPressStepped = true
     handleClick(type)
     longPressInterval = setInterval(() => handleClick(type), 100)
   }, 400)
@@ -257,8 +287,9 @@ const rootClass = computed(() => {
     <!-- 减号按钮 -->
     <view
       :class="['wd-input-number__action', 'wd-input-number__action--sub', minDisabled || disableMinus ? 'is-disabled' : '']"
-      @tap.stop="handleClick('sub')"
+      @tap.stop="handleActionTap('sub')"
       @touchstart="handleTouchStart('sub')"
+      @touchmove.stop.prevent="preventTouchMove"
       @touchend.stop="handleTouchEnd"
       @touchcancel.stop="handleTouchEnd"
     >
@@ -283,8 +314,9 @@ const rootClass = computed(() => {
     <!-- 加号按钮 -->
     <view
       :class="['wd-input-number__action', 'wd-input-number__action--add', maxDisabled || disablePlus ? 'is-disabled' : '']"
-      @tap.stop="handleClick('add')"
+      @tap.stop="handleActionTap('add')"
       @touchstart="handleTouchStart('add')"
+      @touchmove.stop.prevent="preventTouchMove"
       @touchend.stop="handleTouchEnd"
       @touchcancel.stop="handleTouchEnd"
     >

@@ -22,7 +22,7 @@ export const stepsProps = {
    */
   dot: makeBooleanProp(false),
   /**
-   * 间距
+   * 间距（步骤之间的间隔，经 gap 下发：横向 column-gap，纵向 row-gap）
    */
   space: makeStringProp(''),
   /**

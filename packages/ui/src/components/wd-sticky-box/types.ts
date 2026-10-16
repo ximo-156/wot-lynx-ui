@@ -14,3 +14,6 @@ export const stickyBoxProps = {
 }
 
 export type StickyBoxProps = ExtractPropTypes<typeof stickyBoxProps>
+
+/** sticky-box → sticky 的默认吸顶偏移下发 key */
+export const STICKY_BOX_OFFSET_KEY = 'wd-sticky-box-offset' as const

@@ -86,7 +86,6 @@ function handleClickModal() {
       :lazy-render="lazyRender"
       :root-portal="rootPortal"
       round
-      @close="close"
       @enter="emit('enter')"
       @after-enter="emit('after-enter')"
       @leave="emit('leave')"

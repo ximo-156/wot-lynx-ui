@@ -61,7 +61,7 @@ export default {
   search: { search: 'Tìm kiếm', cancel: 'Hủy bỏ' },
   steps: { wait: 'Chưa bắt đầu', finished: 'Đã hoàn thành', process: 'Đang tiến hành', failed: 'Thất bại' },
   tabs: { all: 'Tất cả' },
-  upload: { error: 'Tải lên thất bại' },
+  upload: { error: 'Tải lên thất bại', file: 'Tệp', retry: 'Thử lại' },
   input: { placeholder: 'Vui lòng nhập...' },
   selectPicker: { title: 'Vui lòng chọn', placeholder: 'Vui lòng chọn', select: 'Xác nhận', confirm: 'Xác nhận', filterPlaceholder: 'Tìm kiếm' },
   tag: { placeholder: 'Vui lòng nhập', add: 'thêm' },

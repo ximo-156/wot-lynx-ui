@@ -7,6 +7,18 @@
   flex-basis: calc(100% / var(--wd-grid-item-column, 4));
   box-sizing: border-box;
 
+  /* 正方形格子：Lynx 无 aspect-ratio，高度由脚本度量宽度后内联下发（见 grid-item.vue） */
+
+  /* 边框模式：右/下 1ppx 细线，外层由 grid 的负边距裁切 */
+  @include when(border) {
+    border-right-width: 1ppx;
+    border-right-style: solid;
+    border-right-color: var(--wd-border-1);
+    border-bottom-width: 1ppx;
+    border-bottom-style: solid;
+    border-bottom-color: var(--wd-border-1);
+  }
+
   @include e(content) {
     display: flex;
     flex-direction: column;

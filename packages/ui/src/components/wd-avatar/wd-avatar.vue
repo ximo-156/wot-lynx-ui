@@ -11,11 +11,17 @@ import { computed, useSlots } from 'vue-lynx'
 import WdImg from '../wd-img/wd-img.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { avatarProps, type AvatarShape } from './types'
+import { useParent } from '../../composables/useParent'
+import { AVATAR_GROUP_KEY } from '../wd-avatar-group/types'
 import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(avatarProps)
 const slots = useSlots()
 const emit = defineEmits(['click', 'error', 'tap'])
+
+// 注册到上层 wd-avatar-group（useChildren 的 children 数组）：group 侧据此
+// 计算 maxCount 折叠与 "+N" 文案。无 group 时 parent 为 null，不影响独立使用。
+useParent(AVATAR_GROUP_KEY)
 
 const hasDefaultSlot = computed(() => Boolean(slots.default))
 const hasIcon = computed(() => Boolean(props.icon || props.cssIcon))

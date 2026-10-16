@@ -103,7 +103,9 @@ export default {
     all: 'Все'
   },
   upload: {
-    error: 'Ошибка загрузки'
+    error: 'Ошибка загрузки',
+    file: 'Файл',
+    retry: 'Повторить'
   },
   input: {
     placeholder: 'Введите...'

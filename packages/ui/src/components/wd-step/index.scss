@@ -71,4 +71,34 @@
       color: var(--wd-text-3);
     }
   }
+
+  /* 错误态 */
+  @include when(error) {
+    .wd-step__icon {
+      background-color: var(--wd-color-danger);
+      color: var(--wd-color-on-danger);
+    }
+
+    .wd-step__title {
+      color: var(--wd-color-danger);
+    }
+  }
+
+  /* 点状步骤条（steps 的 dot）：指示器缩为小圆点（序号文本已在模板层不渲染） */
+  @include when(dot) {
+    .wd-step__icon {
+      width: 10px;
+      height: 10px;
+      background-color: var(--wd-gray-3);
+    }
+
+    &.is-finished .wd-step__icon,
+    &.is-process .wd-step__icon {
+      background-color: var(--wd-color-primary);
+    }
+
+    &.is-error .wd-step__icon {
+      background-color: var(--wd-color-danger);
+    }
+  }
 }

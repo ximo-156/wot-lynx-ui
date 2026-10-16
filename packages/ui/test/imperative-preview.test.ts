@@ -38,7 +38,10 @@ describe('命令式预览 open() 回归', () => {
     const overlay = container.querySelector('.wd-overlay')
     expect(overlay, 'overlay 应渲染').not.toBeNull()
     expect(
-      overlay!.classList.contains('fade-enter-active'),
+      // wd-transition 将框架类名映射为带前缀的 wd-transition--fade-enter-active，
+      // 以命中 index.scss 的过渡状态规则（框架默认下发的无前缀类名永不匹配，
+      // 曾导致整个弹层家族无动画）
+      overlay!.classList.contains('wd-transition--fade-enter-active'),
       'overlay 应处于 fade 入场态'
     ).toBe(true)
     cleanup()
@@ -60,7 +63,7 @@ describe('命令式预览 open() 回归', () => {
     expect(overlay, 'overlay 应渲染').not.toBeNull()
     expect(
       overlay!.classList.contains('fade-leave-from') ||
-        overlay!.classList.contains('fade-leave-active'),
+        overlay!.classList.contains('wd-transition--fade-leave-active'),
       'overlay 应处于 fade 离场态'
     ).toBe(true)
     cleanup()
@@ -80,7 +83,10 @@ describe('命令式预览 open() 回归', () => {
     const overlay = container.querySelector('.wd-overlay')
     expect(overlay, 'overlay 应渲染').not.toBeNull()
     expect(
-      overlay!.classList.contains('fade-enter-active'),
+      // wd-transition 将框架类名映射为带前缀的 wd-transition--fade-enter-active，
+      // 以命中 index.scss 的过渡状态规则（框架默认下发的无前缀类名永不匹配，
+      // 曾导致整个弹层家族无动画）
+      overlay!.classList.contains('wd-transition--fade-enter-active'),
       'overlay 应处于 fade 入场态'
     ).toBe(true)
     cleanup()

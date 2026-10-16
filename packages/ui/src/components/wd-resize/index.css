@@ -1,1 +1,1 @@
-.wd-resize{width:100%}.wd-resize__container{position:relative;width:100%}.wd-resize__wrapper{position:absolute;left:0;top:0;width:100%;height:100%;z-index:-1}
+.wd-resize{width:100%}.wd-resize__container{position:absolute;min-width:1px;min-height:1px}.wd-resize__wrapper{position:absolute;top:0;bottom:0;left:0;right:0;z-index:-9999;overflow:hidden;visibility:hidden}.wd-resize--placeholder.is-expand{height:100000px;width:100000px}.wd-resize--placeholder.is-shrink{height:250%;width:250%}

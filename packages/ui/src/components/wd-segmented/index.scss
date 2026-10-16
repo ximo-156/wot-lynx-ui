@@ -42,9 +42,11 @@
 
   @include e(slider) {
     position: absolute;
-    left: 2px;
-    top: 2px;
-    bottom: 2px;
+    /* 与根节点 padding --wd-space-1（4px）同源：滑块内缩量与容器内边距一致，
+       否则滑块整体偏移 2px 且比选项高出一圈 */
+    left: var(--wd-space-1);
+    top: var(--wd-space-1);
+    bottom: var(--wd-space-1);
     border-radius: var(--wd-radius-xs);
     background-color: var(--wd-bg-container);
     border-width: 1px;

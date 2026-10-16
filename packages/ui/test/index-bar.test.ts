@@ -8,7 +8,12 @@
  *    即使想注册也拿不到 link；
  * 3. 子组件 props 曾经 proxy.props 读取（该运行时下恒为空），须用 $.props
  *    （CONVENTIONS §13，参照 wd-checkbox-group）；
- * 4. 触摸跳转曾依赖从未被更新的 scroll-top 属性，实际不会滚动。
+ * 4. 触摸跳转曾依赖从未被更新的 scroll-top 属性，实际不会滚动；
+ * 5. 触摸定位曾读 globalThis.__wdIndexBarRect——该全局全仓库没有赋值点，
+ *    永远走 top:0/height:300 兜底，clientY 映射错误。现改为挂载后
+ *    getRect 一次性度量索引条几何并缓存（CONVENTIONS §16）；jsdom 环境
+ *    度量返回零矩形，组件回落到默认几何（top:0/height:300），本测试
+ *    据此锁定映射结果。
  *
  * 本测试锁定：子组件注册后索引条渲染全部索引；触摸索引条经官方
  * scrollIntoView（SelectorQuery.invoke）把对应锚点滚入可见区。
@@ -31,6 +36,9 @@ interface InvokeCall {
  * 不能整体替换 globalThis.lynx——测试环境切线程时会把后台线程的全局
  * 拷贝回共享 global，整体替换会被冲掉；patch 后台线程对象上的
  * createSelectorQuery 才能被事件处理器（后台线程）看到。
+ *
+ * 注意：组件自身的几何度量（boundingClientRect invoke）也会记入 calls，
+ * 断言跳转时需按 method 过滤（见 scrollCalls）。
  */
 function mockSelectorQuery(): { calls: InvokeCall[]; restore: () => void } {
   const calls: InvokeCall[] = []
@@ -45,6 +53,11 @@ function mockSelectorQuery(): { calls: InvokeCall[]; restore: () => void } {
     })
   })
   return { calls, restore: () => { bgLynx.createSelectorQuery = origin } }
+}
+
+/** 只取 scrollIntoView 调用（滤除组件自身的几何度量） */
+function scrollCalls(calls: InvokeCall[]): InvokeCall[] {
+  return calls.filter((c) => c.params && c.params.method === 'scrollIntoView')
 }
 
 /** 挂载 index-bar + 3 个锚点；注册发生在挂载期间，需等一个 tick 刷新索引条 */
@@ -73,14 +86,12 @@ function touchSidebar(sidebar: Element, clientY: number, withTouchend: boolean =
 }
 
 describe('WdIndexBar / WdIndexAnchor', () => {
-  const originRect = (globalThis as any).__wdIndexBarRect
   let mock: { calls: InvokeCall[]; restore: () => void } | null = null
 
   afterEach(() => {
     cleanup()
     mock?.restore()
     mock = null
-    ;(globalThis as any).__wdIndexBarRect = originRect
   })
 
   it('子组件注册后索引条渲染全部索引', async () => {
@@ -92,22 +103,22 @@ describe('WdIndexBar / WdIndexAnchor', () => {
   it('触摸索引条经 scrollIntoView 跳转对应锚点', async () => {
     mock = mockSelectorQuery()
     const calls = mock.calls
-    // 索引条几何：top 0 / 高 300，3 个索引均分
-    ;(globalThis as any).__wdIndexBarRect = { top: 0, height: 300 }
 
     const { container } = await renderIndexBar()
     const sidebar = container.querySelector('.wd-index-bar__sidebar')!
 
-    // clientY=150 → floor(150/300*3)=1 → 第二个索引 B
+    // 索引条几何：jsdom 度量返回零矩形，组件回落默认 top:0/height:300，
+    // 3 个索引均分。clientY=150 → floor(150/300*3)=1 → 第二个索引 B
     // 不发 touchend：气泡仅在 touching 期间显示，先断言气泡再收尾
     touchSidebar(sidebar, 150, false)
     await nextTick()
 
-    expect(calls.length, '应触发一次 scrollIntoView').toBe(1)
+    const jumps = scrollCalls(calls)
+    expect(jumps.length, '应触发一次 scrollIntoView').toBe(1)
     // 锚点 id = `${indexBarId}-anchor-${index}`（实例唯一前缀，防同页多 bar 撞 id）
-    expect(calls[0].selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-B$/)
-    expect(calls[0].params.method).toBe('scrollIntoView')
-    expect(calls[0].params.params.scrollIntoViewOptions.block).toBe('start')
+    expect(jumps[0].selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-B$/)
+    expect(jumps[0].params.method).toBe('scrollIntoView')
+    expect(jumps[0].params.params.scrollIntoViewOptions.block).toBe('start')
 
     // 触摸气泡回显当前索引
     const bubble = container.querySelector('.wd-index-bar__current-index')
@@ -122,17 +133,16 @@ describe('WdIndexBar / WdIndexAnchor', () => {
   it('索引命中边界时钳制到首/末锚点', async () => {
     mock = mockSelectorQuery()
     const calls = mock.calls
-    ;(globalThis as any).__wdIndexBarRect = { top: 0, height: 300 }
 
     const { container } = await renderIndexBar()
     const sidebar = container.querySelector('.wd-index-bar__sidebar')!
 
     touchSidebar(sidebar, 9999)
     await nextTick()
-    expect(calls[calls.length - 1].selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-C$/)
+    expect(scrollCalls(calls).pop()!.selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-C$/)
 
     touchSidebar(sidebar, 0)
     await nextTick()
-    expect(calls[calls.length - 1].selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-A$/)
+    expect(scrollCalls(calls).pop()!.selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-A$/)
   })
 })

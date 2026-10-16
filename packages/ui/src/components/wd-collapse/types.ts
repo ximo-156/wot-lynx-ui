@@ -6,7 +6,8 @@ export type CollapseValue = string | number | Array<string | number>
 export type CollapseProvide = {
   props: Record<string, any>
   currentValue: ComputedRef<CollapseValue>
-  toggle: (name: string, expanded: boolean) => void
+  /** name 传原始值（数字/字符串），内部统一转 String 比较，push 时保留原类型 */
+  toggle: (name: string | number, expanded: boolean) => void
 }
 
 export const COLLAPSE_KEY: InjectionKey<CollapseProvide> = Symbol('wd-collapse')

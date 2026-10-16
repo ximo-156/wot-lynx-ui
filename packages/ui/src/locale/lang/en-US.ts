@@ -103,7 +103,9 @@ export default {
     all: 'All'
   },
   upload: {
-    error: 'Failed to upload'
+    error: 'Failed to upload',
+    file: 'File',
+    retry: 'Retry'
   },
   input: {
     placeholder: 'Please input information...'

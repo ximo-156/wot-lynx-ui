@@ -58,6 +58,8 @@ function handleClose() {
 }
 
 function handleAdd() {
+  // 禁用态守卫：禁用时点击"+"不弹出输入框、不 emit（与根节点 handleClick 一致）
+  if (props.disabled) return
   adding.value = true
   emit('add')
 }
@@ -73,7 +75,8 @@ function handleConfirm() {
 function submit() {
   const value = dynamicValue.value.trim()
   if (value) {
-    emit('confirm', value)
+    // confirm 载荷与 wot-ui 一致：{ value } 对象而非裸字符串
+    emit('confirm', { value })
   }
   dynamicValue.value = ''
   adding.value = false

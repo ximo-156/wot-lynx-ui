@@ -9,19 +9,30 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref } from 'vue-lynx'
+import { computed, onMounted, ref } from 'vue-lynx'
 import WdButton from '../wd-button/wd-button.vue'
 import { fabProps, type FabExpose } from './types'
-import { filterStyle, parseStyle } from '../../common/util'
+import { filterStyle, getRect, parseStyle, uuid } from '../../common/util'
+import { useDeviceInfo } from '../../composables/useDeviceInfo'
 
 const props = defineProps(fabProps)
 const emit = defineEmits(['update:active', 'click', 'touchstart', 'touchmove', 'touchend'])
+
+/** 实例唯一类名（视口钳制度量用） */
+const instanceId = `wd-fab-${uuid()}`
 
 const inited = ref<boolean>(false)
 const isActive = computed(() => props.active)
 const offset = ref({ x: 0, y: 0 })
 const dragging = ref(false)
 const dragStart = ref({ x: 0, y: 0, ox: 0, oy: 0 })
+
+const { windowWidth, windowHeight } = useDeviceInfo()
+
+// 首帧后展示触发器：避免度量/定位完成前的闪烁（对齐 wot-ui 的 inited 语义）
+onMounted(() => {
+  inited.value = true
+})
 
 const rootStyle = computed(() => {
   const style: Record<string, string> = {
@@ -65,6 +76,25 @@ function handleTouchMove(event: any) {
 function handleTouchEnd(event?: any) {
   emit('touchend', event)
   dragging.value = false
+  clampToViewport()
+}
+
+/** 松手后把悬浮按钮钳制在视口内（对齐 wot-ui 的落位限制，防止拖出屏幕无法拖回） */
+function clampToViewport() {
+  if (!offset.value.x && !offset.value.y) return
+  getRect(`.${instanceId}`)
+    .then((rect) => {
+      const w = Number(rect?.width) || 0
+      const h = Number(rect?.height) || 0
+      if (!w || !h) return
+      const maxX = Math.max(windowWidth.value - w - props.gap * 2, 0)
+      const maxY = Math.max(windowHeight.value - h - props.gap * 2, 0)
+      offset.value = {
+        x: Math.min(Math.max(offset.value.x, -maxX), maxX),
+        y: Math.min(Math.max(offset.value.y, -maxY), maxY)
+      }
+    })
+    .catch(() => {})
 }
 
 function open() {
@@ -86,7 +116,7 @@ defineExpose<FabExpose>({ open, close })
     @touchstart="handleTouchStart"
     @touchend="handleTouchEnd"
   >
-    <view :style="{ visibility: inited ? 'visible' : 'hidden' }" class="wd-fab__trigger" @tap="toggle">
+    <view :style="{ visibility: inited ? 'visible' : 'hidden' }" :class="`wd-fab__trigger ${instanceId}`" @tap="toggle">
       <slot name="trigger" :disabled="disabled">
         <wd-button
           :icon="isActive ? activeIcon : inactiveIcon"

@@ -9,11 +9,17 @@
 import './index.css'
 
 import { addUnit, parseStyle } from '../../common/util'
+import { computed } from 'vue-lynx'
 import { passwordInputProps } from './types'
 
-defineProps(passwordInputProps)
+const props = defineProps(passwordInputProps)
 
 const emit = defineEmits(['focus'])
+
+// Vue 只对 undefined 应用 prop 默认值，显式传入的 null 不套用：
+// 模板直接读 modelValue.length / modelValue[index] 会在渲染期崩溃，
+// 统一归一为字符串（空值 → ''）。
+const value = computed(() => String(props.modelValue ?? ''))
 
 function onTouchStart(event: any) {
   emit('focus', event)
@@ -34,10 +40,10 @@ function onTouchStart(event: any) {
         ]"
         :style="{ marginLeft: index !== 0 && gutter ? addUnit(gutter) : 0 }"
       >
-        <view v-if="focused && index === modelValue.length" class="wd-password-input__cursor" />
+        <view v-if="focused && index === value.length" class="wd-password-input__cursor" />
         <view v-else class="wd-password-input__value">
-          <view :style="{ visibility: mask && modelValue[index] ? 'visible' : 'hidden' }" class="wd-password-input__mask" />
-          <text v-if="!mask && modelValue[index]">{{ modelValue[index] }}</text>
+          <view :style="{ visibility: mask && value[index] ? 'visible' : 'hidden' }" class="wd-password-input__mask" />
+          <text v-if="!mask && value[index]">{{ value[index] }}</text>
         </view>
       </view>
     </view>

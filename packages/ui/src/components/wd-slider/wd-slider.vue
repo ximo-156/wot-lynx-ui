@@ -246,6 +246,13 @@ function onTouchStart(event: any, index: number) {
 
 function onTouchMove(event: any) {
   if (isDisabled.value) return
+  // trackSize 为 0（getRect 失败 / 节点未渲染 / 返回零矩形）时以 0 作
+  // 除数会得到 Infinity/NaN，拖出 NaN 值写入 modelValue。与
+  // positionToValue 的零值守卫一致：先补一次度量并丢弃本帧。
+  if (trackSize.value === 0) {
+    initSlider()
+    return
+  }
   touch.touchMove(event)
   const delta = props.vertical ? touch.deltaY.value : touch.deltaX.value
   const diff = (delta / trackSize.value) * scope.value

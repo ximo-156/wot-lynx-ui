@@ -6,4 +6,10 @@
   flex-wrap: wrap;
   width: 100%;
   background-color: var(--wd-bg-container);
+
+  /* 边框模式：裁掉最右/最下一列溢出的细线 */
+  @include when(border) {
+    margin-right: -1ppx;
+    margin-bottom: -1ppx;
+  }
 }

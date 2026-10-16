@@ -40,21 +40,25 @@ const scrollTop = ref<number>(0)
 
 const isCheckbox = computed(() => props.type === 'checkbox')
 
-/** checkbox 模式值（数组视图） */
+/**
+ * checkbox 模式值（数组视图）。
+ *
+ * setter 只同步状态、不发 change：change 统一经模板上 wd-checkbox-group 的
+ * @change 派发一次（setter 与 @change 处理器各 emit 一次会导致每次勾选
+ * 触发双倍 change）。
+ */
 const checkboxValue = computed<any[]>({
   get: () => (isArray(selectList.value) ? selectList.value : []),
   set: (val) => {
     selectList.value = val
-    emit('change', { value: val })
   }
 })
 
-/** radio 模式值（单值视图） */
+/** radio 模式值（单值视图）；同样只同步状态，change 经 @change 单发 */
 const radioValue = computed<string | number | boolean>({
   get: () => (isArray(selectList.value) ? (selectList.value[0] ?? '') : selectList.value),
   set: (val) => {
     selectList.value = val
-    emit('change', { value: val })
   }
 })
 
@@ -93,6 +97,16 @@ watch(pickerShow, (val) => {
   emit('update:visible', val)
 })
 
+// 过滤关键字变化即应用过滤（含清空按钮）：wd-search 只 emit
+// update:modelValue/clear/cancel/focus/blur/confirm，从不 emit 'change'，
+// 此前 @change="handleFilterChange" 是死监听，filterable 搜索完全失效。
+watch(
+  () => filterVal.value,
+  () => {
+    applyFilter()
+  }
+)
+
 function applyFilter() {
   const keyword = filterVal.value.trim()
   if (!keyword) {
@@ -104,11 +118,7 @@ function applyFilter() {
     .map((item) => ({ ...item }))
 }
 
-function handleFilterChange() {
-  applyFilter()
-}
-
-function handleChange(value: any) {
+function handleChange({ value }: any) {
   selectList.value = value
   emit('change', { value })
 }
@@ -129,6 +139,8 @@ function setScrollIntoView() {
   const list = isArray(selectList.value) ? selectList.value : [selectList.value]
   const index = filterColumns.value.findIndex((item) => list.some((v) => String(v) === String(item[props.valueKey])))
   if (index > 0) {
+    // 行高按默认选项行高 44px 估算（组件未暴露 itemHeight prop，
+    // 与默认样式中的行高保持一致；低优先，暂不加 prop）
     scrollTop.value = index * 44
   }
 }
@@ -176,7 +188,7 @@ defineExpose<SelectPickerExpose>({
       :safe-area-inset-bottom="safeAreaInsetBottom"
       :root-portal="rootPortal"
       custom-class="wd-select-picker__popup"
-      @cancel="close"
+      @close="close"
     >
       <view class="wd-select-picker__wraper">
         <view class="wd-select-picker__header">
@@ -188,7 +200,6 @@ defineExpose<SelectPickerExpose>({
           :placeholder="filterPlaceholder || translate('filterPlaceholder')"
           hide-cancel
           placeholder-left
-          @change="handleFilterChange"
         />
         <scroll-view
           :class="`wd-select-picker__wrapper ${loading ? 'is-loading' : ''} ${customContentClass}`"

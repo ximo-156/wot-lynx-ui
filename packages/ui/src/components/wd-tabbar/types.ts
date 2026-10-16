@@ -45,7 +45,7 @@ export const tabbarProps = {
    */
   inactiveColor: String,
   /**
-   * 是否显示激活态指示条
+   * 是否显示激活态指示条（激活项底部线条，本库扩展，wot-ui 无此 prop）
    */
   activeLine: makeBooleanProp(false)
 }

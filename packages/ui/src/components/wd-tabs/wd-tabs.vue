@@ -15,7 +15,7 @@ import WdBadge from '../wd-badge/wd-badge.vue'
 import { tabsProps } from './types'
 import { useChildren } from '../../composables/useChildren'
 import { TABS_KEY } from './types'
-import { getRect, parseStyle } from '../../common/util'
+import { getRect, isObj, parseStyle } from '../../common/util'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(tabsProps)
@@ -37,9 +37,34 @@ const state = ref({
 /** 已渲染过的 tab 索引集合（懒渲染保持） */
 const renderedSet = ref<Set<number>>(new Set())
 
-const innerSlidable = computed(() => navCache.length > props.slidableNum)
+/**
+ * 导航项缓存。
+ *
+ * 必须是 ref：曾是非响应式 let，innerSlidable / activeIndex 两个 computed
+ * 在首帧求值时 navCache 还是 []，computed 没有任何响应式依赖被永久缓存
+ * （false / 0）——is-slide 永不添加、scroll-x 恒 false，多 tab 导航不可滚动。
+ */
+const navCache = ref<Array<{ title: any; disabled: boolean; badgeProps: any; name: any }>>([])
+
+const innerSlidable = computed(() => navCache.value.length > props.slidableNum)
 
 const slots = useSlots()
+
+/** 深比较（common/util 的 isEqual 只做数组浅比较，对象项恒不相等） */
+function deepEqual(a: any, b: any): boolean {
+  if (a === b) return true
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, index) => deepEqual(item, b[index]))
+  }
+  if (isObj(a) && isObj(b)) {
+    const objA = a as Record<string, any>
+    const objB = b as Record<string, any>
+    const keysA = Object.keys(objA)
+    const keysB = Object.keys(objB)
+    return keysA.length === keysB.length && keysA.every((key) => deepEqual(objA[key], objB[key]))
+  }
+  return false
+}
 
 /**
  * 导航项：从默认插槽的 vnodes 直读 props。
@@ -49,9 +74,13 @@ const slots = useSlots()
  * 注意：slots.default() 只能在渲染上下文调用（否则子组件 setup
  * 拿到 null instance）。故模板每次渲染时求值并写入 navCache，
  * 事件处理器只读 navCache，不再调用 slot。
+ *
+ * 写入带深比较哨兵：每次渲染都会生成新的 items 数组（含消费方可能新建的
+ * badgeProps 对象），若无条件写 ref 会在渲染期间反复触发依赖它的 computed
+ * → 无限重渲染（Maximum recursive updates exceeded）。navCache 只作为
+ * innerSlidable / activeIndex 的响应式数据源，内容一致时保留原引用；
+ * 渲染始终返回新数组，避免缓存导致 badgeProps 陈旧。
  */
-let navCache: Array<{ title: any; disabled: boolean; badgeProps: any; name: any }> = []
-
 function navItems(): Array<{ title: any; disabled: boolean; badgeProps: any; name: any }> {
   const vnodes = slots.default ? slots.default() : []
   const items: Array<{ title: any; disabled: boolean; badgeProps: any; name: any }> = []
@@ -65,12 +94,14 @@ function navItems(): Array<{ title: any; disabled: boolean; badgeProps: any; nam
       name: p.name
     })
   }
-  navCache = items
+  if (!deepEqual(navCache.value, items)) {
+    navCache.value = items
+  }
   return items
 }
 
 const activeIndex = computed(() => {
-  const items = navCache
+  const items = navCache.value
   const index = items.findIndex((p) => p.name === props.modelValue)
   return index > -1 ? index : Number(props.modelValue) || 0
 })
@@ -104,7 +135,7 @@ linkChildren({
 })
 
 function handleSelect(index: number) {
-  const item = navCache[index]
+  const item = navCache.value[index]
   if (!item || item.disabled) return
   state.value.activeIndex = index
   renderedSet.value.add(index)

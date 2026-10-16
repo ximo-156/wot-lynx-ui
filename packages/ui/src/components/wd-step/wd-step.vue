@@ -2,7 +2,8 @@
  * wd-step — 步骤条子项
  *
  * Lynx 实现说明：经 useParent 从 steps 读取激活索引，
- * 按 index 与 active 的关系计算 finished / process / wait 状态。
+ * 按 index 与 active 的关系计算 finished / process / wait 状态；
+ * dot 模式（steps 的 dot）下指示器缩为小圆点，不渲染序号/图标。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -27,9 +28,12 @@ const status = computed<StepStatus>(() => {
   return 'wait'
 })
 
+/** 点状模式（steps 的 dot）：指示器缩为小圆点，不渲染序号/图标 */
+const isDot = computed(() => Boolean(steps.value?.props.dot))
+
 const rootClass = computed(() => {
   const classes = ['wd-step', `is-${status.value}`]
-  if (steps.value?.props.dot) classes.push('is-dot')
+  if (isDot.value) classes.push('is-dot')
   if (props.customClass) classes.push(props.customClass)
   return classes.join(' ')
 })
@@ -39,8 +43,8 @@ const rootClass = computed(() => {
   <view :class="rootClass" :style="parseStyle(customStyle)">
     <view class="wd-step__header">
       <view class="wd-step__icon">
-        <wd-icon v-if="icon" :name="icon" custom-class="wd-step__icon-img" />
-        <text v-else class="wd-step__icon-text">{{ index + 1 }}</text>
+        <wd-icon v-if="icon && !isDot" :name="icon" custom-class="wd-step__icon-img" />
+        <text v-else-if="!isDot" class="wd-step__icon-text">{{ index + 1 }}</text>
       </view>
       <view v-if="title || $slots.default" class="wd-step__title">
         <text>{{ title }}</text>

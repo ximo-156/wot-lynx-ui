@@ -161,4 +161,47 @@ describe('WdKeyboard 键盘布局与交互', () => {
     expect(updates).toEqual(['1', '12'])
     cleanup()
   })
+
+  it('遮罩关闭应同步 update:visible(false)，受控后可再次打开', async () => {
+    // 回归：popup 的 closeOnClickModal 只改写 v-model 的 show，键盘经
+    // @click-modal → handleClose 向父级同步；该事件缺失时父级 visible
+    // 停留在 true，再次触发按钮是无变化赋值，键盘再也打不开。
+    const visible = ref(true)
+    const visibleUpdates: any[] = []
+    const closes: any[] = []
+    const { container } = render(
+      {
+        setup() {
+          return () =>
+            h(Keyboard, {
+              visible: visible.value,
+              modelValue: '',
+              onClose: () => closes.push(1),
+              'onUpdate:visible': (v: boolean) => {
+                visible.value = v
+                visibleUpdates.push(v)
+              }
+            })
+        }
+      } as any
+    )
+    await pause(200)
+    expect(container.querySelectorAll('.wd-keyboard__row').length, '初始应渲染 4 行').toBe(4)
+
+    // 真机语义：tap 遮罩（overlay 重新 emit 的 click → popup click-modal）
+    const mask = container.querySelector('.wd-popup-wrapper .wd-overlay')
+    expect(mask, '遮罩应渲染').not.toBeNull()
+    fireEvent.tap(mask!)
+    await pause(500)
+
+    expect(visibleUpdates, '遮罩关闭应同步受控状态').toContain(false)
+    expect(visible.value, '受控 visible 应为 false').toBe(false)
+    expect(closes.length, '应派发 close 事件').toBe(1)
+
+    // 受控状态同步后，再次打开应能重新渲染
+    visible.value = true
+    await pause(400)
+    expect(container.querySelectorAll('.wd-keyboard__row').length, '重新打开应渲染 4 行').toBe(4)
+    cleanup()
+  })
 })

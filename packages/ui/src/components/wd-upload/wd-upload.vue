@@ -185,23 +185,51 @@ function onFilesChosen(files: any[]) {
   const finalFiles = props.limit ? merged.slice(0, props.limit) : merged
 
   const pending = finalFiles.filter((f) => f[statusKey] === UPLOAD_STATUS.PENDING)
-  callInterceptor(props.beforeUpload, {
-    args: [pending[0], props.formData],
-    done: () => {
-      // beforeUpload 可返回未决 Promise：确认期间组件/页面可能已卸载
-      if (!isAlive()) return
-      uploadFiles.value = finalFiles
-      emitFileList()
-      emit('change', { fileList: finalFiles })
-      // 立即开始上传
-      startUploadFiles()
-    },
-    canceled: () => {
-      // 拦截：移除待上传文件
-      uploadFiles.value = uploadFiles.value.filter((f) => f[statusKey] !== UPLOAD_STATUS.PENDING)
-      emitFileList()
-    }
-  })
+
+  // beforeUpload 声明的签名是单文件 (file, formData)：多选文件时逐个
+  // 调用，其余文件不再绕过上传前拦截器；拦截返回 false 只移除该文件
+  // （此前只对 pending[0] 调用，且 false 时把全部 pending 一起移除）。
+  const rejected = new Set<UploadFileItem>()
+  let remaining = pending.length
+  let settled = false
+
+  const settle = () => {
+    if (settled) return
+    settled = true
+    // beforeUpload 可返回未决 Promise：确认期间组件/页面可能已卸载
+    if (!isAlive()) return
+    const accepted = finalFiles.filter((f) => !rejected.has(f))
+    uploadFiles.value = accepted
+    emitFileList()
+    emit('change', { fileList: accepted })
+    // 立即开始上传
+    startUploadFiles()
+  }
+
+  if (pending.length === 0) {
+    // 无待上传文件（如 limit 截断）：仅应用列表变更
+    settle()
+    return
+  }
+
+  for (const file of pending) {
+    callInterceptor(props.beforeUpload, {
+      args: [file, props.formData],
+      done: () => {
+        // beforeUpload 可返回未决 Promise：确认期间组件/页面可能已卸载
+        if (!isAlive()) return
+        remaining--
+        if (remaining <= 0) settle()
+      },
+      canceled: () => {
+        // 拦截：仅移除该文件
+        if (!isAlive()) return
+        rejected.add(file)
+        remaining--
+        if (remaining <= 0) settle()
+      }
+    })
+  }
 }
 
 /** 删除文件 */

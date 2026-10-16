@@ -103,7 +103,9 @@ export default {
     all: 'すべて'
   },
   upload: {
-    error: 'アップロードエラー'
+    error: 'アップロードエラー',
+    file: 'ファイル',
+    retry: '再試行'
   },
   input: {
     placeholder: '入力してください...'

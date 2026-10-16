@@ -103,7 +103,9 @@ export default {
     all: 'Alle'
   },
   upload: {
-    error: 'Hochladen fehlgeschlagen'
+    error: 'Hochladen fehlgeschlagen',
+    file: 'Datei',
+    retry: 'Wiederholen'
   },
   input: {
     placeholder: 'Bitte geben Sie Informationen ein...'

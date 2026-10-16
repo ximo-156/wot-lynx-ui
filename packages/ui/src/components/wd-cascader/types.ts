@@ -32,6 +32,7 @@ export const cascaderProps = {
   beforeConfirm: Function as PropType<CascaderBeforeConfirm>,
   /**
    * 是否允许选择任意一级
+   * 暂未支持：当前仅支持选择到叶子节点（选择中间级不会收窄路径）
    */
   checkStrictly: makeBooleanProp(false),
   /**
@@ -52,6 +53,7 @@ export const cascaderProps = {
   childrenKey: makeStringProp('children'),
   /**
    * 选项对象中提示对应的 key
+   * 暂未支持：选项副标题渲染未实现，当前版本不读取
    */
   tipKey: makeStringProp('tip'),
   /**
@@ -76,10 +78,13 @@ export const cascaderProps = {
   visible: makeBooleanProp(false),
   /**
    * 懒加载
+   * 暂未支持：异步加载子级需要额外的 loading / 展开态管理，
+   * 当前版本仅在 types 中保留声明，传入不生效
    */
   lazyLoad: Function as PropType<CascaderLazyLoad>,
   /**
    * 叶子节点标识 key
+   * 暂未支持：配合 lazyLoad 使用，当前版本不读取
    */
   isLeafKey: makeStringProp('isLeaf'),
   /**

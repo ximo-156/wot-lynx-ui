@@ -93,6 +93,16 @@ function close() {
 
 function showPopup() {
   emit('open')
+  // 从 props.modelValue 重置内部未提交值：此前只置 popupShow，取消后
+  // 重开仍显示上次拖到一半的旧值（pickerValue 未回滚）。
+  if (isArray(props.modelValue)) {
+    startValue.value = props.modelValue[0]
+    endValue.value = props.modelValue[1]
+    showStart.value = true
+    pickerValue.value = startValue.value
+  } else {
+    pickerValue.value = props.modelValue
+  }
   popupShow.value = true
 }
 
@@ -166,7 +176,7 @@ defineExpose<DatetimePickerExpose>({
       :z-index="zIndex"
       :root-portal="rootPortal"
       custom-class="wd-datetime-picker__popup"
-      @cancel="onCancel"
+      @close="onCancel"
     >
       <view class="wd-datetime-picker__wraper">
         <view class="wd-datetime-picker__title">

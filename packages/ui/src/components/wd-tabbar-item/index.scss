@@ -1,6 +1,7 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(tabbar-item) {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -26,6 +27,18 @@
   @include e(title) {
     margin-top: 2px;
     font-size: var(--wd-font-xs);
+  }
+
+  /* 激活态底部指示条（tabbar 的 activeLine 开启时渲染） */
+  @include e(active-line) {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 3px;
+    border-radius: var(--wd-radius-full);
+    background-color: var(--wd-color-primary);
   }
 
   &:active {

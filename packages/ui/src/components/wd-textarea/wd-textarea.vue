@@ -71,7 +71,10 @@ const showWordCount = computed(() => {
 })
 
 const currentLength = computed(() => {
-  return Array.from(String(props.modelValue)).length
+  // 读本地 inputValue 而非 props.modelValue：modelValue 为 null 时
+  // String(null)="null"（长度 4），字数统计会显示 "4/50"。inputValue
+  // 已由 watch（immediate）把 null/undefined 归一为 ''。
+  return Array.from(String(inputValue.value)).length
 })
 
 const rootClass = computed(() => {

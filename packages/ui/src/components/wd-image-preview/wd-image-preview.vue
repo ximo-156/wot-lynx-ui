@@ -7,7 +7,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref } from 'vue-lynx'
+import { computed, ref, watch } from 'vue-lynx'
 import WdOverlay from '../wd-overlay/wd-overlay.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdSwiper from '../wd-swiper/wd-swiper.vue'
@@ -25,7 +25,23 @@ const state = ref({
   currentIndex: 0
 })
 
-const { previewImage } = useImagePreview(props.selector)
+const { previewImage, options: imagePreviewOption } = useImagePreview(props.selector)
+
+// 消费页面级命令式 API：useImagePreview(selector).previewImage(opts) 写入的是
+// 本组件 inject 的共享 option ref。此前只写不读（无 watch），页面级调用静默
+// 无效；此处 watch 并合并进 state、打开预览（对齐 wd-notify 的命令式模式）。
+watch(
+  () => imagePreviewOption.value,
+  (newVal) => {
+    if (!newVal || typeof newVal === 'symbol' || !isAlive()) return
+    const opts = newVal as ImagePreviewOptions
+    if (!opts.images || opts.images.length === 0) return
+    state.value.images = opts.images
+    state.value.currentIndex = opts.startPosition || 0
+    state.value.show = true
+  },
+  { deep: true }
+)
 
 const options = computed(() => ({
   images: state.value.images,
@@ -89,7 +105,7 @@ defineExpose<ImagePreviewExpose>({
     @after-leave="handleAfterLeave"
   >
     <slot name="close" :close="close">
-      <view v-if="options.closeable" :class="`wd-image-preview__close wd-image-preview__close--${options.closeIconPosition}`" @click.stop="close">
+      <view v-if="options.closeable" :class="`wd-image-preview__close wd-image-preview__close--${options.closeIconPosition}`" @tap.stop="close">
         <wd-icon custom-class="wd-image-preview__close-icon" :name="options.closeIcon" />
       </view>
     </slot>

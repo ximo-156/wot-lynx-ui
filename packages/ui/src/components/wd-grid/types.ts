@@ -38,3 +38,6 @@ export const gridProps = {
 }
 
 export type GridProps = ExtractPropTypes<typeof gridProps>
+
+/** grid → grid-item 的配置下发 key（square/border/clickable，Lynx 无属性选择器继承） */
+export const GRID_CONFIG_KEY = 'wd-grid-config' as const

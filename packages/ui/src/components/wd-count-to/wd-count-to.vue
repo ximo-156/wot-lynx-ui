@@ -4,15 +4,18 @@
  * Lynx 实现说明：
  * - 经 requestAnimationFrame 在后台线程驱动数值过渡，
  *   easeOutQuart 缓动；useEasing 为 false 时线性；
- * - 千分位 / 小数位 / 前后缀格式化与 wot-ui 一致。
+ * - 千分位 / 小数位 / 前后缀格式化与 wot-ui 一致；
+ * - 命令式 API 经 defineExpose 暴露 start / reset / pause（wot-ui 契约：
+ *   CountToExpose），autoStart 为 false 的实例可外部启动；
+ * - startVal / endVal / duration 变化时自动重置并重启动画。
  */
 <script lang="ts" setup>
 import './index.css'
 import { parseStyle } from '../../common/util'
 
-import { computed, onMounted, ref } from 'vue-lynx'
+import { computed, onMounted, ref, watch } from 'vue-lynx'
 import WdText from '../wd-text/wd-text.vue'
-import { countToProps } from './types'
+import { countToProps, type CountToExpose } from './types'
 import { useRaf } from '../../composables/useRaf'
 
 const props = defineProps(countToProps)
@@ -62,11 +65,35 @@ function start() {
   startRaf()
 }
 
+/** 暂停：取消当前动画帧，current 保持当前值（可再次 start 继续） */
+function pause() {
+  rafRunning = false
+  cancelRaf()
+}
+
+/** 重置：回到 startVal，autoStart 为 true 时自动重启动画 */
+function resetTime() {
+  pause()
+  current.value = props.startVal
+  if (props.autoStart) {
+    start()
+  }
+}
+
+// startVal / endVal / duration 变化时重置动画（否则会继续奔向旧目标值）
+watch([() => props.startVal, () => props.endVal, () => props.duration], resetTime)
+
 onMounted(() => {
   if (props.autoStart) {
     start()
   }
   emit('mounted')
+})
+
+defineExpose<CountToExpose>({
+  start,
+  reset: resetTime,
+  pause
 })
 </script>
 

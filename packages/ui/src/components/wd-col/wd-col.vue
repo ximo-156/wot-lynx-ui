@@ -9,6 +9,7 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { colProps } from './types'
+import { filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(colProps)
 
@@ -18,14 +19,14 @@ const rootClass = computed(() => {
   return classes.join(' ')
 })
 
+// 对象语法：字符串 :style 会被 vue-lynx patchProp 静默丢弃（CONVENTIONS §19）
 const rootStyle = computed(() => {
   const style: Record<string, string> = {}
   style['flex-basis'] = `${(props.span / 24) * 100}%`
   if (props.offset > 0) {
     style['margin-left'] = `${(props.offset / 24) * 100}%`
   }
-  const base = Object.entries(style).map(([k, v]) => `${k}: ${v}`).join('; ')
-  return `${base}${props.customStyle ? `; ${props.customStyle}` : ''}`
+  return filterStyle({ ...style, ...parseStyle(props.customStyle) })
 })
 </script>
 

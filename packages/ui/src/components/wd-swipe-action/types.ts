@@ -3,9 +3,11 @@ import { baseProps, makeBooleanProp, makeStringProp } from '../../common/props'
 
 export type SwipeActionStatus = 'left' | 'right' | 'close'
 
-export type SwipeActionPosition = 'left' | 'right' | 'close' | 'both'
+/** 滑动/点击位置类型（'inside' 表示点击内容区域） */
+export type SwipeActionPosition = SwipeActionStatus | 'inside'
 
-export type SwipeActionReason = 'click' | 'drag' | 'button'
+/** 关闭原因：click=点击关闭 / swipe=滑动关闭 / value=外部改值关闭 */
+export type SwipeActionReason = 'click' | 'swipe' | 'value'
 
 export type SwipeActionBeforeClose = (reason: SwipeActionReason, position?: SwipeActionPosition) => boolean | Promise<boolean>
 

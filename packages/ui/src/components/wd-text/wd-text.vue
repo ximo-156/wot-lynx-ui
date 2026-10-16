@@ -83,7 +83,9 @@ function formatText(text: string, format: boolean, mode: string): string {
     } else if (mode === 'name') {
       return text.replace(/^(.).*(.)$/, '$1**$2')
     } else {
-      throw new Error('mode must be one of phone or name for encryption')
+      // 降级：告警并返回原文，不在渲染期间 throw（throw 会崩掉整张卡片）
+      console.error('mode must be one of phone or name for encryption')
+      return text
     }
   }
   return text

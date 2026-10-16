@@ -91,6 +91,27 @@ const transitionName = computed<TransitionName | undefined>(() => {
 const orUndefined = (value: string) => value || undefined
 
 /**
+ * 过渡状态类名（CONVENTIONS §19 / 真机 2026-10 缺陷修复）：
+ * index.scss 的状态类选择器带 `wd-transition--` 前缀（如
+ * `.wd-transition--fade-enter-from`），而框架 Transition 默认下发的是
+ * Vue 约定的无前缀类名（`fade-enter-from`）——两者永不匹配，enter-from /
+ * leave-to 的 opacity/transform 与 enter-active 的 transition-property
+ * 全部静默丢失，整个弹层家族（popup/dialog/toast/notify/overlay/
+ * popover/tooltip/curtain/image-preview/video-preview…）无动画。
+ * 这里在消费方未显式传类名时，按 name 生成带前缀的类名下发，
+ * 使 SCSS 规则命中；显式传入的类名优先。
+ */
+const prefixed = (suffix: 'enter-from' | 'enter-active' | 'enter-to' | 'leave-from' | 'leave-active' | 'leave-to') =>
+  transitionName.value ? `wd-transition--${transitionName.value}-${suffix}` : ''
+
+const enterFromClass = computed(() => props.enterClass || prefixed('enter-from'))
+const enterActiveClass = computed(() => props.enterActiveClass || prefixed('enter-active'))
+const enterToClass = computed(() => props.enterToClass || prefixed('enter-to'))
+const leaveFromClass = computed(() => props.leaveClass || prefixed('leave-from'))
+const leaveActiveClass = computed(() => props.leaveActiveClass || prefixed('leave-active'))
+const leaveToClass = computed(() => props.leaveToClass || prefixed('leave-to'))
+
+/**
  * 传给框架的 duration：归一为 number | { enter, leave }（boolean 视为 0，
  * 即无动画——框架 normalizeDuration 对 boolean 同样落到 0，保持一致）。
  */
@@ -174,10 +195,10 @@ const touchmoveLocked = computed(() =>
     :appear="useVif"
     :name="transitionName"
     :duration="durationForFramework"
-    :enter-from-class="orUndefined(enterClass)"
+    :enter-from-class="orUndefined(enterFromClass)"
     :enter-active-class="orUndefined(enterActiveClass)"
     :enter-to-class="orUndefined(enterToClass)"
-    :leave-from-class="orUndefined(leaveClass)"
+    :leave-from-class="orUndefined(leaveFromClass)"
     :leave-active-class="orUndefined(leaveActiveClass)"
     :leave-to-class="orUndefined(leaveToClass)"
     @before-enter="onPhase('before-enter', 'enter')"

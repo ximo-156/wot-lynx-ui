@@ -30,7 +30,10 @@ const { linkChildren } = useChildren(CONFIG_PROVIDER_KEY)
 const { parent: parentConfigProvider } = useParent(CONFIG_PROVIDER_KEY)
 
 const themeClass = computed(() => {
-  return `wd-theme-${props.theme}${props.customClass ? ' ' + props.customClass : ''}`
+  // wd-config-provider 必须入栈：index.scss 的根容器布局声明
+  // （height:100%; display:flex; flex-direction:column）以该类为选择器，
+  // 缺失时整组声明被静默丢弃（CONVENTIONS §5 类名错配）。
+  return `wd-config-provider wd-theme-${props.theme}${props.customClass ? ' ' + props.customClass : ''}`
 })
 
 const themeStyle = computed<Record<string, string>>(() => {

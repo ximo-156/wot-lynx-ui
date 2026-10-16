@@ -8,7 +8,7 @@
 import './index.css'
 import { parseStyle } from '../../common/util'
 
-import { computed, ref, useSlots } from 'vue-lynx'
+import { computed, onMounted, ref, useSlots, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import { tooltipProps, type TooltipExpose } from './types'
@@ -45,8 +45,40 @@ function toFloatingPlacement(placement: string): any {
 // 按 placement/offset 初始化与更新定位。
 // 第三个参数为 BEM 类名前缀（tooltip），节点度量走 usePopover 生成的实例唯一 id
 // （静态 id 在同页多实例下会撞引擎 id 注册表，见 usePopover.ids 注释）。
-popover.init(toFloatingPlacement(props.placement), props.visibleArrow, 'tooltip')
-popover.control(toFloatingPlacement(props.placement), props.offset as any)
+//
+// ① 初始化定位移到 onMounted：setup 同步执行时目标节点尚未渲染，getRect 取不到
+//    尺寸（width/height=0），此前在 setup 里同步算一次导致定位恒为 0 且之后无重算。
+const placement = computed(() => toFloatingPlacement(props.placement))
+
+function controlPosition() {
+  popover.control(placement.value, props.offset as any)
+}
+
+/** 重新度量目标/气泡尺寸并重算定位 */
+function refreshPosition() {
+  popover.init(placement.value, props.visibleArrow, 'tooltip')
+  controlPosition()
+}
+
+onMounted(() => {
+  refreshPosition()
+})
+
+// ② / ⑥ 打开时重新定位：normal 模式下隐藏副本与真实内容同尺寸，updatePosition
+//    的尺寸比对不会触发重算，故打开时显式 control 一次强制重算。
+watch(showTooltip, (val) => {
+  if (val) {
+    refreshPosition()
+  }
+})
+
+// ③ placement 变化时重新定位。
+watch(
+  () => props.placement,
+  () => {
+    controlPosition()
+  }
+)
 
 function toggle() {
   if (props.disabled) return
@@ -86,6 +118,8 @@ defineExpose<TooltipExpose>({
         </view>
       </view>
     </view>
+    <!-- ⑤ 点击空白关闭：透明全屏 backdrop 捕获气泡外 tap -->
+    <view v-if="showTooltip" class="wd-tooltip__backdrop" @tap.stop="close" />
     <wd-transition
       custom-class="wd-tooltip__pos"
       :custom-style="popover.popStyle.value"

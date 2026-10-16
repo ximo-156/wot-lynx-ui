@@ -4,8 +4,8 @@
  * Lynx 实现说明：
  * - 基于 wd-picker-view 的级联模式（cascade + childrenKey），
  *   选中某一级后动态展开下一列；
- * - checkStrictly 时允许选择任意一级（非叶子），确认按钮收集全路径；
- * - lazyLoad 支持异步加载子级。
+ * - checkStrictly / lazyLoad / isLeafKey / tipKey 暂未支持
+ *   （详见 types.ts 中各 prop 注释）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -30,20 +30,26 @@ const pickerShow = ref<boolean>(false)
 const pickerValue = ref<Array<string | number>>([])
 const selectedPath = ref<CascaderOption[]>([])
 
-/** 当前选中的值数组（兼容单值） */
-const currentValue = computed<Array<string | number>>(() => {
-  return Array.isArray(props.modelValue) ? props.modelValue : isDef(props.modelValue) ? [props.modelValue] : []
-})
+/** 当前选中的值数组（兼容单值；空串视作未选） */
+const currentValue = computed<Array<string | number>>(() => toValueArray(props.modelValue))
+
+/** itemHeight 透传给 picker-view（numericProp → number，缺省走 picker-view 默认 44） */
+const pickerItemHeight = computed(() => (isDef(props.itemHeight) ? Number(props.itemHeight) : undefined))
 
 function isDef(value: any): boolean {
   return value !== undefined && value !== null
 }
 
+/** 归一化 modelValue 为值数组（空串视作未选，避免 [''] 伪装成已选） */
+function toValueArray(val: string | number | Array<string | number>): Array<string | number> {
+  if (Array.isArray(val)) return val
+  return isDef(val) && val !== '' ? [val] : []
+}
+
 watch(
   () => props.modelValue,
   (val) => {
-    const arr = Array.isArray(val) ? val : isDef(val) ? [val] : []
-    pickerValue.value = arr
+    pickerValue.value = toValueArray(val)
   },
   { deep: true, immediate: true }
 )
@@ -90,6 +96,10 @@ function onConfirm() {
       // done 落地时不得在已销毁树上写 ref（真机 9902 晚到 patch 家族）。
       if (!isAlive()) return
       pickerShow.value = false
+      // 空值守卫：未选任何一级时单值模式会 emit undefined，直接关闭不确认
+      if (pickerValue.value.length === 0) {
+        return
+      }
       const value = Array.isArray(props.modelValue) ? pickerValue.value : pickerValue.value[pickerValue.value.length - 1]
       emit('update:modelValue', value)
       emit('confirm', { value, selectedOptions: selectedPath.value })
@@ -113,7 +123,7 @@ defineExpose<CascaderExpose>({
       :safe-area-inset-bottom="safeAreaInsetBottom"
       :root-portal="rootPortal"
       custom-class="wd-cascader__popup"
-      @cancel="close"
+      @close="close"
     >
       <view class="wd-cascader__wraper">
         <view class="wd-cascader__header">
@@ -129,6 +139,7 @@ defineExpose<CascaderExpose>({
           v-model="pickerValue"
           :columns="options"
           cascade
+          :item-height="pickerItemHeight"
           :value-key="valueKey"
           :label-key="textKey"
           :children-key="childrenKey"

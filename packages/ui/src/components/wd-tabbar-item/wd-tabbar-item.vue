@@ -34,6 +34,9 @@ const badgeProps = computed<Record<string, any> | null>(() => {
   return { value: props.value, isDot: props.isDot, max: props.max }
 })
 
+/** 激活态底部指示条（tabbar 的 activeLine 开启时渲染） */
+const showActiveLine = computed(() => Boolean(tabbar.value?.props.activeLine) && active.value)
+
 function handleClick() {
   tabbar.value?.setChange({ name: isDef(props.name) ? props.name : index.value })
   emit('tap')
@@ -49,5 +52,6 @@ function handleClick() {
       <wd-icon v-else :name="active ? (activeIcon || icon) : icon" :color="active ? activeColor : inactiveColor" custom-class="wd-tabbar-item__icon-img" />
     </view>
     <text v-if="title" class="wd-tabbar-item__title" :style="{ color: active ? activeColor : inactiveColor }">{{ title }}</text>
+    <view v-if="showActiveLine" class="wd-tabbar-item__active-line" />
   </view>
 </template>
