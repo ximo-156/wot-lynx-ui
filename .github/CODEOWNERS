@@ -1,0 +1,85 @@
+# CODEOWNERS — wot-lynx-ui
+#
+# 作用：被匹配的路径，其变更必须获得对应 Owner 的批准才能合并
+#       （需在分支保护中勾选 "Require review from Code Owners"）。
+#
+# ⚠️ 请把下面的占位团队名替换为真实 GitHub 用户名或团队：
+#    @tech-lead        → 技术负责人
+#    @arch-owner       → 架构负责人（common / composables）
+#    @design-owner     → 设计系统负责人（styles）
+#    @icon-owner       → 图标负责人
+#    @maintainer       → 仓库管理员（门禁本身）
+#
+# 规则匹配：最后一条匹配的规则生效（GitHub 语义）。
+# 10 人以下团队不必细分到组件级，按「模块 + 默认兜底」即可。
+
+# ---------------------------------------------------------------------------
+# 默认兜底：任何变更都需要技术负责人过目
+# ---------------------------------------------------------------------------
+*                                   @tech-lead
+
+# ---------------------------------------------------------------------------
+# 跨组件公共契约（影响面最大，对应 CONVENTIONS §7 的依赖方向约定）
+# ---------------------------------------------------------------------------
+/packages/ui/src/common/            @arch-owner
+/packages/ui/src/composables/       @arch-owner
+/packages/ui/src/index.ts           @arch-owner
+/packages/ui/tsconfig.json          @arch-owner
+
+# ---------------------------------------------------------------------------
+# 设计系统（三层令牌体系是视觉一致性的根，CONVENTIONS §3）
+# ---------------------------------------------------------------------------
+/packages/ui/src/styles/            @design-owner
+
+# ---------------------------------------------------------------------------
+# 图标（字体图标 + SVG 白名单硬约束，CONVENTIONS §8）
+# ---------------------------------------------------------------------------
+/packages/ui/src/icons/             @icon-owner
+
+# ---------------------------------------------------------------------------
+# 测试资产：回归网是制度记忆，不得随意弱化
+# ---------------------------------------------------------------------------
+/packages/ui/test/                  @arch-owner
+
+# ---------------------------------------------------------------------------
+# 门禁本身：CI、脚本、规范文档 —— 不能被随意改动
+# ---------------------------------------------------------------------------
+/.github/                           @maintainer
+/scripts/                           @maintainer
+/CONVENTIONS.md                     @tech-lead
+/package.json                       @maintainer
+/pnpm-workspace.yaml                @maintainer
+
+# ---------------------------------------------------------------------------
+# 组件实现：按 tier / 业务域分配，谁重写谁负责
+# 未在此列出的组件目录，回退到顶部的 * 规则（@tech-lead）
+# ---------------------------------------------------------------------------
+
+# 基础组件（Tier 1）
+/packages/ui/src/components/wd-config-provider/   @arch-owner
+/packages/ui/src/components/wd-icon/              @icon-owner
+/packages/ui/src/components/wd-transition/        @arch-owner
+/packages/ui/src/components/wd-overlay/           @arch-owner
+/packages/ui/src/components/wd-root-portal/       @arch-owner
+
+# 表单体系（Tier 2）—— 交互密集，事件风险高
+/packages/ui/src/components/wd-form/              @arch-owner
+/packages/ui/src/components/wd-form-item/         @arch-owner
+/packages/ui/src/components/wd-slider/            @arch-owner
+/packages/ui/src/components/wd-picker-view/       @arch-owner
+
+# 弹层体系（Tier 3）—— 根链最终都落到 transition，事件风险高
+/packages/ui/src/components/wd-popup/             @arch-owner
+/packages/ui/src/components/wd-dialog/            @arch-owner
+/packages/ui/src/components/wd-action-sheet/      @arch-owner
+/packages/ui/src/components/wd-toast/             @arch-owner
+
+# 图形码（Tier 4）—— SVG 白名单硬约束
+/packages/ui/src/components/wd-qr-code/           @icon-owner
+/packages/ui/src/components/wd-bar-code/          @icon-owner
+
+# ---------------------------------------------------------------------------
+# 文档与演示
+# ---------------------------------------------------------------------------
+/docs/                              @tech-lead
+/packages/demo/src/App.vue          @tech-lead

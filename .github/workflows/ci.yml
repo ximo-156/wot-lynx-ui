@@ -1,0 +1,179 @@
+name: CI
+
+# 门禁设计：各检查拆成独立 job 并行执行，失败时能一眼看出是哪类问题。
+# 时长红线 10 分钟 —— 超过则应做测试分片，而不是砍检查项。
+#
+# 规范依据：contributing/code-review/05-自动化门禁与CI配置.md
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# 连续 push 时自动取消旧运行，避免排队浪费
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 0. 前置检查 —— scripts/build-css.mjs 目前尚未入库（体检 P0-1）
+  #    缺失时优雅跳过依赖它的 job，避免门禁上线第一天就红灯
+  # ---------------------------------------------------------------------------
+  precheck:
+    name: 前置检查
+    runs-on: ubuntu-latest
+    outputs:
+      has-build-css: ${{ steps.check.outputs.ready }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if [ -f scripts/build-css.mjs ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=前置脚本缺失::scripts/build-css.mjs 尚未入库，生成物一致性与构建校验将被跳过。请参见 contributing/code-review/README.md 第 1 步。"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # 1. 规范检查 —— 把 CONVENTIONS.md 的硬规则自动化
+  #    PR：只查改动文件（存量不阻塞）；main：全量 + baseline 豁免
+  # ---------------------------------------------------------------------------
+  conventions:
+    name: 规范检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # --changed 需要完整历史
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: 增量检查（仅本次改动）
+        if: github.event_name == 'pull_request'
+        run: node scripts/review-lint.mjs --changed origin/${{ github.base_ref }} --github
+
+      - name: 全量检查（main 分支，存量按 baseline 豁免）
+        if: github.event_name == 'push'
+        run: node scripts/review-lint.mjs --github
+
+  # ---------------------------------------------------------------------------
+  # 2. 类型检查
+  # ---------------------------------------------------------------------------
+  typecheck:
+    name: 类型检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter wot-lynx-ui run typecheck
+
+  # ---------------------------------------------------------------------------
+  # 3. 测试（含 11 份回归网）
+  # ---------------------------------------------------------------------------
+  test:
+    name: 测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter wot-lynx-ui run test
+
+  # ---------------------------------------------------------------------------
+  # 4. 生成物一致性 —— 拦住「手改 index.css」与「忘记重新生成」
+  #    本仓库有 104 个已入库的 index.css，均不得手动编辑（CONVENTIONS §2）
+  # ---------------------------------------------------------------------------
+  generated:
+    name: 生成物一致性
+    needs: precheck
+    if: needs.precheck.outputs.has-build-css == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: 重新生成 CSS
+        run: pnpm build:css
+
+      - name: 校验与源码一致
+        run: |
+          if ! git diff --exit-code -- 'packages/ui/src/components/**/index.css'; then
+            echo "::error::index.css 与 index.scss 不一致。可能原因：手改了生成物，或改了 scss 但未运行 pnpm build:css"
+            git diff --stat -- 'packages/ui/src/components/**/index.css'
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # 5. 双端构建校验
+  # ---------------------------------------------------------------------------
+  build:
+    name: 构建校验
+    needs: precheck
+    if: needs.precheck.outputs.has-build-css == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:css
+      - run: pnpm build:demo
+
+  # ---------------------------------------------------------------------------
+  # 6. 依赖安全审计（不阻塞合并，但需关注）
+  # ---------------------------------------------------------------------------
+  audit:
+    name: 依赖审计
+    runs-on: ubuntu-latest
+    continue-on-error: true # 不阻塞合并
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level=high
