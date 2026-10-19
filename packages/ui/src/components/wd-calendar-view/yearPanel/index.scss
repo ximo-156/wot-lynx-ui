@@ -2,6 +2,11 @@
 @use '../index.scss' as *;
 
 @include b(year-panel) {
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：根节点为「控制栏 + 标题
+  // + 滚动面板」的纵向组合，显式声明 flex 纵向流向（linear 下 direction
+  // 静默丢失）。
+  display: flex;
+  flex-direction: column;
 
   @include e(controls) {
     display: flex;

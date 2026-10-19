@@ -2,6 +2,11 @@
 @use '../index.scss'as *;
 
 @include b(month-panel) {
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：根节点为「控制栏 + 周
+  // 表头 + 标题 + 滚动面板（+ 时间选择器）」的纵向组合，显式声明 flex
+  // 纵向流向（linear 下 direction 静默丢失）。
+  display: flex;
+  flex-direction: column;
 
   @include e(controls) {
     display: flex;
@@ -60,6 +65,13 @@
     color: $calendar-view-week-color;
     font-size: $calendar-view-week-font-size;
     line-height: $calendar-view-week-line-height;
+    // Lynx 适配（NATIVE-REWRITE §3.2）：周表头单元格补 justify-content +
+    // align-items 成对 flex 居中（text-align 单独不保证文本节点撑满容器），
+    // flex: 1 决定的格子尺寸不受影响。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
   }
 
   @include e(container) {

@@ -34,6 +34,10 @@ $notice-bar-suffix-color: var(--wot-notice-bar-suffix-color, inherit) !default;
 
 @include b(notice-bar) {
   display: flex;
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，flex-direction 必须显式挂在 display: flex 上（不写即被静默丢弃，
+  // 「前缀图标 + 内容区 + 后缀图标」会被排成纵向）；通知栏为横向行。
+  flex-direction: row;
   padding: $notice-bar-padding;
   align-items: center;
   font-size: $notice-bar-font-size;

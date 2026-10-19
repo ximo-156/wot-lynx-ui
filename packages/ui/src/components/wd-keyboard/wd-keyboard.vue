@@ -5,6 +5,16 @@
  * - 基于 wd-popup（bottom）；default / custom / car 三种模式；
  * - car 模式支持中英切换（省份简称键盘 / 数字字母键盘），
  *   autoSwitchLang 时输入首位后自动切英文；
+ * - 交互为按键点击（touchstart/touchend 判定 press），无拖动/滑动/缩放
+ *   跟手手势，不涉及 MTS（NATIVE-REWRITE §2 仅约束跟手交互类组件）；
+ *   按键按压态由 touch 事件驱动的 wd-key--active 类切换（滑动可取消，
+ *   CSS :active 无法表达「滑出按键即取消」，与 wot-ui 语义一致）；
+ * - 布局居中（NATIVE-REWRITE §3）：根节点显式 display: flex +
+ *   flex-direction: column（纵向「头部 + 键区」）；__header 为
+ *   justify-content + align-items 成对的居中行；__body / __keys /
+ *   __car-keys 为 flex-direction: row 的按键行（wrap 网格基准见
+ *   test/keyboard-layout.test.ts 锁定的 CSS 契约）；__sidebar 为
+ *   flex-direction: column 的侧栏列；
  * - wot-ui 的 hover-class="wd-keyboard__close--hover" 按压态改用 CSS
  *   :active 伪类（CONVENTIONS §17）；
  * - wot-ui 用相邻兄弟选择器 `.wd-keyboard__header + .wd-keyboard__body`

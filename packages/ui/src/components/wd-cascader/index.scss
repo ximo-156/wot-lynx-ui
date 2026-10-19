@@ -62,6 +62,12 @@ $cascader-loading-opacity: var(--wot-cascader-loading-opacity, $opacity-disabled
 $cascader-loading-icon-size: var(--wot-cascader-loading-icon-size, $n-48) !default;
 
 @include b(cascader) {
+  // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // flex-direction 只挂在 display: flex 上生效；根节点承载底部弹层，
+  // 显式补全纵向流向。
+  display: flex;
+  flex-direction: column;
+
   @include edeep(popup) {
     background: $cascader-bg;
   }
@@ -125,8 +131,10 @@ $cascader-loading-icon-size: var(--wot-cascader-loading-icon-size, $n-48) !defau
     }
   }
 
-  // 选项文本容器
+  // 选项文本容器（标签 + 提示纵向堆叠：显式 flex 列流向，NATIVE-REWRITE §3.1）
   @include e(list-item-content) {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-width: 0;
   }
@@ -152,12 +160,18 @@ $cascader-loading-icon-size: var(--wot-cascader-loading-icon-size, $n-48) !defau
   }
 
   @include e(action) {
+    /* 确认按钮垂直居中（NATIVE-REWRITE §3.2）：参考源用 top: 50% +
+       translateY(-50%)，改为四边 0（top/bottom）+ flex 成对居中——
+       Lynx 原生布局、零变换；右侧偏移保留参考源令牌。挂载点为
+       action-sheet 的 #close 插槽（标题栏内，具备定高包含块）。 */
     position: absolute;
-    top: 50%;
+    top: 0;
+    bottom: 0;
     right: $cascader-action-right;
-    transform: translateY(-50%);
     display: flex;
+    flex-direction: row;
     align-items: center;
+    justify-content: flex-end;
   }
 
   @include e(action-confirm) {

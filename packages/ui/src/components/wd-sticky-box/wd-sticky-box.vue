@@ -10,6 +10,10 @@
  * - 参考源外层 view 的静态 style="position: relative" 为字符串属性，
  *   vue-lynx 对字符串 style 会静默丢弃（CONVENTIONS §19），改为对象语法；
  * - customStyle 经 parseStyle 归一后绑定；
+ * - **根节点三件套**（NATIVE-REWRITE §3.1）：display: flex +
+ *   flex-direction: column + position: relative 在 index.scss 显式声明
+ *   （linear 默认布局下 flex-direction 会被静默丢弃），外层包裹 view 仅承担
+ *   对象语法的 position: relative；
  * - 本地私有 props（containerHeight / offsetTop）与参考源不一致，已移除
  *   （参考源仅 baseProps）。
  */

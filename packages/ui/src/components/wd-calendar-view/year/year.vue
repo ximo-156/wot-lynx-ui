@@ -7,7 +7,11 @@
  *   Lynx 无伪元素，改为模板中的真实元素 wd-year__month-range（排在内容节点
  *   之后、z-index 低于内容，两个平台都不遮字）；
  * - __month-top / __month-bottom 为绝对定位 + flex 居中的文本容器，用
- *   「view + 内部 text」承载（Lynx 的 text 不保证按 flex 容器布局）。
+ *   「view + 内部 text」承载（Lynx 的 text 不保证按 flex 容器布局）；
+ * - 布局居中（NATIVE-REWRITE §3）：wd-year 根节点显式 display: flex +
+ *   flex-direction: column；__month 补 justify-content + align-items
+ *   成对 flex 居中（原 margin: 0 auto 单独不保证生效），__month-container
+ *   同样补成对 flex 居中承载月份文本。
  */
 <script lang="ts" setup>
 import './index.css'

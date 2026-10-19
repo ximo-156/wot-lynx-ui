@@ -3,18 +3,21 @@
  *
  * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
  * - 结构：wd-overlay（可选遮罩）+ wd-transition（fade）+ 内容视图，与 wot-ui 一致；
- * - 定位：过渡根视图内联样式与 wot-ui 相同（position: fixed + top: 50% + left: 0 +
- *   width: 100% + text-align: center + pointer-events: none），上下偏移由
- *   .wd-toast--top / --middle-top / --middle / --bottom 的 transform 承担
- *   （wot-ui 用 40vh / 18.8vh 视口单位，Lynx 对视口单位支持不确定——同
- *   wd-img-cropper 的历史结论，保留 wot-ui 取值以保证 Web 预览与样式对齐，
- *   Lynx 端视口单位失效时退化为不偏移，toast 仍可见、仍居中）；
+ * - 定位：过渡根视图按 NATIVE-REWRITE §3.2 / CONVENTIONS §9 用「四边 0 +
+ *   flex 成对居中」撑满视口——该节点自身透明（pointer-events: none）、
+ *   不承载背景，不存在把遮罩涂满的问题，故禁用 left/top 50% + translate；
+ *   水平居中由 align-items 承担，垂直居中由 justify-content 承担。
+ *   position 变体的上下偏移由 .wd-toast--top / --middle-top / --bottom 的
+ *   transform 在居中基准上施加（沿用 wot-ui 同值：top/middle-top/bottom
+ *   相对居中线的 -40vh / -18.8vh / +40vh，视口单位在 Lynx 失效时退化为
+ *   不偏移、toast 仍居中可见）；middle 变体不再需要 translateY(-50%)，
+ *   取中性值 none；
  * - wot-ui 靠 text-align: center + display: inline-block 让 toast 水平居中，
  *   Lynx 无行内流式布局（CONVENTIONS §15：inline-block/inline-flex → flex），
  *   故过渡根视图补 flex-direction: column + align-items: center 承担水平居中；
  * - 参考源的 objToStyle 字符串样式改为对象语法（字符串 :style 会被 vue-lynx
- *   静默丢弃，CONVENTIONS §19）；根视图样式不再随 position 变化，无条件写全
- *   键集（CONVENTIONS §20）；
+ *   静默丢弃，CONVENTIONS §19）；根视图样式经 Style Funnel 输出完整键集，
+ *   不随 position 变化、也不出现条件写样式（CONVENTIONS §20）；
  * - 图标名：wot-ui 用 check-circle / exclamation-circle / info-circle /
  *   close-circle，本地内置图标集（iconfont）无同名字形，映射为
  *   success / warning / prompt / error（CONVENTIONS §8）；
@@ -32,6 +35,7 @@ import WdTransition from '../wd-transition/wd-transition.vue'
 import { defaultOptions, getToastOptionKey, toastIcon } from '.'
 import { toastProps, type ToastDirection, type ToastLoadingType, type ToastOptions, type ToastProps } from './types'
 import { addUnit, isDef, isFunction } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(toastProps)
 
@@ -71,22 +75,29 @@ watch(
 )
 
 /**
- * 动画自定义样式（对象语法；键集固定，不随 position 变化）
+ * 过渡根视图样式（对象语法；Style Funnel 完整键集，不随 position 变化）。
+ *
+ * 四边 0 + flex 成对居中：该 fixed 节点透明、仅作定位harness（承载背景的
+ * 是 .wd-toast 自身），按 NATIVE-REWRITE §3.2 / CONVENTIONS §9 撑满视口
+ * 并用 flex 居中，禁 left/top 50% + translate；z-index 随选项变化，
+ * 与其余键一起每帧写全（CONVENTIONS §20）。
  */
-const transitionStyle = computed<Record<string, string>>(() => {
-  return {
-    'z-index': String(zIndex.value),
-    position: 'fixed',
-    top: '50%',
-    left: '0',
-    width: '100%',
-    'text-align': 'center',
-    'pointer-events': 'none',
-    // Lynx 适配：承担 wot-ui 由 text-align + inline-block 实现的水平居中
-    'flex-direction': 'column',
-    'align-items': 'center'
-  }
+const TOAST_ROOT_STYLE = defineStyleKeys({
+  position: 'fixed',
+  left: '0px',
+  right: '0px',
+  top: '0px',
+  bottom: '0px',
+  display: 'flex',
+  'flex-direction': 'column',
+  'align-items': 'center',
+  'justify-content': 'center',
+  'text-align': 'center',
+  'pointer-events': 'none',
+  'z-index': '100'
 })
+
+const transitionStyle = computed<Record<string, string>>(() => resolveStyle(TOAST_ROOT_STYLE, { 'z-index': String(zIndex.value) }))
 
 const rootClass = computed(() => {
   const classes = [

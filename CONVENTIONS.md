@@ -243,31 +243,56 @@ composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
   `custom-style` 把定位下发到 `wd-transition` 根节点。
 - 全局单例（toast/notify）用模块级 `ref` + 条件渲染实现，参考 wot-ui 的 `useToast` 模式（`showToast(options)` 返回关闭函数）。
 
-## 10. Main Thread Script（禁止引入）
+## 10. Main Thread Script（原生交互性能，声明式唯一形态）
 
-**本组件库不使用 Main Thread Script（MTS）。** `wd-slider`、`wd-swipe-action`
-等高频交互组件统一运行在**后台线程**（Vue 响应式驱动样式），原因：
+**本组件库的所有跟手交互（拖动 / 滑动 / 缩放 / 手势）必须走 Lynx 官方的声明式
+MTS 路径**——这是 Lynx「原生交互性能」的唯一官方形态：事件在主线程直接派发，
+worklet 内同步改写节点样式，零线程跨越（后台线程方案每帧两次线程往返，
+低端机上手感明显滞后）。
 
-1. **可用性检测不可靠**：主线程运行时 `lynxWorkletImpl` 只存在于主线程，
-   而后台线程的 `computed` 里检测该全局恒为 `undefined`，MTS 事件绑定
-   （`main-thread-bind*`）永远不会生效，组件实际走的是降级分支——
-   双份代码、双份维护成本，性能收益为零。
-2. **跨线程注水时序竞争**：`runOnMainThread` 派发的 worklet 在主流成消费
-   `useMainThreadRef` 的 `.current`，其值依赖 `INIT_MT_REF` ops 先于
-   worklet 应用到主线程；两个通道（`vuePatchUpdate` 与
-   `getCoreContext().dispatchEvent`）之间无顺序保证，refMap 未就绪时
-   生产构建中 `getFromWorkletRefMap` 返回 `undefined`，直接崩溃：
-   `1101 main-thread.js exception: TypeError: cannot read property 'current' of undefined`。
-3. **消费方配置负担**：MTS 要求 `includeWorkletPackages` 白名单与
-   `sideEffects: true` 双重约束，接入复杂且易踩坑。
+**唯一允许的形态（声明式）**：
 
-**替代方案**（高频交互组件遵循）：
+```vue
+<script lang="ts" setup>
+import { useMainThreadRef } from 'vue-lynx'
 
-- 拖动/滑动状态放在后台线程 `ref`，样式经计算属性输出（参照 `wd-slider`
-  的 `lineStyle`、`wd-swipe-action` 的 `wrapperStyle`）；
-- 位移动画用 CSS `transition`（跟手时 `transition: none`，落位时恢复）；
-- 度量（轨道宽度等）用 `getRect` 一次性获取并缓存，不在 touchmove 里重复查询；
-- 按压缩态用 `:active` 伪类，不用 touch 事件 + JS state。
+const trackRef = useMainThreadRef()
+
+// 主线程 worklet：只读事件、算位置、直改节点样式
+const onTouchMove = (e: any) => {
+  'main thread'
+  const el = trackRef.current
+  if (!el) return
+  const x = e.touches[0].clientX
+  el.setStyleProperty('transform', `translateX(${x}px)`)
+}
+</script>
+
+<template>
+  <view :main-thread-ref="trackRef" main-thread-bindtouchmove="onTouchMove" />
+</template>
+```
+
+规则：
+
+1. worklet 内**只做**跟手计算 + `setStyleProperty` 直改；提交类状态
+   （change / confirm / 值落定）才回后台线程，经组件 `emit` 上调；
+2. **禁止命令式 `runOnMainThread` / `runOnBackground` 派发**：其 worklet 消费
+   `useMainThreadRef` 的 `.current` 依赖 `INIT_MT_REF` ops 先于 worklet 应用，
+   两通道无顺序保证，refMap 未就绪时生产构建直接崩溃（真机 1101：
+   `cannot read property 'current' of undefined`）。声明式 `main-thread-bind*`
+   由框架在建树时注册，不经该竞态路径；
+3. **禁止 `lynxWorkletImpl` 可用性检测**（后台线程恒为 undefined，双份代码）；
+4. 跟手期间禁用 CSS `transition`（`transition: none`），落位时恢复或用主线程
+   `requestAnimationFrame` 做吸附动画；
+5. 度量（轨道宽度等）仍遵守 §16：挂载后 `getRect` 一次性获取并缓存；
+6. 消费方无需 `includeWorkletPackages` 白名单：worklet 位于本包源码，
+   经 Rspeedy 的 SWC worklet 转换自动处理（workspace 链接不走 node_modules
+   排除路径）。
+
+守卫：`test/no-main-thread-script.test.ts`（禁命令式、放行声明式、防半吊子用法）。
+测试环境经 `test/mts-worklet-shim.ts` 模拟 worklet 派发与主线程元素桩，
+MTS 交互在单测中可真实执行。
 
 ## 11. 验证清单（每个组件完成后必须执行）
 

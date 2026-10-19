@@ -40,16 +40,21 @@ $progress-radius: var(--wot-progress-radius, $radius-full) !default;
 
 @include b(progress) {
   width: 100%;
+  // Lynx 适配：根节点显式三件套——display: flex + flex-direction: row
+  // （进度条 + 外侧文案横向排列，CONVENTIONS §15 / NATIVE-REWRITE §3.1）；
+  // align-items: center 令条体与文案在交叉轴居中。
   display: flex;
+  flex-direction: row;
   align-items: center;
   height: $progress-height;
 
   @include e(outer) {
-    // Lynx 适配：display: block 为参考源声明，引擎不识别该值（仅认
-    // flex/none/linear，CONVENTIONS §15），声明被忽略后回落到默认 linear
-    // 布局，与 Web 的 block 容器语义一致（唯一子节点为绝对定位的 inner），
-    // 故保留声明以对齐参考源样式表。
-    display: block;
+    // Lynx 适配：参考源为 display: block，引擎不识别该值（仅认
+    // flex/none/linear，CONVENTIONS §15），显式改为 display: flex +
+    // flex-direction: row——与 Web 的 block 容器语义一致（唯一子节点为
+    // 绝对定位的 inner，不依赖内部流向），不留给引擎兜底。
+    display: flex;
+    flex-direction: row;
     position: relative;
     flex: 1;
     background: $progress-bg;
@@ -68,7 +73,9 @@ $progress-radius: var(--wot-progress-radius, $radius-full) !default;
     transition-property: width;
     transition-timing-function: linear;
     font-size: $progress-icon-size;
+    // Lynx 适配：inner 态文案 / 图标横向排列，显式三件套（CONVENTIONS §15）。
     display: flex;
+    flex-direction: row;
     align-items: center;
     min-width: max-content;
   }

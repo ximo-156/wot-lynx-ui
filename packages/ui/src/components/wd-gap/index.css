@@ -1,1 +1,1 @@
-.wd-gap--safe{padding-bottom:env(safe-area-inset-bottom)}
+.wd-gap{display:flex;flex-direction:column}.wd-gap--safe{padding-bottom:env(safe-area-inset-bottom)}

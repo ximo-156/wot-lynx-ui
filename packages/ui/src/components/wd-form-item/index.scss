@@ -16,6 +16,15 @@ $form-item-placeholder-color: var(--wot-form-item-placeholder-color, $text-place
 $form-item-disabled-color: var(--wot-form-item-disabled-color, $text-disabled) !default;
 
 @include b(form-item) {
+  // 根节点三件套（NATIVE-REWRITE §3.1）：wd-form-item 的 DOM 根视图由
+  // wd-cell 提供（custom-class 把 wd-form-item 类落到 cell 根视图上），
+  // Lynx 3.x 默认 linear 布局，显式 display:flex + flex-direction:column
+  // 保证单元格纵向堆叠、宽度撑满表单。wd-cell 自身根视图亦声明同款三件套
+  // （布局批次），两处取值一致、无冲突；此处保留使 form-item 自成体系，
+  // 不依赖其它组件的样式演进。
+  display: flex;
+  flex-direction: column;
+
   @include when(disabled) {
     .wd-cell__title,
     .wd-cell__value,

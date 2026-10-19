@@ -94,6 +94,16 @@ $action-sheet-loading-size: var(--wot-action-sheet-loading-size, $n-20) !default
   background: $action-sheet-bg;
   border-radius: $action-sheet-radius $action-sheet-radius 0 0;
   overflow: hidden;
+  // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // flex-direction 只挂在 display: flex 上生效；标题 / 操作项 / 面板区 /
+  // 取消按钮纵向排布
+  display: flex;
+  flex-direction: column;
+  /* 弹层（.wd-popup）现为 flex column 容器（根三件套），flex 子项默认
+     flex-shrink: 1（CONVENTIONS §19）：操作项很多、总高超过弹层
+     max-height:100% 时本视图会被按比例压缩。内容高度由自身决定，禁压缩，
+     超出部分由弹层的 overflow-y:auto 承担滚动 */
+  flex-shrink: 0;
 
   @include e(actions) {
     // Lynx 适配：参考源 max-height: 50vh（视口单位 Lynx 不支持，wd-img-cropper
@@ -108,6 +118,8 @@ $action-sheet-loading-size: var(--wot-action-sheet-loading-size, $n-20) !default
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    // 名称 / 描述为 text 子节点：容器成对居中之外补文本居中（多行时生效）
+    text-align: center;
     font-size: $action-sheet-action-font-size;
     line-height: $action-sheet-action-line-height;
     color: $action-sheet-action-color;
@@ -156,8 +168,11 @@ $action-sheet-loading-size: var(--wot-action-sheet-loading-size, $n-20) !default
 
   @include e(cancel) {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
+    // 取消文案为 text 子节点：容器成对居中之外补文本居中
+    text-align: center;
     box-sizing: border-box;
     background: $action-sheet-cancel-bg;
     color: $action-sheet-cancel-color;
@@ -173,6 +188,7 @@ $action-sheet-loading-size: var(--wot-action-sheet-loading-size, $n-20) !default
   @include e(title) {
     position: relative;
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     color: $action-sheet-title-color;
@@ -180,15 +196,24 @@ $action-sheet-loading-size: var(--wot-action-sheet-loading-size, $n-20) !default
     font-size: $action-sheet-title-font-size;
     font-weight: $action-sheet-title-font-weight;
     line-height: $action-sheet-title-line-height;
+    // 标题文案为 text 子节点：容器成对居中之外补文本居中（换行时生效）
+    text-align: center;
   }
 
   @include edeep(close) {
+    /* 关闭图标垂直居中（NATIVE-REWRITE §3.2）：参考源用 top: 50% +
+       translateY(-50%)，改为四边 0（top/bottom）+ flex 成对居中——
+       Lynx 原生布局、零变换；右侧偏移保留参考源令牌 */
     position: absolute;
-    top: 50%;
+    top: 0;
+    bottom: 0;
     right: $action-sheet-close-right;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
     color: $action-sheet-close-color;
     font-size: $action-sheet-close-font-size;
-    transform: translateY(-50%);
   }
 
   @include e(panels-wrap) {
@@ -200,19 +225,32 @@ $action-sheet-loading-size: var(--wot-action-sheet-loading-size, $n-20) !default
     padding: $action-sheet-panels-padding;
   }
 
+  /* 面板横向轨道：模板为原生 scroll-view（scroll-x，NATIVE-REWRITE §3.3
+     「滚动用 scroll-view」——Lynx 普通 view 的 overflow-x: auto 不产生
+     原生滚动），flex 行内面板不压缩 */
   @include e(panels-content) {
     display: flex;
-    overflow-x: auto;
+    flex-direction: row;
   }
 
   @include e(panel) {
     width: $action-sheet-panel-width;
     flex: 0 0 auto;
     padding: $action-sheet-panel-padding;
+    // 图标 + 标题纵向排布且整体水平居中（NATIVE-REWRITE §3.2：图标原先
+    // 仅靠 margin: 0 auto 居中，auto 外边距在 Lynx 不保证生效）
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 
   @include edeep(panel-img) {
-    display: block;
+    // Lynx 适配：参考源 display: block（Lynx 只认 flex / none / linear，
+    // CONVENTIONS §15），改 flex + row；水平居中由 __panel 的 align-items
+    // 成对居中承担（margin 的 auto 分量在 Lynx 不保证生效）
+    display: flex;
+    flex-direction: row;
     font-size: $action-sheet-panel-img-size;
     width: $action-sheet-panel-img-size;
     height: $action-sheet-panel-img-size;

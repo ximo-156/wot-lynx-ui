@@ -33,6 +33,11 @@ $textarea-count-line-height: var(--wot-textarea-count-line-height, $typography-b
 $textarea-error-color: var(--wot-textarea-error-color, $danger-main) !default;
 
 @include b(textarea) {
+  // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // 显式 display:flex + flex-direction:column 保证「输入区 __body」与
+  // 「字数统计 __count」纵向堆叠（此前未声明 display，flex 属性会被静默丢弃）
+  display: flex;
+  flex-direction: column;
   text-align: left;
   background: $textarea-bg;
   padding: $textarea-padding;

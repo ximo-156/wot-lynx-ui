@@ -8,6 +8,12 @@
  *   panels 归一化），此处逐段保留该逻辑；
  * - 参考源模板里的 block 元素（uni-app 专有、Lynx 无此内置元素）改为
  *   template v-if / v-for；view 内的裸文本包 text 元素；
+ * - 面板横向轨道：参考源为 view + overflow-x: auto（Lynx 普通 view 不产生
+ *   原生滚动），按 NATIVE-REWRITE §3.3 改用原生 scroll-view（scroll-x，
+ *   类名与 DOM 层级不变）；
+ * - 根视图显式 display: flex + flex-direction: column（NATIVE-REWRITE §3.1
+ *   根节点三件套），并 flex-shrink: 0——弹层 .wd-popup 现为 flex column
+ *   容器，操作项很多时本视图不被按比例压缩，超出部分由弹层滚动承担；
  * - 参考源 :style 字符串拼接（popup 的 background: transparent、内容视图的
  *   customStyle）改为对象语法并经 parseStyle 归一（字符串 :style 会被
  *   vue-lynx 静默丢弃，CONVENTIONS §19）；
@@ -183,12 +189,13 @@ defineExpose({ open, close })
           </view>
           <view v-if="isArray(formatPanels) && formatPanels.length" class="wd-action-sheet__panels-wrap">
             <view v-for="(panel, rowIndex) in formatPanels" :key="rowIndex" class="wd-action-sheet__panels">
-              <view class="wd-action-sheet__panels-content">
+              <!-- 横向滚动轨道用原生 scroll-view（NATIVE-REWRITE §3.3） -->
+              <scroll-view :scroll-x="true" class="wd-action-sheet__panels-content">
                 <view v-for="(col, colIndex) in panel" :key="colIndex" class="wd-action-sheet__panel" @tap="select(rowIndex, 'panels', colIndex)">
                   <WdIcon custom-class="wd-action-sheet__panel-img" :name="col.icon" />
                   <text class="wd-action-sheet__panel-title">{{ col.title }}</text>
                 </view>
-              </view>
+              </scroll-view>
             </view>
           </view>
         </slot>

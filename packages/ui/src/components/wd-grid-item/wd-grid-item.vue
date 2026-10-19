@@ -12,12 +12,20 @@
  *   （PORTING §4.6 的 CSS 自定义属性驱动方案）；
  * - rootStyle / contentStyle 由参考源的「objToStyle 拼字符串 +
  *   customStyle 拼接」改为对象语法（parseStyle 归一，CONVENTIONS §19）；
+ * - **Style Funnel**（CONVENTIONS §20）：rootStyle 的全部可切换键
+ *   （宽度 / 正方形 padding / gutter 右内边距与上边距）经 defineStyleKeys +
+ *   resolveStyle 每帧输出完整键集——gutter 由有值变 0 时旧 padding-right /
+ *   margin-top 不会残留；contentStyle 的 right/bottom/height 由 CSS 类承担
+ *   「不设置」语义（见该 computed 上的说明），不走 Funnel；
  * - url 跳转：参考源调用全局 uni.navigateTo 等，改为 common/uni 兼容层
  *   下发（宿主可注入路由，未注入时降级 warning）；
  * - 列数兜底：参考源 columnNum 为 0（无父级 grid 的独立使用场景）时会算出
  *   Infinity% 宽度，此处兜底为 1（grid 内使用时 column/childCount 恒 ≥ 1，
  *   行为不变）；
- * - 文字兜底裸文本包 text 元素（Lynx view 内裸文本不渲染）。
+ * - 文字兜底裸文本包 text 元素（Lynx view 内裸文本不渲染）；
+ * - **图标 + 文字行居中**（NATIVE-REWRITE §3.2）：__wrapper 显式
+ *   display: flex + flex-direction: row + align-items/justify-content 成对；
+ *   __text 自身显式 text-align: center（父级 text-align 不经继承）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -28,6 +36,7 @@ import WdBadge from '../wd-badge/wd-badge.vue'
 import { useParent } from '../../composables/useParent'
 import { GRID_KEY } from '../wd-grid/types'
 import { addUnit, deepAssign, isDef, isString, isUndefined, omitBy, parseStyle, type CSSProperties } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { gridItemProps } from './types'
 import { uni } from '../../common/uni'
 import type { BadgeProps } from '../wd-badge/types'
@@ -89,6 +98,20 @@ const borderClass = computed(() => {
 })
 
 /**
+ * 根节点可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
+ * 中性值取「视觉上等同于不设置」：无 gutter 即无右内边距与上边距；
+ * 非 square 即无 padding-top 撑高（padding-bottom 恒 0）。
+ */
+const GRID_ITEM_ROOT_STYLE = defineStyleKeys({
+  flexBasis: 'auto',
+  width: 'auto',
+  paddingTop: '0px',
+  paddingBottom: '0px',
+  paddingRight: '0px',
+  marginTop: '0px'
+})
+
+/**
  * 根节点样式计算
  * 计算当前格子的宽度、flex 属性及额外样式（如正方形、间距）
  * @returns {CSSProperties} 组合后的 CSS 样式对象
@@ -96,36 +119,34 @@ const borderClass = computed(() => {
 const rootStyle = computed<CSSProperties>(() => {
   const columnNum = column.value || childCount.value || 1
   const percent = `${100 / columnNum}%`
-  const style: CSSProperties = {
-    flexBasis: percent,
-    width: percent
+
+  return {
+    ...resolveStyle(GRID_ITEM_ROOT_STYLE, {
+      flexBasis: percent,
+      width: percent,
+      // 正方形格子：以 padding-top 百分比撑高（配合内容区绝对定位）
+      paddingTop: square.value ? percent : '',
+      paddingBottom: square.value ? '0' : '',
+      // gutter 时 square / 非 square 两种模式都以右内边距承担列间距（对齐参考源）
+      paddingRight: gutter.value ? addUnit(gutter.value) : '',
+      // 非正方形 + 第二行及以后：上边距承担行间距
+      marginTop: !square.value && gutter.value && index.value >= columnNum ? addUnit(gutter.value) : ''
+    }),
+    ...parseStyle(props.customStyle)
   }
-
-  if (square.value) {
-    // 正方形格子
-    style.paddingTop = percent
-    style.paddingBottom = '0'
-
-    if (gutter.value) {
-      style.paddingRight = addUnit(gutter.value)
-    }
-  } else if (gutter.value) {
-    // 非正方形但有间距
-    const gutterValue = addUnit(gutter.value)
-    style.paddingRight = gutterValue
-
-    // 第二行及以后的元素添加上边距
-    if (index.value >= columnNum) {
-      style.marginTop = gutterValue
-    }
-  }
-
-  return { ...style, ...parseStyle(props.customStyle) }
 })
 
 /**
  * 内容区域样式计算
  * 当存在间距且为正方形时，调整位置及尺寸；否则只设置背景颜色
+ *
+ * 注意：此处**不走 Style Funnel**——right / bottom / height 三个键的
+ * 「不设置」语义由 CSS 类承担（is-square 下 __content 为绝对定位且
+ * height: 100%），不存在「视觉上等同于不设置」的中性值（height: auto
+ * 会压掉类的 height: 100%，使正方形内容区塌高）。按 CONVENTIONS §20
+ * 的「低风险」类别保留条件写：这三个键只在 square 由真转假时可能残留，
+ * 而 square 由父级 grid 统一下发、实例内不变。
+ *
  * @returns {CSSProperties} 内容区域的 CSS 样式对象
  */
 const contentStyle = computed<CSSProperties>(() => {

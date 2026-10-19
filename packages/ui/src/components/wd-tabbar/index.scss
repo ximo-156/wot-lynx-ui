@@ -20,7 +20,13 @@ $tabbar-round-shadow: var(
 ) !default;
 
 @include b(tabbar) {
+  // 原生优先重写（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // flex-direction 等弹性属性只在 display: flex 上生效；根节点显式三件套，
+  // 标签项横向排列（row）。justify-content: center 与 align-items: center
+  // 成对写全（子项均 flex: 1 撑满主轴，居中语义在自定义子项时依然成立）。
   display: flex;
+  flex-direction: row;
+  justify-content: center;
   align-items: center;
   flex-wrap: nowrap;
   position: relative;
@@ -28,6 +34,10 @@ $tabbar-round-shadow: var(
   height: $tabbar-height;
 
   @include e(placeholder) {
+    // 原生优先重写（NATIVE-REWRITE §3.1）：占位根（SFC 根 view）显式三件套，
+    // 纵向承载内部 tabbar（类未挂载时由内联样式常量键兜底下发，见 wd-tabbar.vue）
+    display: flex;
+    flex-direction: column;
     box-sizing: content-box;
     // Lynx 适配：仅保留 env() 安全区写法，删除 Web 专有的 constant() 重复声明
     padding-bottom: env(safe-area-inset-bottom);

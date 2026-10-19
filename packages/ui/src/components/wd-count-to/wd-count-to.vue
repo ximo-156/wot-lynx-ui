@@ -11,7 +11,12 @@
  * - startVal / endVal / duration 变化时走 resetTime（reset + autoStart 重启），
  *   挂载时先 resetTime 再 emit mounted，与参考源一致；
  * - 参考源 options 块的 virtualHost / addGlobalClass / styleIsolation 为
- *   uni-app 小程序专有能力，Lynx 无需声明，已移除。
+ *   uni-app 小程序专有能力，Lynx 无需声明，已移除；
+ * - 原生优先重写（NATIVE-REWRITE §3）：本组件为纯展示（rAF 数值过渡由后台
+ *   线程 composable 驱动，无跟手手势，不涉及 MTS），根 view 经 SCSS 显式
+ *   补全三件套（display: flex + flex-direction: row + align-items:
+ *   flex-end）——「前缀 + 主体 + 后缀」横向文本组合，底边对齐等价承担参考源
+ *   vertical-align: bottom 的视觉语义（该 Web 专有声明 Lynx 不识别，已移除）。
  */
 <script lang="ts" setup>
 import './index.css'

@@ -26,6 +26,10 @@ $loadmore-retry-spacing: var(--wot-loadmore-retry-spacing, 0 $spacing-extra-tigh
 
 @include b(loadmore) {
   display: flex;
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，flex-direction 必须显式挂在 display: flex 上（不写即被静默丢弃，
+  // 「加载中」图标与文案会被排成纵向）；加载更多为「图标 + 文案」横向行。
+  flex-direction: row;
   justify-content: center;
   align-items: center;
   box-sizing: border-box;
@@ -47,6 +51,9 @@ $loadmore-retry-spacing: var(--wot-loadmore-retry-spacing, 0 $spacing-extra-tigh
   @include e(text,refresh-text) {
     font-size: $loadmore-font-size;
     line-height: $loadmore-line-height;
+    // Lynx 适配（NATIVE-REWRITE §3.2）：容器 flex 居中的同时给文本节点补
+    // text-align: center，双保险保证文案水平居中。
+    text-align: center;
   }
 
   @include e(refresh-text) {

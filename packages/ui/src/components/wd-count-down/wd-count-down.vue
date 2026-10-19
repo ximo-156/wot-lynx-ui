@@ -13,7 +13,12 @@
  * - format 占位符解析（DD / HH / mm / ss / S / SS / SSS，未出现的单位向上
  *   进位）落在 utils.ts 的 parseFormat，与参考源逐行一致；
  * - 参考源 options 块的 virtualHost / addGlobalClass / styleIsolation 为
- *   uni-app 小程序专有能力，Lynx 无需声明，已移除。
+ *   uni-app 小程序专有能力，Lynx 无需声明，已移除；
+ * - 原生优先重写（NATIVE-REWRITE §3）：本组件为纯展示（无跟手交互，不涉及
+ *   MTS），根 view 经 SCSS 显式补全三件套（display: flex + flex-direction:
+ *   row + align-items: center）——默认内容为单行文本、自定义插槽常为
+ *   「时/分/秒」多块横向组合，横向流 + 交叉轴居中保证多块场景垂直对齐；
+ * - customStyle 经 parseStyle 归一为对象（CONVENTIONS §19）。
  */
 <script lang="ts" setup>
 import './index.css'

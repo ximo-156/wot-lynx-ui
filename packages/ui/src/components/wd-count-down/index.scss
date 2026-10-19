@@ -9,6 +9,13 @@ $count-down-font-size: var(--wot-count-down-font-size, $typography-body-size-mai
 $count-down-line-height: var(--wot-count-down-line-height, $typography-body-line-height-size-main) !default;
 
 @include b(count-down) {
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，不显式声明 display: flex 时 flex-direction 被静默丢弃；倒计时的
+  // 默认内容为单行文本、自定义插槽常为「时/分/秒」多块横向组合，根按横向
+  // 流补全，交叉轴居中保证自定义块与文本基线一带垂直对齐。
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   color: $count-down-text-color;
   font-size: $count-down-font-size;
   line-height: $count-down-line-height;

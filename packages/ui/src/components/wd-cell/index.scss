@@ -83,9 +83,16 @@ $cell-label-margin-top: var(--wot-cell-label-margin-top, $spacing-super-tight) !
 $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacing-loose) !default;
 
 @include b(cell) {
+  /* 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+     linear 布局，显式 display: flex + flex-direction: column 保证单元格
+     内容纵向堆叠 */
   position: relative;
+  display: flex;
+  flex-direction: column;
   padding: $cell-padding;
   background: $cell-bg;
+  /* Lynx text 支持 text-decoration（wd-text 的 decoration prop 同源），
+     参考源同款声明保留：单元格不继承外部下划线装饰 */
   text-decoration: none;
   box-sizing: border-box;
   width: 100%;
@@ -100,7 +107,10 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
 
   @include e(wrapper) {
     position: relative;
+    /* 左右分栏行：显式 flex 行 + 两端对齐；交叉轴默认起点，
+       is-center 时由下方规则改为居中（NATIVE-REWRITE §3.2） */
     display: flex;
+    flex-direction: row;
     justify-content: space-between;
     align-items: flex-start;
 
@@ -128,7 +138,11 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
     position: relative;
     flex: 1;
     min-width: 0;
+    /* 左侧区为「必填星号 + 前置图标 + 标题」的行：显式 flex 行 +
+       交叉轴居中（NATIVE-REWRITE §3.2 图标与文字基线场景） */
     display: flex;
+    flex-direction: row;
+    align-items: center;
     text-align: left;
     font-size: $cell-title-font-size;
     line-height: $cell-title-line-height;
@@ -139,9 +153,15 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
     position: relative;
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   @include e(title) {
+    /* 标题区：标题文本与下方 label 纵向堆叠，显式 flex 列
+       （缺 display: flex 时 flex-direction 被静默丢弃） */
+    display: flex;
+    flex-direction: column;
     min-width: 0;
     font-size: $cell-title-font-size;
     line-height: $cell-title-line-height;
@@ -164,6 +184,8 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
   }
 
   @include e(label) {
+    display: flex;
+    flex-direction: column;
     margin-top: $cell-label-margin-top;
     font-size: $cell-label-font-size;
     line-height: $cell-label-line-height;
@@ -174,7 +196,13 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
   }
 
   @include edeep(prefix) {
-    display: block;
+    /* 前置图标（wd-icon 根 view）：display: block 为 Web 专有值，Lynx 引擎
+       不识别（PORTING §4.5 / §15），改为 flex 行 + 交叉轴居中，使图标在
+       左侧区行内垂直居中 */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     position: relative;
     margin-right: $cell-icon-spacing-right;
     font-size: $cell-icon-size;
@@ -182,7 +210,11 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
   }
 
   @include e(body) {
+    /* 右侧「文案 + 箭头 / 后缀图标」的行：显式 flex 行 + 交叉轴居中
+       （NATIVE-REWRITE §3.2 图标与文字基线场景） */
     display: flex;
+    flex-direction: row;
+    align-items: center;
     min-width: 0;
   }
 
@@ -193,7 +225,8 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
     font-size: $cell-value-font-size;
     line-height: $cell-value-line-height;
     color: $cell-value-color;
-    vertical-align: middle;
+    /* vertical-align: middle 为 Web 专有声明（Lynx 不识别，PORTING §4.5
+       删除清单），行内垂直居中由 __body 的 align-items: center 承担 */
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -223,14 +256,22 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
   }
 
   @include edeep(arrow-right) {
-    display: block;
+    /* 箭头图标（wd-icon 根 view）：同上，display: block → flex 行居中 */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     margin-left: $cell-arrow-margin-left;
     font-size: $cell-arrow-size;
     color: $cell-arrow-color;
   }
 
   @include edeep(suffix) {
-    display: block;
+    /* 后缀图标（wd-icon 根 view）：同上，display: block → flex 行居中 */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     margin-left: $cell-arrow-margin-left;
     font-size: $cell-icon-size;
     color: $cell-icon-color;
@@ -259,6 +300,17 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
 
   @include when(center) {
     @include edeep(wrapper) {
+      /* 垂直居中：主轴两端对齐保留，交叉轴改居中（justify-content +
+         align-items 成对写全，NATIVE-REWRITE §3.2） */
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    @include edeep(left) {
+      align-items: center;
+    }
+
+    @include edeep(body) {
       align-items: center;
     }
   }

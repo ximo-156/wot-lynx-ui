@@ -14,6 +14,12 @@ $swiper-item-text-spacing: var(--wot-swiper-item-text-spacing, $spacing-loose) !
 
 @include b(swiper) {
   position: relative;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。分页视口（scroll-view）
+  // 与指示器（wd-swiper-nav，绝对定位）为仅有的两类子节点，纵向堆叠 +
+  // 交叉轴拉伸令视口撑满容器宽度。
+  display: flex;
+  flex-direction: column;
 
   // Lynx 适配：参考源的 swiper 元素由 scroll-view 承担（见 wd-swiper.vue 头部注释），
   // 高度与圆角经 swiperStyle 内联下发；overflow 由内容轨道 track-inner 承担，
@@ -34,7 +40,11 @@ $swiper-item-text-spacing: var(--wot-swiper-item-text-spacing, $spacing-loose) !
 
   @include e(item) {
     display: flex;
+    flex-direction: row;
+    // 成对居中（NATIVE-REWRITE §3.2）：滑块内的图片 / 视频 / 自定义插槽
+    // 内容在纵横两个方向均居中
     align-items: center;
+    justify-content: center;
     box-sizing: border-box;
     padding: $swiper-item-padding;
 

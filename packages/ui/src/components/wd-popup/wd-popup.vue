@@ -18,8 +18,12 @@
  *   SystemInfo.safeAreaInsets 时取 bottom，否则降级为 0；
  * - 样式由参考源的字符串拼接（z-index/padding-bottom/customStyle）改为对象
  *   语法并经 parseStyle 归一 customStyle（字符串 :style 会被 vue-lynx 静默
- *   丢弃，CONVENTIONS §19）；z-index 与 padding-bottom 每帧都写全
- *   （SetStyle 逐属性合并，省略键等于保留旧值，CONVENTIONS §20）；
+ *   丢弃，CONVENTIONS §19）；z-index 与 padding-bottom 经 Style Funnel
+ *   （defineStyleKeys + resolveStyle）每帧写全，条件由真转假时回落中性值
+ *   0px（CONVENTIONS §20）；
+ * - 根节点三件套（NATIVE-REWRITE §3.1）：.wd-popup 显式 display: flex +
+ *   flex-direction: column——Lynx 3.x 默认 linear 布局下 flex-direction
+ *   会被静默丢弃；贴边位置（top/bottom/left/right）内容自贴边起纵向排布；
  * - 过渡动画名：参考源 center 位置返回 ['zoom-in', 'fade'] 数组（uni-app
  *   transition 的多样式名），本地 wd-transition 底层框架仅接受单 name，
  *   取首个元素 'zoom-in'，行为与参考源一致。
@@ -35,6 +39,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { popupProps, type PopupType } from './types'
 import type { TransitionName } from '../wd-transition/types'
 import { getSystemInfo, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(popupProps)
 const emit = defineEmits([
@@ -76,10 +81,22 @@ const transitionName = computed<TransitionName | TransitionName[]>(() => {
 
 const safeBottom = ref<number>(0)
 
+/**
+ * 弹层根节点可切换样式键（CONVENTIONS §20）：z-index 由 prop 驱动、
+ * padding-bottom 由 safeAreaInsetBottom 的有无驱动，两者都可能在同一实例上
+ * 切换，故经 Style Funnel 每帧输出完整键集，中性值为「视觉上等同于不设置」。
+ */
+const POPUP_STYLE = defineStyleKeys({
+  'z-index': '10',
+  'padding-bottom': '0px'
+})
+
 const style = computed<Record<string, string>>(() => {
   return {
-    'z-index': String(props.zIndex),
-    'padding-bottom': `${safeBottom.value}px`,
+    ...resolveStyle(POPUP_STYLE, {
+      'z-index': String(props.zIndex),
+      'padding-bottom': `${safeBottom.value}px`
+    }),
     ...parseStyle(props.customStyle)
   }
 })

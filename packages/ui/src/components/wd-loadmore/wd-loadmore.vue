@@ -11,7 +11,12 @@
  *   wd-loading 的属性合并（omitBy 去 undefined 后追加 wd-loadmore__loading
  *   类名）与参考源一致，loading 根节点挂该类名供 edeep(loading) 规则命中；
  * - 参考源 options 块的 virtualHost / addGlobalClass / styleIsolation 为
- *   uni-app 小程序专有能力，Lynx 无需声明，已移除。
+ *   uni-app 小程序专有能力，Lynx 无需声明，已移除；
+ * - 原生优先重写（NATIVE-REWRITE §3）：本组件为纯展示（仅根 view 的 tap
+ *   重试，无跟手手势，不涉及 MTS），根 view 经 SCSS 显式补全 flex-direction:
+ *   row（「加载图标 + 文案」横向行；不写则 Lynx 3.x linear 布局下被静默丢弃
+ *   排成纵向），justify-content + align-items 成对居中，文本节点另加
+ *   text-align: center 双保险。
  */
 <script lang="ts" setup>
 import './index.css'

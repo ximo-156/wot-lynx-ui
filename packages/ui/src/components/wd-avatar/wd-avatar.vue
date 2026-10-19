@@ -8,6 +8,9 @@
  *   width/height/font-size 下发（参考源行为，对象语法 —— 字符串 :style
  *   会被 vue-lynx 静默丢弃，CONVENTIONS §19）；自定义尺寸经 parseStyle
  *   归一 customStyle；
+ * - 居中（NATIVE-REWRITE §3）：根 view 显式 display: flex +
+ *   flex-direction: row + justify-content / align-items 成对居中，文本
+ *   元素（__text）另写 text-align: center（Lynx text 不依赖继承）；
  * - avatar-group 内的层叠间距：参考源以 `:first-child` 与相邻兄弟选择器
  *   （`& + &`）表达「首项无叠层、其余项负边距」，Lynx 不支持结构伪类与
  *   兄弟选择器（CONVENTIONS §5），改由组件按 useParent 索引推 `is-first`

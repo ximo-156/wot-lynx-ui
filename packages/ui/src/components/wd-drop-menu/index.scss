@@ -32,9 +32,15 @@ $drop-menu-text-color-active: var(--wot-drop-menu-text-color-active, $primary-6)
 
 @include b(drop-menu) {
   position: relative;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。菜单条与各菜单项的浮层
+  // 纵向堆叠，交叉轴拉伸令菜单条满宽。
+  display: flex;
+  flex-direction: column;
 
   @include e(list) {
     display: flex;
+    flex-direction: row;
     text-align: center;
     background-color: $drop-menu-list-bg;
   }
@@ -47,6 +53,13 @@ $drop-menu-text-color-active: var(--wot-drop-menu-text-color-active, $primary-6)
     padding: $drop-menu-option-padding;
     box-sizing: border-box;
     text-align: center;
+    // Lynx 适配：菜单项为定高横条，标题需在纵横两向居中——以 flex 列 +
+    // 成对居中承载标题行（参考源靠 text-align + inline-flex 近似），
+    // 禁用态透明度见 when(disabled)
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 
     @include when(active) {
       .wd-drop-menu__option-title-text {

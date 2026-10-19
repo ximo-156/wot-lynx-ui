@@ -2,6 +2,10 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(row) {
+  /* 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+     linear 布局，不显式写 display: flex 时 flex-direction / flex-wrap 被
+     静默丢弃；row 为行布局的内容方向 */
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
 }

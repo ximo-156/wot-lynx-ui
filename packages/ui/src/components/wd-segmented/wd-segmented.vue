@@ -165,13 +165,16 @@ const rootClass = computed(() => {
   return classes.join(' ')
 })
 
+/** 根节点样式：customStyle 经 parseStyle 归一为对象（CONVENTIONS §19） */
+const rootStyle = computed(() => parseStyle(props.customStyle))
+
 defineExpose<SegmentedExpose>({
   updateActiveStyle
 })
 </script>
 
 <template>
-  <view :class="rootClass" :style="parseStyle(customStyle)">
+  <view :class="rootClass" :style="rootStyle">
     <view
       v-for="(option, index) in options"
       :key="index"

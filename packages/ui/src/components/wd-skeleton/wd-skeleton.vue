@@ -17,7 +17,14 @@
  * - themeMap（avatar/image/text/paragraph 默认行列）、rowCol 解析、
  *   getColItemClass/getColItemStyle 与参考源逐行一致；
  * - 参考源 options 块的 virtualHost / addGlobalClass / styleIsolation 为
- *   uni-app 小程序专有能力，Lynx 无需声明，已移除。
+ *   uni-app 小程序专有能力，Lynx 无需声明，已移除；
+ * - 原生优先重写（NATIVE-REWRITE §3）：本组件为纯展示（无跟手交互，不涉及
+ *   MTS），根 / __row / __col 三处容器均经 SCSS 显式补全三件套——根与
+ *   __row 为纵向堆叠、__row 内占位块为横向排列（flex-direction 必须显式
+ *   挂在 display: flex 上，否则 Lynx 3.x linear 布局下被静默丢弃）；
+ *   __col 的 justify-content + align-items 成对居中承载渐变扫描层；
+ * - col 尺寸样式经 defineStyleKeys + resolveStyle 输出完整键集
+ *   （CONVENTIONS §20 Style Funnel 迁移）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -25,7 +32,8 @@ import './index.css'
 import { ref, computed, watch } from 'vue-lynx'
 import type { SkeletonRowCol, SkeletonRowColObj } from './types'
 import { skeletonProps } from './types'
-import { isNumber, addUnit, parseStyle, type CSSProperties } from '../../common/util'
+import { isNumber, addUnit, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const themeMap = {
   avatar: [{ type: 'circle', height: '64px', width: '64px' }],
@@ -76,8 +84,24 @@ const parsedRowCols = computed(() => {
 function getColItemClass(rowCol: SkeletonRowColObj) {
   return ['wd-skeleton__col', `wd-skeleton--type-${rowCol.type || 'text'}`, { [`wd-skeleton--animation-${props.animation}`]: props.animation }]
 }
+/**
+ * 占位块可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
+ * 中性值取 ''（未设置）——宽高圆角由 wd-skeleton--type-* 类承担，
+ * 与 filterStyle 的剔空语义一致（size 展开为 width + height）。
+ */
+const COL_STYLE_KEYS = defineStyleKeys({
+  width: '',
+  height: '',
+  margin: '',
+  background: '',
+  marginLeft: '',
+  marginRight: '',
+  borderRadius: '',
+  backgroundColor: ''
+})
+
 function getColItemStyle(rowCol: SkeletonRowColObj) {
-  const style: CSSProperties = {}
+  const source: Record<string, string> = {}
   const styleName = ['size', 'width', 'height', 'margin', 'background', 'marginLeft', 'marginRight', 'borderRadius', 'backgroundColor']
 
   for (const name of styleName) {
@@ -85,14 +109,14 @@ function getColItemStyle(rowCol: SkeletonRowColObj) {
       const px = addUnit(rowCol[name])
 
       if (name === 'size') {
-        style.width = px
-        style.height = px
+        source.width = px
+        source.height = px
       } else {
-        ;(style as any)[name] = px
+        source[name] = px
       }
     }
   }
-  return style
+  return resolveStyle(COL_STYLE_KEYS, source)
 }
 
 watch(

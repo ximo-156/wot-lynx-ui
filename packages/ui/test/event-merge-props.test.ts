@@ -116,7 +116,7 @@ describe('mergeProps 同名监听合并崩溃回归', () => {
     cleanup()
   })
 
-  it('wd-swipe-action：父级 @touchstart 与根 view touchstart 不合并崩溃', async () => {
+  it('wd-swipe-action：父级 @touchstart 与 wrapper touchstart 不合并崩溃', async () => {
     let parentStarts = 0
     const { container } = render({
       setup() {
@@ -129,9 +129,13 @@ describe('mergeProps 同名监听合并崩溃回归', () => {
       }
     } as any)
     await pause(50)
-    const root = container.querySelector('.wd-swipe-action') as Element
-    expect(root).toBeTruthy()
-    fireEvent.touchstart(root, { touches: [{ clientX: 10, clientY: 10 }] })
+    const wrapper = container.querySelector('.wd-swipe-action__wrapper') as Element
+    expect(wrapper).toBeTruthy()
+    // MTS 化后的分工（NATIVE-REWRITE §2）：主线程 touchstart/move 绑根 view，
+    // 后台 touchstart（事件转发 + 手势起点记录）绑内容容器 wrapper——真机上
+    // 内容区触摸先经 wrapper 再冒泡到根 view；jsdom 不冒泡，直接派发到
+    // 后台处理器所在元素验证转发链路
+    fireEvent.touchstart(wrapper, { touches: [{ clientX: 10, clientY: 10 }] })
     await pause(50)
     expect(parentStarts).toBe(1)
     expectNoBadHandlers()

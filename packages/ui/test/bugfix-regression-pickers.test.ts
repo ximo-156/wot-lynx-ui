@@ -168,11 +168,16 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
       expect(columns.length, '初始应展开两列').toBe(2)
       expect(columns[1].querySelectorAll('.wd-picker-view__column-item').length).toBe(2)
 
-      // 第 1 列向上拖一格（itemHeight 默认 44）→ 选中"江苏"
+      // 第 1 列向上拖一格（itemHeight 默认 44）→ 选中"江苏"。
+      // 事件分工（jsdom 不模拟冒泡，按真机冒泡结果分别派发）：列内容（子）绑
+      // 后台 touchstart/touchend + 主线程 touchmove；列（父）绑主线程
+      // touchstart 记跟手起点（详见 wd-picker-view 文件头）。
       const first = columns[0]
+      const firstContent = first.querySelector('.wd-picker-view__column-content')!
+      fireEvent.touchstart(firstContent, { touches: [{ clientX: 0, clientY: 0 }] })
       fireEvent.touchstart(first, { touches: [{ clientX: 0, clientY: 0 }] })
-      fireEvent.touchmove(first, { touches: [{ clientX: 0, clientY: -44 }] })
-      fireEvent.touchend(first)
+      fireEvent.touchmove(firstContent, { touches: [{ clientX: 0, clientY: -44 }] })
+      fireEvent.touchend(firstContent, { touches: [], changedTouches: [{ clientX: 0, clientY: -44 }] })
       await nextTick()
       await nextTick()
 

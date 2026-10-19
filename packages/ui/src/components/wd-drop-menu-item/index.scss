@@ -39,6 +39,11 @@ $drop-item-popup-border-top: var(--wot-drop-item-popup-border-top, $stroke-main 
   z-index: 101;
   // pointer-events 让全屏包裹层放行触摸，仅浮层自身响应（本地多组件同用法）
   pointer-events: none;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。浮层（wd-popup，绝对
+  // 定位贴边）为唯一流式子节点，纵向堆叠 + 交叉轴拉伸。
+  display: flex;
+  flex-direction: column;
 
   @include edeep(popup) {
     position: absolute;
@@ -48,6 +53,7 @@ $drop-item-popup-border-top: var(--wot-drop-item-popup-border-top, $stroke-main 
 
   @include e(option) {
     display: flex;
+    flex-direction: row;
     padding: $drop-item-option-padding;
     justify-content: space-between;
     align-items: center;
@@ -91,7 +97,13 @@ $drop-item-popup-border-top: var(--wot-drop-item-popup-border-top, $stroke-main 
   }
 
   @include edeep(icon) {
-    display: block;
+    // Lynx 适配：参考源为 display: block（引擎不识别，落回 linear 默认）；
+    // 勾选图标根（wd-icon 的 view）以 flex 行 + 成对居中承载字形
+    // （wd-collapse-item 箭头同方案）
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     font-size: $drop-item-icon-size;
     color: $drop-item-icon-color;
   }

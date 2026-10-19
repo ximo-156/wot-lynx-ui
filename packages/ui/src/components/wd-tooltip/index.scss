@@ -63,6 +63,12 @@ $tooltip-line-height: var(--wot-tooltip-line-height, $typography-body-line-heigh
 
   @include e(inner) {
     position: relative;
+    // Lynx 适配：弹层内容显式 flex 行 + 成对居中（CONVENTIONS §3）——__pos 有
+    // min-width: 138px，气泡宽于文字时靠 flex 居中而非 text-align 继承
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
     padding: $tooltip-padding;
     white-space: nowrap;
     line-height: $tooltip-line-height;

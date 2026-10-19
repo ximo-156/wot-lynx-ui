@@ -110,10 +110,17 @@ $popover-menu-icon-margin-right: var(--wot-popover-menu-icon-margin-right, $spac
 
   @include e(inner) {
     position: relative;
+    // Lynx 适配：弹层内容显式 flex 行 + 成对居中 + 文本居中（CONVENTIONS §3：
+    // 容器 flex 居中不依赖 text-align 继承，气泡宽于内容时文字仍居中）
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
     white-space: nowrap;
     padding: $popover-padding;
     font-size: $popover-font-size;
     line-height: $popover-line-height;
+    text-align: center;
     color: $popover-color;
   }
 

@@ -1,6 +1,9 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(form) {
+  // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // 显式 display:flex + flex-direction:column 保证各表单项纵向堆叠、
+  // 宽度撑满父容器（flex 子项默认 stretch）
   display: flex;
   flex-direction: column;
   width: 100%;

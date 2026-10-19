@@ -14,7 +14,8 @@
  *   Lynx 无对应全局点击链路，降级为自包含的全屏透明 backdrop 捕获气泡外
  *   tap；useQueue / clickoutside 队列逻辑保留（打开时关闭其它气泡）。
  * - showStyle 为 wot-ui 遗留状态（模板未消费），此处按对象语法同步赋值以
- *   保持脚本逐段对齐。
+ *   保持脚本逐段对齐；显示值取 Lynx 可识别的 flex（参考源的 inline-block
+ *   在 Lynx 3.x 下被静默丢弃，CONVENTIONS §15）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -72,8 +73,9 @@ watch(
         closeOther(proxy)
       }
     }
-    // wot-ui 此处为字符串（display: inline-block;），本地 showStyle 为对象语法
-    popover.showStyle.value = newValue ? { display: 'inline-block' } : { display: 'none' }
+    // wot-ui 此处为字符串（display: inline-block;），本地 showStyle 为对象语法；
+    // inline-block 在 Lynx 不被识别，显示值取语义等价的 flex
+    popover.showStyle.value = newValue ? { display: 'flex' } : { display: 'none' }
     emit('change', { show: newValue })
     emit(`${newValue ? 'open' : 'close'}`)
   }
@@ -89,7 +91,7 @@ onBeforeMount(() => {
   } else {
     pushToQueue(proxy)
   }
-  popover.showStyle.value = props.modelValue ? { display: 'inline-block' } : { display: 'none' }
+  popover.showStyle.value = props.modelValue ? { display: 'flex' } : { display: 'none' }
 })
 
 onBeforeUnmount(() => {

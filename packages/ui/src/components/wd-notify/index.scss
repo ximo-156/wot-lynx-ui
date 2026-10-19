@@ -54,8 +54,14 @@ $notify-types: ("primary": ("bg": $notify-primary-bg,
     "color": $notify-warning-color));
 
 @include b(notify) {
+  // 根节点三件套（NATIVE-REWRITE §3.1）：图标 + 内容 + 关闭为横向行，
+  // 显式 flex-direction: row（Lynx 3.x 默认 linear 布局下不写即静默丢弃）；
+  // flex-shrink: 0 —— 弹层 .wd-popup 为 flex column 容器，本视图不被按
+  // 比例压缩
   display: flex;
+  flex-direction: row;
   align-items: center;
+  flex-shrink: 0;
   box-sizing: border-box;
   padding: $notify-padding;
   font-size: $notify-font-size;
@@ -105,6 +111,9 @@ $notify-types: ("primary": ("bg": $notify-primary-bg,
 
   @include e(content) {
     flex: 1 1 auto;
+    // 单行省略的文本容器：flex 行内的可收缩项需要 min-width: 0，否则文本
+    // 会把前缀图标 / 关闭按钮挤出屏外（flex 子项默认 min-width: auto）
+    min-width: 0;
 
     @include lineEllipsis;
   }

@@ -43,7 +43,12 @@ $card-footer-padding: var(--wot-card-footer-padding, $padding-tight $padding-loo
 $card-footer-border-color: var(--wot-card-footer-border-color, $border-main) !default;
 
 @include b(card) {
+  /* 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+     linear 布局，显式 display: flex + flex-direction: column 保证
+     标题 / 内容 / 底部纵向堆叠 */
   position: relative;
+  display: flex;
+  flex-direction: column;
   background-color: $card-bg;
   border-radius: $card-radius;
   box-shadow: $card-shadow;
@@ -58,7 +63,11 @@ $card-footer-border-color: var(--wot-card-footer-border-color, $border-main) !de
     width: 100%;
     padding: $card-title-padding;
     box-sizing: border-box;
+    /* 标题行：图标 / 文字与右侧操作同行排列，显式 flex 行 +
+       交叉轴居中（NATIVE-REWRITE §3.2 图标与文字基线场景） */
     display: flex;
+    flex-direction: row;
+    align-items: center;
   }
 
   @include e(title-text) {
@@ -77,11 +86,15 @@ $card-footer-border-color: var(--wot-card-footer-border-color, $border-main) !de
     line-height: $card-content-line-height;
     padding: $card-content-padding;
     box-sizing: border-box;
+    /* 内容区纵向堆叠（缺 display: flex 时 flex-direction 被静默丢弃） */
+    display: flex;
+    flex-direction: column;
   }
 
   // 底部区域
   @include e(footer) {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: flex-end;
     padding: $card-footer-padding;

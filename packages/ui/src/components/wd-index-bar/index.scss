@@ -20,10 +20,18 @@ $index-bar-current-index-z-index: var(--wot-index-bar-current-index-z-index, 10)
   position: relative;
   width: 100%;
   height: 100%;
+  // 原生优先重写（NATIVE-REWRITE §3.1）：根节点显式三件套——内容区
+  // （scroll-view）、索引条、触摸气泡纵向层叠。
+  display: flex;
+  flex-direction: column;
 
   @include e(content) {
     width: 100%;
     height: 100%;
+    // 锚点列表纵向排布的显式三件套（不写则 linear 默认方向虽同为纵向，
+    // 但弹性属性会静默丢失；与根节点口径一致）。
+    display: flex;
+    flex-direction: column;
   }
 
   @include e(current-index) {

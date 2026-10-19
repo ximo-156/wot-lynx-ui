@@ -21,6 +21,11 @@ $cell-group-insert-radius: var(--wot-cell-group-insert-radius, $radius-large) !d
 $cell-group-insert-margin: var(--wot-cell-group-insert-margin, $spacing-zero $spacing-extra-loose) !default;
 
 @include b(cell-group) {
+  /* 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+     linear 布局，显式 display: flex + flex-direction: column 保证
+     标题区 / 单元格区纵向堆叠 */
+  display: flex;
+  flex-direction: column;
   background: $cell-group-bg;
 
   /* Lynx 适配：参考源 when(border) 内以 halfPixelBorder 的 ::after 伪元素
@@ -35,7 +40,11 @@ $cell-group-insert-margin: var(--wot-cell-group-insert-margin, $spacing-zero $sp
 
   @include e(title) {
     position: relative;
+    /* 标题行：左侧标题与右侧辅助文字同行排列，显式 flex 行 +
+       交叉轴居中（NATIVE-REWRITE §3.2） */
     display: flex;
+    flex-direction: row;
+    align-items: center;
     justify-content: space-between;
     padding: $cell-group-padding;
     background: $cell-group-bg;
@@ -44,12 +53,25 @@ $cell-group-insert-margin: var(--wot-cell-group-insert-margin, $spacing-zero $sp
     font-weight: $cell-group-font-weight;
   }
 
+  @include e(left) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+  }
+
   @include e(right) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
     color: $cell-group-value-color;
     font-size: $cell-group-value-font-size;
   }
 
   @include e(body) {
+    display: flex;
+    flex-direction: column;
     background: $cell-group-bg;
   }
 

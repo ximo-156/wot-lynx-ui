@@ -2,5 +2,10 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(sticky-box) {
+  /* 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：显式
+     display: flex + flex-direction: column——容器是子吸顶项的纵向流，
+     position: relative 为吸顶定位的包含块（参考源同款声明） */
   position: relative;
+  display: flex;
+  flex-direction: column;
 }

@@ -8,7 +8,11 @@
  *   之后、z-index 低于内容，两个平台都不遮字）；
  * - __day-top / __day-bottom 为绝对定位 + flex 居中的文本容器，用
  *   「view + 内部 text」承载（Lynx 的 text 不保证按 flex 容器布局）；
- * - firstDayStyle 由 objToStyle 字符串改为对象语法（CONVENTIONS §19）。
+ * - firstDayStyle 由 objToStyle 字符串改为对象语法（CONVENTIONS §19）；
+ * - 布局居中（NATIVE-REWRITE §3）：wd-month 根节点显式 display: flex +
+ *   flex-direction: column；__day-container 补 justify-content +
+ *   align-items 成对 flex 居中承载日期文本（text-align 单独不保证文本
+ *   节点撑满容器），选中态背景仍铺满整个日期格。
  */
 <script lang="ts" setup>
 import './index.css'

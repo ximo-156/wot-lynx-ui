@@ -6,9 +6,10 @@
  *   tap，CONVENTIONS §14 订正），均改绑 @tap；
  * - 参考源 rootStyle / animation 以 objToStyle 拼字符串后下发，Lynx 的
  *   patchProp 对 :style 只认对象（CONVENTIONS §19），改为对象语法：
- *   根样式 filterStyle + parseStyle(customStyle) 合并；content 的过渡样式
- *   由 transitionState（reactive，五键全集，Style Funnel §20）经 computed
- *   快照下发，不存在条件缺键；
+ *   根样式经 defineStyleKeys + resolveStyle 每帧输出完整键集（Style
+ *   Funnel §20 迁移），再与 parseStyle(customStyle) 合并；content 的过渡
+ *   样式由 transitionState（reactive，五键全集）经 computed 快照下发，
+ *   不存在条件缺键；
  * - 参考源 stopTransition 以 CSS 宽关键字 unset 取消过渡（Lynx 支持不确定，
  *   参照 wd-curtain 的处理先例），改为语义等价的中性值：transition-property
  *   none + 0s 时长（视觉上等同于不设置）；
@@ -24,14 +25,22 @@
  * - 参考源纵向滚动以 view 承载裸文本、默认插槽回落亦为裸文本，Lynx 要求
  *   文本包 text 元素（CONVENTIONS §4），均已包裹；
  * - 参考源 options 块的 virtualHost / addGlobalClass / styleIsolation 为
- *   uni-app 小程序专有能力，Lynx 无需声明，已移除。
+ *   uni-app 小程序专有能力，Lynx 无需声明，已移除；
+ * - 原生优先重写（NATIVE-REWRITE §3）：本组件无跟手交互（横向/纵向滚动均由
+ *   CSS transition 在 UI 线程原生执行，不涉及 MTS），根 view 经 SCSS 显式
+ *   补全 flex-direction: row——「前缀图标 + 内容区 + 后缀图标」横向行，
+ *   align-items: center 成对居中；纵向模式的文本项堆叠沿用 Lynx linear
+ *   布局的默认纵向流向（与 wot-ui DOM 一致，不引入额外类名）；
+ * - 根内联样式（color / background）已随上述 Style Funnel 迁移输出完整
+ *   键集（中性值 '' 由 is-{type} 状态类兜底配色）。
  */
 <script lang="ts" setup>
 import './index.css'
 
 import { ref, watch, nextTick, computed, reactive, onMounted } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
-import { getRect, isArray, isDef, parseStyle, filterStyle, uuid, type CSSProperties } from '../../common/util'
+import { getRect, isArray, isDef, parseStyle, uuid, type CSSProperties } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { type NoticeBarExpose, noticeBarProps } from './types'
 import { useAlive } from '../../composables/useAlive'
 
@@ -65,17 +74,24 @@ const animation = computed(() => {
   return { ...transitionState }
 })
 
+/**
+ * 根节点可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
+ * 中性值取 ''（未设置）——不传 color / background-color 时由 is-{type}
+ * 状态类承担配色（与 wd-text 的迁移范式一致）。
+ */
+const NOTICE_BAR_STYLE = defineStyleKeys({
+  color: '',
+  background: ''
+})
+
 const rootStyle = computed(() => {
-  const style: CSSProperties = {}
-  if (isDef(props.color)) {
-    style.color = props.color
+  return {
+    ...resolveStyle(NOTICE_BAR_STYLE, {
+      color: isDef(props.color) ? props.color : '',
+      background: isDef(props.backgroundColor) ? props.backgroundColor : ''
+    }),
+    ...parseStyle(props.customStyle)
   }
-
-  if (isDef(props.backgroundColor)) {
-    style.background = props.backgroundColor
-  }
-
-  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 const noticeBarClass = computed(() => {
   const { type, wrapable, scrollable } = props

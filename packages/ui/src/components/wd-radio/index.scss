@@ -144,6 +144,9 @@ $radio-button-icon-left: var(--wot-radio-button-icon-left, $n-4) !default;
     border-style: solid;
     border-color: currentColor;
     border-radius: $radio-button-shape-border-radius;
+    // Lynx 适配：圆心点的居中属性显式挂在 display: flex 上（§15）
+    display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
   }

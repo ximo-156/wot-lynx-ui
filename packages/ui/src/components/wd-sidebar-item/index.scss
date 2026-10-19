@@ -35,7 +35,12 @@ $sidebar-item-icon-size: var(--wot-sidebar-item-icon-size, $n-20) !default;
 $sidebar-item-icon-margin-right: var(--wot-sidebar-item-icon-margin-right, $padding-ultra-tight) !default;
 
 @include b(sidebar-item) {
+  // 原生优先重写（NATIVE-REWRITE §3.1）：根节点显式三件套，图标 + 徽标
+  // （标签）横向排列；justify-content + align-items 成对居中，定高装饰条
+  // （指示条）的垂直居中沿用参考源 translateY(-50%)（定高元素，四边 0 +
+  // flex 需额外包裹层、会改动 DOM 层级，属「确有必要」保留）
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   position: relative;
@@ -58,6 +63,9 @@ $sidebar-item-icon-margin-right: var(--wot-sidebar-item-icon-margin-right, $padd
     // wd-sidebar-item__indicator（仅激活时渲染）
     @include edeep(indicator) {
       position: absolute;
+      // 定高（$n-20）装饰条垂直居中：left: 0 贴边 + top: 50% + translateY(-50%)
+      // （与 wd-circle / wd-index-bar / wd-input-number 等同源写法；改为四边 0
+      // + flex 需额外包裹元素，会破坏 DOM 层级对齐，属确有必要保留）
       top: 50%;
       left: 0;
       width: $sidebar-item-indicator-width;

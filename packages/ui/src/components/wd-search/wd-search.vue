@@ -2,6 +2,9 @@
  * wd-search — 搜索框
  *
  * 与 wot-ui 2.3.2 对齐；Lynx 适配点（相对参考源的差异）：
+ * - 根节点三件套（NATIVE-REWRITE §3.1）：index.scss 显式声明
+ *   display:flex + flex-direction:row + align-items:center，「输入块」与
+ *   「取消按钮」横向排列且交叉轴居中；
  * - 未聚焦时显示「封面」占位（点击封面后才渲染 input 并聚焦，避免键盘
  *   抢焦）；聚焦/失焦/清空驱动封面显隐（showPlaceHolder + showInput）；
  * - @click → @tap（CONVENTIONS §6：Lynx view/图标只派发 tap）；

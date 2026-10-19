@@ -24,6 +24,11 @@ $collapse-item-body-padding: var(--wot-collapse-item-body-padding, $padding-loos
 
 @include b(collapse-item) {
   position: relative;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。头部 / 折叠内容两级子节点
+  // 纵向堆叠，交叉轴拉伸令内容满宽。
+  display: flex;
+  flex-direction: column;
 
   @include when(border) {
     @include halfPixelBorder('top');
@@ -38,14 +43,18 @@ $collapse-item-body-padding: var(--wot-collapse-item-body-padding, $padding-loos
   @include e(header) {
     position: relative;
     display: flex;
+    flex-direction: row;
     justify-content: space-between;
     align-items: center;
     padding: $collapse-item-header-padding;
     overflow: hidden;
 
-    // Lynx 适配：user-select 为 Web 专有属性，按 PORTING §4.5 删除
+    // Lynx 适配：user-select 为 Web 专有属性，按 PORTING §4.5 删除；
+    // 参考源的 display: block（自定义标题插槽撑满头部）引擎不识别，
+    // 以 flex + column 等价表达纵向块级流（wd-step 同方案）
     @include when(custom) {
-      display: block;
+      display: flex;
+      flex-direction: column;
     }
   }
 
@@ -56,7 +65,13 @@ $collapse-item-body-padding: var(--wot-collapse-item-body-padding, $padding-loos
   }
 
   @include edeep(arrow) {
-    display: block;
+    // Lynx 适配：参考源为 display: block（引擎不识别，落回 linear 默认）；
+    // 箭头图标根（wd-icon 的 view）以 flex 行 + 成对居中承载字形，
+    // 与 wd-step / wd-drop-menu-item 的图标处理同方案
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     font-size: $collapse-item-arrow-size;
     color: $collapse-item-arrow-color;
     transition: transform 0.3s;

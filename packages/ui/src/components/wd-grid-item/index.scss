@@ -64,6 +64,10 @@ $grid-item-text-spacing: var(--wot-grid-item-text-spacing, $spacing-super-tight)
   @include e(wrapper) {
     display: flex;
     flex-direction: row;
+    /* 图标与文字同级成行：交叉轴居中保证图标在行内垂直居中
+       （NATIVE-REWRITE §3.2 图标与文字基线场景） */
+    align-items: center;
+    justify-content: center;
   }
 
   @include e(content) {
@@ -127,6 +131,10 @@ $grid-item-text-spacing: var(--wot-grid-item-text-spacing, $spacing-super-tight)
     font-size: $grid-item-font-size;
     line-height: $grid-item-line-height;
     color: $grid-item-text-color;
+    /* 文本居中（NATIVE-REWRITE §3.2）：除容器 flex 居中之外，文本元素自身
+       显式 text-align: center——Lynx 不开 CSS 继承时父级 text-align 不会
+       下发到子 text，写了才真正居中 */
+    text-align: center;
 
     @include when(ellipsis) {
       @include lineEllipsis;

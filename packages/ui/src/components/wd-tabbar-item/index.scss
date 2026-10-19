@@ -17,14 +17,20 @@ $tabbar-item-icon-size: var(--wot-tabbar-item-icon-size, $n-24) !default;
   text-align: center;
   text-decoration: none;
   height: 100%;
+  // 原生优先重写（NATIVE-REWRITE §3.1）：根节点显式三件套，标签项横向排列；
+  // justify-content + align-items 成对居中（徽标包裹的 body 在两项轴上均居中）
   display: flex;
+  flex-direction: row;
   justify-content: center;
   align-items: center;
 
   @include e(body) {
     display: flex;
-    align-items: center;
     flex-direction: column;
+    // 居中成对：交叉轴 align-items 水平居中图标与标题，主轴 justify-content
+    // 纵向居中（body 内容高度自适应，center 与不设置视觉等价但键集语义完整）
+    justify-content: center;
+    align-items: center;
     line-height: 1;
     padding: 0;
     position: relative;
@@ -43,6 +49,9 @@ $tabbar-item-icon-size: var(--wot-tabbar-item-icon-size, $n-24) !default;
   @include e(body-title) {
     font-size: $tabbar-item-title-font-size;
     line-height: $tabbar-item-title-line-height;
+    // Lynx text 不保证继承父级 text-align（需宿主开启 enableCSSInheritance），
+    // 标题文本显式居中（NATIVE-REWRITE §3.2）
+    text-align: center;
   }
 
   @include edeep(body-icon) {

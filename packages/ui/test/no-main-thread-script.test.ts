@@ -1,16 +1,21 @@
 /**
- * 结构回归测试：组件库禁止引入 Main Thread Script（MTS）机制。
+ * 结构回归测试：组件库的 Main Thread Script（MTS）使用规范。
  *
- * 背景（真机报错 1101 "main-thread.js exception: TypeError: cannot read
- * property 'current' of undefined"）：
- * - `lynxWorkletImpl` 只存在于主线程，后台线程的 computed 检测恒为 false，
- *   MTS 事件绑定永不生效，组件实际走降级分支；
- * - `runOnMainThread` 派发的 worklet 消费 useMainThreadRef 的 `.current`，
- *   其值依赖 INIT_MT_REF ops 先于 worklet 应用到主线程，跨通道无顺序保证，
- *   refMap 未就绪时生产构建直接崩溃。
+ * 2026-10-19 起组件库全面转向**原生优先**实现：跟手交互（拖动 / 滑动 / 缩放）
+ * 必须走 Lynx 官方的声明式 MTS 路径（`main-thread-bind*` 事件 + `'main thread'`
+ * 指令函数 + `useMainThreadRef` + `main-thread-ref`），事件在主线程直接派发、
+ * 节点样式直改，零线程跨越——这是 Lynx「原生交互性能」的唯一官方路径。
  *
- * MTS 已从组件库统一移除（见 CONVENTIONS.md §9），本测试防止回归：
- * 任何组件源码不得再出现 worklet 指令、主线程事件/引用绑定或跨线程 API。
+ * 历史禁令（真机 1101 "cannot read property 'current' of undefined"）针对的是
+ * **命令式** `runOnMainThread` 派发模式：其 worklet 消费 useMainThreadRef 的
+ * `.current` 依赖 INIT_MT_REF ops 先于 worklet 应用，跨通道无顺序保证，refMap
+ * 未就绪时生产构建直接崩溃。声明式 `main-thread-bind*` 由框架在建树时注册，
+ * 不经过该竞态路径，为现行唯一允许的 MTS 形态。
+ *
+ * 本测试锁定：
+ * - **禁止**命令式跨线程 API（runOnMainThread / runOnBackground / lynxWorkletImpl 检测）；
+ * - **允许**声明式 MTS（main-thread-bind* / main-thread-ref / useMainThreadRef /
+ *   'main thread' 指令）。
  */
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -40,34 +45,24 @@ function stripComments(source: string): string {
     .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
 }
 
+/** 命令式跨线程 API：真机 1101 崩溃路径，一律禁止 */
 const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
-  { pattern: /['"]main thread['"]/, hint: "'main thread' worklet 指令" },
-  { pattern: /useMainThreadRef/, hint: 'useMainThreadRef' },
-  { pattern: /runOnMainThread/, hint: 'runOnMainThread' },
-  { pattern: /runOnBackground/, hint: 'runOnBackground' },
-  { pattern: /main-thread-ref/, hint: 'main-thread-ref 属性' },
-  { pattern: /main-thread-bind/, hint: 'main-thread-bind* 事件' },
+  { pattern: /runOnMainThread/, hint: 'runOnMainThread 命令式派发' },
+  { pattern: /runOnBackground/, hint: 'runOnBackground 命令式派发' },
   { pattern: /lynxWorkletImpl/, hint: 'lynxWorkletImpl 检测' }
 ]
 
-describe('组件库源码不得使用 Main Thread Script', () => {
+describe('组件库 MTS 使用规范（声明式允许，命令式禁止）', () => {
   const files = collectSourceFiles(SRC_DIR)
 
-  // 读盘 + 去注释**只做一次**并缓存到 describe 作用域。
-  //
-  // 旧实现把 readFileSync + stripComments 写在 it.each 的回调里：7 个用例各自
-  // 重读全库 ~350 个源码文件并跑一遍正则替换，单用例耗时超过 vitest 默认的 5s
-  // 超时 → 7 个用例全部「超时失败」（不是断言失败）。后果是这条守卫在 CI 上
-  // 要么假红、要么被当作 flaky 忽略，CONVENTIONS §10「禁止 MTS」实际处于
-  // 无人看守状态。缓存后单用例只对内存中的字符串跑一次正则。
+  // 读盘 + 去注释**只做一次**并缓存到 describe 作用域（旧实现每用例重读全库，
+  // 单用例超 5s 致 7 个用例全部超时失败，守卫实际处于无人看守状态）。
   const sources = files.map((file) => ({
     file,
     code: stripComments(readFileSync(file, 'utf8'))
   }))
 
   it('覆盖率：收集器不应漏扫 src 下的源码文件', () => {
-    // 重写期间组件数量动态变化，断言「磁盘文件数 == 收集器文件数」，
-    // 即收集逻辑始终覆盖全部源码（全部 102 个组件重写完成后约 350 个文件）。
     let onDisk = 0
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir)) {
@@ -96,4 +91,16 @@ describe('组件库源码不得使用 Main Thread Script', () => {
       expect(offenders).toEqual([])
     }
   )
+
+  it("声明式 MTS 形态自洽：用了 'main thread' 指令就必须经 main-thread-bind* 绑定", () => {
+    // 防「写了指令函数但没绑主线程事件」的半吊子用法（死代码 + 假性能）
+    const offenders = sources
+      .filter(({ code }) => {
+        const hasDirective = /['"]main thread['"]/.test(code)
+        const hasBinding = /main-thread-bind/.test(code)
+        return hasDirective && !hasBinding
+      })
+      .map(({ file }) => path.relative(SRC_DIR, file))
+    expect(offenders).toEqual([])
+  })
 })

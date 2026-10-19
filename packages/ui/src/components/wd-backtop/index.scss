@@ -33,6 +33,10 @@ $backtop-z-index: var(--wot-backtop-z-index, 100) !default;
   width: $backtop-width;
   height: $backtop-height;
   display: flex;
+  // 原生优先重写（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，flex-direction 必须显式挂在 display: flex 上才生效；按钮内容为
+  // 「图标 + 文本」的纵向组合，故按 column 声明。
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   color: $backtop-color;
@@ -49,6 +53,9 @@ $backtop-z-index: var(--wot-backtop-z-index, 100) !default;
     font-size: $backtop-text-font-size;
     line-height: $backtop-text-line-height;
     color: $backtop-text-color;
+    // 文本居中（NATIVE-REWRITE §3.2）：容器 flex 居中之外，text 元素自身
+    // 也必须显式 text-align: center（Lynx text 不依赖继承）
+    text-align: center;
   }
 
   @include edeep(backicon) {

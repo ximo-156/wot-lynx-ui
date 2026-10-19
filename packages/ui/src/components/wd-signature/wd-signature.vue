@@ -1,26 +1,44 @@
 /*
- * wd-signature — 签名
+ * wd-signature — 签名（原生优先重写版）
  *
  * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
  * - Lynx 无 canvas 2D API（CONVENTIONS §12）：签名板用 SVG 折线实现
- *   ——每笔一条 polyline（非压感）或逐段 path（压感，stroke-width 取
- *   该段终点线宽），元素均在 SVG content 白名单内（CONVENTIONS §8）；
+ *   ——已提交笔迹每笔一条 polyline（非压感）或逐段 path（压感，
+ *   stroke-width 取该段终点线宽），元素均在 SVG content 白名单内
+ *   （CONVENTIONS §8）；
+ * - **跟手走主线程（声明式 MTS）**：正在绘制的当前笔迹由主线程
+ *   worklet 直改「线段池」渲染——每个 touchmove 把上一触点到当前
+ *   触点的一段直线经 setStyleProperty 直改池中下一个 view 元素
+ *   （left / top / width / height / border-radius / background-color /
+ *   transform: rotate），零线程跨越、笔画进行中零重渲染（原实现每帧
+ *   重绘整幅 SVG，O(总点数)）；线段几何与 SVG 导出的逐段 path 同构
+ *   （段宽取终点线宽），视觉与导出一致；
+ * - **跨元素分工（真机冒泡语义）**：画布（__content-canvas）绑后台
+ *   touchstart / touchend（起笔记录与落笔提交）与主线程
+ *   main-thread-bindtouchmove（跟手渲染）；父容器 __content 绑主线程
+ *   touchstart / touchend / touchcancel（度量画布几何、起笔登记、
+ *   清尾）与后台 @touchmove.stop.prevent（累积笔迹数据 + 防滚动接管，
+ *   替代 uni-app canvas 的 disable-scroll——vue-lynx 修饰符仅 .stop
+ *   有副作用，catch 语义由后台处理器承担）。真机上画布触摸事件冒泡到
+ *   __content 即触发；**jsdom 不模拟冒泡**，测试中需向两个元素分别
+ *   派发验证（与 slider-mts.test.ts 同法）；
+ * - **几何一次性度量**：画布页面偏移由主线程 worklet 在起笔时经
+ *   `MainThread.Element.invoke('boundingClientRect')` 获取（CONVENTIONS
+ *   §16），后台起笔处理器同步经 getRect 刷新同一偏移——两侧同源，
+ *   保证跟手渲染与导出 SVG 的坐标系一致；
+ * - **线段池重置（Style Funnel §20）**：池内联样式的「隐藏态」由
+ *   segmentResetStyle ref 持有，落笔 / 清空 / 撤销 / 恢复时赋新引用，
+ *   池宽高随该帧 SVG 重绘一并清零（同一帧无闪烁）；笔画进行中引用
+ *   不变，重渲染不冲刷 worklet 直改值；
+ * - **池容量降级**：池容量 POOL_SIZE 条线段，单笔超过时超出部分不
+ *   跟手渲染，落笔后由 SVG 全量重绘补齐（笔迹数据以后台累积为准，
+ *   导出不受影响）；
  * - 确认导出为标准 SVG data URI（不经过引擎 SVG 解析器，可安全携带
  *   完整属性），SignatureResult.tempFilePath 即该 data URI；
  *   fileType / quality 为 canvas 导出专有 props，对 SVG 导出不生效
  *   （保留声明仅为 API 对齐）；
- * - 参考源在触摸处理器内调用 e.preventDefault()：vue-lynx 的修饰符
- *   仅实现 .stop（stopPropagation），.prevent 无副作用，故改由模板
- *   @touchmove.stop.prevent 承担（等价 uni-app canvas 的
- *   disable-scroll：签名期间阻止页面滚动，disableScroll 恒按 true
- *   生效，见 types.ts 该 prop 注释）；
  * - 触摸坐标为页面坐标（Lynx touches[].clientX/clientY），需减去画布
  *   偏移换算为画布坐标（uni-app canvas 事件坐标即以画布为原点）；
- * - 参考源的 ctx 相关内部实现（getContext / setcanvasState / setLine /
- *   redrawCanvas / drawSmoothLine / canvasToImage）由 svgContent
- *   computed 的响应式重算替代：笔迹数据（lines/redoLines/currentLine）
- *   变化即自动重绘，无需手动 redraw；watch penColor / lineWidth 因此
- *   省略（computed 直接读取 props）；
  * - customClass / customStyle 绑定到根节点（参考源根节点未绑定二者，
  *   Lynx 端口按库内统一约定绑定，见 PORTING §3.5）；
  * - 度量回调晚于卸载落地时经 useAlive 守卫丢弃（真机 9902 家族）。
@@ -28,7 +46,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, onMounted, ref, useMainThreadRef, watch } from 'vue-lynx'
 import WdButton from '../wd-button/wd-button.vue'
 import { signatureProps, type SignatureEmits, type SignatureExpose, type SignatureResult, type Point, type Line } from './types'
 import { useTranslate } from '../../composables/useTranslate'
@@ -105,6 +123,12 @@ const canvasStyle = computed(() => {
   return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
+/**
+ * 根节点样式：customStyle 经 parseStyle 归一为对象（CONVENTIONS §19）。
+ * 经 computed 暴露给模板——不在模板中直接调用导入的 parseStyle。
+ */
+const rootStyle = computed(() => parseStyle(props.customStyle))
+
 const enableHistory = computed(() => props.enableHistory)
 
 const lines = ref<Line[]>([]) // 保存所有线条
@@ -157,25 +181,31 @@ const startDrawing = (e: any) => {
   drawing.value = true
   emit('start', e)
 
-  // 创建新线条，同时保存当前的所有绘制参数
-  const { x, y } = getPoint(e)
-  currentLine.value = {
-    points: [
-      {
-        x,
-        y,
-        t: Date.now() // 使用 t 记录时间戳，用于速度计算
-      }
-    ],
-    color: props.penColor,
-    width: getDefaultLineWidth(),
-    backgroundColor: props.backgroundColor,
-    isPressure: props.pressure // 添加笔锋模式标记
-  }
-
-  // 清空重做记录
-  redoLines.value = []
-  draw(e)
+  // 一次性刷新画布偏移（与主线程 worklet 同源几何，保证跟手渲染与
+  // 导出坐标系一致）；刷新后再以首点建线，规避异步窗口
+  getRect(`#${canvasId.value}`, false, proxy).then((rect) => {
+    // 回调晚于卸载落地时丢弃：在已销毁树上写 ref 会触发 vue-lynx 继续
+    // patch，产生晚到的 remove/insert（真机 9902 removeNode 家族）
+    if (!isAlive()) return
+    canvasOffset.value = { left: Number(rect.left) || 0, top: Number(rect.top) || 0 }
+    const { x, y } = getPoint(e)
+    // 创建新线条，同时保存当前的所有绘制参数
+    currentLine.value = {
+      points: [
+        {
+          x,
+          y,
+          t: Date.now() // 使用 t 记录时间戳，用于速度计算
+        }
+      ],
+      color: props.penColor,
+      width: getDefaultLineWidth(),
+      backgroundColor: props.backgroundColor,
+      isPressure: props.pressure // 添加笔锋模式标记
+    }
+    // 清空重做记录
+    redoLines.value = []
+  })
 }
 
 /**
@@ -204,6 +234,8 @@ const stopDrawing = (e: any) => {
     currentStep.value = lines.value.length
   }
   currentLine.value = undefined
+  // 线段池随该帧 SVG 重绘一并重置（见 segmentResetStyle 注释）
+  resetSegmentPool()
   emit('end', e)
 }
 
@@ -243,6 +275,7 @@ const clear = () => {
   lines.value = []
   redoLines.value = []
   currentStep.value = 0
+  resetSegmentPool()
   emit('clear')
 }
 
@@ -259,9 +292,13 @@ const confirmSignature = () => {
   emit('confirm', result)
 }
 
-//canvas划线
+/**
+ * 画布 touchmove（后台）：累积笔迹数据（不渲染——渲染在主线程
+ * worklet），并经 catch 语义阻止签名期间页面滚动接管
+ * （uni-app canvas 的 disable-scroll 等价物）。
+ */
 const draw = (e: any) => {
-  if (!drawing.value || props.disabled) return
+  if (!drawing.value || props.disabled || !currentLine.value) return
   const { x, y } = getPoint(e)
 
   const point: Point = {
@@ -313,6 +350,7 @@ const revoke = () => {
   const removedLines = lines.value.splice(lines.value.length - step)
   redoLines.value.push(...removedLines)
   currentStep.value = Math.max(0, currentStep.value - step)
+  resetSegmentPool()
 }
 
 /**
@@ -324,11 +362,13 @@ const restore = () => {
   const restoredLines = redoLines.value.splice(redoLines.value.length - step)
   lines.value.push(...restoredLines)
   currentStep.value = Math.min(lines.value.length, currentStep.value + step)
+  resetSegmentPool()
 }
 
 /**
  * 生成笔迹的 SVG 标记（白名单元素：rect / polyline / path）
- * @param strokeLines 参与渲染的线条（渲染路径含在绘制的当前线，导出路径仅含已提交线条）
+ * @param strokeLines 参与渲染的线条（渲染路径仅含已提交线条，当前笔迹
+ * 由主线程线段池跟手渲染；导出路径同）
  * @param scale 导出缩放倍数（viewBox 不变，宽高属性按倍数放大）
  */
 function buildSvgMarkup(strokeLines: Line[], scale: number = 1): string {
@@ -357,11 +397,24 @@ function buildSvgMarkup(strokeLines: Line[], scale: number = 1): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvasWidth.value} ${canvasHeight.value}" width="${canvasWidth.value * scale}" height="${canvasHeight.value * scale}">${bg}${body}</svg>`
 }
 
-/** SVG content：渲染路径含正在绘制的当前线 */
+/** SVG content：仅含已提交笔迹（当前笔迹由主线程线段池渲染） */
 const svgContent = computed(() => {
-  const strokeLines: Line[] = currentLine.value ? [...lines.value, currentLine.value] : [...lines.value]
-  return sanitizeSvgContent(buildSvgMarkup(strokeLines))
+  return sanitizeSvgContent(buildSvgMarkup(lines.value))
 })
+
+/**
+ * 线段池重置样式（Vue 侧「隐藏态」）。
+ *
+ * 跟手渲染期间线段宽高由主线程 worklet 直改（绕过 Vue）；落笔 / 清空 /
+ * 撤销 / 恢复时经 resetSegmentPool 赋新引用，池内联样式随该帧 SVG
+ * 重绘一并重置为 0×0（同一帧，无闪烁）。笔画进行中引用不变——computed
+ * / 重渲染不触碰该 prop，worklet 直改值不被冲刷（CONVENTIONS §20）。
+ */
+const segmentResetStyle = ref<Record<string, string>>({ position: 'absolute', left: '0px', top: '0px', width: '0px', height: '0px' })
+
+function resetSegmentPool() {
+  segmentResetStyle.value = { position: 'absolute', left: '0px', top: '0px', width: '0px', height: '0px' }
+}
 
 onMounted(() => {
   init()
@@ -379,20 +432,193 @@ defineExpose<SignatureExpose>({
   restore,
   revoke
 })
+
+// ---------- 主线程 worklet（当前笔迹跟手渲染，零线程跨越） ----------
+
+/** 线段池容量：单笔线段数上限，超出部分落笔后由 SVG 全量重绘补齐 */
+const POOL_SIZE = 512
+
+/**
+ * 主线程元素桩类型（worklet 内经 .current 取用）。
+ * 与 @lynx-js/types 的 MainThread.Element 对齐的常用子集。
+ */
+interface MtElement {
+  setStyleProperty(name: string, value: string): void
+  getAttribute(name: string): string | null
+  invoke(method: string, params?: any): Promise<any>
+}
+
+/** 画布元素：worklet 起笔时一次性度量页面偏移 */
+const canvasRef = useMainThreadRef<MtElement | null>(null)
+/** 线段池元素引用数组：worklet 跟手直改（数组在 setup 期建定，元素随渲染挂载） */
+const segmentRefs = Array.from({ length: POOL_SIZE }, () => useMainThreadRef<MtElement | null>(null))
+
+/** 画布页面偏移快照（worklet 内 .current 活值） */
+const geomRef = useMainThreadRef<{ left: number; top: number } | null>(null)
+/**
+ * 当前笔迹主线程状态（worklet 内 .current 活值）：
+ * rawX / rawY 起笔触点（页面坐标），offX / offY 画布偏移，
+ * lastX / lastY / lastT / lastW / prevW 上一触点状态（压感与去重），
+ * index 已用线段数，ready 几何是否已落地。
+ */
+const drawRef = useMainThreadRef<{
+  rawX: number
+  rawY: number
+  offX: number
+  offY: number
+  lastX: number
+  lastY: number
+  lastT: number
+  lastW: number
+  prevW: number
+  index: number
+  ready: boolean
+} | null>(null)
+
+/** worklet 捕获的静态配置快照（setup 期求值；props 实例内不变） */
+const cfgPenColor = props.penColor
+const cfgLineWidth = props.lineWidth
+const cfgPressure = props.pressure
+const cfgDisabled = props.disabled
+const cfgMinWidth = props.minWidth
+const cfgMaxWidth = props.maxWidth
+const cfgMinSpeed = props.minSpeed || 1.5
+
+/**
+ * 起笔（主线程）：一次性度量画布页面偏移并登记笔迹状态。
+ *
+ * 绑在 __content（画布父元素）上：画布的 touchstart 是后台绑定
+ * （起笔记录与 emit），同名事件不能同时挂主线程与后台两个处理器；
+ * 真机上画布触摸冒泡到 __content 即触发此处（slider 范本同款分工）。
+ */
+const onDrawStartMt = (event: any) => {
+  'main thread'
+  if (cfgDisabled) return
+  const touch0 = event.touches && event.touches[0]
+  if (!touch0) return
+  drawRef.current = {
+    rawX: touch0.clientX,
+    rawY: touch0.clientY,
+    offX: 0,
+    offY: 0,
+    lastX: 0,
+    lastY: 0,
+    lastT: 0,
+    lastW: cfgPressure ? (cfgMaxWidth + cfgMinWidth) / 2 : cfgLineWidth,
+    prevW: 0,
+    index: 0,
+    ready: false
+  }
+  const canvas = canvasRef.current
+  if (!canvas || typeof canvas.invoke !== 'function') return
+  canvas.invoke('boundingClientRect').then((rect: any) => {
+    const d = drawRef.current
+    if (!d || d.ready) return
+    d.offX = Number(rect.left) || 0
+    d.offY = Number(rect.top) || 0
+    d.lastX = d.rawX - d.offX
+    d.lastY = d.rawY - d.offY
+    d.lastT = Date.now()
+    d.ready = true
+  })
+}
+
+/**
+ * 跟手（主线程）：当前触点与上一触点的一段直线直改线段池下一元素。
+ *
+ * 段几何与 SVG 导出的逐段 path 同构（段宽取终点线宽、圆头线帽），
+ * 元素中心定位 + rotate，无需 transform-origin。与后台 draw() 同一
+ * 套去重 / 压感公式，保证跟手渲染与导出笔迹一致。
+ */
+const onDrawMoveMt = (event: any) => {
+  'main thread'
+  const d = drawRef.current
+  if (!d || !d.ready || d.index >= POOL_SIZE) return
+  const touch0 = event.touches && event.touches[0]
+  if (!touch0) return
+
+  const x = touch0.clientX - d.offX
+  const y = touch0.clientY - d.offY
+  const t = Date.now()
+
+  // 与后台 draw() 同一去重：同毫秒或同位置不建段
+  if (d.lastT === t || (d.lastX === x && d.lastY === y)) return
+
+  const distance = Math.sqrt(Math.pow(x - d.lastX, 2) + Math.pow(y - d.lastY, 2))
+  const speed = distance / (t - d.lastT || 0.1)
+
+  let width = cfgLineWidth
+  if (cfgPressure) {
+    const limitedSpeed = Math.min(cfgMinSpeed * 10, Math.max(cfgMinSpeed, speed))
+    const addWidth = ((cfgMaxWidth - cfgMinWidth) * (limitedSpeed - cfgMinSpeed)) / cfgMinSpeed
+    width = Math.min(Math.max(cfgMaxWidth - addWidth, cfgMinWidth), cfgMaxWidth)
+    // 线宽变化率限制（与后台 draw() 一致）
+    if (d.prevW && d.lastW) {
+      const rate = (width - d.lastW) / d.lastW
+      const maxRate = 0.2
+      if (Math.abs(rate) > maxRate) {
+        width = d.lastW * (1 + (rate > 0 ? maxRate : -maxRate))
+      }
+    }
+  }
+
+  const seg = segmentRefs[d.index] && segmentRefs[d.index].current
+  if (seg && distance > 0) {
+    const angle = (Math.atan2(y - d.lastY, x - d.lastX) * 180) / Math.PI
+    seg.setStyleProperty('left', `${(d.lastX + x) / 2 - distance / 2}px`)
+    seg.setStyleProperty('top', `${(d.lastY + y) / 2 - width / 2}px`)
+    seg.setStyleProperty('width', `${distance}px`)
+    seg.setStyleProperty('height', `${width}px`)
+    seg.setStyleProperty('background-color', cfgPenColor)
+    seg.setStyleProperty('border-radius', `${width / 2}px`)
+    seg.setStyleProperty('transform', `rotate(${angle}deg)`)
+  }
+
+  d.prevW = d.lastW
+  d.lastW = width
+  d.lastX = x
+  d.lastY = y
+  d.lastT = t
+  d.index = d.index + 1
+}
+
+/**
+ * 收笔 / 取消（主线程）：清空笔迹状态。
+ *
+ * 线段池的隐藏重置由 Vue 侧 segmentResetStyle 承担（与 SVG 重绘同帧）；
+ * 此处仅清主线程状态，防上一笔起点残留导致跳变。
+ */
+const onDrawEndMt = () => {
+  'main thread'
+  drawRef.current = null
+}
 </script>
 
 <template>
-  <view :class="['wd-signature', customClass]" :style="parseStyle(customStyle)">
-    <view class="wd-signature__content">
+  <view :class="['wd-signature', customClass]" :style="rootStyle">
+    <!-- 主线程 worklet 宿主：起笔度量 / 收笔清尾（画布触摸冒泡至此），
+         后台 touchmove 承担笔迹累积与防滚动接管 -->
+    <view
+      class="wd-signature__content"
+      :main-thread-bindtouchstart="onDrawStartMt"
+      :main-thread-bindtouchend="onDrawEndMt"
+      :main-thread-bindtouchcancel="onDrawEndMt"
+      @touchmove.stop.prevent="draw"
+    >
       <view
         :id="canvasId"
         class="wd-signature__content-canvas"
         :style="canvasStyle"
+        :main-thread-ref="canvasRef"
         @touchstart="startDrawing"
-        @touchmove.stop.prevent="draw"
+        :main-thread-bindtouchmove="onDrawMoveMt"
         @touchend="stopDrawing"
       >
+        <!-- 已提交笔迹（SVG，仅落笔时重绘） -->
         <svg :content="svgContent" />
+        <!-- 线段池：当前笔迹的跟手渲染元素（主线程 worklet 直改样式；
+             隐藏态由 segmentResetStyle 驱动，随 SVG 重绘同帧重置） -->
+        <view v-for="index in POOL_SIZE" :key="index" :main-thread-ref="segmentRefs[index - 1]" :style="segmentResetStyle" />
       </view>
     </view>
     <view class="wd-signature__footer">

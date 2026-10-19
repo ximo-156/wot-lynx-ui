@@ -14,11 +14,11 @@
  * - 参考源 inner 态图标 / 文案 / zero 态配色用 !important 覆盖状态色，
  *   Lynx 默认不支持 !important（PORTING §4.5），改由选择器特异度
  *   （.wd-progress--inner.is-zero 三类选择器）在源码序上覆盖，行为等价；
- * - 根 view 无事件绑定，不涉及 CONVENTIONS §14 的 tap 转发；
- * - display: block 为参考源声明，Lynx 引擎不识别该值（仅认 flex/none/
- *   linear，CONVENTIONS §15）——声明被忽略后 outer 回落到默认 linear 布局，
- *   与 Web 的 block 容器语义一致（子节点仅一个绝对定位的 inner），故保留
- *   声明以对齐参考源样式表。
+ * - 布局三件套（NATIVE-REWRITE §3 / CONVENTIONS §15）：根节点与 outer /
+ *   inner 均显式 display: flex + flex-direction: row——参考源 outer 的
+ *   display: block 引擎不识别（仅认 flex/none/linear），显式改写后与 Web
+ *   的 block 容器语义一致（唯一子节点为绝对定位的 inner）；
+ * - 根 view 无事件绑定，不涉及 CONVENTIONS §14 的 tap 转发。
  */
 <script lang="ts" setup>
 import './index.css'

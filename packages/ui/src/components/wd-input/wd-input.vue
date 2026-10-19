@@ -2,6 +2,10 @@
  * wd-input — 输入框
  *
  * 与 wot-ui 2.3.2 对齐；Lynx 适配点（相对参考源的差异）：
+ * - 根节点三件套（NATIVE-REWRITE §3.1）：index.scss 显式声明
+ *   display:flex + flex-direction:row + align-items:center，「前缀图标 /
+ *   原生输入框 / 后缀区」横向排列且交叉轴居中；__prefix / __suffix 同为
+ *   显式 flex row 容器；
  * - 基于 Lynx 原生 input 元素；参考源用 v-model 双向绑定，vue-lynx 运行时
  *   对原生元素不挂 vModel 指令，故改 :value 受控绑定 + @input 回写
  *   inputValue 后再向上同步（语义与 v-model 一致）；

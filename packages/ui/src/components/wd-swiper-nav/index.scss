@@ -44,9 +44,23 @@ $swiper-nav-btn-spacing: var(--wot-swiper-nav-btn-spacing, $spacing-loose) !defa
 $swiper-nav-btn-border-radius: var(--wot-swiper-nav-btn-border-radius, $radius-full) !default;
 
 @include b(swiper-nav) {
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。指示器根节点同时承担
+  // 「贴边定位条」角色（见下方 m(top/bottom/left/right)）：四边 0 + flex
+  // 成对居中令 dots 行 / fraction 文案在条带内居中，纵向方向由
+  // m(vertical) 覆盖 flex-direction（晚于本规则，特异性相同后者胜出）。
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
 
   @include e(btn) {
     position: absolute;
+    // Lynx 适配（NATIVE-REWRITE §3.2「禁 left:50% + translate」的例外，
+    // 与 wd-popup 居中弹层同源）：控制按钮是定寸圆形控件（24px），
+    // 「四边 0 + flex 居中」只能撑开可拉伸盒子，无法表达「定寸盒子
+    // 单轴居中」——故保留 top: 50% + translateY(-50%)；其内部图标仍
+    // 以 flex 成对居中（下方 align-items / justify-content）。
     top: 50%;
     transform: translateY(-50%);
     display: flex;
@@ -84,6 +98,8 @@ $swiper-nav-btn-border-radius: var(--wot-swiper-nav-btn-border-radius, $radius-f
     background: $swiper-nav-fraction-bg;
     color: $swiper-nav-fraction-color;
     font-size: $swiper-nav-fraction-font-size;
+    // 分数文案居中（NATIVE-REWRITE §3.2：容器 flex 居中 + 文本 text-align）
+    text-align: center;
   }
 
   @include e(item) {
@@ -121,18 +137,21 @@ $swiper-nav-btn-border-radius: var(--wot-swiper-nav-btn-border-radius, $radius-f
     }
   }
 
+  // Lynx 适配（NATIVE-REWRITE §3.2）：参考源用 top: 50% + translateY(-50%)
+  // 做左右边距的垂直居中，改为四边 0（top/bottom）撑满 + flex 成对居中
+  // ——不依赖 transform，纵向 dots 与横向 dots 均正确居中
   @include m(left) {
     position: absolute;
     left: $swiper-nav-spacing;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
+    bottom: 0;
   }
 
   @include m(right) {
     position: absolute;
     right: $swiper-nav-spacing;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
+    bottom: 0;
   }
 
   @include m(top-left) {
@@ -141,11 +160,13 @@ $swiper-nav-btn-border-radius: var(--wot-swiper-nav-btn-border-radius, $radius-f
     left: $swiper-nav-spacing;
   }
 
+  // Lynx 适配（NATIVE-REWRITE §3.2）：参考源用 left: 50% + translateX(-50%)
+  // 做顶部/底部的水平居中，改为左右贴边撑满 + flex 成对居中
   @include m(top) {
     position: absolute;
-    left: 50%;
+    left: 0;
+    right: 0;
     top: $swiper-nav-spacing;
-    transform: translateX(-50%);
   }
 
   @include m(top-right) {
@@ -162,9 +183,9 @@ $swiper-nav-btn-border-radius: var(--wot-swiper-nav-btn-border-radius, $radius-f
 
   @include m(bottom) {
     position: absolute;
-    left: 50%;
+    left: 0;
+    right: 0;
     bottom: $swiper-nav-spacing;
-    transform: translateX(-50%);
   }
 
   @include m(bottom-right) {
@@ -174,9 +195,10 @@ $swiper-nav-btn-border-radius: var(--wot-swiper-nav-btn-border-radius, $radius-f
   }
 
   // Lynx 3.x 默认 linear 布局：flex-direction 只对 display:flex 生效
-  // （CONVENTIONS §15），纵向指示器的列方向依赖 m(dots, dots-bar) 上的
-  // display:flex，故此处仅覆盖方向。
+  // （CONVENTIONS §15）。纵向指示器的列方向在此自足声明（display:flex
+  // 一并写出，修饰规则不依赖根规则的层叠次序）。
   @include m(vertical) {
+    display: flex;
     flex-direction: column;
   }
 }

@@ -11,18 +11,31 @@ $circle-text-line-height: var(--wot-circle-text-line-height, $typography-title-l
 @include b(circle) {
   position: relative;
   // Lynx 适配：inline-block 不被识别（引擎只认 flex/none/linear，
-  // CONVENTIONS §15），改为 display: flex + flex-direction: row。
+  // CONVENTIONS §15），改为 display: flex + flex-direction: row；
+  // 圆环（svg）为唯一流式子节点，成对居中令其在根节点内居中。
   display: flex;
   flex-direction: row;
+  align-items: center;
+  justify-content: center;
   text-align: center;
 
   @include e(text) {
     position: absolute;
     z-index: 1;
-    top: 50%;
+    // Lynx 适配：参考源用 top: 50% + translateY(-50%) 垂直居中，改为四边 0
+    // 撑满 + flex 成对居中（NATIVE-REWRITE §3.2：禁 top/left: 50% +
+    // translate，四边定位 + flex 居中不依赖 transform，父高由 svg 撑起时
+    // 百分比 top 亦无歧义）；
     left: 0;
-    width: 100%;
-    transform: translateY(-50%);
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    // 文案（含插槽自定义内容）多行时逐行居中
+    text-align: center;
     font-size: $circle-text-font-size;
     line-height: $circle-text-line-height;
     color: $circle-text-color;

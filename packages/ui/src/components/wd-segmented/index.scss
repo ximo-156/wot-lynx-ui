@@ -65,6 +65,8 @@ $segmented-outline-item-bg-active-disabled: var(--wot-segmented-outline-item-bg-
     position: relative;
     z-index: 1;
     display: flex;
+    // Lynx 适配：显式声明横向排列（§15：flex 属性只对 display: flex 生效）
+    flex-direction: row;
     flex: 1;
     align-items: center;
     justify-content: center;

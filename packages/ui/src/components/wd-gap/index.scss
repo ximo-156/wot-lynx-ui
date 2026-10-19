@@ -2,6 +2,13 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(gap) {
+  /* 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：显式
+     display: flex + flex-direction: column——间隔槽本身是纵向流中的
+     块级占位，缺 display: flex 时 flex-direction 被静默丢弃；
+     高度由 height prop 经内联对象语法下发（CONVENTIONS §19） */
+  display: flex;
+  flex-direction: column;
+
   @include m(safe) {
     padding-bottom: env(safe-area-inset-bottom);
   }

@@ -117,7 +117,7 @@ function normSelector(sel) {
 const WEB_ONLY_PROPS = new Set([
   'outline', '-webkit-appearance', '-moz-osx-font-smoothing', '-webkit-font-smoothing',
   'cursor', 'user-select', 'pointer-events', '-webkit-tap-highlight-color',
-  '-webkit-box-orient', 'appearance', 'float'
+  '-webkit-box-orient', 'appearance', 'float', 'vertical-align'
 ])
 
 /** 该规则是否属于 Lynx 既定适配而剔除（伪元素相关） */

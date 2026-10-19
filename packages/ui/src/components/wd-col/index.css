@@ -1,1 +1,1 @@
-.wd-col{box-sizing:border-box}
+.wd-col{display:flex;flex-direction:column;box-sizing:border-box}

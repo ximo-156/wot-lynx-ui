@@ -33,12 +33,35 @@
  *   单向样式：prop 由有值改为空值时内联色不会自动清除（Lynx SET_STYLE 为
  *   逐属性合并，无「未设置」中立值可写），与 wot-ui 行为相同；
  * - 箭头图标：参考源传 name="down"，本地内置图标集无该字形，映射到
- *   arrow-down-bold（CONVENTIONS §8）。
+ *   arrow-down-bold（CONVENTIONS §8）；
+ * - **滑动手势走主线程（声明式 MTS，NATIVE-REWRITE §2/§10）**：swipeable
+ *   开启时面板条带（wd-tabs__body，animated 下的横向 flex 条带）的
+ *   touchstart / touchmove 绑定 `'main thread'` worklet——touchstart 经
+ *   `invoke('boundingClientRect')` 一次性度量条带宽度（§16：热路径零节点
+ *   查询）并记录起点、锁定手势轴向；touchmove 以绝对公式
+ *   `left = -activeIndex * width + deltaX` 经 setStyleProperty 直改条带
+ *   （零线程跨越，低端机跟手无滞后），边缘页外拖按 0.3 阻尼衰减，逐帧显式
+ *   写 transition-duration: 0ms 禁过渡（§20）；
+ * - **落定走后台**：容器（父节点）保留后台 @touchstart / @touchend——
+ *   touchstart 经 useTouch 记起点并置位 swiping（跟手期 bodyStyle 输出
+ *   transition-duration: 0ms），touchend 用终点坐标经同一套 useTouch 公式
+ *   重算 deltaX / direction / offsetX（与参考源逐帧累计的终态等价），
+ *   水平位移超过 50px 才切换上/下一项并 emit change / update:modelValue，
+ *   未达阈值则回弹（swiping 回落恢复落位过渡，条带动画归位）；
+ * - **分工不变式**：body（子）只挂 main-thread-bindtouchstart/move，
+ *   container（父）只挂后台 @touchstart/@touchend——同一元素同名事件不双绑
+ *   （§2：注册互相覆盖）；触摸落在面板内容上时事件沿响应链上浮，两条链路
+ *   都会收到（wd-slider 滑块/轨道、wd-picker-view 列/列内容同范式）。
+ *   jsdom 不模拟冒泡，测试中直接派发到对应元素验证（slider-mts 同手法）；
+ * - 条带当前索引 / 总数经元素属性 active-index / tab-count 向主线程下发
+ *   （随重渲染更新），worklet 经 getAttribute 实时读（slider 范围边界
+ *   left-bound/right-bound 同范式）；非 animated 或非 swipeable 时 worklet
+ *   直接返回（无条带可拖），后台落定逻辑与参考源一致（瞬时切换）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, nextTick, onMounted, reactive, useSlots, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, nextTick, onMounted, reactive, useMainThreadRef, useSlots, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdBadge from '../wd-badge/wd-badge.vue'
 import WdSticky from '../wd-sticky/wd-sticky.vue'
@@ -95,7 +118,9 @@ const state = reactive({
   /** map的开关 */
   mapShow: false,
   /** scroll-view偏移量 */
-  scrollLeft: 0
+  scrollLeft: 0,
+  /** 滑动手势跟手中（主线程 worklet 直改条带 left，后台置位/回落） */
+  swiping: false
 })
 
 const { children, linkChildren } = useChildren(TABS_KEY)
@@ -106,6 +131,54 @@ const { proxy } = getCurrentInstance() as any
 const slots = useSlots()
 
 const touch = useTouch()
+
+// ---------- 主线程（MTS）滑动手势 ----------
+
+/**
+ * 主线程元素桩类型（worklet 内经 event.currentTarget 取用）。
+ * 与 @lynx-js/types 的 MainThread.Element 对齐的常用子集。
+ */
+interface MtElement {
+  setStyleProperty(name: string, value: string): void
+  getAttribute(name: string): string | null
+  invoke(method: string, params?: any): Promise<any>
+}
+
+/**
+ * 跟手手势状态（touchstart 时建立于主线程，touchmove 只读）。
+ *
+ * width 为面板条带宽度（= 容器宽）：touchstart 经 invoke 一次性度量
+ * （§16），度量未回来时（width === 0）该帧不直改，等下一帧；
+ * axis 为方向锁——首个超过阈值的位移决定轴向，纵向手势（面板内容
+ * 竖向滚动）不抢占，避免滑列表时条带横向抖动。
+ */
+interface TabsGesture {
+  width: number
+  startX: number
+  startY: number
+  axis: '' | 'horizontal' | 'vertical'
+}
+
+/** 跟手手势状态（主线程活值） */
+const gestureRef = useMainThreadRef<TabsGesture | null>(null)
+
+/** worklet 捕获的静态配置快照（setup 期求值；props 实例内不变） */
+const cfgSwipeable = props.swipeable
+const cfgAnimated = props.animated
+
+/** 方向锁阈值（px） */
+const AXIS_LOCK_THRESHOLD = 6
+/** 边缘阻尼系数：首/末页继续外拖时衰减（与后台落定的阈值语义一致） */
+const EDGE_DAMPING = 0.3
+
+/**
+ * 根节点样式（customStyle 经 parseStyle 归一为对象，CONVENTIONS §19）。
+ *
+ * 经 computed 而非模板内直接调用 parseStyle：模板直接引用导入绑定会使
+ * compiler-sfc 在 script-setup 返回对象上生成 getter（含花括号），
+ * 击穿测试垫片 mtsWorkletPlugin 的 worklet 包装（wd-slider 同范式）。
+ */
+const rootStyle = computed(() => parseStyle(props.customStyle))
 
 /** 导航项数据（从默认插槽的 vnode 直读，非跟踪读取，见文件头说明） */
 type NavItem = { title: any; disabled: boolean; badgeProps: any; name: any }
@@ -159,7 +232,9 @@ const mapBodyStyle = computed(() =>
   })
 )
 
-/** body 样式：left / transition-duration 键集完整（Style Funnel） */
+/** body 样式：left / transition-duration 键集完整（Style Funnel）；
+    swiping 为跟手期标志——此期间 transition-duration 归零（主线程 worklet
+    亦逐帧直写 0ms 双保险），落定后恢复 props.duration 供归位/切换过渡 */
 const BODY_STYLE = defineStyleKeys({ left: '0%', 'transition-duration': '0ms' })
 
 const bodyStyle = computed(() =>
@@ -168,7 +243,7 @@ const bodyStyle = computed(() =>
     props.animated
       ? {
           left: `${-100 * state.activeIndex}%`,
-          'transition-duration': `${props.duration}ms`
+          'transition-duration': state.swiping ? '0ms' : `${props.duration}ms`
         }
       : undefined
   )
@@ -407,16 +482,34 @@ function handleSelect(index: number) {
     name
   })
 }
+/**
+ * 容器触摸开始（后台：记手势起点 + 置位跟手标志）。
+ *
+ * 绑定在容器（父节点）而非条带：条带的 touchstart 是主线程绑定（度量
+ * 几何 + 记起点），同名事件不能在同一元素同时挂主线程与后台两个处理器；
+ * 容器与条带是父子元素，触摸条带/面板内容时事件沿响应链上浮到此处，
+ * 语义等价（wd-slider 滑块/轨道、wd-picker-view 列内容/列同范式）。
+ */
 function onTouchStart(event: any) {
   if (!props.swipeable) return
   touch.touchStart(event)
+  // 跟手期：bodyStyle 输出 transition-duration: 0ms（主线程 worklet 亦
+  // 逐帧直写 0ms 双保险）；touchend 回落恢复落位过渡
+  state.swiping = true
 }
-function onTouchMove(event: any) {
+
+/**
+ * 容器触摸结束（后台：同一套公式重算终值并 commit）。
+ *
+ * useTouch.touchMove 读 touches[0] / changedTouches[0]——touchend 事件的
+ * changedTouches 即终点坐标，故以终点重算得到的 deltaX / direction /
+ * offsetX 与参考源「逐帧累计 + 末帧判定」的终态完全等价（起点同为手势
+ * 起点）；水平位移超过 minSwipeDistance(50px) 才切换上/下一项，
+ * 未达阈值时 swiping 回落、条带过渡归位（回弹）。
+ */
+function onTouchEnd(event: any) {
   if (!props.swipeable) return
   touch.touchMove(event)
-}
-function onTouchEnd() {
-  if (!props.swipeable) return
   const { direction, deltaX, offsetX } = touch
   const minSwipeDistance = 50
   if (direction.value === 'horizontal' && offsetX.value >= minSwipeDistance) {
@@ -426,6 +519,7 @@ function onTouchEnd() {
       setActive(state.activeIndex + 1)
     }
   }
+  state.swiping = false
 }
 
 /**
@@ -453,6 +547,70 @@ defineExpose<TabsExpose>({
   scrollIntoView,
   updateLineStyle
 })
+
+// ---------- 主线程 worklet（滑动手势跟手，零线程跨越） ----------
+
+/**
+ * 条带触摸开始（主线程）：一次性度量条带宽度并记录手势起点、锁定轴向。
+ *
+ * 绑定在条带元素（被拖动节点本身）上；非 animated（无横向条带）或非
+ * swipeable 时直接返回——此时只有后台落定逻辑生效（与参考源的瞬时切换
+ * 语义一致）。几何经 invoke('boundingClientRect') 一次性获取（§16），
+ * touchmove 热路径只读 gestureRef 缓存。
+ */
+const onBodyTouchStart = (event: any) => {
+  'main thread'
+  if (!cfgSwipeable || !cfgAnimated) return
+  const body = event.currentTarget as MtElement | undefined
+  const touch = event.touches && event.touches[0]
+  if (!body || !touch) return
+  gestureRef.current = { width: 0, startX: touch.clientX, startY: touch.clientY, axis: '' }
+  if (typeof body.invoke !== 'function') return
+  body.invoke('boundingClientRect').then((rect: any) => {
+    const gesture = gestureRef.current
+    if (gesture) gesture.width = Number(rect && rect.width) || 0
+  })
+}
+
+/**
+ * 条带跟手移动（主线程）：绝对公式 + 条带 left 直改。
+ *
+ * left = -activeIndex * width + deltaX：activeIndex / tabCount 经元素属性
+ * active-index / tab-count 实时读（slider 范围边界同范式）；首/末页外拖
+ * 按 EDGE_DAMPING 阻尼衰减；逐帧显式写 transition-duration: 0ms（跟手禁
+ * 过渡，§20——落位过渡由后台 swiping 回落时经 bodyStyle 恢复）。
+ */
+const onBodyTouchMove = (event: any) => {
+  'main thread'
+  const body = event.currentTarget as MtElement | undefined
+  const gesture = gestureRef.current
+  if (!body || !gesture || gesture.width === 0) return
+  const touch = event.touches && event.touches[0]
+  if (!touch) return
+
+  const dx = touch.clientX - gesture.startX
+  const dy = touch.clientY - gesture.startY
+  if (gesture.axis === '') {
+    // 方向锁：首个超过阈值的位移决定轴向；纵向手势（面板内容竖向滚动）
+    // 不抢，避免滑列表时条带横向抖动
+    if (Math.abs(dx) < AXIS_LOCK_THRESHOLD && Math.abs(dy) < AXIS_LOCK_THRESHOLD) return
+    gesture.axis = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical'
+  }
+  if (gesture.axis !== 'horizontal') return
+
+  const count = Number(body.getAttribute('tab-count'))
+  const active = Number(body.getAttribute('active-index'))
+  if (!(count > 1) || isNaN(active) || active < 0) return
+
+  let offset = dx
+  // 边缘阻尼：首页继续右拖 / 末页继续左拖时衰减（与后台落定的首末页
+  // 不切换语义一致，松手后回弹归位）
+  if ((offset > 0 && active <= 0) || (offset < 0 && active >= count - 1)) {
+    offset = offset * EDGE_DAMPING
+  }
+  body.setStyleProperty('left', `${-active * gesture.width + offset}px`)
+  body.setStyleProperty('transition-duration', '0ms')
+}
 </script>
 
 <template>
@@ -462,7 +620,7 @@ defineExpose<TabsExpose>({
         :class="`wd-tabs ${customClass} ${innerSlidable() ? 'is-slide' : ''} ${showMap() ? 'is-map' : ''} ${
           !showScrollbar ? 'is-hide-scrollbar' : ''
         }`"
-        :style="parseStyle(customStyle)"
+        :style="rootStyle"
       >
         <wd-sticky :offset-top="offsetTop">
           <view class="wd-tabs__nav wd-tabs__nav--sticky">
@@ -513,8 +671,19 @@ defineExpose<TabsExpose>({
           </view>
         </wd-sticky>
 
-        <view class="wd-tabs__container" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
-          <view :class="['wd-tabs__body', animated ? 'is-animated' : '']" :style="bodyStyle">
+        <!-- 手势分工：container（父）后台 @touchstart/@touchend 记起点与
+             落定；body（子）主线程 main-thread-bindtouchstart/move 跟手
+             直改 left（真机上触摸面板内容时事件沿响应链上浮，两条链路
+             均收到；jsdom 不模拟冒泡，测试直接派发到对应元素） -->
+        <view class="wd-tabs__container" @touchstart="onTouchStart" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
+          <view
+            :class="['wd-tabs__body', animated ? 'is-animated' : '']"
+            :style="bodyStyle"
+            :active-index="String(state.activeIndex)"
+            :tab-count="String(navItems().length)"
+            :main-thread-bindtouchstart="onBodyTouchStart"
+            :main-thread-bindtouchmove="onBodyTouchMove"
+          >
             <slot />
           </view>
         </view>
@@ -529,7 +698,7 @@ defineExpose<TabsExpose>({
       :class="`wd-tabs ${customClass} ${innerSlidable() ? 'is-slide' : ''} ${showMap() ? 'is-map' : ''} ${
         !showScrollbar ? 'is-hide-scrollbar' : ''
       }`"
-      :style="parseStyle(customStyle)"
+      :style="rootStyle"
     >
       <view class="wd-tabs__nav">
         <view class="wd-tabs__nav--wrap">
@@ -574,8 +743,19 @@ defineExpose<TabsExpose>({
         </view>
       </view>
 
-      <view class="wd-tabs__container" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
-        <view :class="['wd-tabs__body', animated ? 'is-animated' : '']" :style="bodyStyle">
+      <!-- 手势分工：container（父）后台 @touchstart/@touchend 记起点与
+           落定；body（子）主线程 main-thread-bindtouchstart/move 跟手
+           直改 left（真机上触摸面板内容时事件沿响应链上浮，两条链路
+           均收到；jsdom 不模拟冒泡，测试直接派发到对应元素） -->
+      <view class="wd-tabs__container" @touchstart="onTouchStart" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
+        <view
+          :class="['wd-tabs__body', animated ? 'is-animated' : '']"
+          :style="bodyStyle"
+          :active-index="String(state.activeIndex)"
+          :tab-count="String(navItems().length)"
+          :main-thread-bindtouchstart="onBodyTouchStart"
+          :main-thread-bindtouchmove="onBodyTouchMove"
+        >
           <slot />
         </view>
       </view>

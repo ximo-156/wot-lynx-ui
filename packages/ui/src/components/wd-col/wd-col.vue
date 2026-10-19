@@ -7,9 +7,14 @@
  * - gutter 内边距、span 宽度百分比、offset 位移的计算式与 watch 校验
  *   （span/offset < 0 控制台告警）与参考源逐行一致；
  * - gutter 读取父级 wd-row 经 ROW_KEY 注入的 props（useParent），与参考源一致；
- * - background-clip: content-box 为 Web 专有声明，Lynx 引擎忽略该属性
- *   （仅影响背景绘制范围， gutter 间距语义由 padding 保证），保留以对齐
- *   参考源声明集合。
+ * - **根节点三件套**（NATIVE-REWRITE §3.1）：display: flex + flex-direction: column
+ *   在 index.scss 显式声明；
+ * - background-clip: content-box 为 Web 专有声明（PORTING §4.5 删除清单），
+ *   Lynx 引擎不识别，已移除——gutter 间距语义由左右 padding 完整承担；
+ * - **Style Funnel**（CONVENTIONS §20）：rootStyle 的四个可切换键
+ *   （gutter 左右内边距 / span 宽度 / offset 位移）经 defineStyleKeys +
+ *   resolveStyle 每帧输出完整键集，避免「条件写样式」在 span 由具体值变 24
+ *   时残留旧宽度。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -19,6 +24,7 @@ import { useParent } from '../../composables/useParent'
 import { ROW_KEY } from '../wd-row/types'
 import { colProps } from './types'
 import { addUnit, isDef, parseStyle, type CSSProperties } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(colProps)
 const { parent: row } = useParent(ROW_KEY)
@@ -27,34 +33,41 @@ const rootClass = computed(() => {
   return `wd-col ${props.customClass}`
 })
 
-const rootStyle = computed(() => {
+/**
+ * 可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
+ * 中性值取「视觉上等同于不设置」：无 gutter 即无左右内边距；
+ * span 不落在 (0,24] 区间即不约束宽度；无 offset 即无位移。
+ */
+const COL_STYLE = defineStyleKeys({
+  paddingLeft: '0px',
+  paddingRight: '0px',
+  width: 'auto',
+  marginLeft: '0px'
+})
+
+const rootStyle = computed<CSSProperties>(() => {
   const gutter = isDef(row.value) ? row.value.props.gutter || 0 : 0
   const { span, offset } = props
-  const style: CSSProperties = {}
 
-  // gutter 间距：左右 padding
-  if (gutter > 0) {
-    const padding = addUnit(gutter / 2)
-    style.paddingLeft = padding
-    style.paddingRight = padding
-    style.backgroundClip = 'content-box'
-  }
-
-  // 栅格宽度
+  // 栅格宽度：span 落在 (0,24) 为百分比，24 为整行
+  let width = ''
   if (span > 0 && span < 24) {
-    const width = `${(span / 24) * 100}%`
-    style.width = width
+    width = `${(span / 24) * 100}%`
   } else if (span === 24) {
-    style.width = '100%'
+    width = '100%'
   }
 
-  // 栅格偏移
-  if (offset > 0) {
-    const marginLeft = `${(offset / 24) * 100}%`
-    style.marginLeft = marginLeft
+  return {
+    ...resolveStyle(COL_STYLE, {
+      // gutter 间距：左右 padding
+      paddingLeft: gutter > 0 ? addUnit(gutter / 2) : '',
+      paddingRight: gutter > 0 ? addUnit(gutter / 2) : '',
+      width,
+      // 栅格偏移
+      marginLeft: offset > 0 ? `${(offset / 24) * 100}%` : ''
+    }),
+    ...parseStyle(props.customStyle)
   }
-
-  return { ...style, ...parseStyle(props.customStyle) }
 })
 
 watch([() => props.span, () => props.offset], () => {

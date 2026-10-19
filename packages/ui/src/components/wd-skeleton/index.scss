@@ -26,11 +26,19 @@ $skeleton-animation-flashed-opacity: var(--wot-skeleton-animation-flashed-opacit
 
 @include b(skeleton) {
   box-sizing: border-box;
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，不显式声明 display: flex 时 flex-direction 被静默丢弃；骨架屏为
+  // 多行纵向堆叠结构，根按纵向流补全。
+  display: flex;
+  flex-direction: column;
 
   @include e(row) {
     justify-content: space-between;
     margin-bottom: $skeleton-row-margin-bottom;
     display: flex;
+    // Lynx 适配（NATIVE-REWRITE §3.1）：行内占位块为横向排列，flex-direction
+    // 必须显式挂在 display: flex 上（linear 布局下不写即被静默丢弃）。
+    flex-direction: row;
     align-items: center;
 
     /* Lynx 适配：参考源为 &:only-child / &:last-child 伪类（Lynx 不支持，
@@ -45,6 +53,8 @@ $skeleton-animation-flashed-opacity: var(--wot-skeleton-animation-flashed-opacit
     border-radius: $skeleton-text-border-radius;
     background-color: $skeleton-col-bg;
     display: flex;
+    // Lynx 适配（NATIVE-REWRITE §3.1）：占位块内承载渐变扫描层，横向流显式化。
+    flex-direction: row;
     align-items: center;
     justify-content: center;
   }

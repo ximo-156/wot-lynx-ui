@@ -6,6 +6,11 @@
   overflow: hidden;
   // Lynx 适配：linear 布局下视图默认不撑满交叉轴，显式给宽度保证内容区满宽
   width: 100%;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效；wrapper 为唯一流式子节点，
+  // 纵向堆叠 + 交叉轴拉伸令默认插槽内容满宽（与 Web 块级流语义一致）。
+  display: flex;
+  flex-direction: column;
 
   @include e(left) {
     left: 0;
@@ -26,16 +31,19 @@
 }
 
 // Lynx 适配（参考源无对应规则）：
-// - 操作区插槽内容（一组按钮）需横向排列且撑满高度：参考源靠 Web 行内流，
-//   Lynx 3.x 默认 linear 布局会竖排，故显式 display:flex + flex-direction:row
-//   （CONVENTIONS §15）；
 // - 内容容器 wrapper 承载 transform 位移，需为定位上下文（绝对定位的操作区
-//   以它为包含块）并让默认插槽内容满宽。
+//   以它为包含块）；
+// - **flex-direction: column（不是 row）**：默认插槽内容是唯一流式子节点，
+//   纵向容器 + align-items: stretch 令其撑满交叉轴（宽度）——这与 Web 块级
+//   流语义一致；若用 row，内容作为 flex 子项会收缩到内容宽，单元格不再
+//   满宽、右侧空白处无法触发滑动；
+// - 操作区插槽内容（一组按钮）的横向排列由 e(left) / e(right) 自身承担
+//   （见下方 display:flex + flex-direction:row），与 wrapper 的方向无关。
 @include b(swipe-action) {
   @include e(wrapper) {
     position: relative;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: stretch;
     width: 100%;
   }

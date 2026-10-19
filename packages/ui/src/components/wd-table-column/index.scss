@@ -27,11 +27,13 @@
 
   // Lynx 适配：参考源 is-shadow 的 ::after 渐变阴影（Lynx 无伪元素）
   // 改为模板真实元素 wd-table__shadow（PORTING §4.4）。
+  // 参考源的 30rpx 为小程序专有单位，Lynx 引擎只认 px（rpx 写了即静默
+  // 丢失、阴影宽度归零），故按 px 等价改写（屏幕密度换算由宿主统一处理）。
   .wd-table__shadow {
     position: absolute;
-    right: -30rpx;
+    right: -30px;
     top: 0;
-    width: 30rpx;
+    width: 30px;
     height: 100%;
     background: $table-shadow-gradient;
     pointer-events: none;

@@ -6,6 +6,12 @@ $resize-container-min-size: var(--wot-resize-container-min-size, $n-1) !default;
 $resize-wrapper-z-index: var(--wot-resize-wrapper-z-index, -9999) !default; // wrapper 层级
 
 @include b(resize) {
+  /* 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：显式
+     display: flex + flex-direction: column——容器自身宽高由内联对象语法
+     下发（CONVENTIONS §19），内部探测容器为 absolute 脱离文档流 */
+  display: flex;
+  flex-direction: column;
+
   @include e(container) {
     position: absolute;
     min-width: $resize-container-min-size;
@@ -13,6 +19,8 @@ $resize-wrapper-z-index: var(--wot-resize-wrapper-z-index, -9999) !default; // w
   }
 
   @include e(wrapper) {
+    /* 绝对定位铺满容器：四边 0（NATIVE-REWRITE §3.2 绝对定位居中写法），
+       隐藏且不参与命中，滚动事件驱动尺寸探测 */
     position: absolute;
     top: 0;
     bottom: 0;

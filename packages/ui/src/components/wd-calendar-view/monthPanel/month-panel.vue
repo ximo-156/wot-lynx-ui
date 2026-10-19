@@ -13,7 +13,11 @@
  * - 内部月份网格子组件的模板标签用 PascalCase 的 Month：wot-ui 写的是
  *   kebab-case 的 month，而 tag-transform-loader 只改写 wd-* 标签，非 wd-
  *   前缀的 kebab-case 标签会被 Lynx 编译器判为原生元素，真机报 603/60301
- *   "Can't find ui tag" 并白屏（CONVENTIONS §4 / test/native-tag-whitelist）。
+ *   "Can't find ui tag" 并白屏（CONVENTIONS §4 / test/native-tag-whitelist）；
+ * - 布局居中（NATIVE-REWRITE §3）：wd-month-panel 根节点显式
+ *   display: flex + flex-direction: column（控制栏 + 周表头 + 标题 +
+ *   滚动面板 + 时间选择器的纵向组合）；__week 周表头单元格补
+ *   justify-content + align-items 成对 flex 居中。
  */
 <script lang="ts" setup>
 import './index.css'

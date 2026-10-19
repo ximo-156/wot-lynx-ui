@@ -141,14 +141,20 @@ const RULES = [
     message: '字符串 :style 会被静默替换为 {}（样式全部消失）—— 必须用对象语法'
   },
   {
-    id: 'js/mts',
+    // 2026-10-19 起组件库全面原生优先：跟手交互走声明式 MTS
+    // （main-thread-bind* + useMainThreadRef + 'main thread' 指令），
+    // 这是 Lynx 官方「原生交互性能」路径（CONVENTIONS §10）。
+    // 禁止的是**命令式**跨线程 API：runOnMainThread 派发的 worklet 消费
+    // useMainThreadRef 的 .current 时依赖 INIT_MT_REF ops 先于 worklet
+    // 应用，跨通道无顺序保证，refMap 未就绪时生产构建直接崩溃（真机 1101）。
+    id: 'js/mts-imperative',
     ref: '§10',
     severity: 'error',
     ext: ['.vue', '.ts'],
     notDirs: ['packages/ui/test'], // 回归测试本身会引用这些标识符
     kind: 'line',
-    pattern: /main-thread-bind|useMainThreadRef|runOnMainThread|lynxWorkletImpl/,
-    message: '禁止 Main Thread Script（可用性检测不可靠 + 跨线程注水时序竞争会导致崩溃）'
+    pattern: /runOnMainThread|runOnBackground|lynxWorkletImpl/,
+    message: '禁止命令式跨线程 API（真机 1101 崩溃路径）—— 跟手交互用声明式 main-thread-bind*（CONVENTIONS §10）'
   },
   {
     id: 'js/no-debugger',

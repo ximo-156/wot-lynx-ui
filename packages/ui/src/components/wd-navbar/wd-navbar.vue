@@ -6,7 +6,8 @@
  *   产出非法值 "px"（浏览器忽略）；Lynx 的字符串 style 会被静默丢弃
  *   （CONVENTIONS §19），故改为对象语法 + Style Funnel（§20）：height 未
  *   度量时显式下发中性值 auto（视觉等同不设置），度量后下发实测高度，
- *   避免条件写样式导致上一帧高度残留；
+ *   避免条件写样式导致上一帧高度残留；display / flex-direction 为常量键
+ *   （根节点三件套，NATIVE-REWRITE §3.1），随每帧完整下发；
  * - rootStyle 的 z-index / padding-top / height / line-height 同样经
  *   resolveStyle 输出完整键集（§20）；customStyle 经 parseStyle 归一；
  * - 安全区适配：参考源取 useDeviceInfo 的 statusBarHeight（Lynx 不提供
@@ -75,8 +76,13 @@ const rootStyle = computed(() =>
   )
 )
 
-/** 外层占位 view 样式：未度量时 height 为 auto（等同不设置） */
-const PLACEHOLDER_STYLE = defineStyleKeys({ height: 'auto' })
+/** 外层占位 view 样式：display / flex-direction 为常量键（根节点三件套，
+    NATIVE-REWRITE §3.1）；height 未度量时为 auto（等同不设置） */
+const PLACEHOLDER_STYLE = defineStyleKeys({
+  display: 'flex',
+  'flex-direction': 'column',
+  height: 'auto'
+})
 
 const placeholderStyle = computed(() =>
   resolveStyle(PLACEHOLDER_STYLE, {

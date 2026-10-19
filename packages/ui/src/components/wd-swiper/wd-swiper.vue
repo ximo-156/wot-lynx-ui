@@ -10,6 +10,12 @@
  *   圆角经 swiperStyle 下发），内容轨道 wd-swiper__track-inner 为平台必需的
  *   额外包裹层（Lynx 的 scroll-view 不像 Web 那样自动把子节点排成滚动行），
  *   当前页经 scroll-left / scroll-top 定位，滚动结束吸附到最近页；
+ * - **跟手走原生滚动（NATIVE-REWRITE §8「原生滚动」类别）**：手指滑动由
+ *   scroll-view 在引擎主线程直接完成（原生惯性 + 吸附），即官方「原生交互
+ *   性能」路径；指示器联动（scroll → current → dots）参照 wd-index-bar 的
+ *   既定分工留在后台线程（Lynx 无 scroll 事件的 main-thread 绑定形态，
+ *   强行自绘触摸轨道反而违背「滚动用 scroll-view」的原生元素优先铁律，
+ *   CONVENTIONS §3.3）；
  * - current 双轨（对齐参考源）：currentValue 为逻辑当前项，navCurrent 为下发给
  *   scroll-view 的程序定位值——手势滚动时只更新 currentValue，不与用户的滚动
  *   位置互搏，scrollend 时再对齐 navCurrent（同时完成 imperfect 滚动吸附）；

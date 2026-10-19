@@ -45,10 +45,27 @@ $calendar-confirm-padding: var(--wot-calendar-confirm-padding, $padding-tight $p
 $calendar-confirm-border-color: var(--wot-calendar-confirm-border-color, $border-light) !default;
 
 @include b(calendar) {
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，不显式声明 display: flex 时 flex-direction 被静默丢弃；根节点
+  // 承载 action-sheet 弹层，显式补全纵向流向。
+  display: flex;
+  flex-direction: column;
 
   @include e(header) {
     position: relative;
     overflow: hidden;
+    // Lynx 适配（NATIVE-REWRITE §3.1）：头部为「类型切换 tabs + 快捷选项」
+    // 的纵向组合，显式声明 flex 纵向流向（linear 下 direction 静默丢失）。
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Lynx 适配（NATIVE-REWRITE §3.1）：wot-ui 未给 __view 写样式（Web 下
+  // 块级元素天然纵向堆叠）；Lynx 3.x 默认 linear 布局，flex-direction 会被
+  // 静默丢弃，显式补全「区间标签 + 日历视图」的纵向流向。
+  @include e(view) {
+    display: flex;
+    flex-direction: column;
   }
 
   // Lynx 适配：wot-ui 的 :deep() 在本地无 shadow DOM，等价为后代选择器。
@@ -100,6 +117,13 @@ $calendar-confirm-border-color: var(--wot-calendar-confirm-border-color, $border
     line-height: $calendar-range-item-line-height;
     padding: $calendar-range-item-padding;
     text-align: center;
+    // Lynx 适配（NATIVE-REWRITE §3.2）：区间标签项为「起止时间文本」容器，
+    // 单靠 text-align 依赖文本节点撑满容器（linear 布局下不保证），补
+    // justify-content + align-items 成对 flex 居中确保水平/垂直居中生效。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     @include pixelBorder(bottom, 0, $calendar-range-item-line-color);
 
     @include when(placeholder) {

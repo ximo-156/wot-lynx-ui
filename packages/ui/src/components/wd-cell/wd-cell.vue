@@ -13,7 +13,17 @@
  * - 箭头图标：参考源直接把 arrowDirection（left/up/down/right）作为图标名
  *   传给 wd-icon；本地内置图标集无该名字形，经 arrowIcon 映射到
  *   arrow-left/up/down/right-bold（CONVENTIONS §8）；
- * - label / value 的兜底裸文本包 text 元素（Lynx view 内裸文本不渲染）。
+ * - label / value 的兜底裸文本包 text 元素（Lynx view 内裸文本不渲染）；
+ * - **居中补全**（NATIVE-REWRITE §3.1 / §3.2）：根 view 显式
+ *   display: flex + flex-direction: column；__wrapper 为 flex 行 +
+ *   justify-content: space-between（两端对齐）；__left（必填星号 + 前置
+ *   图标 + 标题）与 __body（文案 + 箭头 / 后缀图标）均为 flex 行 +
+ *   align-items: center——图标与文字基线同一行垂直居中；__title / __label
+ *   为 flex 列；is-center 时三个层级成对补全 justify-content / align-items；
+ * - display: block（wd-icon 根 view 上的 Web 专有值，Lynx 只认
+ *   flex/none/linear）与 vertical-align 一并移除（PORTING §4.5 / §15，
+ *   NATIVE-REWRITE §3.1）；text-decoration: none 为 Lynx text 支持的
+ *   声明，按参考源保留。
  */
 <script lang="ts" setup>
 import './index.css'

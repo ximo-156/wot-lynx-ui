@@ -101,10 +101,20 @@ $dialog-action-text-border: var(--wot-dialog-action-text-border, $stroke-light) 
     overflow: hidden;
     width: $dialog-width;
     box-sizing: border-box;
+    /* 根节点三件套（NATIVE-REWRITE §3.1）：关闭图标（绝对定位）+ body +
+       actions 纵向排布；flex-shrink: 0 —— 居中弹层 .wd-popup 为 flex
+       column 容器，内容超高时本容器不被按比例压缩，由弹层滚动承担 */
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
   }
 
   @include e(img) {
-    display: block;
+    // Lynx 适配：参考源 display: block（Lynx 只认 flex / none / linear，
+    // CONVENTIONS §15），改 flex + row；通栏图由 width/height 定型，
+    // 内部无子节点，display 取值不影响视觉
+    display: flex;
+    flex-direction: row;
     width: 100%;
     height: auto;
     border-radius: $dialog-img-border-radius;
@@ -121,6 +131,8 @@ $dialog-action-text-border: var(--wot-dialog-action-text-border, $stroke-light) 
     display: flex;
     flex-direction: column;
     align-items: center;
+    // 标题文案为 text 子节点：容器成对居中之外补文本居中（换行时生效）
+    text-align: center;
     font-size: $dialog-title-font-size;
     color: $dialog-title-color;
     line-height: $dialog-title-line-height;

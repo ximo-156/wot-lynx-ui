@@ -16,7 +16,10 @@
  *   元素（PORTING §4.4），改为模板中的真实元素 wd-sidebar-item__indicator
  *   （仅激活时渲染）+ 对应类名样式；
  * - 禁用态：参考源的 cursor: not-allowed 为 Web 专有属性，删除；按压反馈
- *   由 disabled 早退（handleClick 守卫）承担。
+ *   由 disabled 早退（handleClick 守卫）承担；
+ * - 原生优先重写（NATIVE-REWRITE §3）：根节点 display:flex + flex-direction:row
+ *   与居中成对书写在 index.scss（Lynx 3.x 默认 linear 布局，弹性属性只在
+ *   display:flex 上生效；父级 wd-sidebar 根已改为 scroll-view 原生滚动）。
  */
 <script lang="ts" setup>
 import './index.css'

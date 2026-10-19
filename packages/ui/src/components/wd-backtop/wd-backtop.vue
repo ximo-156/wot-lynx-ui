@@ -19,7 +19,11 @@
  * - customStyle / iconStyle 为字符串，经 parseStyle 归一为对象语法
  *   （CONVENTIONS §19：字符串 :style 会被 vue-lynx 静默丢弃）；
  * - 图标名 to-top 在本地 iconfont 集中无对应字形，取最近似字形 top；
- * - 参考源 view 内的裸文本（{{ text }}）包进 text 元素（CONVENTIONS §4）。
+ * - 参考源 view 内的裸文本（{{ text }}）包进 text 元素（CONVENTIONS §4）；
+ * - 布局居中（NATIVE-REWRITE §3）：承载 position: fixed 的 wd-transition 根
+ *   节点（.wd-backtop）显式 display: flex + flex-direction: column +
+ *   justify-content / align-items 成对居中；__content 同为纵排居中容器；
+ *   __text 补 text-align: center（Lynx text 不依赖继承）。
  */
 <script lang="ts" setup>
 import './index.css'

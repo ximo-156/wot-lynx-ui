@@ -15,7 +15,14 @@
  *   的 check 不在内置集中，取配对的 check-item（与 close 同批码点，
  *   形态为对勾）；
  * - 模板结构与参考源逐节点对齐（header/indicator/circle|dot|icon/line/content），
- *   文本均在 text 元素中；icon/title/description 三个插槽保留。
+ *   文本均在 text 元素中；icon/title/description 三个插槽保留；
+ * - 原生优先重写（NATIVE-REWRITE §3）：根节点由 inline-block 适配值 linear 改
+ *   为显式 display: flex + flex-direction: column 三件套（__content 显式
+ *   flex-shrink: 0，纵向 space 定高时内容不按比例压缩）；__header 显式 flex
+ *   row，is-center 态指示器经容器 justify-content: center 水平居中（参考源
+ *   依赖 Web 行内盒 + text-align，Lynx 无行内盒），标题/描述在 is-center 态
+ *   显式 text-align: center（Lynx text 不保证继承）——几何与连接线
+ *   left: calc(50% + ...) 配套，详见 index.scss。
  */
 <script lang="ts" setup>
 import './index.css'

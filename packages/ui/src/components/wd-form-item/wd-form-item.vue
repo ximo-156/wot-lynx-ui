@@ -2,6 +2,10 @@
  * wd-form-item — 表单项
  *
  * 与 wot-ui 2.3.2 对齐；Lynx 适配点（相对参考源的差异）：
+ * - 根节点三件套（NATIVE-REWRITE §3.1）：本组件 DOM 根视图由 wd-cell 提供
+ *   （custom-class 把 wd-form-item 类落到 cell 根视图上），index.scss 对
+ *   .wd-form-item 显式声明 display:flex + flex-direction:column，保证
+ *   Lynx 3.x 默认 linear 布局下纵向堆叠、宽度撑满表单；
  * - 结构基于 wd-cell（标题/标签/右侧内容/箭头），错误信息内联展示；
  *   错误提示文本包 text（Lynx view 内裸文本不渲染，CONVENTIONS §4）；
  * - 经 FORM_KEY 读取 form 配置与校验入口；向下提供禁用态

@@ -37,6 +37,10 @@ $tour-buttons-margin-top: var(--wot-tour-buttons-margin-top, $spacing-tight) !de
   left: 0;
   right: 0;
   z-index: $tour-z-index;
+  // Lynx 适配：根节点三件套（CONVENTIONS §3.1：Lynx 3.x 默认 linear 布局，
+  // flex 属性只对 display:flex 生效；子节点均为 fixed 定位，方向仅作显式声明）
+  display: flex;
+  flex-direction: column;
 
   @include e(mask) {
     position: fixed;
@@ -44,6 +48,10 @@ $tour-buttons-margin-top: var(--wot-tour-buttons-margin-top, $spacing-tight) !de
     bottom: 0;
     left: 0;
     right: 0;
+    // Lynx 适配：遮罩容器显式 flex 纵向（子节点 highlight / popover 为 fixed
+    // 定位，声明仅保证引擎按 flex 规则解析）
+    display: flex;
+    flex-direction: column;
   }
 
   @include e(highlight) {
@@ -70,6 +78,9 @@ $tour-buttons-margin-top: var(--wot-tour-buttons-margin-top, $spacing-tight) !de
   @include e(popover) {
     z-index: $tour-popover-z-index;
     position: fixed;
+    // Lynx 适配：水平居中保留 left:50% + translateX(-50%)——提示框的纵向
+    // 位置由内联 top/bottom 动态下发（相对高亮元素），四边 0 + flex 居中
+    // 无法表达「贴高亮元素定位」，属确有必要（NATIVE-REWRITE §3.2）
     left: 50%;
     transform: translateX(-50%);
     max-width: $tour-popover-max-width;
@@ -80,6 +91,9 @@ $tour-buttons-margin-top: var(--wot-tour-buttons-margin-top, $spacing-tight) !de
     border-radius: $tour-popover-radius;
     width: fit-content;
     min-width: $tour-popover-min-width;
+    // Lynx 适配：弹层内容纵向排列显式声明（信息区 + 操作区）
+    display: flex;
+    flex-direction: column;
   }
 
   @include e(info) {

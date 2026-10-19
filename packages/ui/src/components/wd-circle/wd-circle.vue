@@ -24,6 +24,10 @@
  * - 内联样式：参考源 rootStyle 为 objToStyle 字符串 + customStyle 拼接，
  *   Lynx 的字符串 style 会被静默丢弃（CONVENTIONS §19），改为对象语法并
  *   经 parseStyle 归一 customStyle；
+ * - 文案居中（NATIVE-REWRITE §3.2）：参考源 __text 用 top: 50% +
+ *   translateY(-50%) 垂直居中，改为四边 0 撑满 + flex 成对居中（禁
+ *   top/left: 50% + translate，四边定位 + flex 居中不依赖 transform），
+ *   文本元素另加 text-align: center（Lynx text 不依赖继承）；
  * - 半径兜底：strokeWidth 超过 2 倍 size 时参考源 canvas 不绘制，本地
  *   负半径下 SVG 整环不渲染，故钳为 0 保持行为一致；
  * - 文本节点：参考源 view 内的裸文本已包 text，插槽内容由消费方保证。

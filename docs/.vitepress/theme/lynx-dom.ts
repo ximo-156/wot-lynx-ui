@@ -29,6 +29,40 @@ import {
 export * from 'vue'
 
 // ---------------------------------------------------------------------------
+// MTS 兼容导出（2026-10-19 原生优先重写后组件开始 import useMainThreadRef）
+//
+// Web 预览无主线程，useMainThreadRef 退化为「返回一个带 .current/.value 的
+// 普通对象引用」：main-thread-bind* 事件在预览中不派发（无 worklet 运行时），
+// 组件经此引用做的直改在预览中不可见——预览只做静态视觉核对，交互回归以
+// 单测（mts-worklet-shim）与真机清单为准。
+// ---------------------------------------------------------------------------
+class PreviewMainThreadRef<T> {
+  _value: T
+  constructor(initValue: T) {
+    this._value = initValue
+  }
+  get value(): T {
+    return this._value
+  }
+  set value(_v: T) {
+    // 只读（与真机 BG 侧语义一致）
+  }
+  get current(): T {
+    return this._value
+  }
+  set current(v: T) {
+    this._value = v
+  }
+  toJSON() {
+    return { _wvid: 0, _initValue: this._value }
+  }
+}
+
+export function useMainThreadRef<T>(initValue: T): any {
+  return new PreviewMainThreadRef(initValue)
+}
+
+// ---------------------------------------------------------------------------
 // Lynx 手势事件 → DOM 事件映射
 // ---------------------------------------------------------------------------
 const EVENT_MAP: Record<string, string> = {

@@ -141,6 +141,9 @@ const rootClass = computed(() => {
   return classes.join(' ')
 })
 
+/** 根节点样式：customStyle 经 parseStyle 归一为对象（CONVENTIONS §19） */
+const rootStyle = computed(() => parseStyle(props.customStyle))
+
 watch(
   () => props.name,
   () => {
@@ -200,7 +203,7 @@ function toggle() {
 </script>
 
 <template>
-  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="toggle">
+  <view :class="rootClass" :style="rootStyle" @tap="toggle">
     <view v-if="$slots.default" :class="['wd-checkbox__label', customLabelClass]">
       <slot />
     </view>

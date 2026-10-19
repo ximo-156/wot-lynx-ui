@@ -134,6 +134,9 @@ $avatar-color: var(--wot-avatar-color, $text-auxiliary) !default;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    // Lynx 适配：text 节点不依赖继承（CONVENTIONS §8），居中显式写在文本
+    // 元素上（NATIVE-REWRITE §3.2：容器 flex 居中 + text-align: center）。
+    text-align: center;
   }
 
   @include edeep(icon) {

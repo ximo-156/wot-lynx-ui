@@ -35,6 +35,12 @@ $select-picker-footer-border-color: var(--wot-select-picker-footer-border-color,
 $select-picker-item-padding: var(--wot-select-picker-item-padding, $padding-extra-loose $padding-zero) !default;
 
 @include b(select-picker) {
+  // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // flex-direction 只挂在 display: flex 上生效；根节点承载底部弹层，
+  // 显式补全纵向流向。
+  display: flex;
+  flex-direction: column;
+
   @include e(loading) {
     position: absolute;
     display: flex;

@@ -151,10 +151,15 @@ describe('Tier 2b 选择器 / 键盘 / 日历', () => {
           }
         } as any
       )
+      // 原生优先重写后的事件分工（jsdom 不模拟冒泡，按真机冒泡结果分别派发）：
+      // 列内容（子）绑后台 touchstart/touchend + 主线程 touchmove；
+      // 列（父）绑主线程 touchstart（记跟手起点）。
       const column = container.querySelector('.wd-picker-view__column')!
+      const content = container.querySelector('.wd-picker-view__column-content')!
+      fireEvent.touchstart(content, { touches: [{ clientX: 0, clientY: 0 }] })
       fireEvent.touchstart(column, { touches: [{ clientX: 0, clientY: 0 }] })
-      fireEvent.touchmove(column, { touches: [{ clientX: 0, clientY: -50 }] })
-      fireEvent.touchend(column)
+      fireEvent.touchmove(content, { touches: [{ clientX: 0, clientY: -50 }] })
+      fireEvent.touchend(content, { touches: [], changedTouches: [{ clientX: 0, clientY: -50 }] })
       // 向上拖动一屏，选中值应变化
       expect(updates.length).toBeGreaterThan(0)
       expect(updates[updates.length - 1]).not.toEqual(['a'])

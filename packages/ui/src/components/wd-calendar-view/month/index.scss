@@ -2,6 +2,12 @@
 @use '../index.scss' as *;
 
 @include b(month) {
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：根节点为「月份标题 +
+  // 日期网格」的纵向组合，显式声明 flex 纵向流向（linear 下 direction
+  // 静默丢失）。
+  display: flex;
+  flex-direction: column;
+
   @include e(title) {
     font-size: $calendar-view-panel-title-font-size;
     line-height: $calendar-view-panel-title-line-height;
@@ -125,10 +131,19 @@
   @include e(day-container) {
     position: relative;
     z-index: 2;
+    // Lynx 适配（NATIVE-REWRITE §3.2）：日期文本容器单靠 text-align 依赖
+    // 文本节点撑满容器（linear 布局下不保证），补 justify-content +
+    // align-items 成对 flex 居中；display 不影响自身作为 linear 子项的
+    // 交叉轴拉伸，选中态背景仍铺满整个日期格。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
   }
 
   @include e(day-text) {
     font-weight: $calendar-view-day-font-weight;
+    text-align: center;
   }
 
   @include e(day-top) {
@@ -137,9 +152,10 @@
     left: 0;
     right: 0;
     // Lynx 适配：text-align 依赖文本节点撑满容器（linear 布局下不保证），
-    // 补 flex 居中确保水平居中生效。
+    // 补 flex 居中（justify-content + align-items 成对）确保水平居中生效。
     display: flex;
     flex-direction: row;
+    align-items: center;
     justify-content: center;
     line-height: $calendar-view-info-line-height;
     font-size: $calendar-view-info-font-size;
@@ -151,9 +167,10 @@
     bottom: $calendar-view-info-position;
     left: 0;
     right: 0;
-    // Lynx 适配：同上，补 flex 居中。
+    // Lynx 适配：同上，补 flex 居中（justify-content + align-items 成对）。
     display: flex;
     flex-direction: row;
+    align-items: center;
     justify-content: center;
     line-height: $calendar-view-info-line-height;
     font-size: $calendar-view-info-font-size;

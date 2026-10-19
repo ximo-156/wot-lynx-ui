@@ -27,6 +27,11 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
   width: 100%;
   overflow: hidden;
   background: $table-bg;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。滚动容器（scroll-view）
+  // 为唯一流式子节点，纵向堆叠 + 交叉轴拉伸令其撑满宽度。
+  display: flex;
+  flex-direction: column;
 
   @include when(border) {
     border: $table-border-width solid $table-border-color;
@@ -59,6 +64,7 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
   @include e(cell) {
     position: relative;
     display: flex;
+    flex-direction: row;
     align-items: center;
     box-sizing: border-box;
     background: $table-bg;
@@ -101,12 +107,23 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
       justify-content: flex-start;
     }
 
+    // Lynx 适配：flex 子项（text）被 justify-content 以盒子为单位对齐，
+    // 换行 / 省略（text-maxline）时盒子撑满单元格、内部文本仍左对齐——
+    // 故按对齐方式同步文本 text-align（NATIVE-REWRITE §3.2 文本居中）
     @include when(center) {
       justify-content: center;
+
+      @include edeep(value) {
+        text-align: center;
+      }
     }
 
     @include when(right) {
       justify-content: flex-end;
+
+      @include edeep(value) {
+        text-align: right;
+      }
     }
   }
 

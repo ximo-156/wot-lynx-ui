@@ -1,9 +1,16 @@
 /*
  * wd-calendar — 日历
  *
- * Lynx 实现说明（相对 wot-ui 的适配点）：
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
  * - 弹层用 wd-action-sheet（bottom）承载，与 wot-ui 一致；内部按
  *   header（类型切换 tabs + 快捷选项）+ wd-calendar-view + 确认按钮组织；
+ * - 交互为 tab 切换 / 标签点选 / 按钮确认，无拖动/滑动/缩放手势，
+ *   不涉及 MTS 跟手（NATIVE-REWRITE §2 仅约束跟手交互类组件）；
+ * - 布局居中（NATIVE-REWRITE §3）：根节点、__header、__view 均显式
+ *   display: flex + flex-direction: column（纵向组合）；__range 为
+ *   justify-content + align-items 成对的居中行；__range-item 在
+ *   text-align: center 之外补 flex 居中对（文本容器不依赖继承）；
+ *   __shortcuts 为 wrap + justify-content: center 的标签行；
  * - @click → @tap（CONVENTIONS §6）；hover-class 按压态由 wd-tag /
  *   wd-button 自身承担；
  * - customStyle 为字符串，经 parseStyle 归一为对象后绑定（CONVENTIONS §19）；

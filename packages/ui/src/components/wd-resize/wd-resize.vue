@@ -12,6 +12,14 @@
  *   options script 与 script setup 双块编译为非 inline 模式时 let 重定向失效）；
  * - rootStyle 与探测占位样式由参考源的字符串拼接改为对象语法
  *   （parseStyle 归一 customStyle / :style 对象，CONVENTIONS §19）；
+ * - **根节点三件套**（NATIVE-REWRITE §3.1）：display: flex +
+ *   flex-direction: column 在 index.scss 显式声明；探测 scroll-view 以
+ *   四边 0 绝对定位铺满容器（§3.2 绝对定位写法）；
+ * - **原生元素优先**：两个探测节点即 Lynx 原生 scroll-view（scroll-x /
+ *   scroll-y + scroll-left / scroll-top 程序定位），无 Web 专有降级分支；
+ * - **Style Funnel**（CONVENTIONS §20）：rootStyle 的宽高两个可切换键
+ *   经 defineStyleKeys + resolveStyle 每帧输出完整键集，避免度量未返回时
+ *   上一帧尺寸残留；
  * - 探测机制本身沿用参考源：容器 absolute 脱离文档流，两个隐藏 scroll-view
  *   绝对定位铺满容器，滚动位置布置到远超底部后被引擎钳制，触发 scroll
  *   事件后重新度量并比对 emit；无交互、无事件转发。
@@ -21,6 +29,7 @@ import './index.css'
 
 import { computed, onMounted, ref } from 'vue-lynx'
 import { addUnit, getRect, parseStyle, uuid, type CSSProperties } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { resizeProps } from './types'
 
 const props = defineProps(resizeProps)
@@ -46,12 +55,23 @@ const resizeId = ref<string>(`resize${uuid()}`) // 容器唯一标识符
 let lastHeight = 0
 let lastWidth = 0
 
+/**
+ * 可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
+ * 中性值 0px：度量未返回（或容器塌缩）时不约束尺寸。
+ */
+const RESIZE_STYLE = defineStyleKeys({
+  width: '0px',
+  height: '0px'
+})
+
 const rootStyle = computed<CSSProperties>(() => {
-  const style: CSSProperties = {
-    width: addUnit(width.value),
-    height: addUnit(height.value)
+  return {
+    ...resolveStyle(RESIZE_STYLE, {
+      width: addUnit(width.value),
+      height: addUnit(height.value)
+    }),
+    ...parseStyle(props.customStyle)
   }
-  return { ...style, ...parseStyle(props.customStyle) }
 })
 
 /**

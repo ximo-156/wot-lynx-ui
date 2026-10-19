@@ -17,9 +17,16 @@ $fab-trigger-icon-size: var(--wot-fab-trigger-icon-size, $n-32) !default;
 @include b(fab) {
   position: fixed;
   z-index: $fab-z-index;
+  // 原生优先重写（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，不显式写 display: flex 时 flex-direction 被静默丢弃；fab 内容为
+  // 「触发器 + 绝对定位的动作菜单」，故按 column 显式声明。
+  display: flex;
+  flex-direction: column;
 
   @include edeep(trigger) {
     display: flex;
+    // 触发器内容（按钮内容盒）为横向单行，显式补 flex-direction: row
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     width: $fab-trigger-width;
@@ -34,6 +41,9 @@ $fab-trigger-icon-size: var(--wot-fab-trigger-icon-size, $n-32) !default;
     position: absolute;
     z-index: 0;
     display: flex;
+    // 动作菜单基础方向（column）：四个方向修饰类（--top / --bottom /
+    // --left / --right）在后方同权重覆盖，DOM 恒定带其中一个
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: $fab-actions-padding 0;

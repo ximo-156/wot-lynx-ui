@@ -10,7 +10,11 @@
  *   text 元素均消费对象）；
  * - 参考源模板中的 template v-if 无渲染占位保留（非 block 元素）；
  * - 徽标经 wd-badge 透传，customBadgeProps 合并逻辑与参考源一致
- *   （deepAssign + omitBy 剔除 undefined，max 缺省 99）。
+ *   （deepAssign + omitBy 剔除 undefined，max 缺省 99）；
+ * - 原生优先重写（NATIVE-REWRITE §3）：根 / __body 的 display:flex +
+ *   flex-direction 与居中成对书写在 index.scss（Lynx 3.x 默认 linear 布局，
+ *   弹性属性只在 display:flex 上生效），标题文本显式 text-align: center
+ *   （Lynx text 不保证继承）。
  */
 <script lang="ts" setup>
 import './index.css'

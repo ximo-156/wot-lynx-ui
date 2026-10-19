@@ -42,11 +42,17 @@ $password-input-cursor-duration: var(--wot-password-input-cursor-duration, 1s) !
 
 @include b(password-input) {
   position: relative;
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，不显式声明 display: flex 时 flex-direction 被静默丢弃；根节点为
+  // 「输入格 + 提示信息」的纵向组合，显式补全。
+  display: flex;
+  flex-direction: column;
   margin: 0 $password-input-margin;
 
   @include e(security) {
     display: flex;
     flex-direction: row;
+    align-items: center;
     width: 100%;
     height: $password-input-height;
   }
@@ -63,6 +69,9 @@ $password-input-cursor-duration: var(--wot-password-input-cursor-duration, 1s) !
     font-size: $password-input-font-size;
     line-height: $password-input-line-height;
     background: $password-input-bg;
+    // Lynx 适配（NATIVE-REWRITE §3.2）：容器 flex 居中的同时给文本节点补
+    // text-align: center，双保险保证非掩码态字符水平居中。
+    text-align: center;
 
     @include when(border) {
       border: $password-input-border-width solid $password-input-border-color;
@@ -115,6 +124,9 @@ $password-input-cursor-duration: var(--wot-password-input-cursor-duration, 1s) !
     // 补 flex 居中确保水平居中生效。
     display: flex;
     flex-direction: row;
+    // Lynx 适配（NATIVE-REWRITE §3.2）：justify-content + align-items
+    // 成对写全（单轴居中在 linear 默认方向下另一轴不保证）。
+    align-items: center;
     justify-content: center;
     margin-top: $password-input-margin;
     font-size: $password-input-info-font-size;

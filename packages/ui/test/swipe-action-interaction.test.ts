@@ -6,6 +6,11 @@
  * - 方向锁：纵向位移不触发横移；
  * - click 载荷对齐 wot-ui；关闭态点击不 emit；
  * - 根 view @tap 已在 emits 声明并转发（§14 合并数组 handler 防护）。
+ *
+ * MTS 化后的派发路径（2026-10 原生优先重写，行为细节见 swipe-action-mts.test.ts）：
+ * 主线程 touchstart / touchmove 绑在根 view，后台 touchstart / touchmove /
+ * touchend / touchcancel 绑在内容容器 wrapper（同名事件禁双绑，分挂父子两层；
+ * 真机上内容区触摸先经 wrapper 再冒泡到根 view，jsdom 不冒泡故按分工派发）。
  */
 import { describe, it, expect } from 'vitest'
 import { h, ref } from 'vue-lynx'
@@ -52,20 +57,24 @@ describe('wd-swipe-action 交互回归', () => {
     const record = { clicks: [] as any[], taps: [] as any[] }
     const { container } = mountSwipe(record)
     const root = container.querySelector('.wd-swipe-action') as Element
+    const wrapper = container.querySelector('.wd-swipe-action__wrapper') as Element
     const right = container.querySelector('.wd-swipe-action__right') as Element
     expect(root).toBeTruthy()
+    expect(wrapper).toBeTruthy()
     expect(right).toBeTruthy()
 
     // 操作区宽度在 jsdom 为 0（getRect 无布局）：用足够大的位移 + 直接注入宽度的方式
     // 验证阈值状态机——先把右区宽度通过样式撑开不可行（jsdom 无布局），
     // 故退而验证：touchstart/touchmove/touchend 链路不崩且 transition 状态正确切换
+    // （真机手势经 wrapper 后台记起点、经 root 主线程 worklet 跟手）
+    fireEvent.touchstart(wrapper, { touches: [{ clientX: 300, clientY: 0 }] })
     fireEvent.touchstart(root, { touches: [{ clientX: 300, clientY: 0 }] })
     fireEvent.touchmove(root, { touches: [{ clientX: 200, clientY: 0 }] })
     await pause(20)
-    // 拖动中（dragging=true）transition 必须为 none（跟手）。
+    // 拖动中（touching=true）transition 必须为 none（跟手）。
     // 不能靠「删键」——Lynx SetStyle 是合并语义，必须显式置 none
     expect(wrapperStyleOf(container)).toContain('transition: none')
-    fireEvent.touchend(root, { touches: [], changedTouches: [{ clientX: 200, clientY: 0 }] })
+    fireEvent.touchend(wrapper, { touches: [], changedTouches: [{ clientX: 200, clientY: 0 }] })
     await pause(50)
     // 松手后恢复过渡（吸附动画）
     expect(wrapperStyleOf(container)).toContain('transition: transform')
@@ -76,12 +85,14 @@ describe('wd-swipe-action 交互回归', () => {
     const record = { clicks: [] as any[], taps: [] as any[] }
     const { container } = mountSwipe(record)
     const root = container.querySelector('.wd-swipe-action') as Element
+    const wrapper = container.querySelector('.wd-swipe-action__wrapper') as Element
+    fireEvent.touchstart(wrapper, { touches: [{ clientX: 300, clientY: 100 }] })
     fireEvent.touchstart(root, { touches: [{ clientX: 300, clientY: 100 }] })
     // 纵向大位移 + 横向小位移：direction 判为 vertical，横移不得发生
     fireEvent.touchmove(root, { touches: [{ clientX: 310, clientY: 400 }] })
     await pause(20)
     expect(wrapperStyleOf(container)).toContain('translateX(0px)')
-    fireEvent.touchend(root, { touches: [], changedTouches: [{ clientX: 310, clientY: 400 }] })
+    fireEvent.touchend(wrapper, { touches: [], changedTouches: [{ clientX: 310, clientY: 400 }] })
     await pause(50)
     cleanup()
   })
@@ -151,9 +162,11 @@ describe('wd-swipe-action 交互回归', () => {
       }
     } as any)
     const root = container.querySelector('.wd-swipe-action') as Element
+    const wrapper = container.querySelector('.wd-swipe-action__wrapper') as Element
+    fireEvent.touchstart(wrapper, { touches: [{ clientX: 300, clientY: 0 }] })
     fireEvent.touchstart(root, { touches: [{ clientX: 300, clientY: 0 }] })
     fireEvent.touchmove(root, { touches: [{ clientX: 100, clientY: 0 }] })
-    fireEvent.touchend(root, { touches: [], changedTouches: [{ clientX: 100, clientY: 0 }] })
+    fireEvent.touchend(wrapper, { touches: [], changedTouches: [{ clientX: 100, clientY: 0 }] })
     fireEvent.tap(root)
     await pause(50)
     expect(record.modelValue).toBe('close')

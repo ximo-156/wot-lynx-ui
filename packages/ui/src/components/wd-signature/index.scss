@@ -13,10 +13,16 @@ $signature-footer-margin-top: var(--wot-signature-footer-margin-top, $spacing-ti
 $signature-button-margin-left: var(--wot-signature-button-margin-left, $spacing-tight) !default;
 
 @include b(signature) {
+  // Lynx 3.x 默认 linear 布局：根节点显式三件套（§15 / §3.1）
+  display: flex;
+  flex-direction: column;
+
   @include e(content) {
     justify-content: center;
     align-items: center;
     display: flex;
+    // 内容为单列（画布），显式声明方向（§15）
+    flex-direction: column;
     overflow: hidden;
     background: $signature-bg;
     border-radius: $signature-radius;
@@ -28,12 +34,17 @@ $signature-button-margin-left: var(--wot-signature-button-margin-left, $spacing-
     // Lynx 适配：view 元素无 canvas 的内在高度，度量（getRect）前需要
     // 一个引导高度，否则零高度节点无法度量（度量不可用时保留该默认值）
     height: 200px;
+    // 线段池（绝对定位的跟手渲染元素）以画布为定位基准
+    position: relative;
   }
 
   @include e(footer) {
     margin-top: $signature-footer-margin-top;
     justify-content: flex-end;
     display: flex;
+    // 横向按钮行：主轴右对齐（wot-ui 语义）+ 交叉轴居中对齐（§3.2 成对写全）
+    flex-direction: row;
+    align-items: center;
     // Lynx 适配：wot-ui 用 `.wd-signature__button:not(:first-child)`
     // 兄弟伪类控制按钮左间距，Lynx 无该伪类，改由容器 gap 承担
     // （PORTING §4.5）

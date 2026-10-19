@@ -11,7 +11,10 @@
  * - 内部年份网格子组件的模板标签用 PascalCase 的 Year：wot-ui 写的是
  *   kebab-case 的 year，而 tag-transform-loader 只改写 wd-* 标签，非 wd-
  *   前缀的 kebab-case 标签会被 Lynx 编译器判为原生元素，真机报 603/60301
- *   "Can't find ui tag" 并白屏（CONVENTIONS §4 / test/native-tag-whitelist）。
+ *   "Can't find ui tag" 并白屏（CONVENTIONS §4 / test/native-tag-whitelist）；
+ * - 布局居中（NATIVE-REWRITE §3）：wd-year-panel 根节点显式
+ *   display: flex + flex-direction: column（控制栏 + 标题 + 滚动面板的
+ *   纵向组合）。
  */
 <script lang="ts" setup>
 import './index.css'

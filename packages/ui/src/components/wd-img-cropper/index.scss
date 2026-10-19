@@ -108,9 +108,10 @@ $img-cropper-icon-color: var(--wot-img-cropper-icon-color, $base-white) !default
     flex-basis: auto;
   }
 
-  // 中间行容器
+  // 中间行容器（横向：左遮罩 + 裁剪框 + 右遮罩；Lynx 需显式方向，§15）
   @include e(cut-middle) {
     display: flex;
+    flex-direction: row;
   }
 
   // 裁剪框主体
@@ -175,6 +176,7 @@ $img-cropper-icon-color: var(--wot-img-cropper-icon-color, $base-white) !default
     left: 0;
     top: 0;
     display: flex;
+    flex-direction: row;
     border-width: 0;
     border-style: solid;
     border-color: $img-cropper-gridline-border-color;
@@ -229,6 +231,7 @@ $img-cropper-icon-color: var(--wot-img-cropper-icon-color, $base-white) !default
 
   @include e(footer-btn) {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: space-between;
     box-sizing: border-box;

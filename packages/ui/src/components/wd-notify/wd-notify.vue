@@ -16,8 +16,12 @@
  *   overflow: unset 为 Web 专有写法，Lynx 不支持，删除；
  * - 内联样式一律对象语法并经 parseStyle 归一 customStyle（字符串 :style 会被
  *   vue-lynx 静默丢弃，CONVENTIONS §19）；会随 position / variant 切换的键
- *   （padding-top / left / right / width）每帧写全，省略键等于保留旧值
- *   （CONVENTIONS §20）；
+ *   （padding-top / left / right / width）经 Style Funnel（defineStyleKeys +
+ *   resolveStyle）每帧写全，省略键等于保留旧值（CONVENTIONS §20）；
+ * - 根视图显式 display: flex + flex-direction: row（NATIVE-REWRITE §3.1
+ *   根节点三件套）并 flex-shrink: 0——弹层 .wd-popup 现为 flex column
+ *   容器；内容区 __content 补 min-width: 0，保证单行省略时前缀图标与
+ *   关闭按钮不被文本挤出屏外；
  * - 根 view 的点击 @click → @tap，并在 emits 声明 tap 转发（CONVENTIONS §6/§14）；
  *   onClick / onClosed / onOpened 回调选项优先于 emit（与 wot-ui 一致）。
  */
@@ -30,6 +34,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { notifyProps, type NotifyType, type NotifyProps } from './types'
 import { getNotifyOptionKey } from '.'
 import { addUnit, filterStyle, isDef, isFunction, isString, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(notifyProps)
@@ -100,23 +105,29 @@ watch(
   }
 )
 
-const popupStyle = computed<Record<string, string>>(() => {
-  const style: Record<string, string> = {
-    background: 'transparent',
-    'padding-top': '0px',
-    left: '0px',
-    right: '0px',
-    width: 'auto'
-  }
-  if (state.value.position === 'top') {
-    style['padding-top'] = addUnit(state.value.safeHeight || 0)
-  }
-  if (state.value.variant === 'floating') {
-    style.left = '12px'
-    style.right = '12px'
-  }
-  return style
+/**
+ * 弹层定位样式（CONVENTIONS §20 Style Funnel）。
+ *
+ * 这些键都会随 position / variant 切换（padding-top 仅 top 位、left/right
+ * 仅 floating 变体），省略键等于保留旧值（SetStyle 逐属性合并），故声明
+ * 完整键集 + 中性值，每帧写全：position 由 top 切 bottom 时 padding-top
+ * 回落 0px，variant 由 floating 切回 filled 时 left/right 回落 0px。
+ */
+const POPUP_STYLE = defineStyleKeys({
+  background: 'transparent',
+  'padding-top': '0px',
+  left: '0px',
+  right: '0px',
+  width: 'auto'
 })
+
+const popupStyle = computed<Record<string, string>>(() =>
+  resolveStyle(POPUP_STYLE, {
+    'padding-top': state.value.position === 'top' ? addUnit(state.value.safeHeight || 0) : '',
+    left: state.value.variant === 'floating' ? '12px' : '',
+    right: state.value.variant === 'floating' ? '12px' : ''
+  })
+)
 
 /**
  * 颜色 / 背景色为可选配置：未传时经 filterStyle 剔除空值（CONVENTIONS §19.3），

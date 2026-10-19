@@ -13,6 +13,12 @@
  *   类名与 id 保留；
  * - 参考源 innerOffsetTop 的 H5 44px 导航栏补偿为条件编译（#ifdef H5），
  *   Lynx 无该概念，直接取 props.offsetTop；
+ * - **根节点三件套 + 居中核查**（NATIVE-REWRITE §3.1）：display: flex +
+ *   flex-direction: column 在 index.scss 显式声明（根与 __container 两处），
+ *   linear 默认布局下缺一行 flex-direction 即被静默丢弃；
+ * - **Style Funnel**（CONVENTIONS §20）：rootStyle 的三个可切换键
+ *   （position / top / z-index）经 defineStyleKeys + resolveStyle 每帧输出
+ *   完整键集——offsetTop 由具体值变 0 时旧位移不会残留；
  * - rootStyle 由参考源的「objToStyle 拼字符串 + customStyle 拼接」改为对象语法
  *   （parseStyle 归一，CONVENTIONS §19：字符串 :style 会被静默丢弃）；
  * - 无交互事件（按压/点击由插槽内容自行处理）。
@@ -23,18 +29,32 @@ import './index.css'
 import { computed } from 'vue-lynx'
 import { stickyProps } from './types'
 import { addUnit, parseStyle, uuid, type CSSProperties } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(stickyProps)
 
 const stickyId = `wd-sticky-${uuid()}`
 
+/**
+ * 可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
+ * position 恒为 sticky（渲染器原生吸顶），top / z-index 的中性值取
+ * prop 默认值——offsetTop 由具体值变 0 时旧位移不会残留。
+ */
+const STICKY_STYLE = defineStyleKeys({
+  position: 'sticky',
+  top: '0px',
+  zIndex: '1'
+})
+
 const rootStyle = computed<CSSProperties>(() => {
-  const style: CSSProperties = {
-    position: 'sticky',
-    top: addUnit(props.offsetTop),
-    zIndex: String(props.zIndex)
+  return {
+    ...resolveStyle(STICKY_STYLE, {
+      position: 'sticky',
+      top: addUnit(props.offsetTop),
+      zIndex: String(props.zIndex)
+    }),
+    ...parseStyle(props.customStyle)
   }
-  return { ...style, ...parseStyle(props.customStyle) }
 })
 </script>
 

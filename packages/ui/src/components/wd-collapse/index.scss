@@ -30,6 +30,11 @@ $collapse-more-text-margin-right: var(--wot-collapse-more-text-margin-right, $sp
 
 @include b(collapse) {
   background: $collapse-bg;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。collapse-item / 查看更多
+  // 包裹层纵向堆叠，交叉轴拉伸令面板满宽。
+  display: flex;
+  flex-direction: column;
 
   @include when(viewmore) {
     padding: $collapse-padding;

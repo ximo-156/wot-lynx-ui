@@ -36,7 +36,8 @@ $sort-button-sort-spacing: var(--wot-sort-button-sort-spacing, $spacing-ultra-ti
 
 @include b(sort-button) {
   // Lynx 适配：inline-flex → flex + flex-direction: row（PORTING §4.5，
-  // CONVENTIONS §15：引擎不识别 inline-flex）
+  // CONVENTIONS §15：引擎不识别 inline-flex）；Lynx 非根 view 默认包裹
+  // 内容宽度，flex 化后按钮仍随标题宽度自适应（与参考源行内块语义一致）
   display: flex;
   flex-direction: row;
   height: $sort-button-height;
@@ -51,6 +52,10 @@ $sort-button-sort-spacing: var(--wot-sort-button-sort-spacing, $spacing-ultra-ti
         width: $sort-button-line-width;
         height: $sort-button-line-height;
         bottom: $sort-button-line-bottom;
+        // 定宽（24px）装饰pill水平居中：left:50% + translate(-50%, 0) 为
+        // 「确有必要」保留——四边 0 + flex 居中需要额外包裹元素承载 pill，
+        // 会破坏 DOM 层级对齐（同源写法见 wd-badge / wd-index-bar /
+        // wd-input-number 的百分比 translate）
         left: 50%;
         transform: translate(-50%, 0);
         background: $sort-button-line-color;
@@ -67,14 +72,21 @@ $sort-button-sort-spacing: var(--wot-sort-button-sort-spacing, $spacing-ultra-ti
     color: $sort-button-color;
     word-break: break-all;
     white-space: nowrap;
+    // 原生优先重写（NATIVE-REWRITE §3.1）：标题区 + 箭头区横向排列，显式
+    // 三件套（Lynx 3.x 默认 linear 布局，flex-direction 只在 display:flex
+    // 上生效）；交叉轴 align-items: center 令内容在 48px 高度内垂直居中
     display: flex;
+    flex-direction: row;
     align-items: center;
     height: 100%;
   }
 
   @include e(left) {
     position: relative;
+    // 原生优先重写（NATIVE-REWRITE §3.1）：标题文本 + 下划线横向排列，显式
+    // 三件套；交叉轴居中令文本在 48px 高度内垂直居中
     display: flex;
+    flex-direction: row;
     align-items: center;
     height: 100%;
 

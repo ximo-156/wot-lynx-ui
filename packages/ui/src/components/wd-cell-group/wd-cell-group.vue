@@ -6,7 +6,12 @@
  *   titleWidth/layout/valueAlign），子单元格 props 优先；
  * - rootStyle：参考源直接绑定 customStyle 字符串，改为 parseStyle() 归一
  *   的对象语法（CONVENTIONS §19，字符串 :style 会被静默丢弃）；
- * - insert 模式为卡片式分组（圆角容器 + 水平外边距）。
+ * - insert 模式为卡片式分组（圆角容器 + 水平外边距）；
+ * - **根节点三件套 + 居中补全**（NATIVE-REWRITE §3.1 / §3.2）：根 view 显式
+ *   display: flex + flex-direction: column；标题区为 flex 行 +
+ *   align-items: center + justify-content: space-between（左标题 / 右辅助
+ *   文字两端对齐且同行居中）；左右文本容器同为 flex 行 + 交叉轴居中；
+ *   单元格区为 flex 列。
  */
 <script lang="ts" setup>
 import './index.css'

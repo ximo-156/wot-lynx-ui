@@ -1,4 +1,14 @@
 @use '../../styles/variable.scss' as *;
+@use '../../styles/mixin/mixin.scss' as *;
+
+// Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：wot-ui 的本文件只声明组件
+// 私有令牌（Web 下 view 块级元素天然承载纵向堆叠的面板）；Lynx 3.x 默认
+// linear 布局，不显式 display: flex 时 flex-direction 被静默丢弃，根节点
+// （年份面板 / 月份面板二选一）显式补全纵向流向。
+@include b(calendar-view) {
+  display: flex;
+  flex-direction: column;
+}
 
 $calendar-view-panel-title-font-size: var(--wot-calendar-view-panel-title-font-size, $typography-body-size-main) !default; // 面板标题字号
 $calendar-view-panel-title-line-height: var(--wot-calendar-view-panel-title-line-height, $typography-body-line-height-size-main) !default; // 面板标题行高

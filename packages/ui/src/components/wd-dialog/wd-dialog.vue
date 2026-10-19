@@ -22,6 +22,12 @@
  * - ::-webkit-scrollbar 为 Web 专有伪元素，Lynx 不支持，删除（对应令牌保留）；
  * - display: block 在 Lynx 只认 flex / none / linear，__actions--block 改为
  *   flex + column（CONVENTIONS §15）；
+ * - 内容区 __content：参考源为 view + overflow: auto（Lynx 普通 view 不产生
+ *   原生滚动，超长消息会被容器 overflow:hidden 裁掉），按 NATIVE-REWRITE §3.3
+ *   改用原生 scroll-view（scroll-y，类名与 DOM 层级不变）；
+ * - 根容器 __container 显式 display: flex + flex-direction: column
+ *   （NATIVE-REWRITE §3.1 根节点三件套）并 flex-shrink: 0——居中弹层
+ *   .wd-popup 为 flex column 容器，内容超高时本容器不被按比例压缩；
  * - 图标名：wot-ui 用 check-circle-fill 等，本地内置图标集无同名字形，
  *   DIALOG_BUILTIN_ICON_MAP 映射为 success / prompt / warning / error；
  * - 点击事件 @click → @tap（CONVENTIONS §6）。
@@ -590,8 +596,10 @@ defineExpose({
             <text v-if="dialogState.title">{{ dialogState.title }}</text>
           </view>
         </slot>
-        <view
+        <!-- 内容区用原生 scroll-view（scroll-y，NATIVE-REWRITE §3.3） -->
+        <scroll-view
           v-if="dialogState.type === 'prompt' || !!dialogState.msg || slots.default"
+          :scroll-y="true"
           :class="`wd-dialog__content ${showTitle ? 'is-after-title' : dialogState.headerImage ? 'is-after-image' : ''}`"
         >
           <slot :msg="dialogState.msg" :type="dialogState.type" :inputValue="inputVal" :showErr="dialogState.showErr" :inputError="dialogState.inputError">
@@ -609,7 +617,7 @@ defineExpose({
             </template>
             <text v-else class="wd-dialog__content-text">{{ dialogState.msg }}</text>
           </slot>
-        </view>
+        </scroll-view>
       </view>
       <slot name="actions" :confirm="() => toggleModal('confirm')" :cancel="() => toggleModal('cancel')" :close="() => toggleModal('close')">
         <view

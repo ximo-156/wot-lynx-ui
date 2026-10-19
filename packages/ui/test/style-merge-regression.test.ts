@@ -105,7 +105,7 @@ describe('样式脏值（SetStyle 合并语义）', () => {
     cleanup()
   })
 
-  it('wd-picker-view：拖动中 transition 必须显式置 none（否则拖动带缓动、不跟手）', async () => {
+  it('wd-picker-view：跟手期 transition 必须显式置 none（否则拖动带缓动、不跟手）', async () => {
     const { container } = render({
       setup() {
         return () =>
@@ -119,27 +119,41 @@ describe('样式脏值（SetStyle 合并语义）', () => {
     const column = container.querySelector('.wd-picker-view__column')!
     const content = () => container.querySelector('.wd-picker-view__column-content')
     expect(column, '应渲染列').not.toBeNull()
-    expect(styleOf(content()), '初始（未拖动）不应带过渡').toContain('transition: none')
+    // 原生优先重写后：列内容常驻落位吸附过渡（Vue 侧重渲染承担落位动画）
+    expect(styleOf(content()), '初始（未拖动）应带落位吸附过渡').toContain('transform 0.2s')
 
-    // 拖动并落位 → 应用吸附过渡
+    // 拖动（MTS 分工派发，jsdom 不模拟冒泡：后台 touchstart/touchend 派发到
+    // 列内容，主线程 touchstart/touchmove 分别派发到列 / 列内容）→ 跟手期
+    // worklet 与 transform 同帧显式写 transition: none
+    fireEvent.touchstart(content(), { touches: [{ clientY: 100 }] })
     fireEvent.touchstart(column, { touches: [{ clientY: 100 }] })
-    fireEvent.touchmove(column, { touches: [{ clientY: 60 }] })
-    fireEvent.touchend(column)
+    fireEvent.touchmove(content(), { touches: [{ clientY: 60 }] })
     await frames()
-    expect(styleOf(content()), '落位应带吸附过渡').toContain('transform 0.2s')
+    expect(styleOf(content()), '跟手期过渡必须显式为 none（残留 0.2s → 拖动全程带缓动）').toContain(
+      'transition: none'
+    )
+    // 跟手直改：位移 = 起点 0 + (100 - 60) = 40px → translateY(-40px)
+    expect(styleOf(content()), '跟手应直改 transform').toContain('translateY(-40px)')
 
-    // 再次拖动 → 过渡必须重新显式置为 none（旧实现省略该键 → 残留 0.2s，不跟手）
+    // 落位（后台 touchend 用同一公式重算并 commit）→ 重新下发吸附过渡
+    fireEvent.touchend(content(), { touches: [], changedTouches: [{ clientY: 60 }] })
+    await frames()
+    expect(styleOf(content()), '落位应恢复吸附过渡').toContain('transform 0.2s')
+
+    // 再次拖动 → 跟手期过渡必须重新显式置为 none（旧实现省略该键 → 残留 0.2s，不跟手）
+    fireEvent.touchstart(content(), { touches: [{ clientY: 100 }] })
     fireEvent.touchstart(column, { touches: [{ clientY: 100 }] })
+    fireEvent.touchmove(content(), { touches: [{ clientY: 90 }] })
     await frames()
     expect(
       styleOf(content()),
-      '再次拖动必须清除吸附过渡（旧实现残留 transform 0.2s → 拖动全程带缓动）'
+      '再次拖动必须清除吸附过渡（残留 transform 0.2s → 拖动全程带缓动）'
     ).toContain('transition: none')
 
     cleanup()
   })
 
-  it('wd-toast：position 切换不产生 top / bottom 内联残留（定位由 --top/--bottom 类 transform 承担）', async () => {
+  it('wd-toast：position 切换不产生 top / bottom 内联残留（定位根四边 0 + flex 居中，偏移由 --top/--bottom 类 transform 承担）', async () => {
     const { container } = render({
       setup() {
         const toast = useToast('style-merge-toast')
@@ -156,23 +170,27 @@ describe('样式脏值（SetStyle 合并语义）', () => {
 
     fireEvent.tap(container.querySelector('.trigger-top')!)
     await frames()
-    // 与 wot-ui 一致：内联样式为常量键集（position/top:50%/left/width/text-align），
-    // 不随 position 变化写 top/bottom——定位由根类 wd-toast--top/--bottom 的
-    // transform 承担，因此不存在 top/bottom 残留问题（SetStyle 合并语义下
-    // 唯一可能残留的键也全部恒写）。
+    // 与 wot-ui 的差异仅在定位机制（NATIVE-REWRITE §3.2 / CONVENTIONS §9）：
+    // 内联样式为常量键集（四边 0 + flex 成对居中），不随 position 变化写任何
+    // 条件键——上下偏移由根类 wd-toast--top/--bottom 的 transform 在居中基准上
+    // 承担，因此不存在 top/bottom 残留问题（SetStyle 合并语义下唯一可能残留
+    // 的键也全部恒写，且不含被禁的 left/top 50% + translate）。
     const topStyle = styleOf(transitionRoot())
     expect(topStyle, '内联样式不得写 top: 10%（旧本地实现）').not.toContain('top: 10%')
-    expect(topStyle, '内联样式不得写 bottom').not.toContain('bottom:')
+    expect(topStyle, '内联样式不得写 bottom: 10%').not.toContain('bottom: 10%')
+    expect(topStyle, '禁止 top: 50% + translate 找中心').not.toContain('top: 50%')
     expect(topStyle, 'position 固定写 fixed').toContain('position: fixed')
-    expect(topStyle, '键集恒定：top: 50%').toContain('top: 50%')
+    expect(topStyle, '四边 0 撑满视口').toMatch(/top:\s*0px/)
+    expect(topStyle).toMatch(/bottom:\s*0px/)
+    expect(topStyle).toMatch(/left:\s*0px/)
+    expect(topStyle).toMatch(/right:\s*0px/)
+    expect(topStyle, 'flex 成对居中').toMatch(/justify-content:\s*center/)
+    expect(topStyle).toMatch(/align-items:\s*center/)
 
     fireEvent.tap(container.querySelector('.trigger-bottom')!)
     await frames()
     const bottomStyle = styleOf(transitionRoot())
-    expect(bottomStyle, '切到 bottom 后内联样式仍不得出现 top/bottom 残留').not.toContain('top: 10%')
-    expect(bottomStyle).not.toContain('bottom: 10%')
-    expect(bottomStyle, '键集恒定：top: 50%').toContain('top: 50%')
-    expect(bottomStyle, '键集恒定：left: 0').toContain('left: 0')
+    expect(bottomStyle, '切到 bottom 后内联样式键集完全不变（无残留、无条件键）').toBe(topStyle)
 
     cleanup()
   })

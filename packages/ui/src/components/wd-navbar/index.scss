@@ -31,11 +31,23 @@ $navbar-z-index: var(--wot-navbar-z-index, 10) !default;
   line-height: $navbar-height;
   background-color: $navbar-bg;
   box-sizing: content-box;
+  // 原生优先重写（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // flex-direction 等弹性属性只在 display: flex 上生效；根节点显式三件套，
+  // 内容（__content）纵向排布。
+  display: flex;
+  flex-direction: column;
 
   @include e(content) {
     position: relative;
     height: 100%;
     width: 100%;
+    // 居中补全：left/right 为绝对定位不参与流，title 是唯一流内子项——
+    // 主轴 justify-content: center 使其水平居中，交叉轴 align-items: center
+    // 保证任意行高下都垂直居中（不依赖 line-height 继承，Lynx text 不继承）。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
   }
 
   @include e(title) {
@@ -46,6 +58,13 @@ $navbar-z-index: var(--wot-navbar-z-index, 10) !default;
     font-weight: $navbar-title-font-weight;
     font-size: $navbar-title-font-size;
     @include lineEllipsis();
+    // 居中补全：标题文本在自身盒子内双向居中 + text-align: center
+    // （flex 子项内容收缩时文本不贴左）。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 
   @include e(text) {
@@ -54,6 +73,7 @@ $navbar-z-index: var(--wot-navbar-z-index, 10) !default;
     display: flex;
     flex-direction: row;
     align-items: center;
+    justify-content: center;
     color: $navbar-desc-color;
   }
 

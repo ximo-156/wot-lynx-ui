@@ -67,6 +67,10 @@ $upload-row-spacing: var(--wot-upload-row-spacing, $spacing-tight) !default;
 @include b(upload) {
   position: relative;
   display: flex;
+  // 原生优先重写（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，flex-direction 必须显式挂在 display: flex 上才生效；预览项 +
+  // 唤起项按横向换行排列，故显式声明 row（flex-wrap: wrap 才有意义）。
+  flex-direction: row;
   flex-wrap: wrap;
 
   @include e(evoke) {
@@ -101,6 +105,8 @@ $upload-row-spacing: var(--wot-upload-row-spacing, $spacing-tight) !default;
     color: $upload-evoke-color;
     font-size: $upload-evoke-font-size;
     line-height: $upload-evoke-line-height;
+    // 文本居中（NATIVE-REWRITE §3.2）：父级 flex 居中之外显式声明
+    text-align: center;
   }
 
   @include edeep(evoke-icon) {
@@ -124,6 +130,9 @@ $upload-row-spacing: var(--wot-upload-row-spacing, $spacing-tight) !default;
 
   @include e(picture, file, video) {
     position: relative;
+    // 参考源声明（Web 块级流）：Lynx 引擎只识别 flex / none / linear，该值
+    // 在真机被静默丢弃——保留仅为与 wot-ui 声明集对齐；file / video 由下方
+    // 规则覆盖为 flex 纵排居中，picture 为原生 image 元素（宽高 100% 撑满）。
     display: block;
     width: 100%;
     height: 100%;
@@ -153,10 +162,19 @@ $upload-row-spacing: var(--wot-upload-row-spacing, $spacing-tight) !default;
   }
 
   @include edeep(video-play) {
+    // 原生优先重写（NATIVE-REWRITE §3.2 绝对定位居中）：参考源用
+    // top/left 50% + transform translate(-50%, -50%) 定心，改为四边 0 +
+    // flex 居中——播放图标是 wd-icon 根 view，本身就是居中载体，无需额外
+    // 包裹元素（不破坏 DOM 层级对齐），且不依赖百分比 transform。
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     font-size: $upload-video-icon-size;
     color: $upload-video-icon-color;
   }
@@ -189,6 +207,8 @@ $upload-row-spacing: var(--wot-upload-row-spacing, $spacing-tight) !default;
     font-size: $upload-progress-font-size;
     line-height: $upload-progress-line-height;
     color: $upload-progress-color;
+    // 文本居中（NATIVE-REWRITE §3.2）
+    text-align: center;
   }
 
   @include edeep(icon) {

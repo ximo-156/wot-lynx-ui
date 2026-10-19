@@ -31,6 +31,10 @@ $pagination-size-separator-margin: var(--wot-pagination-size-separator-margin, $
 @include b(pagination) {
   background-color: $pagination-bg;
   padding: $pagination-padding;
+  // 原生优先重写（NATIVE-REWRITE §3.1）：根节点显式三件套——内容区
+  // （__content）与辅助文案（__message）纵向排布。
+  display: flex;
+  flex-direction: column;
 
   @include edeep(icon) {
     font-size: $pagination-icon-size;

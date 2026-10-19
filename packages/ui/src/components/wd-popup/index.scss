@@ -14,6 +14,11 @@ $popup-radius: var(--wot-popup-radius, $radius-large) !default;
 
 @include b(popup) {
   position: fixed;
+  // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // flex-direction 只挂在 display: flex 上才生效；弹层内容（消费方的
+  // 任意 slot 节点）按纵向排布，故显式 column
+  display: flex;
+  flex-direction: column;
   max-height: 100%;
   overflow-y: auto;
   background: $popup-bg;
@@ -29,6 +34,14 @@ $popup-radius: var(--wot-popup-radius, $radius-large) !default;
   /* 参考源用 mdeep() 生成根级 `:deep() .wd-popup--<position>`；本地 m() 的
      @at-root 产物与其归一化结果一致，mdeep() 会多带一层 .wd-popup 祖先、
      永不命中（CONVENTIONS §5.5 同类名错配） */
+  /* 定位说明（NATIVE-REWRITE §3.2「禁 left:50% + translate」的例外）：
+     居中弹层的 fixed 节点自带不透明背景令牌 --wot-popup-bg，且必须收缩
+     包裹内容（尺寸由消费方传入的任意 slot 决定）——若按四边 0 + flex
+     居中撑满视口，这层背景会涂满整个屏幕、把遮罩完全盖住（demo 的居中
+     弹层内容正依赖该背景）。故保留 left/top 50% + translate3d(-50%,-50%,0)
+     的收缩居中；transform-origin: 0 0 与 zoom-in 过渡帧的 scale 补偿同源
+     （参考源取值）。贴边位置（top/bottom/left/right）无此问题，均按
+     CONVENTIONS §9 用对应边贴边 + 根三件套纵向排布。 */
   @include m(center) {
     left: 50%;
     top: 50%;

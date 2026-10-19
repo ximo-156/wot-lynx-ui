@@ -2,6 +2,8 @@
  * wd-form — 表单
  *
  * 与 wot-ui 2.3.2 对齐；Lynx 适配点（相对参考源的差异）：
+ * - 根节点三件套（NATIVE-REWRITE §3.1）：index.scss 显式声明
+ *   display:flex + flex-direction:column，保证各表单项纵向堆叠；
  * - customStyle 经 parseStyle() 归一为对象后下发（CONVENTIONS §19：
  *   vue-lynx 的 :style 只认对象，字符串样式会被静默丢弃）；
  * - 平台 options 块（virtualHost / styleIsolation / addGlobalClass）为

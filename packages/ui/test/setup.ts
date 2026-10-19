@@ -7,6 +7,7 @@
  */
 import { JSDOM } from 'jsdom'
 import { LynxTestingEnv } from '@lynx-js/testing-environment'
+import { installWorkletGlobals, resetWorkletRegistry } from './mts-worklet-shim'
 
 // url 必须给 http(s) origin：about:blank 是不透明 origin，jsdom 的
 // localStorage getter 会抛 SecurityError；断言失败时 vitest 序列化 DOM
@@ -36,9 +37,18 @@ const mainThreadFns = {
 const mtGlobal = lynxTestingEnv.mainThread.globalThis as any
 Object.assign(mtGlobal, mainThreadFns)
 
+// Main Thread Script 模拟层：worklet 派发 + 主线程元素桩（见 mts-worklet-shim.ts）
+installWorkletGlobals(mtGlobal)
+
 lynxTestingEnv.switchToBackgroundThread()
 
 await import('vue-lynx/entry-background')
+
+// MTS 探针：供 mts-worklet-shim 补丁 MainThreadRef.prototype.current
+;(globalThis as any).__wdUseMainThreadRefProbe = (await import('vue-lynx')).useMainThreadRef(null)
+// 探针就绪后再桥接 .current（installWorkletGlobals 时探针尚未就位）
+const { patchMainThreadRefCurrent } = await import('./mts-worklet-shim')
+patchMainThreadRefCurrent()
 
 const publishEventFn = (globalThis as any).publishEvent
 

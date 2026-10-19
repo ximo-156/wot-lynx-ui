@@ -78,7 +78,11 @@ $toast-loading-margin-bottom: var(--wot-toast-loading-margin-bottom, $spacing-ex
   }
 
   @include m(middle) {
-    transform: translate3d(0, -50%, 0);
+    /* 垂直居中由过渡根视图的「四边 0 + flex 成对居中」承担
+       （NATIVE-REWRITE §3.2 / CONVENTIONS §9）：参考源在 top: 50% 的
+       基准上用 translate3d(0,-50%,0) 找中心，新基准下已居中，该变换会
+       造成二次上移，故取中性值 none（ Style Funnel 中性值语义） */
+    transform: none;
   }
 
   @include m(bottom) {
@@ -89,7 +93,10 @@ $toast-loading-margin-bottom: var(--wot-toast-loading-margin-bottom, $spacing-ex
     // Lynx 适配：wot-ui 为 display: inline-flex，改为 flex + row（CONVENTIONS §15）
     display: flex;
     flex-direction: row;
+    // 图标 + 文本行成对居中（NATIVE-REWRITE §3.2）：文案触达 max-width 时
+    // 图标与文本组仍在行内居中，不贴左
     align-items: center;
+    justify-content: center;
 
     @include me(msg) {
       margin-left: $toast-msg-margin-left;

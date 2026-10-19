@@ -34,6 +34,9 @@ $input-error-color: var(--wot-input-error-color, $danger-main) !default;
 
 @include b(input) {
   position: relative;
+  // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // 显式 display:flex + flex-direction:row 保证「前缀图标 / 输入框 /
+  // 后缀区」横向排列；align-items:center 负责交叉轴居中
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -46,7 +49,10 @@ $input-error-color: var(--wot-input-error-color, $danger-main) !default;
     font-size: $input-icon-font-size;
     line-height: initial;
     flex-shrink: 0;
+    // 图标+插槽横向排列：flex 属性只对 display:flex 生效，方向显式声明
+    // （NATIVE-REWRITE §3.1 / CONVENTIONS §15）
     display: flex;
+    flex-direction: row;
     align-items: center;
   }
 
@@ -61,7 +67,10 @@ $input-error-color: var(--wot-input-error-color, $danger-main) !default;
   }
 
   @include e(suffix) {
+    // 清空/密码/字数统计/后缀图标横向排列，显式方向 + 交叉轴居中
+    // （NATIVE-REWRITE §3.1 / CONVENTIONS §15）
     display: flex;
+    flex-direction: row;
     align-items: center;
     flex-shrink: 0;
     line-height: initial;

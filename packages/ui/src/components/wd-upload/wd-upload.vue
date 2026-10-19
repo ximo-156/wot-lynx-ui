@@ -24,7 +24,13 @@
  *   patch（真机 9902 removeNode 家族）；
  * - 图标名 camera-fill / play-circle-fill / close-circle / video-camera 在
  *   本地 iconfont 集中无对应字形，经 resolveIconName 取最近似字形
- *   （camera / play / close / film），消费者显式传入的其它名字原样下发。
+ *   （camera / play / close / film），消费者显式传入的其它名字原样下发；
+ * - 布局居中（NATIVE-REWRITE §3）：根 view 显式 display: flex +
+ *   flex-direction: row + flex-wrap: wrap（预览项 / 唤起项横向换行）；
+ *   __evoke / __file / __video / __status-content 均为 flex 纵排 + 双轴居中
+ *   容器；__file-name / __evoke-num / __progress-txt 补 text-align: center；
+ *   播放图标（__video-play）由参考源的 top/left 50% + translate(-50%, -50%)
+ *   改为四边 0 + flex 居中（图标根 view 自身即居中载体，不加包裹元素）。
  */
 <script lang="ts" setup>
 import './index.css'

@@ -16,7 +16,11 @@
  *   改为主元素真实 border-top（1ppx），参考源 mixin 前置的 position: relative
  *   显式保留；
  * - round 变体 box-shadow 按参考源保留（PORTING §4 未列入删除清单，令牌定制点
- *   不丢失）。
+ *   不丢失）；
+ * - 原生优先重写（NATIVE-REWRITE §3.1）：占位根 view（SFC 根）经 Style Funnel
+ *   常量键显式下发 display: flex + flex-direction: column 三件套——该类名仅在
+ *   round + fixed + placeholder + 安全区场景挂载，未挂载时根 view 不得退回
+ *   Lynx 默认 linear 布局；内部 .wd-tabbar 亦显式 flex-direction: row（SCSS）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -41,7 +45,9 @@ linkChildren({
   setChange
 })
 
-/** z-index 中性值：prop 默认 10，恒有值；经 Style Funnel 保证键集完整 */
+/** 占位根三件套（NATIVE-REWRITE §3.1）：display / flex-direction 为常量键，
+    随每帧完整下发；z-index 中性值：prop 默认 10，恒有值；经 Style Funnel
+    保证键集完整 */
 const ROOT_STYLE = defineStyleKeys({ 'z-index': '10' })
 
 const rootStyle = computed(() => {
@@ -49,7 +55,11 @@ const rootStyle = computed(() => {
 })
 
 /** 占位高度中性值 auto：未度量时与不设置视觉等价（键集完整，CONVENTIONS §20） */
-const PLACEHOLDER_STYLE = defineStyleKeys({ height: 'auto' })
+const PLACEHOLDER_STYLE = defineStyleKeys({
+  display: 'flex',
+  'flex-direction': 'column',
+  height: 'auto'
+})
 
 const placeholderStyle = computed(() => {
   return resolveStyle(PLACEHOLDER_STYLE, { height: height.value === '' ? '' : addUnit(height.value) })

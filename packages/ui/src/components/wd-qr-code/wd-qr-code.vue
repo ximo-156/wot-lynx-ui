@@ -22,7 +22,11 @@
  * - canvasId 为 uni-app / 小程序专有 props（canvas 元素 id），Lynx 无 canvas
  *   元素，保留声明但不生效（PORTING §2.3）；
  * - 编码由同目录 qrcode.ts 承担（wot-ui 2.3.2 同源编码器：Byte 模式 / 版本
- *   1-40 自适应 / L/M/Q/H 四级纠错 / RS 纠错 / 掩码评估），在后台线程同步完成。
+ *   1-40 自适应 / L/M/Q/H 四级纠错 / RS 纠错 / 掩码评估），在后台线程同步完成；
+ * - 布局居中（NATIVE-REWRITE §3）：根 view 显式 display: flex +
+ *   flex-direction: row + justify-content / align-items 成对居中（码图为唯一
+ *   在流子元素）；logo 外框为四边定位的 flex 居中盒（display / flex-direction /
+ *   align-items / justify-content 四件套齐全），背景图与 logo 均不参与流内布局。
  */
 <script lang="ts" setup>
 import './index.css'

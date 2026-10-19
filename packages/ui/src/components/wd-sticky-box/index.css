@@ -1,1 +1,1 @@
-.wd-sticky-box{position:relative}
+.wd-sticky-box{position:relative;display:flex;flex-direction:column}

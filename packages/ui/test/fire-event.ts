@@ -5,8 +5,16 @@
  * lynxCoreInject.tt.publishEvent，从而切换到后台线程执行 Vue 事件处理器。
  *
  * 事件类型格式："bindEvent:tap"（与 __AddEvent 注册一致）。
+ *
+ * 主线程 worklet 事件（main-thread-bind*）：ElementPAPI 以
+ * `Object.assign({}, evt)` 拷贝事件后调 runWorklet——jsdom 的
+ * target/currentTarget 是 Event.prototype 访问器，不在自有属性里，拷贝即丢失。
+ * 真机 Lynx 事件对象自带 currentTarget（绑定元素），故派发前把元素挂到
+ * WD_EVENT_TARGET_EL Symbol 自有属性上（Object.assign 会复制 Symbol 键），
+ * 由 mts-worklet-shim 的 runWorklet 还原为 currentTarget/target。
  */
 import { createEvent, fireEvent as domFireEvent } from '@testing-library/dom'
+import { WD_EVENT_TARGET_EL } from './mts-worklet-shim'
 
 const EVENT_INIT_KEYS = new Set(['bubbles', 'cancelable', 'composed'])
 
@@ -63,6 +71,8 @@ for (const key of Object.keys(eventMap)) {
     const event = createEvent(`${eventType}:${key}`, elem, eventInit)
     const customProps = Object.fromEntries(Object.entries(eventInit).filter(([k]) => !EVENT_INIT_KEYS.has(k)))
     Object.assign(event, customProps)
+    // worklet 事件的 currentTarget/target 桥接（Symbol 自有属性，见文件头）
+    ;(event as any)[WD_EVENT_TARGET_EL] = elem
     const ans = domFireEvent(elem, event)
 
     if (isMainThread) {

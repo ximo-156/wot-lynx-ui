@@ -36,10 +36,16 @@ $divider-padding-default: var(--wot-divider-padding-default, $spacing-zero) !def
 
 @include b(divider) {
   position: relative;
+  /* 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：显式
+     display: flex + flex-direction: row——「线段 + 内容 + 线段」为内容
+     方向上的行；align-items: center 与 justify-content 成对写全，
+     保证内容在行内垂直居中 */
   display: flex;
+  flex-direction: row;
   padding: $divider-padding;
   margin: $divider-margin;
   align-items: center;
+  justify-content: center;
   color: $divider-color-default;
   font-size: $divider-font-size-default;
 
@@ -97,7 +103,8 @@ $divider-padding-default: var(--wot-divider-padding-default, $spacing-zero) !def
     height: $divider-size-vertical-height;
     margin: $spacing-zero $divider-margin-vertical-content;
     padding: $padding-zero;
-    vertical-align: middle;
+    /* vertical-align: middle 为 Web 专有声明（Lynx 不识别，PORTING §4.5
+       删除清单）——垂直态分割线的行内居中由使用方的 flex 容器承担 */
 
     @include edeep(line) {
       height: 100%;

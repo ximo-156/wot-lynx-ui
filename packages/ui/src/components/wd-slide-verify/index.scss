@@ -39,6 +39,8 @@ $slide-verify-success-icon-size: var(--wot-slide-verify-success-icon-size, $n-20
 @include b(slide-verify) {
   position: relative;
   display: flex;
+  // Lynx 3.x 默认 linear 布局：flex-direction 必须显式声明（§15）
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   overflow: hidden;
@@ -55,6 +57,8 @@ $slide-verify-success-icon-size: var(--wot-slide-verify-success-icon-size, $n-20
     color: $slide-verify-text-color;
     font-size: $slide-verify-text-font-size;
     line-height: $slide-verify-text-line-height;
+    // 文本居中：容器 flex 居中之外，text 元素显式声明（§3.2）
+    text-align: center;
     transition: color 0.3s ease;
   }
 

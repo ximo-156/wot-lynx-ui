@@ -27,7 +27,15 @@
  *   避免同页多实例串台；度量失败回退常见屏幕尺寸 375×667），props 变化时
  *   经 computed 重算网格，不走参考源的 doReset 重绘流程；
  * - 平铺节点数钳制在 MAX_TILES 上限内（小单元 + 大容器时防止铺出数千
- *   节点冻结渲染，见 test/perf-guards.test.ts）。
+ *   节点冻结渲染，见 test/perf-guards.test.ts）；
+ * - 原生优先重写（NATIVE-REWRITE §3）：本组件为纯展示（无跟手交互，不涉及
+ *   MTS），根节点经 SCSS 显式补全三件套（display: flex + flex-direction:
+ *   column）——插槽内容纵向堆叠，水印图层绝对定位不参与流；图层四边 0 +
+ *   flex 铺满（wrap 平铺），单元容器 justify-content + align-items 成对
+ *   居中，文本节点另加 text-align: center 对齐参考源 canvas 的居中绘制；
+ * - 平铺单元样式经 defineStyleKeys + resolveStyle 输出完整键集
+ *   （CONVENTIONS §20 Style Funnel 迁移：marginLeft 中性值 0px，
+ *   staggered → grid 切换不留残移）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -35,6 +43,7 @@ import './index.css'
 import { computed, onMounted, ref } from 'vue-lynx'
 import { watermarkProps } from './types'
 import { addUnit, getRect, isDef, parseStyle, filterStyle, uuid } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(watermarkProps)
@@ -89,6 +98,17 @@ const rootStyle = computed(() => {
   return { ...style, ...parseStyle(props.customStyle) }
 })
 
+/**
+ * 平铺单元可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
+ * marginLeft 中性值取 0px（视觉上等同于不设置）——layout 由 staggered 切回
+ * grid 时奇数行的右移位移不留残值。
+ */
+const TILE_STYLE = defineStyleKeys({
+  width: '0px',
+  height: '0px',
+  marginLeft: '0px'
+})
+
 /** 平铺网格：单元占位含 gutter，按图层尺寸算行列数铺满整个图层 */
 const tiles = computed(() => {
   const unitWidth = Math.max(props.width + props.gutterX, 1)
@@ -108,15 +128,16 @@ const tiles = computed(() => {
   const result: Array<{ style: Record<string, string> }> = []
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const style: Record<string, string> = {
-        width: `${unitWidth}px`,
-        height: `${unitHeight}px`
-      }
-      // staggered：奇数行右移半个单元宽度（参考源 2×2 离屏画布错位绘制的等效铺贴）
-      if (props.layout === 'staggered' && r % 2 === 1) {
-        style.marginLeft = `${unitWidth / 2}px`
-      }
-      result.push({ style })
+      // staggered：奇数行右移半个单元宽度（参考源 2×2 离屏画布错位绘制的等效铺贴）；
+      // 非错位行经 resolveStyle 回落中性值 0px，键集完整
+      const staggeredOffset = props.layout === 'staggered' && r % 2 === 1 ? `${unitWidth / 2}px` : ''
+      result.push({
+        style: resolveStyle(TILE_STYLE, {
+          width: `${unitWidth}px`,
+          height: `${unitHeight}px`,
+          marginLeft: staggeredOffset
+        })
+      })
     }
   }
   return result

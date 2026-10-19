@@ -2,11 +2,13 @@
 @use '../../styles/variable.scss' as *;
 
 @include b(steps) {
-  // Lynx 适配（CONVENTIONS §15）：横向步骤条依赖 step 子项横向排列，参考源
-  // 依靠 .wd-step 的 inline-block 行内块流式语义（Web）；Lynx 3.x 默认 linear
-  // 布局为纵向逐行排列且不识别 inline-block，故容器显式 display: flex + row。
+  // 原生优先重写（NATIVE-REWRITE §3.1）：横向步骤条依赖 step 子项横向排列，
+  // 参考源依靠 .wd-step 的 inline-block 行内块流式语义（Web）；Lynx 3.x 默认
+  // linear 布局为纵向逐行排列且不识别 inline-block，故容器显式 display: flex
+  // + flex-direction: row。
   // align-items: flex-start 保证各 step 保持内容自然高度（stretch 会拉伸
-  // step 盒子，令绝对定位连接线的 top: 50% 基准错位）。
+  // step 盒子，令绝对定位连接线的 top: 50% 基准错位）；主轴由 step 的
+  // 100%/n 宽度分占，无居中语义，不补 justify-content。
   display: flex;
   flex-direction: row;
   align-items: flex-start;

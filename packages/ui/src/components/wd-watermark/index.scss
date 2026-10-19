@@ -22,6 +22,12 @@ $watermark-opacity: var(--wot-watermark-opacity, $opacity-dimmer) !default;
   bottom: 0;
   background-repeat: repeat;
   width: 100%;
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，不显式声明 display: flex 时 flex-direction 被静默丢弃；本地根节点
+  // 同时承载插槽内容与水印图层（绝对定位、不参与流），按纵向流补全，
+  // 插槽内容自然堆叠。
+  display: flex;
+  flex-direction: column;
 
   @include when(fullscreen) {
     // Lynx 适配：参考源为根节点 position: fixed；此处 fixed 落在水印图层上
@@ -66,5 +72,9 @@ $watermark-opacity: var(--wot-watermark-opacity, $opacity-dimmer) !default;
   @include e(text) {
     // 参考源 canvas 绘制时按单元宽度自动换行，此处由文本自然换行承载
     width: 100%;
+    // Lynx 适配（NATIVE-REWRITE §3.2）：单元容器 flex 居中的同时给文本节点
+    // 补 text-align: center，与参考源 canvas textAlign='center' 的居中绘制
+    // 语义对齐（旋转前先水平居中）。
+    text-align: center;
   }
 }

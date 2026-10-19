@@ -2,6 +2,10 @@
  * wd-textarea — 文本域
  *
  * 与 wot-ui 2.3.2 对齐；Lynx 适配点（相对参考源的差异）：
+ * - 根节点三件套（NATIVE-REWRITE §3.1）：index.scss 显式声明
+ *   display:flex + flex-direction:column，「输入区 __body」与「字数统计
+ *   __count」纵向堆叠（参考源根节点无 display 声明，依赖小程序 view 默认
+ *   flex——Lynx 3.x 默认 linear，不写即静默丢弃 flex 属性）；
  * - 基于 Lynx 原生 textarea 元素；参考源用 v-model 双向绑定，vue-lynx
  *   运行时对原生元素不挂 vModel 指令，故改 :value 受控绑定 + @input 回写
  *   inputValue 后再向上同步（语义与 v-model 一致）；

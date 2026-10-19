@@ -7,4 +7,8 @@
   // 内容尺寸由 svg 元素撑开，绝对定位的 logo / 背景图不参与布局。
   display: flex;
   flex-direction: row;
+  // 原生优先重写（NATIVE-REWRITE §3.1 根节点三件套）：居中成对写全，
+  // 码图（唯一在流子元素）在根盒子内双轴居中
+  align-items: center;
+  justify-content: center;
 }

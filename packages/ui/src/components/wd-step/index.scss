@@ -111,15 +111,29 @@ $step-description-padding: var(--wot-step-description-padding, $padding-zero $pa
 
 @include b(step) {
   position: relative;
-  // Lynx 适配：参考源为 display: inline-block（Web 行内块流，横向排列由
-  // .wd-steps 容器内联流完成）；Lynx 引擎只认 flex/none/linear，不识别
-  // inline-block（CONVENTIONS §15），inline-block 的「块级内部纵向流」语义
-  // 由 linear 等价承担（header 在上、content 在下）
-  display: linear;
+  // 原生优先重写（NATIVE-REWRITE §3.1）：参考源为 display: inline-block
+  // （Web 行内块流，横向排列由 .wd-steps 容器内联流完成）；Lynx 引擎只认
+  // flex/none/linear 且不识别 inline-block（CONVENTIONS §15），inline-block
+  // 的「块级内部纵向流」语义由 flex + column 等价承担（header 在上、
+  // content 在下，子项交叉轴撑满）
+  display: flex;
+  flex-direction: column;
 
   @include e(header) {
     position: relative;
     font-size: 0;
+    // 原生优先重写（NATIVE-REWRITE §3.1/§3.2）：header 显式三件套。指示器是
+    // header 的行内子项：非居中态贴左（连接线自指示器右侧起笔，
+    // left: calc($step-line-spacing + $step-indicator-size)）；is-center 态
+    // 由容器主轴 justify-content: center 水平居中（参考源经 text-align 居中
+    // inline-flex 指示器——Web 行内盒模型，Lynx 无行内盒，flex 主轴居中为
+    // 等价实现，配合 when(center) 内连接线 left: calc(50% + ...) 的几何）。
+    // align-items: flex-start：纵向步骤条 header 为 absolute + height:100%，
+    // 指示器须保持贴顶（center 会把它坠到垂直中线）。
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
 
     &.is-dot {
       .wd-step__line {
@@ -279,6 +293,9 @@ $step-description-padding: var(--wot-step-description-padding, $padding-zero $pa
     font-size: $step-circle-text-font-size;
     line-height: $step-circle-text-line-height;
     font-weight: $step-circle-text-font-weight;
+    // 圆形指示器内的序号文本显式居中（Lynx text 不保证继承容器 text-align，
+    // NATIVE-REWRITE §3.2）
+    text-align: center;
   }
 
   @include e(line) {
@@ -305,6 +322,10 @@ $step-description-padding: var(--wot-step-description-padding, $padding-zero $pa
     margin-top: $step-content-margin-top;
     display: flex;
     flex-direction: column;
+    // 根节点改为 flex column 后子项默认 flex-shrink: 1（CONVENTIONS §19）：
+    // 纵向步骤条由 space 固定 step 高度时，内容不得被按比例压缩（参考源
+    // block 流下内容原样溢出），显式禁压缩
+    flex-shrink: 0;
   }
 
   @include e(title) {
@@ -325,6 +346,27 @@ $step-description-padding: var(--wot-step-description-padding, $padding-zero $pa
 
   @include when(center) {
     text-align: center;
+
+    // 原生优先重写（NATIVE-REWRITE §3.2）：参考源经 text-align 居中 header 内
+    // 的 inline-flex 指示器（Web 行内盒模型）——Lynx 无行内盒，改由 header 的
+    // flex 主轴 justify-content: center 等价实现（非居中态贴左见 __header），
+    // 与下方连接线 left: calc(50% + ...) 的几何配套（线起笔于居中指示器右侧
+    // 一个间距，延伸至下一步居中指示器左侧一个间距）
+    .wd-step__header {
+      justify-content: center;
+    }
+
+    // 标题 / 描述：flex 列容器交叉轴居中 + 文本显式居中（Lynx text 不保证
+    // 继承根上的 text-align: center，多行描述逐行居中）
+    .wd-step__content {
+      align-items: center;
+    }
+
+    .wd-step__title,
+    .wd-step__description {
+      text-align: center;
+    }
+
     .wd-step__line {
       left: calc(50% + $step-line-spacing + $step-indicator-size / 2);
     }
@@ -338,8 +380,9 @@ $step-description-padding: var(--wot-step-description-padding, $padding-zero $pa
 
   @include when(vertical) {
     // Lynx 适配：参考源为 display: block；引擎只认 flex/none/linear，
-    // linear 即纵向逐行排列，与 block 的垂直流语义等价
-    display: linear;
+    // flex + column 即纵向逐行排列，与 block 的垂直流语义等价
+    display: flex;
+    flex-direction: column;
 
     .wd-step__header {
       position: absolute;

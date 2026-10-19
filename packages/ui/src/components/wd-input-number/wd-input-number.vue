@@ -2,6 +2,10 @@
  * wd-input-number — 步进器
  *
  * 与 wot-ui 2.3.2 对齐；Lynx 适配点（相对参考源的差异）：
+ * - 根节点三件套（NATIVE-REWRITE §3.1）：index.scss 显式声明
+ *   display:flex + flex-direction:row + align-items:center，「减号 /
+ *   输入框 / 加号」横向排列且交叉轴居中；加减按钮为显式 flex row +
+ *   justify-content:center 容器；
  * - 加减按钮 + 原生 input 元素；:value 受控绑定 + @input 回写（vue-lynx
  *   运行时对原生元素不挂 vModel 指令），语义与参考源 v-model 一致；
  * - @click → @tap（CONVENTIONS §6：Lynx view 只派发 tap）；
@@ -14,9 +18,12 @@
  *   touchend，丢失时会无限步进——Lynx 上手势被系统接管时 touchend 可能
  *   丢失，故补兜底）；
  * - 长按已步进时 tap 去重（部分平台长按抬起后仍补发 tap，否则每次长按
- *   结束都会额外步进一次）；
- * - inputWidth 内联宽度按参考源条件输出（静态布局 prop，与参考源同样
- *   不在无值时下发 width，由类声明宽度 36px 接管）；
+ *   结束都会额外步进一次）；去重标志为 setup 作用域 ref，每实例一份
+ *   （模块级变量会跨实例串染）；
+ * - inputWidth 内联宽度经 Style Funnel（defineStyleKeys + resolveStyle）
+ *   每帧输出完整键集（CONVENTIONS §20）：中性值取组件令牌
+ *   var(--wot-input-number-input-width, …)，与类声明宽度同值——无值时
+ *   视觉等同不设置，由有值转无值时旧宽度不残留；
  * - customStyle 经 parseStyle() 归一为对象后下发（CONVENTIONS §19）；
  * - blur 时经 FORM_ITEM_VALIDATE_KEY 通知 form-item 校验；
  * - 平台 options 块（virtualHost / styleIsolation / addGlobalClass）为
@@ -28,6 +35,7 @@ import './index.css'
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue-lynx'
 import { inputNumberProps, type OperationType } from './types'
 import { addUnit, isDef, isEqual, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { useParent } from '../../composables/useParent'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { callInterceptor } from '../../common/interceptor'
@@ -36,6 +44,18 @@ import { FORM_ITEM_VALIDATE_KEY } from '../../composables/useFormItemValidate'
 const props = defineProps(inputNumberProps)
 const { parent: formItemValidate } = useParent(FORM_ITEM_VALIDATE_KEY)
 const isDisabled = useFormDisabled(props)
+
+/**
+ * 输入框可切换样式键 + 中性值（CONVENTIONS §20 Style Funnel）。
+ *
+ * 中性值与 index.scss 中 `.wd-input-number__input` 的类声明宽度同源
+ * （同一令牌链），保证任何一帧都输出完整键集：inputWidth 由有值转为
+ * 无值时回落令牌宽度，不会残留上次的 inline 宽度。
+ */
+const INPUT_WIDTH_STYLE = defineStyleKeys({ width: 'var(--wot-input-number-input-width, var(--wot-n-36, 36px))' })
+
+/** 输入框宽度（完整键集输出；有值语义与参考源 inputWidth 三元一致） */
+const inputStyle = computed(() => resolveStyle(INPUT_WIDTH_STYLE, { width: props.inputWidth ? addUnit(props.inputWidth) : '' }))
 
 const emit = defineEmits<{
   /**
@@ -58,6 +78,18 @@ const emit = defineEmits<{
 
 const inputValue = ref<string | number>(getInitValue())
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 长按连续步进是否已执行过步进（tap 去重标志）。
+ *
+ * 部分平台在长按抬起后仍会补发一次 tap：@tap 与长按定时器叠加无去重时，
+ * 每次长按结束都会额外步进一次。touchstart 重置标志，长按定时器首个步进
+ * 置位，tap 消费后跳过当次。
+ *
+ * 标志置于 setup 作用域（每实例一份）：此前为模块级变量，同屏多个步进器
+ * 时长按其一会吞掉另一个的 tap（跨实例状态串染）。
+ */
+const longPressStepped = ref<boolean>(false)
 
 onUnmounted(() => {
   clearLongPressTimer()
@@ -417,14 +449,14 @@ function handleFocus(event: any) {
  *
  * 部分平台在长按抬起后仍会补发一次 tap：@tap 与长按定时器叠加无去重时，
  * 每次长按结束都会额外步进一次。touchstart 重置标志，长按定时器首个步进
- * 置位，tap 消费后跳过当次。
+ * 置位，tap 消费后跳过当次。标志为 setup 作用域的 ref（每实例一份），
+ * 定义见文件头附近。
  */
-let longPressStepped = false
 
 /** 加减按钮 tap：长按已步进过时跳过当次，避免重复步进 */
 function handleActionTap(type: OperationType) {
-  if (longPressStepped) {
-    longPressStepped = false
+  if (longPressStepped.value) {
+    longPressStepped.value = false
     return
   }
   handleClick(type)
@@ -435,11 +467,11 @@ function preventTouchMove() {}
 
 /** 长按连续步进 */
 function handleTouchStart(type: OperationType) {
-  longPressStepped = false
+  longPressStepped.value = false
   if (!props.longPress) return
   clearLongPressTimer()
   longPressTimer = setTimeout(() => {
-    longPressStepped = true
+    longPressStepped.value = true
     handleClick(type)
     longPressStep(type)
   }, 600)
@@ -489,7 +521,7 @@ function clearLongPressTimer() {
     <view v-if="!withoutInput" class="wd-input-number__inner" @tap.stop="">
       <input
         class="wd-input-number__input"
-        :style="inputWidth ? { width: addUnit(inputWidth) } : {}"
+        :style="inputStyle"
         :type="inputType"
         :input-mode="precision ? 'decimal' : 'numeric'"
         :disabled="isDisabled || disableInput"

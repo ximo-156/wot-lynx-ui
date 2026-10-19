@@ -77,6 +77,10 @@ $tabs-map-body-bg: var(--wot-tabs-map-body-bg, $filled-oppo) !default;
   position: relative;
   background: $tabs-nav-bg;
   width: 100%;
+  // 原生优先重写（NATIVE-REWRITE §3.1）：根节点显式三件套——导航区
+  // （__nav / __map）、内容区（__container）、遮罩（__mask）纵向层叠。
+  display: flex;
+  flex-direction: column;
 
   // Lynx 适配：参考源 when(hide-scrollbar) 仅含 ::-webkit-scrollbar 规则
   // （Web 专有，Lynx 无滚动条概念），整条规则删除；is-hide-scrollbar 类名
@@ -283,6 +287,12 @@ $tabs-map-body-bg: var(--wot-tabs-map-body-bg, $filled-oppo) !default;
     padding: $tabs-map-nav-btn-padding;
     text-align: center;
     transition: color $tabs-duration, border-color $tabs-duration;
+    // 居中补全（NATIVE-REWRITE §3.2）：按钮文案双向居中。Lynx text 不
+    // 继承 text-align，容器补 flex 居中对，与 text-align: center 双保险。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
 
     @include when(active) {
       color: $tabs-nav-color-active;

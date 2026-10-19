@@ -49,7 +49,11 @@ $input-number-action-primary-color: var(--wot-input-number-action-primary-color,
 $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-sub-color, $primary-6) !default;
 
 @include b(input-number) {
+  // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // 显式 display:flex + flex-direction:row 保证「减号 / 输入框 / 加号」
+  // 横向排列；align-items:center 负责交叉轴居中
   display: flex;
+  flex-direction: row;
   align-items: center;
   line-height: 1;
 
@@ -65,6 +69,10 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
     box-sizing: border-box;
   }
 
+  // 分割线：贴按钮内侧（sub 在右、add 在左），高度撑满按钮。
+  // top:50% + translateY(-50%) 与 height:100% 组合等价于 top:0（变换量为
+  // 自身高度的 -50%），保留参考源写法以对齐样式计算值；该元素不是「内容
+  // 居中」场景，不受 NATIVE-REWRITE §3.2 的 left:50% 禁令约束。
   @include e(action-divider) {
     position: absolute;
     top: 50%;
@@ -76,7 +84,13 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
 
   // Lynx 适配：参考源减号/加号字形为 ::before / ::after 伪元素（背景取
   // currentColor），Lynx 无伪元素，改为模板真实元素；横条为减号与加号的
-  // 公共部分，竖条（--vertical）为加号独有
+  // 公共部分，竖条（--vertical）为加号独有。
+  // 定位说明（NATIVE-REWRITE §3.2「禁 left:50% + translate」的例外）：
+  // 加号的横条与竖条必须在按钮中心**重叠**成十字，flex 行排列只会让两者
+  // 并排，故保留绝对定位；translate 同时承担 scaleY/scaleX 的发丝线压缩
+  // （视觉高度 = 令牌值的一半），去掉 translate 即失去定位，属「确有
+  // 必要」。居中基准取按钮百分比，令牌（icon-size / action-size）被消费方
+  // 覆盖时依然正确（与 wd-slider 气泡的 left:50% + translateX 同一手法）。
   @include e(action-icon) {
     position: absolute;
     left: 50%;
@@ -123,6 +137,9 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
 
   @include e(input) {
     position: relative;
+    // display: block 为参考源声明：Lynx 引擎只识别 flex / none / linear，
+    // 该值被静默忽略（原生 input 的内部布局由引擎接管，无视觉影响），
+    // 保留以对齐 wot-ui 样式计算值（与 wd-progress / wd-cell 同处理）
     display: block;
     width: $input-number-input-width;
     height: 100%;
