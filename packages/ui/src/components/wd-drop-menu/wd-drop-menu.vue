@@ -1,103 +1,198 @@
 /*
  * wd-drop-menu — 下拉菜单
  *
- * Lynx 实现说明：经 useChildren 向 drop-menu-item 提供 offset/fold；
- * 展开态由各 item 内部维护（expose getShowPop/close），本组件据此显示
- * 遮罩、执行手风琴收起与菜单条高度度量（offset）。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 结构对齐参考源：菜单条（wd-drop-menu__list + wd-drop-menu__option）由本组件
+ *   经 useChildren 收集的 drop-menu-item 渲染，各 item 只负责自己的浮层
+ *   （wd-drop-item + wd-popup）；
+ * - @click → @tap；根 view 的 @tap.stop.prevent 吞咽点击按 Lynx 语义改写为
+ *   @tap.stop.prevent，并在 emits 声明 'tap' 转发（CONVENTIONS §14：不在
+ *   emits 声明的同名监听会落入 $attrs 与原生绑定合并成数组 handler，
+ *   事件派发即抛注册表 TypeError）；
+ * - 蒙层不再补绑 @touchmove="noop"：锁滚走 wd-overlay 的 lock-scroll →
+ *   disable-touch-move 链路（CONVENTIONS §14 明令禁止包裹层补绑裸
+ *   @touchmove，会与 overlay 根 view 的同名绑定合并崩溃）；
+ * - 蒙层与浮层定位的 var(--window-top) / var(--window-bottom) 为 uni-app
+ *   内置 CSS 变量（状态栏/导航栏高度），Lynx 无该变量，按 PORTING §4.5 以
+ *   var(--window-top, 0px) 回退取 0（蒙层从页面顶部开始，语义降级）；
+ * - 读子组件 props 走 toRaw 非跟踪读取（CONVENTIONS §13：渲染路径直接读
+ *   子组件 props 会触发 Maximum recursive updates）；
+ * - 参考源模板中 MP-DINGTALK 条件编译的包裹 view 已移除；
+ * - 子组件 exposed 调用前判空（§13：渲染路径 / Promise 回调里的非空断言）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onMounted, ref } from 'vue-lynx'
+import { computed, getCurrentInstance, inject, onBeforeMount, ref, toRaw, watch } from 'vue-lynx'
 import WdOverlay from '../wd-overlay/wd-overlay.vue'
-import { dropMenuProps, DROP_MENU_KEY } from './types'
+import WdIcon from '../wd-icon/wd-icon.vue'
+import { closeOther } from '../../common/clickoutside'
+import { type Queue, queueKey } from '../../composables/useQueue'
+import { getRect, getSystemInfo, parseStyle, uuid } from '../../common/util'
 import { useChildren } from '../../composables/useChildren'
 import { useAlive } from '../../composables/useAlive'
-import { getRect, parseStyle, uuid } from '../../common/util'
+import { DROP_MENU_KEY, dropMenuProps } from './types'
 
 const props = defineProps(dropMenuProps)
+const emit = defineEmits(['tap'])
+
 const isAlive = useAlive()
-
-/** 根节点 id：菜单条高度度量用（同页多个 drop-menu 不撞 id） */
-const dropMenuId = ref<string>(`wd-drop-menu-${uuid()}`)
-
-/** 菜单条高度（偏移）：item 浮层 top 读此缓存，挂载后一次性度量 */
+const queue = inject<Queue | null>(queueKey, null)
+const dropMenuId = ref<string>(`dropMenuId${uuid()}`)
 const offset = ref<number>(0)
+const windowHeight = ref<number>(0)
+const modalStyle = computed(() => {
+  return props.direction === 'down'
+    ? `top: calc(var(--window-top, 0px) + ${offset.value}px); bottom: 0;`
+    : `top: 0; bottom: calc(var(--window-bottom, 0px) + ${offset.value}px)`
+})
 
-const { children, linkChildren } = useChildren(DROP_MENU_KEY)
+const { proxy } = getCurrentInstance() as any
+
+const { linkChildren, children } = useChildren(DROP_MENU_KEY)
+
+const showOverlay = computed(() => {
+  return children.some((child) => {
+    const exposed = child.$ && child.$.exposed
+    return exposed && typeof exposed.getShowPop === 'function' ? exposed.getShowPop() : false
+  })
+})
+
+const overlayVisible = ref(false)
+let overlayTimer: ReturnType<typeof setTimeout> | null
+
+// 延迟关闭遮罩层，避免闪烁
+// 小程序中，即使先 fold 再 closeOther 也会有闪烁，使用延迟关闭遮罩层处理
+watch(showOverlay, (newVal) => {
+  if (overlayTimer) {
+    clearTimeout(overlayTimer)
+  }
+  if (newVal) {
+    overlayVisible.value = true
+  } else {
+    overlayTimer = setTimeout(() => {
+      // 定时器晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
+      if (!isAlive()) return
+      overlayVisible.value = false
+      overlayTimer = null
+    }, 16)
+  }
+})
+
+linkChildren({ props, fold, offset })
+
+watch(
+  () => props.direction,
+  (newValue) => {
+    if (!['up', 'down'].includes(newValue)) {
+      console.error("[wot ui] warning(wd-drop-menu): direction must be 'up' or 'down'")
+    }
+  },
+  { deep: true, immediate: true }
+)
+
+onBeforeMount(() => {
+  windowHeight.value = getSystemInfo().windowHeight
+})
+
+/** 根 view 的 tap 吞咽 + 原生事件转发（CONVENTIONS §14） */
+function handleRootTap(event: any) {
+  emit('tap', event)
+}
+
+/** 子项浮层是否展开（读 expose，调用前判空，CONVENTIONS §13） */
+function isChildActive(child: any): boolean {
+  const exposed = child.$ && child.$.exposed
+  return Boolean(exposed && typeof exposed.getShowPop === 'function' && exposed.getShowPop())
+}
+
+function getDisplayTitle(child: any) {
+  // toRaw 非跟踪读取（CONVENTIONS §13）
+  const { title, modelValue, options, valueKey, labelKey } = (child.$ && toRaw(child.$.props)) || {}
+
+  if (title) {
+    return title
+  }
+  for (let i = 0, len = options.length; i < len; i++) {
+    if (modelValue === options[i][valueKey]) {
+      return options[i][labelKey]
+    }
+  }
+  console.error('[wot-design] warning(wd-drop-menu-item): no value is matched in the options option.')
+}
+
+function toggle(child: any) {
+  // 点击当前 menu, 关闭其他 menu
+  if (child && !child.disabled) {
+    if (queue && queue.closeOther) {
+      queue.closeOther(child)
+    } else {
+      closeOther(child)
+    }
+    fold(child)
+  }
+}
 
 /**
- * 收起除 child 外的展开项（手风琴）。
- *
- * child 为子组件公共实例代理（item 展开前经 fold(instance.proxy) 调用）；
- * 各 item 经 expose 暴露 close()，由本方法逐个调用——曾是空转的
- * forEach，连续点两个菜单标题会两个列表同时展开。
+ * 控制菜单内容是否展开
  */
-function fold(child?: any) {
-  children.forEach((c: any) => {
-    if (!child || c !== child) {
-      const exposed = c.$ && c.$.exposed
-      if (exposed && typeof exposed.close === 'function') {
-        exposed.close()
-      }
+function fold(child: any) {
+  getRect(`#${dropMenuId.value}`, false, proxy).then((rect) => {
+    // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
+    if (!isAlive()) return
+    if (!rect) return
+    const { top, bottom } = rect
+    if (props.direction === 'down') {
+      offset.value = Number(bottom)
+    } else {
+      offset.value = windowHeight.value - Number(top)
+    }
+    const exposed = child.$ && child.$.exposed
+    if (exposed && typeof exposed.toggle === 'function') {
+      exposed.toggle()
     }
   })
 }
 
-linkChildren({
-  props: props as any,
-  offset,
-  fold
-})
-
-onMounted(() => {
-  // 菜单条高度一次性度量并缓存（CONVENTIONS §16：触摸热路径不度量）；
-  // item 的浮层 top 直接读该缓存，避免 top:0 盖住菜单栏自身。
-  getRect(`#${dropMenuId.value}`).then((rect) => {
-    // 度量回调晚于组件卸载落地时丢弃（9902 防护）
-    if (!isAlive()) return
-    offset.value = Number(rect && rect.height) || 0
-  })
-})
-
-const showOverlay = computed(() => {
-  // 遮罩仅在有浮层展开时显示：读子组件 expose 的 getShowPop（内部展开态）。
-  // 曾误写为 c.props?.modelValue——Vue 公共实例代理只有 $props 没有 props，
-  // 恒读成 undefined，遮罩永不显示；改读 modelValue 也不对（选中值恒为真，
-  // 选中后遮罩常驻不消失）。
-  return children.some((c: any) => {
-    const exposed = c.$ && c.$.exposed
-    if (exposed && typeof exposed.getShowPop === 'function') {
-      return exposed.getShowPop()
-    }
-    // 兜底：子组件尚未 expose 时读 modelValue
-    const childProps = c.$ && c.$.props
-    return Boolean(childProps && childProps.modelValue)
-  })
-})
-
-/** 点击遮罩：受 closeOnClickModal 控制，关闭所有展开项 */
 function handleClickOverlay() {
-  if (!props.closeOnClickModal) return
-  children.forEach((c: any) => {
-    const exposed = c.$ && c.$.exposed
-    if (exposed && typeof exposed.close === 'function') {
-      exposed.close()
-    }
-  })
+  if (props.closeOnClickModal) {
+    // 关闭所有打开的菜单项
+    children.forEach((child) => {
+      const exposed = child.$ && child.$.exposed
+      if (exposed && typeof exposed.close === 'function') {
+        exposed.close()
+      }
+    })
+  }
 }
 </script>
 
 <template>
-  <view :id="dropMenuId" :class="`wd-drop-menu ${customClass}`" :style="parseStyle(customStyle)">
-    <slot />
+  <view :style="parseStyle(customStyle)" :class="`wd-drop-menu ${customClass}`" @tap.stop.prevent="handleRootTap" :id="dropMenuId">
     <wd-overlay
+      :show="overlayVisible"
+      :duration="duration"
+      :z-index="12"
+      :custom-style="modalStyle"
+      @click="handleClickOverlay"
       v-if="modal"
-      :show="showOverlay"
-      :lock-scroll="false"
-      :z-index="zIndex - 1"
-      custom-style="background-color: transparent;"
-      @tap="handleClickOverlay"
     />
+
+    <view class="wd-drop-menu__list">
+      <view
+        v-for="(child, index) in children"
+        :key="index"
+        @tap="toggle(child)"
+        :class="`wd-drop-menu__option ${child.disabled ? 'is-disabled' : ''} ${isChildActive(child) ? 'is-active' : ''}`"
+      >
+        <view class="wd-drop-menu__option-title">
+          <view class="wd-drop-menu__option-title-text">
+            <text>{{ getDisplayTitle(child) }}</text>
+          </view>
+          <wd-icon :name="child.icon" :size="child.iconSize" custom-class="wd-drop-menu__arrow" />
+        </view>
+      </view>
+    </view>
+    <slot />
   </view>
 </template>

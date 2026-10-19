@@ -1,22 +1,10 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(qr-code) {
+  position: relative;
+  // Lynx 适配：参考源 display: inline-block 不被引擎识别（只认
+  // flex/none/linear，CONVENTIONS §15），改为 display: flex + row；
+  // 内容尺寸由 svg 元素撑开，绝对定位的 logo / 背景图不参与布局。
   display: flex;
   flex-direction: row;
-  align-items: center;
-  justify-content: center;
-
-  @include e(empty) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--wd-bg-secondary);
-    border-radius: var(--wd-radius-sm);
-  }
-
-  @include e(empty-text) {
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-4);
-  }
 }

@@ -1,16 +1,81 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 折叠面板背景颜色
+$collapse-bg: var(--wot-collapse-bg, $filled-oppo) !default;
+// 折叠内容文字颜色
+$collapse-body-color: var(--wot-collapse-body-color, $text-auxiliary) !default;
+// 折叠内容文字字号
+$collapse-body-font-size: var(--wot-collapse-body-font-size, $typography-label-size-large) !default;
+// 折叠容器左右内边距
+$collapse-padding: var(--wot-collapse-padding, $padding-loose) !default;
+// 折叠内容区域内边距
+$collapse-body-padding: var(--wot-collapse-body-padding, $padding-extra-loose $padding-loose) !default;
+// 折叠标题文字颜色
+$collapse-title-color: var(--wot-collapse-title-color, $text-main) !default;
+// 折叠标题文字字号
+$collapse-title-font-size: var(--wot-collapse-title-font-size, $typography-body-size-extra-large) !default;
+// 折叠箭头尺寸
+$collapse-arrow-size: var(--wot-collapse-arrow-size, $n-16) !default;
+// 折叠箭头颜色
+$collapse-arrow-color: var(--wot-collapse-arrow-color, $icon-main) !default;
+// 更多按钮文字字号
+$collapse-more-font-size: var(--wot-collapse-more-font-size, $typography-body-size-main) !default;
+// 更多按钮文字颜色
+$collapse-more-color: var(--wot-collapse-more-color, $primary-6) !default;
+// 更多按钮上边距
+$collapse-more-margin-top: var(--wot-collapse-more-margin-top, $spacing-main) !default;
+// 更多按钮文字右侧间距
+$collapse-more-text-margin-right: var(--wot-collapse-more-text-margin-right, $spacing-super-tight) !default;
 
 @include b(collapse) {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  background-color: var(--wd-bg-container);
+  background: $collapse-bg;
 
+  @include when(viewmore) {
+    padding: $collapse-padding;
+  }
+
+  @include e(content) {
+    font-size: $collapse-body-font-size;
+    color: $collapse-body-color;
+
+    // Lynx 适配：参考源为 display:-webkit-box + -webkit-box-orient:vertical
+    // （Web 盒模型，Lynx 不支持，PORTING §4.5），收起态截断由组件模板的
+    // max-height 近似 + 此处 overflow 裁剪承担。
+    @include when(retract) {
+      overflow: hidden;
+    }
+  }
+
+  // Lynx 适配：inline-block 不被 Lynx 识别（引擎只认 flex/none/linear，
+  // CONVENTIONS §15），改为 display:flex + flex-direction:row；
+  // vertical-align / user-select 为 Web 专有属性，按 PORTING §4.5 删除。
   @include e(more) {
     display: flex;
     flex-direction: row;
+    align-items: center;
+    font-size: $collapse-more-font-size;
+    margin-top: $collapse-more-margin-top;
+    color: $collapse-more-color;
+  }
+
+  @include e(more-txt) {
+    margin-right: $collapse-more-text-margin-right;
+  }
+
+  // Lynx 适配：inline-block + vertical-align 改为 flex 行内居中
+  @include e(arrow) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     justify-content: center;
-    margin-top: var(--wd-space-25);
-    padding: var(--wd-space-3);
+    transition: transform 0.1s;
+    font-size: $collapse-arrow-size;
+    height: $collapse-arrow-size;
+    line-height: $collapse-arrow-size;
+
+    @include when(retract) {
+      transform: rotate(-180deg);
+    }
   }
 }

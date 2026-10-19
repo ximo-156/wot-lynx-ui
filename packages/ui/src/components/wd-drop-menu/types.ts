@@ -1,13 +1,12 @@
-import type { ExtractPropTypes, InjectionKey } from 'vue-lynx'
+import type { ExtractPropTypes, InjectionKey, Ref } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
-import { ref } from 'vue-lynx'
 
 export type DropDirection = 'up' | 'down'
 
 export type DropMenuProvide = {
-  props: Record<string, any>
-  offset: ReturnType<typeof ref<number>>
+  props: Partial<DropMenuProps>
   fold: (child?: any) => void
+  offset: Ref<number>
 }
 
 export const DROP_MENU_KEY: InjectionKey<DropMenuProvide> = Symbol('wd-drop-menu')
@@ -15,23 +14,23 @@ export const DROP_MENU_KEY: InjectionKey<DropMenuProvide> = Symbol('wd-drop-menu
 export const dropMenuProps = {
   ...baseProps,
   /**
-   * 层级
+   * 弹框层级
    */
   zIndex: makeNumberProp(12),
   /**
-   * 展开方向
+   * 菜单展开方向，可选值为up 或 down
    */
   direction: makeStringProp<DropDirection>('down'),
   /**
-   * 是否显示遮罩
+   * 是否展示蒙层
    */
   modal: makeBooleanProp(true),
   /**
-   * 点击遮罩是否关闭
+   * 是否点击蒙层时关闭
    */
   closeOnClickModal: makeBooleanProp(true),
   /**
-   * 动画时长（ms）
+   * 菜单展开收起动画时间，单位 ms
    */
   duration: makeNumberProp(200)
 }
