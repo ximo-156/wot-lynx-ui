@@ -49,34 +49,51 @@ const CASCADE_TREE = [
 
 describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
   describe('#1 wd-calendar-view 区间选择', () => {
-    it('pending 哨兵 [start, 0] 不再被误判为已完成区间：第二次点击完成区间', async () => {
+    /** 定位指定月份面板（wot-ui 结构：月面板 > .wd-month） */
+    const panelOf = (container: Element, title: string) =>
+      Array.from(container.querySelectorAll('.wd-month')).find(
+        (m) => m.querySelector('.wd-month__title')?.textContent === title
+      ) || null
+    const dayText = (el: Element) => el.querySelector('.wd-month__day-text')?.textContent?.trim()
+    const cellOf = (panel: Element, n: string) =>
+      Array.from(panel.querySelectorAll('.wd-month__day')).find((c) => dayText(c) === n) || null
+
+    it('pending 哨兵 [start, null] 不再被误判为已完成区间：第二次点击完成区间', async () => {
       const updates: any[] = []
       const changes: any[] = []
+      // wot-ui 区间状态机是无状态的：必须经 v-model 回写闭环
       const { container } = render(
         {
           setup() {
+            const value = ref<any>(null)
             return () =>
               h(CalendarView, {
-                modelValue: null,
+                modelValue: value.value,
                 type: 'daterange',
-                'onUpdate:modelValue': (v: any) => updates.push(v),
+                'onUpdate:modelValue': (v: any) => {
+                  updates.push(v)
+                  value.value = v
+                },
                 onChange: (e: any) => changes.push(e)
               })
           }
         } as any
       )
-      const days = container.querySelectorAll('.wd-calendar-view__day')
-      expect(days.length).toBe(42)
+      const now = new Date()
+      const title = `${now.getFullYear()}年${now.getMonth() + 1}月`
+      expect(panelOf(container, title), '应渲染当月面板').toBeTruthy()
 
-      // 第一次点击：pending [d1, 0]
-      fireEvent.tap(days[10])
-      await nextTick()
+      // 第一次点击：pending [d1, null]（wot-ui 哨兵为 null）。
+      // month-panel 的 change 经 50ms debounce 下发（对齐参考源），需等待定时器。
+      fireEvent.tap(cellOf(panelOf(container, title)!, '5')!)
+      await pause(80)
       expect(updates[updates.length - 1]).toHaveLength(2)
-      expect(updates[updates.length - 1][1]).toBe(0)
+      expect(updates[updates.length - 1][1]).toBeNull()
 
-      // 第二次点击（更晚日期）：必须形成完整区间（修复前永远重新开始）
-      fireEvent.tap(days[20])
-      await nextTick()
+      // 第二次点击（更晚日期）：必须形成完整区间（修复前永远重新开始）。
+      // 面板 DOM 会随受控回写重建，需重新定位；change 同样经 debounce。
+      fireEvent.tap(cellOf(panelOf(container, title)!, '12')!)
+      await pause(80)
       const last = updates[updates.length - 1]
       expect(last).toHaveLength(2)
       expect(last[0]).toBeTruthy()
@@ -87,44 +104,53 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
       cleanup()
     })
 
-    it('maxRange 超限：只重置为新起点并提示，change 不发半截区间', async () => {
+    it('maxRange 超限：钳制到最大范围并提示，change 携带完整区间（对齐 wot-ui）', async () => {
       const updates: any[] = []
       const changes: any[] = []
       const { container } = render(
         {
           setup() {
+            const value = ref<any>(null)
             return () =>
               h(CalendarView, {
-                modelValue: null,
+                modelValue: value.value,
                 type: 'daterange',
                 maxRange: 3,
-                'onUpdate:modelValue': (v: any) => updates.push(v),
+                'onUpdate:modelValue': (v: any) => {
+                  updates.push(v)
+                  value.value = v
+                },
                 onChange: (e: any) => changes.push(e)
               })
           }
         } as any
       )
-      const days = container.querySelectorAll('.wd-calendar-view__day')
+      const now = new Date()
+      const title = `${now.getFullYear()}年${now.getMonth() + 1}月`
 
-      fireEvent.tap(days[10])
-      await nextTick()
+      fireEvent.tap(cellOf(panelOf(container, title)!, '5')!)
+      await pause(80)
       const changeCountBefore = changes.length
 
-      // 点击 20 天后的日期：超出 maxRange=3
-      fireEvent.tap(days[30])
-      await nextTick()
+      // 点击 20 天后的日期：超出 maxRange=3（面板 DOM 重建，需重新定位）。
+      // wot-ui 语义：超限不重置起点，而是把终点钳制到 start + maxRange - 1
+      // 并弹出 rangePrompt 提示；change 携带的是钳制后的完整区间。
+      fireEvent.tap(cellOf(panelOf(container, title)!, '25')!)
+      await pause(80)
       const last = updates[updates.length - 1]
-      // 重置为新的 pending 起点（第二个元素是哨兵 0）
       expect(last).toHaveLength(2)
-      expect(last[1]).toBe(0)
-      // 超限不再派发 change（修复前 emit 的是上一次的半截区间）
-      expect(changes.length, '超限不应派发 change').toBe(changeCountBefore)
+      expect(last[0], '起点保持不变').toBe(updates[0][0])
+      expect(last[1], '终点钳制到 start + maxRange - 1').toBeTruthy()
+      expect(last[1] - last[0], '区间天数 = maxRange').toBe(2 * 24 * 60 * 60 * 1000)
+      // change 携带钳制后的完整区间（非半截区间）
+      expect(changes.length, '超限仍派发 change（钳制后的完整区间）').toBeGreaterThan(changeCountBefore)
+      expect(changes[changes.length - 1].value).toEqual(last)
       cleanup()
     })
 
     it('getDayType 对今天返回 current（is-current 高亮不再是死规则）', async () => {
       const { container } = render(CalendarView, { modelValue: null, type: 'date' })
-      const today = container.querySelector('.wd-calendar-view__day.is-current')
+      const today = container.querySelector('.wd-month__day.is-current')
       expect(today, '今天应带 is-current').not.toBeNull()
       cleanup()
     })
@@ -211,7 +237,9 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
   })
 
   describe('#5/#6/#7 wd-drop-menu', () => {
-    function renderDropMenu() {
+    // wot-ui 的选项标题由 useChildren 注册表渲染（子组件挂载时才 link 入
+    // 父级 children 数组），需等一个 tick 才能查询到（对齐参考源行为）
+    async function renderDropMenu() {
       const sort = ref<string | number>('')
       const price = ref<string | number>('')
       const changes: any[] = []
@@ -247,44 +275,49 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
           }
         } as any
       )
+      await nextTick()
       return { container, changes }
     }
 
     it('展开一项时收起其他项（手风琴），遮罩随之显示', async () => {
-      const { container } = renderDropMenu()
-      const titles = container.querySelectorAll('.wd-drop-menu-item__title')
-      expect(titles.length).toBe(2)
+      const { container } = await renderDropMenu()
+      // wot-ui 2.3.2 结构：drop-menu 渲染选项标题（.wd-drop-menu__option-title），
+      // 浮层由 drop-menu-item 渲染（.wd-drop-item__popup）
+      const options = container.querySelectorAll('.wd-drop-menu__option')
+      expect(options.length).toBe(2)
 
-      fireEvent.tap(titles[0])
-      await nextTick()
-      expect(container.querySelectorAll('.wd-drop-menu-item__list').length, '第一项展开').toBe(1)
+      // wot-ui 的展开经 getRect（异步度量）驱动，需等待其回调（对齐参考源）
+      fireEvent.tap(options[0])
+      await pause(50)
+      expect(container.querySelectorAll('.wd-drop-item__popup').length, '第一项展开').toBe(1)
       await frames()
       expect(container.querySelector('.wd-overlay'), '展开时应显示遮罩').not.toBeNull()
 
-      // 点第二项标题：第一项应收起
-      fireEvent.tap(titles[1])
-      await nextTick()
-      const lists = container.querySelectorAll('.wd-drop-menu-item__list')
+      // 点第二项标题：第一项应收起（收起带 200ms 离场动画，需等动画落地）
+      fireEvent.tap(options[1])
+      await pause(400)
+      const lists = container.querySelectorAll('.wd-drop-item__popup')
       expect(lists.length, '同时只能展开一项').toBe(1)
       cleanup()
     })
 
     it('select 只 emit 一次 change（不再双发 update:modelValue）', async () => {
-      const { container, changes } = renderDropMenu()
-      const titles = container.querySelectorAll('.wd-drop-menu-item__title')
-      fireEvent.tap(titles[0])
-      await nextTick()
+      const { container, changes } = await renderDropMenu()
+      fireEvent.tap(container.querySelectorAll('.wd-drop-menu__option')[0])
+      await pause(50)
 
-      const options = container.querySelectorAll('.wd-drop-menu-item__option')
+      const options = container.querySelectorAll('.wd-drop-item__option')
       expect(options.length).toBe(2)
       fireEvent.tap(options[1])
-      await nextTick()
+      // 选中后自动收起（200ms 离场动画）
+      await pause(400)
 
       const sortChanges = changes.filter(([name]) => name === 'sort')
       expect(sortChanges.length, 'change 只应触发一次').toBe(1)
-      expect(sortChanges[0][1]).toEqual({ value: 'price' })
+      // wot-ui 的 change 载荷为 { value, selectedItem }
+      expect(sortChanges[0][1]).toEqual({ value: 'price', selectedItem: { value: 'price', label: '价格' } })
       // 选中后自动收起
-      expect(container.querySelectorAll('.wd-drop-menu-item__list').length).toBe(0)
+      expect(container.querySelectorAll('.wd-drop-item__popup').length).toBe(0)
       cleanup()
     })
   })
@@ -499,15 +532,21 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
   })
 
   describe('#8 wd-calendar 确认 / 取消', () => {
+    // wot-ui 的 inited 由 pickerShow（visible 的同步镜像）的 watch 置位，
+    // 挂载时即 visible=true 不会触发该 watch——与参考源行为一致，故测试
+    // 经「关闭 → 打开」的真实使用流程驱动（visible ref 置 true）。
+
     it('确认只派发 confirm，不派发 cancel', async () => {
       const events: string[] = []
+      const visible = ref(false)
       const { container } = render(
         {
           setup() {
             return () =>
               h(Calendar, {
                 modelValue: Date.now(),
-                visible: true,
+                visible: visible.value,
+                'onUpdate:visible': (v: any) => (visible.value = v),
                 onConfirm: () => events.push('confirm'),
                 onCancel: () => events.push('cancel')
               })
@@ -515,7 +554,12 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
         } as any
       )
       await frames()
-      const btn = container.querySelector('.wd-calendar__footer wd-button, .wd-calendar__footer .wd-button')
+      // 打开（经 v-model 回写，触发 pickerShow watch → inited）
+      visible.value = true
+      await frames()
+      await pause(100)
+      // wot-ui 2.3.2 结构：确认栏为 .wd-calendar__confirm > .wd-calendar__confirm-btn-wrapper > wd-button
+      const btn = container.querySelector('.wd-calendar__confirm .wd-button')
       expect(btn, '确认按钮应渲染').not.toBeNull()
       fireEvent.tap(btn!)
       await frames()
@@ -527,13 +571,15 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
     it('取消关闭时回滚未提交的值（再次打开显示快照值）', async () => {
       const events: string[] = []
       const base = new Date(2024, 0, 15).getTime()
+      const visible = ref(false)
       const { container } = render(
         {
           setup() {
             return () =>
               h(Calendar, {
                 modelValue: base,
-                visible: true,
+                visible: visible.value,
+                'onUpdate:visible': (v: any) => (visible.value = v),
                 onCancel: () => events.push('cancel'),
                 onConfirm: () => events.push('confirm')
               })
@@ -541,10 +587,15 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
         } as any
       )
       await frames()
-      // 打开时快照 base；点一个其他日期形成未提交值
-      const days = container.querySelectorAll('.wd-calendar-view__day')
+      visible.value = true
+      await frames()
+      await pause(100)
+      // 打开时快照 base；点一个其他日期形成未提交值。
+      // wot-ui 2.3.2 结构：日期格子为 .wd-month__day（月面板内）
+      const days = container.querySelectorAll('.wd-month__day')
       fireEvent.tap(days[3])
-      await nextTick()
+      // month-panel 的 change 经 50ms debounce 下发（对齐参考源）
+      await pause(80)
       // 命令式关闭（等价点遮罩/取消）：应回滚 + 派发 cancel
       const calendar = container.querySelector('.wd-calendar')
       expect(calendar).not.toBeNull()
@@ -565,7 +616,7 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
   })
 
   describe('#15 wd-cascader 确认空值守卫', () => {
-    it('未选任何一级时确认不 emit confirm/update:modelValue', async () => {
+    it('未选任何一级时确认携带空值（wot-ui 不守卫空值）', async () => {
       const confirms: any[] = []
       const updates: any[] = []
       const cascaderRef = ref<any>(null)
@@ -577,6 +628,8 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
                 ref: cascaderRef,
                 modelValue: '',
                 options: CASCADE_TREE,
+                // wot-ui 仅在 checkStrictly 下渲染取消/确认操作栏（默认模式点叶子即确认）
+                checkStrictly: true,
                 onConfirm: (e: any) => confirms.push(e),
                 'onUpdate:modelValue': (v: any) => updates.push(v)
               })
@@ -585,13 +638,19 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
       )
       cascaderRef.value.open()
       await frames()
+      // wot-ui 结构：操作栏为单个 .wd-cascader__action（#close 插槽），
+      // 内含确认按钮 .wd-cascader__action-confirm（取消经 action-sheet 关闭）
       const actions = container.querySelectorAll('.wd-cascader__action')
-      expect(actions.length, '头部应渲染取消/确认').toBe(2)
-      // 第二个 action 是确认
-      fireEvent.tap(actions[1])
+      expect(actions.length, '操作栏应渲染').toBe(1)
+      const confirmBtn = container.querySelector('.wd-cascader__action-confirm')
+      expect(confirmBtn, '确认按钮应渲染').not.toBeNull()
+      fireEvent.tap(confirmBtn!)
       await frames()
-      expect(confirms, '空值不应派发 confirm').toHaveLength(0)
-      expect(updates, '空值不应派发 update:modelValue').toHaveLength(0)
+      // wot-ui 语义：canStrictConfirm 仅由 isRestoring 决定（不守卫空值），
+      // 未选任何级时确认携带空值 { value: '', selectedOptions: [] }
+      expect(confirms).toHaveLength(1)
+      expect(confirms[0]).toEqual({ value: '', selectedOptions: [] })
+      expect(updates, '空值仍派发 update:modelValue（wot-ui 行为）').toHaveLength(1)
       cleanup()
     })
   })

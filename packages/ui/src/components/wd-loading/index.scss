@@ -143,10 +143,8 @@ $loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-
         animation-duration: $loading-wave-animation-duration;
         animation-timing-function: linear;
         animation-iteration-count: infinite;
-
-        &:nth-of-type(n + 2) {
-          margin-left: $loading-wave-gap;
-        }
+        // Lynx 适配：wot-ui 以 :nth-of-type(n + 2) 给第 2 柱起加间距；
+        // Lynx 不支持结构伪类，改由模板按索引内联 margin-left（见 wd-loading.vue）
       }
     }
   }

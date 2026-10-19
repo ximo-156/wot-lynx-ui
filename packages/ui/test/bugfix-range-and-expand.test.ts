@@ -15,7 +15,7 @@
  *    allowSameDay 的真正落点是点击守卫（禁止点同一天成区间），本文件一并锁定。
  */
 import { describe, it, expect } from 'vitest'
-import { h } from 'vue-lynx'
+import { h, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { fireEvent } from './fire-event'
 import { pause } from '../src/common/util'
@@ -118,9 +118,17 @@ describe('wd-swipe-action：编程展开（宽度落地补齐）', () => {
 })
 
 describe('wd-calendar-view：区间高亮与 allowSameDay', () => {
-  const dayText = (el: Element) => el.querySelector('.wd-calendar-view__day-text')?.textContent?.trim()
-  const dayCells = (container: Element) => Array.from(container.querySelectorAll('.wd-calendar-view__day'))
-  const cellOf = (container: Element, n: string) => dayCells(container).find((c) => dayText(c) === n)
+  // wot-ui 2.3.2 结构：日历视图按「月面板（默认渲染 minDate~maxDate 共约 13
+  // 个月）> 月网格」组织，日期格子类名为 .wd-month__day / .wd-month__day-text
+  // （对齐参考源）。测试需按月份标题定位到具体月份面板内查询，避免相邻
+  // 补位月/范围外月份的「5 日」干扰。
+  const dayText = (el: Element) => el.querySelector('.wd-month__day-text')?.textContent?.trim()
+  const panelOf = (container: Element, title: string) =>
+    Array.from(container.querySelectorAll('.wd-month')).find(
+      (m) => m.querySelector('.wd-month__title')?.textContent === title
+    ) || null
+  const dayCells = (panel: Element) => Array.from(panel.querySelectorAll('.wd-month__day'))
+  const cellOf = (panel: Element, n: string) => dayCells(panel).find((c) => dayText(c) === n)
 
   it('已完成区间的起点/终点/中间段分别带 is-start / is-end / is-middle', async () => {
     const start = new Date(2026, 9, 5).getTime() // 2026-10-05
@@ -133,9 +141,11 @@ describe('wd-calendar-view：区间高亮与 allowSameDay', () => {
 
     await frames()
 
-    const startCell = cellOf(container, '5')
-    const endCell = cellOf(container, '12')
-    const midCell = cellOf(container, '8')
+    const panel = panelOf(container, '2026年10月')!
+    expect(panel, '应渲染 2026年10月 面板').toBeTruthy()
+    const startCell = cellOf(panel, '5')
+    const endCell = cellOf(panel, '12')
+    const midCell = cellOf(panel, '8')
     expect(startCell, '应渲染 10 月 5 日格子').toBeTruthy()
     expect(endCell, '应渲染 10 月 12 日格子').toBeTruthy()
     expect(midCell, '应渲染 10 月 8 日格子').toBeTruthy()
@@ -149,20 +159,29 @@ describe('wd-calendar-view：区间高亮与 allowSameDay', () => {
 
   it('allowSameDay=false（默认）时点击与起点同一天不成区间', async () => {
     const emitted: any[] = []
+    // wot-ui 的区间状态机是无状态的：每次点击读 props.value 判定 pending /
+    // 完成态，必须经 v-model 回写闭环（与参考源行为一致）
     const { container } = render({
       setup() {
+        const value = ref<null | [number, null]>(null)
         return () =>
           h(CalendarView as any, {
             type: 'daterange',
-            modelValue: null,
-            'onUpdate:modelValue': (v: any) => emitted.push(v)
+            modelValue: value.value,
+            'onUpdate:modelValue': (v: any) => {
+              emitted.push(v)
+              value.value = v
+            }
           })
       }
     } as any)
 
     await frames()
-    // modelValue=null 时展示当月；当月内 day 5 唯一（相邻补位为上月/下月，不含 5）
-    const startCell = cellOf(container, '5')!
+    // 默认范围约为当前月份 ±6 个月，按标题定位当月面板
+    const now = new Date()
+    const panel = panelOf(container, `${now.getFullYear()}年${now.getMonth() + 1}月`)!
+    expect(panel, '应渲染当月面板').toBeTruthy()
+    const startCell = cellOf(panel, '5')!
     expect(startCell, '应渲染当月 5 日格子').toBeTruthy()
 
     fireEvent.tap(startCell)
@@ -171,7 +190,7 @@ describe('wd-calendar-view：区间高亮与 allowSameDay', () => {
     const afterFirst = emitted.length
 
     // 再次点击同一天：allowSameDay=false 应被守卫拦下（不成 [d, d]）
-    fireEvent.tap(cellOf(container, '5')!)
+    fireEvent.tap(cellOf(panel, '5')!)
     await frames()
     expect(
       emitted.length,

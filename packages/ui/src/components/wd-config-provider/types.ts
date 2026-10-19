@@ -13,7 +13,7 @@ export const configProviderProps = {
    */
   theme: makeStringProp('light'),
   /**
-   * 自定义主题变量（camelCase 键，映射为 --wd-* 内联变量）
+   * 自定义主题变量（camelCase 键，映射为 --wot-* 内联变量）
    */
   themeVars: {
     type: Object as PropType<ConfigProviderThemeVars>,

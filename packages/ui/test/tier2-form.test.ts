@@ -6,7 +6,7 @@
  * input 清空、slider 步进）做行为断言。
  */
 import { describe, it, expect } from 'vitest'
-import { h, ref } from 'vue-lynx'
+import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { fireEvent } from './fire-event'
 import Switch from '../src/components/wd-switch/wd-switch.vue'
@@ -179,7 +179,7 @@ describe('Tier 2 表单体系', () => {
       cleanup()
     })
 
-    it('WdInputNumber 加减步进', () => {
+    it('WdInputNumber 加减步进', async () => {
       const updates: any[] = []
       const { container } = render(
         {
@@ -199,13 +199,19 @@ describe('Tier 2 表单体系', () => {
           }
         } as any
       )
-      const sub = container.querySelector('.wd-input-number__action--sub')!
-      const add = container.querySelector('.wd-input-number__action--add')!
+      // wot-ui 2.3.2 BEM：加减按钮为 .wd-input-number__sub / __add
+      const sub = container.querySelector('.wd-input-number__sub')!
+      const add = container.querySelector('.wd-input-number__add')!
       fireEvent.tap(add)
-      expect(updates).toContain('6')
-      // 内部值已为 6，再减一步为 5（组件以内部状态为准，符合用户感知）
+      // wot-ui 的 update:modelValue 载荷为 number（precision=0 时）
+      expect(updates).toContain(6)
+      // 受控回环需等一个 tick：组件以 props.modelValue 判定是否真的变化
+      // （与参考源 updateValue 的 isEqual 早退一致）
+      await nextTick()
+      // 内部值已为 6，再减一步为 5（wot-ui 载荷为 number）
       fireEvent.tap(sub)
-      expect(updates).toContain('5')
+      await nextTick()
+      expect(updates).toContain(5)
       cleanup()
     })
   })

@@ -36,7 +36,7 @@ import { type Queue, queueKey } from '../../composables/useQueue'
 import { useTouch } from '../../composables/useTouch'
 
 const props = defineProps(swipeActionProps)
-const emit = defineEmits<SwipeActionEmits & { tap: [event: any]; touchstart: [event: any]; touchmove: [event: any]; touchend: [event: any]; touchcancel: [event: any] }>()
+const emit = defineEmits<SwipeActionEmits & { tap: [event: any]; touchstart: [event: any]; touchmove: [event: any]; touchend: [event?: any]; touchcancel: [event?: any] }>()
 
 const { proxy } = getCurrentInstance() as any
 const isAlive = useAlive()

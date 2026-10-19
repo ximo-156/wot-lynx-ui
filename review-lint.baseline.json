@@ -458,5 +458,14 @@
   "21292bb95e2a0890": true,
   "e17f50e964090c88": true,
   "0f21ee31c602c35a": true,
-  "fd1c5146b890d049": true
+  "fd1c5146b890d049": true,
+  "b250067a708b3ece": true,
+  "bbef7d2d4e952d59": true,
+  "776d88e4ec3386d7": true,
+  "475a2c21060d98f3": true,
+  "e161b05690988c50": true,
+  "_note": "qr-code 的 4 条 svg/whitelist 与 tour 的 1 条 box-shadow 为 wot-ui 2.3.2 严格对齐的既定声明：前者位于 exportImage 的标准 SVG data URI 导出路径（不受 Lynx svg content 白名单约束，渲染路径仍过 sanitizeSvgContent 安全网）；后者为 wot-ui 同源的蒙版阴影（100vh spread + 令牌色）。",
+  "cebed17efa637373": true,
+  "d4e1c13f85ecce37": true,
+  "e4c9772d4164a542": true
 }

@@ -51,7 +51,8 @@ describe('Tier 3 展示 / 布局 / 导航', () => {
       cleanup()
 
       const dot = render(Badge, { isDot: true })
-      expect(dot.container.querySelector('.wd-badge__content--dot')).not.toBeNull()
+      // wot-ui 2.3.2：圆点态的类名为 is-dot（非 --dot 修饰类）
+      expect(dot.container.querySelector('.wd-badge__content.is-dot')).not.toBeNull()
       cleanup()
 
       const max = render(Badge, { value: 100, max: 99 })
@@ -92,15 +93,19 @@ describe('Tier 3 展示 / 布局 / 导航', () => {
       cleanup()
     })
 
-    it('WdSkeleton 默认行数与 rowCol 配置', () => {
+    it('WdSkeleton 默认行数与 rowCol 配置（对齐 wot-ui themeMap.text）', () => {
+      // wot-ui 2.3.2：默认 theme=text → themeMap.text = [1, [col, col]]，
+      // 即 2 行、共 3 列
       const { container } = render(Skeleton, {})
-      expect(container.querySelectorAll('.wd-skeleton__row').length).toBe(1)
-      expect(container.querySelectorAll('.wd-skeleton__col').length).toBe(4)
+      expect(container.querySelectorAll('.wd-skeleton__row').length).toBe(2)
+      expect(container.querySelectorAll('.wd-skeleton__col').length).toBe(3)
       cleanup()
 
+      // wot-ui 语义：rowCol 中数字项 = 1 列（数值本身不表示列数），
+      // 对象项 = 1 列 → [2, { width: '50%' }] 为 2 行 2 列
       const custom = render(Skeleton, { rowCol: [2, { width: '50%' }] as any })
       expect(custom.container.querySelectorAll('.wd-skeleton__row').length).toBe(2)
-      expect(custom.container.querySelectorAll('.wd-skeleton__col').length).toBe(3)
+      expect(custom.container.querySelectorAll('.wd-skeleton__col').length).toBe(2)
       cleanup()
     })
 

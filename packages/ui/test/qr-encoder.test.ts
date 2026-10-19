@@ -69,7 +69,11 @@ describe('QR 编码器', () => {
     expect(size).toBe(21)
   })
 
-  it('超长内容抛错（v10 上限）', () => {
-    expect(() => encodeQr('x'.repeat(500))).toThrow()
+  it('超长内容抛错（v40 容量上限）', () => {
+    // wot-ui 同源编码器支持版本 1-40（Byte 模式 ECC M 上限约 2953 字节），
+    // 超出后抛 "Too long data"（对齐参考源行为）
+    expect(() => encodeQr('x'.repeat(3000))).toThrow('Too long data')
+    // 500 字符在 v40 容量内，正常编码（旧实现的 v10 上限已随同源编码器移除）
+    expect(encodeQr('x'.repeat(500)).size).toBeGreaterThan(21)
   })
 })

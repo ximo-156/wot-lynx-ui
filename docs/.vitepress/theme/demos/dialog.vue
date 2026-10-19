@@ -45,7 +45,7 @@ function showConfirm() {
     <view class="wd-h5-demo__section">
       <text class="wd-h5-demo__section-title">受控用法</text>
       <view class="wd-h5-demo__panel">
-        <text style="font-size: 13px; color: var(--wd-text-2)">
+        <text style="font-size: 13px; color: var(var(--wot-text-secondary))">
           除命令式外，也可用 v-model:visible 受控打开（见 API）。
         </text>
       </view>

@@ -1,69 +1,120 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 表格背景色
+$table-bg: var(--wot-table-bg, $filled-oppo) !default;
+// 表格文字颜色
+$table-color: var(--wot-table-color, $text-main) !default;
+// 斑马纹背景色
+$table-stripe-bg: var(--wot-table-stripe-bg, $filled-bottom) !default;
+// 边框颜色
+$table-border-color: var(--wot-table-border-color, $border-main) !default;
+// 边框宽度
+$table-border-width: var(--wot-table-border-width, $stroke-main) !default;
+// 单元格字号
+$table-cell-font-size: var(--wot-table-cell-font-size, $typography-body-size-main) !default;
+// 单元格行高
+$table-cell-line-height: var(--wot-table-cell-line-height, $typography-body-line-height-size-main) !default;
+// 单元格内边距
+$table-cell-padding: var(--wot-table-cell-padding, $padding-loose $padding-extra-loose) !default;
+// 固定列阴影渐变背景
+$table-shadow-gradient: var(--wot-table-shadow-gradient, linear-gradient(270deg, $base-transparent 0%, $opac-2_04 100%)) !default;
+// 排序按钮高度
+$table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
 
 @include b(table) {
+  position: relative;
   width: 100%;
+  overflow: hidden;
+  background: $table-bg;
 
-  @include e(scroll) {
-    width: 100%;
+  @include when(border) {
+    border: $table-border-width solid $table-border-color;
   }
 
-  @include e(inner) {
-    display: flex;
-    flex-direction: column;
-  }
-
+  // Lynx 适配：参考源表头为 CSS Grid 行，Lynx 无 Grid，改为 flex 行
+  // （列宽由单元格内联 width 下发，flex-shrink:0 防压缩）。
   @include e(header) {
     display: flex;
     flex-direction: row;
-    background-color: var(--wd-bg-secondary);
-  }
+    width: 100%;
+    background: $table-bg;
+    z-index: 2;
 
-  @include e(th) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    padding: var(--wd-space-3) var(--wd-space-4);
-
-    @include m(fixed) {
+    @include when(sticky) {
       position: sticky;
-      left: 0;
-      background-color: var(--wd-bg-secondary);
+      top: 0;
     }
   }
 
-  @include e(th-text) {
-    font-size: var(--wd-font-sm);
-    font-weight: var(--wd-font-weight-medium);
-    color: var(--wd-text-2);
-  }
-
-  @include e(row) {
+  // Lynx 适配：表体为「列主」flex 行（每个 wd-table-column 是纵向容器），
+  // 替代参考源的 display:grid + grid-template-columns。
+  @include e(body) {
     display: flex;
     flex-direction: row;
-    border-bottom-width: 1ppx;
-    border-bottom-style: solid;
-    border-bottom-color: var(--wd-border-2);
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  @include e(cell) {
+    position: relative;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    background: $table-bg;
+    padding: $table-cell-padding;
+    font-size: $table-cell-font-size;
+    line-height: $table-cell-line-height;
+    color: $table-color;
+    // Lynx 适配：flex 行内的单元格不允许被压缩（参考源的 grid 列宽是刚性的）
+    flex-shrink: 0;
+    --wot-sort-button-height: #{$table-sort-button-height};
+
+    // Lynx 适配：参考源的 ::before 边框（伪元素）改为单元格真实 border
+    // （PORTING §4.4：边框技巧 → 主元素真实 border）
+    @include when(border) {
+      border-right: $table-border-width solid $table-border-color;
+      border-bottom: $table-border-width solid $table-border-color;
+
+      @include when(last) {
+        border-right: none;
+      }
+    }
 
     @include when(stripe) {
-      background-color: var(--wd-bg-secondary);
+      background: $table-stripe-bg;
     }
-  }
 
-  @include e(td) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    padding: var(--wd-space-3) var(--wd-space-4);
-
-    @include m(fixed) {
+    @include when(fixed) {
       position: sticky;
-      left: 0;
-      background-color: var(--wd-bg-container);
+      z-index: 1;
+    }
+
+    // Lynx 适配：is-shadow 的 ::after 渐变阴影改为模板真实元素
+    // wd-table__shadow（样式见 wd-table-column/index.scss）
+
+    @include when(hidden) {
+      display: none;
+    }
+
+    @include when(left) {
+      justify-content: flex-start;
+    }
+
+    @include when(center) {
+      justify-content: center;
+    }
+
+    @include when(right) {
+      justify-content: flex-end;
     }
   }
 
-  @include e(td-text) {
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-1);
+  @include e(value) {
+    white-space: normal;
+    @include when(ellipsis) {
+      word-break: break-all;
+      @include multiEllipsis(2);
+    }
   }
 }

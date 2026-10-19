@@ -18,6 +18,9 @@
  * - 读子组件 props 走 toRaw 非跟踪读取（CONVENTIONS §13：渲染路径直接读
  *   子组件 props 会触发 Maximum recursive updates）；
  * - 参考源模板中 MP-DINGTALK 条件编译的包裹 view 已移除；
+ * - 箭头图标：内置 180 图标集无 caret-down 字形（CONVENTIONS §8），模板内映射到
+ *   arrow-down-bold（与 wd-cell / wd-sort-button 同方案），icon prop 默认值保持与
+ *   参考源一致，消费方传名透传；
  * - 子组件 exposed 调用前判空（§13：渲染路径 / Promise 回调里的非空断言）。
  */
 <script lang="ts" setup>
@@ -98,6 +101,11 @@ onBeforeMount(() => {
 /** 根 view 的 tap 吞咽 + 原生事件转发（CONVENTIONS §14） */
 function handleRootTap(event: any) {
   emit('tap', event)
+}
+
+/** 箭头图标名映射：内置集无 caret-down 字形，取 arrow-down-bold（CONVENTIONS §8） */
+function arrowIcon(icon: string): string {
+  return icon === 'caret-down' ? 'arrow-down-bold' : icon
 }
 
 /** 子项浮层是否展开（读 expose，调用前判空，CONVENTIONS §13） */
@@ -189,7 +197,7 @@ function handleClickOverlay() {
           <view class="wd-drop-menu__option-title-text">
             <text>{{ getDisplayTitle(child) }}</text>
           </view>
-          <wd-icon :name="child.icon" :size="child.iconSize" custom-class="wd-drop-menu__arrow" />
+          <wd-icon :name="arrowIcon(child.icon)" :size="child.iconSize" custom-class="wd-drop-menu__arrow" />
         </view>
       </view>
     </view>

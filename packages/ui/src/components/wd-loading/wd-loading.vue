@@ -78,9 +78,17 @@ function dotDelayStyle(index: number): Record<string, string> {
   return { 'animation-delay': `${((index - 1) * (0.8 / 3)).toFixed(4)}s` }
 }
 
-/** wave 单柱的动画名（wot-ui 经 :nth-of-type 绑定，此处按索引内联） */
+/**
+ * wave 单柱的动画名与间距（wot-ui 经 :nth-of-type 绑定动画名、
+ * :nth-of-type(n + 2) 加间距；Lynx 不支持结构伪类，按索引内联）
+ */
 function waveBarStyle(index: number): Record<string, string> {
-  return { 'animation-name': `wd-wave-bar-${index}` }
+  const style: Record<string, string> = { 'animation-name': `wd-wave-bar-${index}` }
+  if (index > 1) {
+    // --wot-loading-wave-gap 默认 6.25%
+    style['margin-left'] = 'var(--wot-loading-wave-gap, 6.25%)'
+  }
+  return style
 }
 </script>
 

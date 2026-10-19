@@ -1,1 +1,1 @@
-.wd-bar-code{display:flex;flex-direction:column;align-items:center;padding:var(--wd-space-2);background-color:var(--wd-bg-container)}.wd-bar-code__text{margin-top:var(--wd-space-1);letter-spacing:2px}
+.wd-bar-code{display:flex;flex-direction:column;align-items:center;padding:var(--wot-spacing-tight, var(--wot-n-8, 8px));background-color:var(--wot-filled-oppo, var(--wot-base-white, white))}.wd-bar-code__text{margin-top:var(--wot-spacing-super-tight, var(--wot-n-4, 4px));letter-spacing:2px}

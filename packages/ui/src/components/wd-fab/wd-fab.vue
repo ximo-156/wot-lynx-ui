@@ -114,8 +114,8 @@ async function getBounding() {
     const trigerInfo = await getRect(`.${triggerId}`, false, proxy)
     fabSize.width = trigerInfo.width || 56
     fabSize.height = trigerInfo.height || 56
-  } catch (error) {
-    console.log(error)
+  } catch {
+    // getRect 约定永不 reject（common/util.ts）；此处为防御性分支
   }
 
   const { top = 16, left = 16, right = 16, bottom = 16 } = props.gap

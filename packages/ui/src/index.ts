@@ -2,7 +2,7 @@
  * wot-lynx-ui — 基于 Vue Lynx 的 wot-ui API 兼容组件库（重写版）
  *
  * 使用方式：
- *   1. 引入主题：import 'wot-lynx-ui/theme'（提供 --wd-* 设计令牌）；
+ *   1. 引入主题：import 'wot-lynx-ui/theme'（提供 --wot-* 设计令牌）；
  *   2. 按需引入组件，或通过 createApp().use(wotLynxUI) 全局注册。
  *
  * 组件清单**不在此文件维护**：它由 scripts/gen-index.mjs 从 src/components/

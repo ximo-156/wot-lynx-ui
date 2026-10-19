@@ -44,13 +44,13 @@ describe('P2 清理项回归', () => {
     cleanup()
   })
 
-  it('wd-sticky：未传 offsetTop 时继承父级 sticky-box 的偏移', async () => {
+  it('wd-sticky：未传 offsetTop 时贴顶（对齐 wot-ui：不从 sticky-box 继承）', async () => {
     const { container } = render({
       setup() {
         return () =>
           h(
             StickyBox as any,
-            { offsetTop: 50, containerHeight: 200 },
+            { offsetTop: 50 },
             { default: () => h(Sticky as any, {}, { default: () => h('view', '内容') }) }
           )
       }
@@ -59,7 +59,8 @@ describe('P2 清理项回归', () => {
 
     const sticky = container.querySelector('.wd-sticky')
     expect(sticky, '应渲染 wd-sticky').toBeTruthy()
-    expect(styleOf(sticky), '未传 offsetTop 应继承父级 50').toContain('top: 50px')
+    // wot-ui 2.3.2：offsetTop 默认 0 且无父子继承（旧本地行为已移除）
+    expect(styleOf(sticky), '未传 offsetTop 应为 top: 0px').toContain('top: 0px')
     cleanup()
   })
 

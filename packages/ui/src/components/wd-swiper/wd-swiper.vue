@@ -25,7 +25,10 @@
  *   common/uni 兼容层降级为空实现（不崩溃，仅告警一次）；
  * - 参考源模板中的 scroll-view 包裹层为 MP-WEIXIN 条件编译，已移除；
  * - @click → @tap；customStyle / customTextStyle 经 parseStyle 归一为对象语法
- *   （CONVENTIONS §19）；内联样式键集合恒定（CONVENTIONS §20 Style Funnel）。
+ *   （CONVENTIONS §19）；轨道 / 滑块 / 媒体三处内联样式键集合恒定（CONVENTIONS
+ *   §20 Style Funnel）；swiperStyle 的 border-radius 沿用参考源的条件写入
+ *   （radius 为静态 prop，且无条件写 0 会盖掉消费方对
+ *   --wot-swiper-border-radius 的 CSS 覆盖）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -50,7 +53,7 @@ const currentValue = ref<number>(props.current) // 当前滑块
 const videoPlaying = ref<boolean>(false) // 当前是否在播放视频
 
 const uid = ref<string>(uuid())
-/** 根节点 id：容器宽高度量用（同页多个轮播不撞节点） */
+/** 分页视口（scroll-view）id：容器宽高度量用（同页多个轮播不撞节点） */
 const swiperId = ref<string>(`swiperId${uid.value}`)
 
 /** 容器宽高（px）：挂载后一次性度量并缓存 */
@@ -425,8 +428,9 @@ function handleIndicatorChange({ dir }: { dir: 'prev' | 'next' }) {
 </script>
 
 <template>
-  <view :id="swiperId" :class="`wd-swiper ${customClass}`" :style="parseStyle(customStyle)">
+  <view :class="`wd-swiper ${customClass}`" :style="parseStyle(customStyle)">
     <scroll-view
+      :id="swiperId"
       class="wd-swiper__track"
       :style="swiperStyle"
       :scroll-x="!isVertical"

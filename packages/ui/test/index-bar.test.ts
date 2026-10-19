@@ -22,6 +22,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { h, nextTick } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { fireEvent } from './fire-event'
+import { pause } from '../src/common/util'
 import IndexBar from '../src/components/wd-index-bar/wd-index-bar.vue'
 import IndexAnchor from '../src/components/wd-index-anchor/wd-index-anchor.vue'
 
@@ -126,7 +127,9 @@ describe('WdIndexBar / WdIndexAnchor', () => {
     expect(bubble!.textContent).toContain('B')
 
     fireEvent.touchend(sidebar)
-    await nextTick()
+    // 参考源 handleTouchEnd 内部 await pause()（30ms）后才清除 touching，
+    // 需等待定时器而非仅 nextTick（对齐 wot-ui 的异步收尾语义）
+    await pause(50)
     expect(container.querySelector('.wd-index-bar__current-index'), 'touchend 后气泡消失').toBeNull()
   })
 

@@ -31,6 +31,7 @@ const customKeyboardValue = ref('')
 const carKeyboardVisible = ref(false)
 const carKeyboardValue = ref('')
 const verifyPassed = ref(false)
+const slideVerifyRef = ref<any>(null)
 const uploadFiles = ref<any[]>([])
 const tabValue = ref(0)
 const sidebarValue = ref('a')
@@ -439,7 +440,7 @@ const portalBarVisible = ref(false)
             <wd-loading type="wave" size="24px" />
           </view>
           <view class="demo-row">
-            <wd-loading type="circular" size="20px" color="#7F5CFF" text="加载中" />
+            <wd-loading type="circular" size="20px" color="#1C64FD" text="加载中" />
             <wd-loading type="dots" size="20px" direction="horizontal" text="横向" />
           </view>
         </view>
@@ -536,7 +537,7 @@ const portalBarVisible = ref(false)
 
           <text class="demo-panel__label">SlideVerify / Signature / Upload</text>
           <view class="demo-row">
-            <wd-slide-verify v-model="verifyPassed" />
+            <wd-slide-verify ref="slideVerifyRef" @success="verifyPassed = true" @fail="verifyPassed = false" />
           </view>
           <view class="demo-row">
             <wd-signature style="flex: 1" />
@@ -753,8 +754,8 @@ const portalBarVisible = ref(false)
           </view>
           <text class="demo-panel__label">自定义颜色（bg-color / color）</text>
           <view class="demo-row">
-            <wd-navbar-capsule bg-color="#7F5CFF" color="#FFFFFF" />
-            <wd-navbar-capsule :show-back="false" bg-color="#EDF1FF" color="#7F5CFF" />
+            <wd-navbar-capsule bg-color="#1C64FD" color="#FFFFFF" />
+            <wd-navbar-capsule :show-back="false" bg-color="#E5EDFF" color="#1C64FD" />
           </view>
         </view>
       </view>
@@ -798,7 +799,7 @@ const portalBarVisible = ref(false)
             <wd-tabbar-item title="我的" icon="user" />
           </wd-tabbar>
           <text class="demo-panel__label">圆角形状（shape="round"）+ 自定义激活色</text>
-          <wd-tabbar v-model="tabbarRoundValue" shape="round" active-color="#7F5CFF" style="margin-top: 8px">
+          <wd-tabbar v-model="tabbarRoundValue" shape="round" active-color="#1C64FD" style="margin-top: 8px">
             <wd-tabbar-item title="首页" icon="home" active-icon="home-filling" />
             <wd-tabbar-item title="消息" icon="comment" />
             <wd-tabbar-item title="我的" icon="user" />
@@ -975,7 +976,7 @@ const portalBarVisible = ref(false)
           </view>
           <text class="demo-panel__label">separator 千分位 / color / autoStart 手动开始</text>
           <view class="demo-row">
-            <wd-count-to :start-val="0" :end-val="1234567" :duration="3000" color="#7F5CFF" />
+            <wd-count-to :start-val="0" :end-val="1234567" :duration="3000" color="#1C64FD" />
             <wd-count-to :auto-start="false" :start-val="0" :end-val="8888" :duration="1500" separator="," />
           </view>
           <view class="demo-row">
@@ -1079,7 +1080,7 @@ const portalBarVisible = ref(false)
             <view style="padding: 12px">
               <view style="height: 32px; background: #f7f8fa" />
               <wd-sticky :offset-top="0" :z-index="10">
-                <view style="background: #7f5cff; padding: 10px; border-radius: 8px">
+                <view style="background: #1c64fd; padding: 10px; border-radius: 8px">
                   <text style="color: #ffffff; font-size: 13px">吸顶标题 A（offsetTop 0）</text>
                 </view>
               </wd-sticky>
@@ -1098,11 +1099,11 @@ const portalBarVisible = ref(false)
       <view class="demo-section">
         <text class="demo-section__title">StickyBox 粘性容器</text>
         <view class="demo-panel">
-          <text class="demo-panel__label">containerHeight 容器高度 / offsetTop 偏移</text>
-          <wd-sticky-box :container-height="180">
+          <text class="demo-panel__label">offsetTop 偏移（容器高度由外层样式承担）</text>
+          <wd-sticky-box style="height: 180px">
             <view style="padding: 12px">
               <wd-sticky :offset-top="0" :z-index="10">
-                <view style="background: #7f5cff; padding: 10px; border-radius: 8px">
+                <view style="background: #1c64fd; padding: 10px; border-radius: 8px">
                   <text style="color: #ffffff; font-size: 13px">offsetTop 0</text>
                 </view>
               </wd-sticky>
@@ -1228,7 +1229,7 @@ const portalBarVisible = ref(false)
           <text class="demo-panel__label">层叠叠加（maxCount 折叠，direction="right"）</text>
           <view class="demo-row">
             <wd-avatar-group :max-count="3" :size="40" collapse-text="+5">
-              <wd-avatar :size="40" text="A" bg-color="#7F5CFF" />
+              <wd-avatar :size="40" text="A" bg-color="#1C64FD" />
               <wd-avatar :size="40" text="B" bg-color="#34C759" />
               <wd-avatar :size="40" text="C" bg-color="#FF9500" />
             </wd-avatar-group>
@@ -1458,7 +1459,7 @@ const portalBarVisible = ref(false)
             <wd-button size="small" @tap="portalBarVisible = !portalBarVisible">{{ portalBarVisible ? '隐藏' : '显示' }}底部固定条</wd-button>
           </view>
           <wd-root-portal v-if="portalBarVisible">
-            <view style="position: fixed; left: 0; right: 0; bottom: 0; padding: 12px; background-color: #7f5cff">
+            <view style="position: fixed; left: 0; right: 0; bottom: 0; padding: 12px; background-color: #1c64fd">
               <text style="color: #ffffff; font-size: 13px">经 RootPortal 挂载的底部固定条</text>
             </view>
           </wd-root-portal>
@@ -1584,14 +1585,14 @@ const portalBarVisible = ref(false)
 
 .demo-tag {
   font-size: 12px;
-  color: #7f5cff;
+  color: #1c64fd;
   background: #edf1ff;
   border-radius: 6px;
   padding: 4px 8px;
 }
 
 .demo-transition-box {
-  background: #7f5cff;
+  background: #1c64fd;
   border-radius: 12px;
   padding: 16px;
 }

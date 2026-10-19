@@ -139,7 +139,7 @@ describe('样式脏值（SetStyle 合并语义）', () => {
     cleanup()
   })
 
-  it('wd-toast：position 切换后 top / bottom 不得残留', async () => {
+  it('wd-toast：position 切换不产生 top / bottom 内联残留（定位由 --top/--bottom 类 transform 承担）', async () => {
     const { container } = render({
       setup() {
         const toast = useToast('style-merge-toast')
@@ -156,28 +156,28 @@ describe('样式脏值（SetStyle 合并语义）', () => {
 
     fireEvent.tap(container.querySelector('.trigger-top')!)
     await frames()
+    // 与 wot-ui 一致：内联样式为常量键集（position/top:50%/left/width/text-align），
+    // 不随 position 变化写 top/bottom——定位由根类 wd-toast--top/--bottom 的
+    // transform 承担，因此不存在 top/bottom 残留问题（SetStyle 合并语义下
+    // 唯一可能残留的键也全部恒写）。
     const topStyle = styleOf(transitionRoot())
-    expect(topStyle, 'top 定位应写 top: 10%').toContain('top: 10%')
-    expect(topStyle, 'top 定位时 bottom 应显式置 auto').toContain('bottom: auto')
+    expect(topStyle, '内联样式不得写 top: 10%（旧本地实现）').not.toContain('top: 10%')
+    expect(topStyle, '内联样式不得写 bottom').not.toContain('bottom:')
+    expect(topStyle, 'position 固定写 fixed').toContain('position: fixed')
+    expect(topStyle, '键集恒定：top: 50%').toContain('top: 50%')
 
     fireEvent.tap(container.querySelector('.trigger-bottom')!)
     await frames()
     const bottomStyle = styleOf(transitionRoot())
-    expect(bottomStyle, 'bottom 定位应写 bottom: 10%').toContain('bottom: 10%')
-    expect(
-      bottomStyle,
-      '切到 bottom 后 top 必须重置为 auto（旧实现省略 → 同时存在 top 与 bottom，位置错乱）'
-    ).toContain('top: auto')
-    // 直接断言「旧值不残留」：合并语义下若省略 top，元素上会同时留下 top: 10%
-    expect(
-      bottomStyle,
-      '切到 bottom 后不得残留 top: 10%'
-    ).not.toContain('top: 10%')
+    expect(bottomStyle, '切到 bottom 后内联样式仍不得出现 top/bottom 残留').not.toContain('top: 10%')
+    expect(bottomStyle).not.toContain('bottom: 10%')
+    expect(bottomStyle, '键集恒定：top: 50%').toContain('top: 50%')
+    expect(bottomStyle, '键集恒定：left: 0').toContain('left: 0')
 
     cleanup()
   })
 
-  it('wd-fab：位移归零态也必须显式写 transform', async () => {
+  it('wd-fab：位移键集恒定（top/left 恒写，不残留旧位移）', async () => {
     const { container } = render({
       setup() {
         return () => h(Fab as any)
@@ -187,9 +187,13 @@ describe('样式脏值（SetStyle 合并语义）', () => {
     await frames()
     const root = container.querySelector('.wd-fab')!
     expect(root, '应渲染 fab 根节点').not.toBeNull()
-    // 旧实现在 offset 为 (0,0) 时省略 transform，一旦 clampToViewport 把位移
-    // 归零就会残留上一次的位移；无条件写入后初始态即可断言。
-    expect(styleOf(root), '初始位移应显式为 translate(0px, 0px)').toContain('translate(0px, 0px)')
+    // 与 wot-ui 一致：fab 位移经 top/left 下发（非 transform），且键集恒定
+    // （top/left/transition 恒写）——合并语义下不存在旧位移残留。
+    const style = styleOf(root)
+    expect(style, 'top 恒写').toMatch(/top:\s*\d+px/)
+    expect(style, 'left 恒写').toMatch(/left:\s*\d+px/)
+    expect(style, 'transition 恒写').toMatch(/transition:/)
+    expect(style, '不得写 transform（旧本地实现）').not.toContain('transform')
 
     cleanup()
   })

@@ -1,6 +1,6 @@
 import DefaultTheme from 'vitepress/theme'
 import './custom.css'
-// 组件库设计令牌（--wd-*）：H5 预览依赖，全站引入
+// 组件库设计令牌（--wot-*）：H5 预览依赖，全站引入
 import 'wot-lynx-ui/theme'
 // H5 预览外壳样式（Lynx 元素语义重建 + 演示页样式 + 右侧栏加宽规则）
 import './preview.css'

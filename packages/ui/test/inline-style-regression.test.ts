@@ -38,7 +38,8 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     expect(styleOf(item)).toContain('height')
     expect(styleOf(item)).toMatch(/44px/)
 
-    const indicator = container.querySelector('.wd-picker-view__indicator')
+    // wot-ui 2.3.2：选中指示带经 indicator-class 下发，类名为 __roller
+    const indicator = container.querySelector('.wd-picker-view__roller')
     expect(styleOf(indicator)).toMatch(/height/)
     expect(styleOf(indicator)).toMatch(/44px/)
     expect(styleOf(indicator)).toMatch(/top/)
@@ -107,37 +108,35 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     cleanup()
   })
 
-  it('WdCalendarView 网格首行从「本月 1 号上周日」开始（含前月补位）', () => {
-    // 2026-10-01 是周四；firstDayOfWeek=0（周日）时首行应为 27..3（9 月 27 日起）
+  it('WdCalendarView 月网格首格按周偏移（对齐 wot-ui：margin-left 百分比）', () => {
+    // wot-ui 2.3.2 结构：月面板 > .wd-month > .wd-month__days > .wd-month__day；
+    // 每月只渲染当月日期（无前/后月补位格），首格经 firstDayStyle 的
+    // margin-left 百分比偏移到正确星期列。2026-10-01 是周四，
+    // firstDayOfWeek=0（周日）→ offset=4 → margin-left = 4/7*100%
     const value = new Date(2026, 9, 15).getTime()
     const { container } = render(CalendarView, { modelValue: value, type: 'date' })
-    const days = [...container.querySelectorAll('.wd-calendar-view__day')]
-    expect(days.length).toBe(42)
-    const texts = days.slice(0, 7).map((d) => (d.textContent || '').trim())
-    expect(texts).toEqual(['27', '28', '29', '30', '1', '2', '3'])
-    // 10 月 1 号在第 5 格（周四）且是本月日；9 月 27 日是补位日
-    const oct1 = days[4]
-    expect((oct1.textContent || '').trim()).toBe('1')
-    expect(oct1.getAttribute('class') || '').not.toContain('is-adjacent')
-    expect(days[0].getAttribute('class') || '').toContain('is-adjacent')
-    // 10 月 31 日之后是 11 月补位
-    expect(days[34].getAttribute('class') || '').not.toContain('is-adjacent')
-    expect((days[34].textContent || '').trim()).toBe('31')
-    expect(days[35].getAttribute('class') || '').toContain('is-adjacent')
+    const panel = Array.from(container.querySelectorAll('.wd-month')).find(
+      (m) => m.querySelector('.wd-month__title')?.textContent === '2026年10月'
+    )!
+    expect(panel, '应渲染 2026年10月 面板').toBeTruthy()
+    const days = [...panel.querySelectorAll('.wd-month__day')]
+    expect(days.length, '10 月共 31 天（无补位格）').toBe(31)
+    expect((days[0].querySelector('.wd-month__day-text')?.textContent || '').trim()).toBe('1')
+    // 首格（10 月 1 日，周四）左偏 4 列（100/7*4 = 57.142857...%）
+    expect(styleOf(days[0])).toMatch(/margin-left:\s*57\.14/)
+    // 其余格无内联偏移
+    expect(styleOf(days[1])).not.toMatch(/margin-left/)
     cleanup()
   })
 
-  it('WdCalendarView 行为显式行结构（grid > row > day），不依赖 flex-wrap', () => {
+  it('WdCalendarView 月网格按周分行（对齐 wot-ui：flex-wrap 周行结构）', () => {
     const { container } = render(CalendarView, { modelValue: Date.now(), type: 'date' })
-    const rows = container.querySelectorAll('.wd-calendar-view__row')
-    expect(rows.length).toBe(6)
-    rows.forEach((row) => {
-      expect(row.querySelectorAll('.wd-calendar-view__day').length).toBe(7)
-    })
-    const grid = container.querySelector('.wd-calendar-view__grid')
+    // wot-ui 2.3.2：日期格直接在 .wd-month__days 容器内按 flex-wrap 排布，
+    // 无显式 row 包装（旧本地「显式行」结构已按参考源移除）
+    const grid = container.querySelector('.wd-month__days')!
     expect(grid).not.toBeNull()
-    // 网格下不再直接挂 day（全部包在 row 内）
-    expect(grid!.querySelectorAll(':scope > .wd-calendar-view__day').length).toBe(0)
+    const directDays = grid.querySelectorAll(':scope > .wd-month__day')
+    expect(directDays.length, '首个面板的日期格直接挂在 days 容器下').toBeGreaterThan(28)
     cleanup()
   })
 
@@ -163,15 +162,16 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     cleanup()
   })
 
-  it('WdSwitch 轨道 / 滑块样式为对象且已应用', () => {
+  it('WdSwitch 轨道 / 滑块尺寸由 SCSS 类承担（对齐 wot-ui：em 基准改 --wot-switch-size）', () => {
     const { container } = render(Switch, { modelValue: true, activeColor: '#34C759' })
     const root = container.querySelector('.wd-switch')
-    expect(styleOf(root)).toMatch(/height|width/)
+    // wot-ui 2.3.2：尺寸体系在 SCSS（--wot-switch-size 基准的 calc 链），
+    // JS 侧只经内联 font-size（+ 同名 CSS 变量）下发 size prop；
+    // 对象语法断言：内联样式必须是对象而非被丢弃的字符串
+    expect(styleOf(root)).toMatch(/font-size/)
+    expect(styleOf(root)).toContain('--wot-switch-size')
     const action = container.querySelector('.wd-switch__action')
-    expect(styleOf(action)).toMatch(/width/)
-    expect(styleOf(action)).toMatch(/transform/)
-    const inner = container.querySelector('.wd-switch__inner')
-    if (inner) expect(styleOf(inner)).toMatch(/background/)
+    expect(action).not.toBeNull()
     cleanup()
   })
 })

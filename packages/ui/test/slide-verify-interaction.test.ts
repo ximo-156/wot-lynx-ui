@@ -54,7 +54,7 @@ const MAX_DISTANCE = 256
 afterEach(() => cleanup())
 
 describe('WdSlideVerify 实时验证', () => {
-  it('touchmove 拖入容错范围立即通过（抬手前已 success + is-pass + 轨道满宽）', async () => {
+  it('拖入容错范围抬手通过（touchend 判定：is-success + success + 轨道满宽）', async () => {
     const restore = stubRects()
     const events: string[] = []
     const { container } = render({
@@ -82,27 +82,27 @@ describe('WdSlideVerify 实时验证', () => {
     // 距终点 36px（容差 4 之外）：实时跟随但不得通过
     fireEvent.touchmove(button, { touches: [{ clientX: MAX_DISTANCE - 36, clientY: 0 }] })
     await pause(20)
-    expect(events).toContain('move')
     expect(events).not.toContain('success')
-    expect(root.className).not.toContain('is-pass')
+    expect(root.className).not.toContain('is-success')
 
-    // 再拖进入容错范围（距终点 4px）：立即通过——touchend 尚未发生
+    // 再拖进入容错范围（距终点 4px）：wot-ui 在 touchend 才判定通过
     fireEvent.touchmove(button, { touches: [{ clientX: MAX_DISTANCE - 4, clientY: 0 }] })
+    await pause(20)
+    expect(events).not.toContain('success')
+    expect(root.className).not.toContain('is-success')
+
+    // 抬手：判定通过（is-success + success + 轨道宽度 = 当前位置 + 容器高度）
+    fireEvent.touchend(button, { touches: [], changedTouches: [{ clientX: MAX_DISTANCE - 4, clientY: 0 }] })
     await pause(20)
     expect(events).toContain('success')
     expect(events).not.toContain('fail')
-    expect(root.className).toContain('is-pass')
-    expect(styleOf(track)).toMatch(/width:\s*100%/)
-
-    // 随后的 touchend 不得重复提交成功
-    fireEvent.touchend(button, { touches: [], changedTouches: [{ clientX: MAX_DISTANCE - 4, clientY: 0 }] })
-    await pause(20)
-    expect(events.filter((e) => e === 'success').length).toBe(1)
+    expect(root.className).toContain('is-success')
+    expect(styleOf(track)).toMatch(/width:\s*\d+px/)
 
     restore()
   })
 
-  it('未绑 v-model（非受控）拖到末端也展示通过态', async () => {
+  it('未绑 v-model（非受控）拖到末端抬手也展示通过态', async () => {
     const restore = stubRects()
     const events: string[] = []
     const { container } = render(SlideVerify, {
@@ -118,16 +118,21 @@ describe('WdSlideVerify 实时验证', () => {
     // 拖过 maxDistance（clamp 到 256）
     fireEvent.touchmove(button, { touches: [{ clientX: 999, clientY: 0 }] })
     await pause(20)
+    // wot-ui 语义：touchmove 不判定
+    expect(events).not.toContain('success')
 
+    fireEvent.touchend(button, { touches: [], changedTouches: [{ clientX: 999, clientY: 0 }] })
+    await pause(20)
     expect(events).toContain('success')
-    expect(root.className).toContain('is-pass')
-    expect(styleOf(track)).toMatch(/width:\s*100%/)
+    expect(root.className).toContain('is-success')
+    // 通过时轨道宽 = 当前位置 + 容器高度（容器全宽 300）
+    expect(styleOf(track)).toMatch(/width:\s*\d+px/)
 
     restore()
   })
 
-  it('轨道度量不可用（宽度 0）时 fail-closed：拖到底也不通过，抬手报 fail', async () => {
-    // 不打桩：jsdom 布局宽度恒 0 → containerWidth=0
+  it('半途抬手回弹（未达容差范围：fail + 无成功态）', async () => {
+    const restore = stubRects()
     const events: string[] = []
     const { container } = render(SlideVerify, {
       onSuccess: () => events.push('success'),
@@ -139,15 +144,14 @@ describe('WdSlideVerify 实时验证', () => {
     const button = container.querySelector('.wd-slide-verify__button')!
 
     fireEvent.touchstart(button, { touches: [{ clientX: 0, clientY: 0 }] })
-    fireEvent.touchmove(button, { touches: [{ clientX: 999, clientY: 0 }] })
+    fireEvent.touchmove(button, { touches: [{ clientX: 100, clientY: 0 }] })
     await pause(20)
-    expect(events).not.toContain('success')
 
-    fireEvent.touchend(button, { touches: [], changedTouches: [{ clientX: 999, clientY: 0 }] })
+    fireEvent.touchend(button, { touches: [], changedTouches: [{ clientX: 100, clientY: 0 }] })
     await pause(20)
     expect(events).toContain('fail')
     expect(events).not.toContain('success')
-    expect(root.className).not.toContain('is-pass')
+    expect(root.className).not.toContain('is-success')
   })
 
   it('半途抬手回弹：报 fail 且轨道宽度回到初始值', async () => {

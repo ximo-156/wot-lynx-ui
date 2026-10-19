@@ -1,3 +1,39 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
-/* wd-table-column 为声明式配置组件，无视觉样式 */
+@use '../wd-table/index.scss' as *;
+
+@include b(table-column) {
+  // Lynx 适配：参考源为 display:contents（让单元格直接参与表体 grid），
+  // Lynx 不支持该值；改为纵向 flex 容器承载本列单元格（列主布局，
+  // 见 wd-table-column.vue 头部注释），flex-shrink:0 防止被表体压缩。
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  // Lynx 适配：固定列把 sticky 挂在列根上（单元格的包含块是列根、
+  // 无位移空间，sticky 会失效），left 偏移由组件内联下发。
+  @include when(fixed) {
+    position: sticky;
+    z-index: 1;
+  }
+
+  // Lynx 适配：参考源用 .wd-table__cell:last-child 去除末行下边框，
+  // Lynx 不支持结构伪类，改为模板按行索引推送的 is-last-row 类名。
+  .wd-table__cell.is-last-row {
+    @include when(border) {
+      border-bottom: none;
+    }
+  }
+
+  // Lynx 适配：参考源 is-shadow 的 ::after 渐变阴影（Lynx 无伪元素）
+  // 改为模板真实元素 wd-table__shadow（PORTING §4.4）。
+  .wd-table__shadow {
+    position: absolute;
+    right: -30rpx;
+    top: 0;
+    width: 30rpx;
+    height: 100%;
+    background: $table-shadow-gradient;
+    pointer-events: none;
+  }
+}

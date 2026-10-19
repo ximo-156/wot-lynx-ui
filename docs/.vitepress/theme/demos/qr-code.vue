@@ -13,7 +13,7 @@ import WdBarCode from 'wot-lynx-ui/components/wd-bar-code/wd-bar-code.vue'
       <view class="wd-h5-demo__panel">
         <view class="wd-h5-demo__row" style="justify-content: space-around">
           <wd-qr-code text="https://wot-ui.cn" :size="120" />
-          <wd-qr-code text="https://wot-ui.cn" :size="120" color="#7F5CFF" />
+          <wd-qr-code text="https://wot-ui.cn" :size="120" color="#1C64FD" />
         </view>
       </view>
     </view>

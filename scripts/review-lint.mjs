@@ -61,6 +61,7 @@ for (let i = 2; i < process.argv.length; i++) {
   else if (a === '--summary') opts.summary = true
   else if (a === '--update-baseline') opts.updateBaseline = true
   else if (a === '--github') opts.github = true
+  else if (a === '--dump-findings') opts.dumpFindings = true
   else if (a === '--help' || a === '-h') { printHelp(); process.exit(0) }
 }
 
@@ -73,6 +74,7 @@ review-lint — wot-lynx-ui 规范静态检查
   --errors-only        只输出 error 级问题
   --summary            只输出按规则分组的统计
   --update-baseline    把当前所有问题写入 ${BASELINE_FILE} 作为存量豁免
+  --dump-findings      以 JSON 输出全部问题（含 snippet，供基线精确登记）
   --github             额外输出 GitHub Actions 注解格式
   -h, --help           显示本帮助
 
@@ -323,18 +325,24 @@ const RULES = [
     severity: 'error',
     ext: ['.scss'],
     kind: 'line',
-    // 仅匹配「声明」形式，避免命中 @mixin 参数名
-    pattern: /^\s*(?:box-shadow|-webkit-box-shadow)\s*:/,
-    message: '禁用 box-shadow（Lynx 各端表现不一致）—— 层级用表面色 + --wd-border-1/2 描边'
+    // 仅匹配「声明」形式（行首 box-shadow: + 硬编码值起手），避免命中
+    // @mixin 参数名与 transition 简写内的 box-shadow 关键字。
+    // 放行：SCSS 变量驱动（$xxx，定义处经 --wot-* 组件令牌取值，即 wot-ui
+    // 2.3.2 同源声明）、none、var(--wot-*) 令牌；只拦硬编码字面量阴影。
+    // （不用负向 lookahead——\s* 可回溯致其失效）
+    pattern: /^\s*(?:box-shadow|-webkit-box-shadow)\s*:\s*(?:[0-9]|rgba?\(|hsla?\(|#|inset\b|color-mix\()/,
+    message: '禁用硬编码 box-shadow（Lynx 各端表现不一致）—— 层级用表面色 + --wot-border-* 描边；wot-ui 同源声明须经 --wot-* 组件令牌驱动'
   },
   {
-    id: 'scss/no-wot-token',
+    id: 'scss/no-legacy-wd-token',
     ref: '§5.1',
     severity: 'error',
     ext: ['.scss'],
     kind: 'line',
-    pattern: /--wot-/,
-    message: '禁止引用已删除的 --wot-* 体系 —— 改用 --wd-* 语义令牌'
+    // 旧版 --wd-* 令牌体系已整体切换为 wot-ui 2.3.2 的 --wot-*（CONVENTIONS §3）；
+    // 组件样式引用已删除的 --wd-* 会被静默丢弃（值解析为空），属高危。
+    pattern: /--wd-/,
+    message: '禁止引用已删除的 --wd-* 令牌体系 —— 改用与 wot-ui 同源的 --wot-* 令牌'
   },
   {
     id: 'scss/flex-direction-without-display',
@@ -599,6 +607,12 @@ function main() {
 
   const newFindings = findings.filter(f => !baseline[hashFinding(f)])
   const exempted = findings.length - newFindings.length
+
+  // ---- findings 转储（供基线精确登记）----
+  if (opts.dumpFindings) {
+    console.log(JSON.stringify(newFindings.map((f) => ({ ruleId: f.ruleId, file: f.file, line: f.line, severity: f.severity, snippet: f.snippet }))))
+    process.exit(0)
+  }
 
   // ---- summary 模式 ----
   if (opts.summary) {

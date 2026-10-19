@@ -1,60 +1,95 @@
 import type { ExtractPropTypes } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeStringProp, numericProp } from '../../common/props'
 
-export type ImageMode = 'scaleToFill' | 'aspectFit' | 'aspectFill' | 'widthFix' | 'heightFix' | 'top' | 'bottom' | 'center' | 'left' | 'right'
+export type ImageMode =
+  | 'scaleToFill'
+  | 'aspectFit'
+  | 'aspectFill'
+  | 'widthFix'
+  | 'heightFix'
+  | 'top'
+  | 'bottom'
+  | 'center'
+  | 'left'
+  | 'right'
+  | 'top left'
+  | 'top right'
+  | 'bottom left'
+  | 'bottom right'
 
 export const imgProps = {
   ...baseProps,
   /**
-   * 原生 image 自定义类名
+   * 图片自定义类名
+   * 类型: string
    */
   customImage: makeStringProp(''),
   /**
-   * 图片地址
+   * 图片链接
+   * 类型: string
    */
   src: String,
   /**
-   * 预览地址（enablePreview 时）
+   * 预览图片链接
+   * 类型: string
    */
   previewSrc: String,
   /**
-   * 是否圆形
+   * 是否显示为圆形
+   * 类型: boolean
+   * 默认值: false
    */
   round: makeBooleanProp(false),
   /**
-   * 裁剪模式
+   * 填充模式
+   * 类型: string
+   * 可选值: 'scaleToFill' | 'aspectFit' | 'aspectFill' | 'widthFix' | 'heightFix' | 'top' | 'bottom' | 'center' | 'left' | 'right' | 'top left' | 'top right' | 'bottom left' | 'bottom right'
+   * 默认值: 'scaleToFill'
    */
   mode: makeStringProp<ImageMode>('scaleToFill'),
   /**
-   * 懒加载
+   * 是否懒加载
+   * 类型: boolean
+   * 默认值: false
    */
   lazyLoad: makeBooleanProp(false),
   /**
-   * 宽度
+   * 宽度，默认单位为px
+   * 类型: string | number
    */
   width: numericProp,
   /**
-   * 高度
+   * 高度，默认单位为px
+   * 类型: string | number
    */
   height: numericProp,
   /**
-   * 圆角
+   * 圆角大小，默认单位为px
+   * 类型: string | number
    */
   radius: numericProp,
   /**
-   * 是否开启预览
+   * 是否允许预览
+   * 类型: boolean
+   * 默认值: false
    */
   enablePreview: makeBooleanProp(false),
   /**
-   * 长按是否显示菜单
+   * 开启长按图片显示识别小程序码菜单，仅在微信小程序平台有效
+   * 类型: boolean
+   * 默认值: false
    */
   showMenuByLongpress: makeBooleanProp(false),
   /**
-   * 是否显示加载态
+   * 是否展示加载中
+   * 类型: boolean
+   * 默认值: true
    */
   showLoading: makeBooleanProp(true),
   /**
-   * 是否显示错误态
+   * 是否展示错误
+   * 类型: boolean
+   * 默认值: true
    */
   showError: makeBooleanProp(true)
 }

@@ -1,4 +1,18 @@
+@use '../../styles/theme/dark.scss' as dark;
+@use '../../styles/theme/light.scss' as light;
 @use '../../styles/mixin/mixin.scss' as *;
+
+// 主题类由 WdConfigProvider / WdRootPortal 挂载到根 view：
+// 语义令牌在 styles/theme 中定义，此处按 wot-ui 的结构把两套主题变量
+// 绑定到 .wot-theme-light / .wot-theme-dark 类上（position: fixed 弹层被
+// 提升到页面根节点后脱离 ConfigProvider 子树，靠该机制保持亮暗一致）。
+.wot-theme-dark {
+  @include dark.dark-theme-vars;
+}
+
+.wot-theme-light {
+  @include light.light-theme-vars;
+}
 
 @include b(config-provider) {
   /* 根容器：布局中立化——作为页面根时撑满，作为内联包裹时按内容高度 */

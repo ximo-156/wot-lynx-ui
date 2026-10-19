@@ -14,7 +14,7 @@
 - **目标**：`packages/ui/src/components/<component>/`（三文件 + 生成的 `index.css`）
   - `types.ts` — props 定义，import 自 `vue-lynx` 与 `../../common/props`
   - `wd-xxx.vue` — 全新实现
-  - `index.scss` — 全新样式，消费 `--wd-*` 设计令牌
+  - `index.scss` — 全新样式，消费 `--wot-*` 设计令牌（与 wot-ui 2.3.2 同源）
 
 ## 1. 总体原则
 
@@ -33,45 +33,33 @@
 packages/ui/src/components/wd-xxx/
 ├── types.ts          # props 定义，import 自 'vue-lynx' 与 '../../common/props'
 ├── wd-xxx.vue        # 组件实现（全新手写）
-└── index.scss        # 样式（消费 --wd-* 令牌）
+└── index.scss        # 样式（消费 --wot-* 令牌）
 ```
 
 `index.css` 由 `node scripts/build-css.mjs` 自动生成，**不要手动编辑**。
 
-## 3. 设计系统（全新，替代 wot-ui 的 --wot-* 体系）
+## 3. 设计系统（与 wot-ui 2.3.2 同源的 --wot-* 体系）
 
-三层令牌体系，命名空间 `--wd-*`：
+**令牌体系直接采用 wot-ui 2.3.2 的设计规范**（`--wot-*` 命名空间，与官方源码逐值一致）——
+消费方从 wot-ui 迁移时，既有主题定制（`themeVars` 键、CSS 变量覆盖）零改动可用：
 
 | 层 | 文件 | 内容 | 示例 |
 | --- | --- | --- | --- |
-| 原始刻度 | `styles/tokens/_primitive.scss` | 色阶/间距/圆角/字号/动效，主题无关 | `--wd-blue-6`、`--wd-space-4` |
-| 语义令牌 | `styles/tokens/_semantic.scss` | 亮/暗双主题语义别名 | `--wd-color-primary`、`--wd-text-1` |
-| 组件令牌 | 各组件 `index.scss` | 组件私有变量，回退到语义令牌 | `--wd-button-primary-bg` |
-
-**视觉方向**（重写时的设计基准，依据 docs/guide/design-research.md 的小米 × 苹果调研）：
-
-- 品牌色：品牌紫 `--wd-purple-6`（#7F5CFF，**既定品牌色，不随设计刷新更改**），
-  中性灰对齐 Apple systemGray 阶梯 + HyperOS 语义灰（`#1D1D1F` / `#6E6E73` / `#8E8E93`）；
-- 语义色：成功绿 / 警告琥珀 / 危险红，各 10 档色阶；警告底文字用
-  `--wd-color-on-warning` 深色（对比度 ≥ 4.5:1）；
-- 圆角偏大（按钮 mini 4 → large 12px，round 变体胶囊 999px；卡片 12–16px，弹层 16–20px），
-  传达现代移动端质感；
-- 文字层级 `--wd-text-1..4` + disabled，图标层级 `--wd-icon-1..4`；
-- 表面层级：`--wd-bg-page`（页面）→ `--wd-bg-container`（卡片）→ `--wd-bg-elevated`（弹层）；
-- **不用 box-shadow**（Lynx 各端表现不一致），层级靠表面色 + `--wd-border-1/2` 描边表达；
-  暗色用 Apple base/elevated 双层海拔（弹层自动提亮一档）；
-- 动效三档：`--wd-duration-fast/base/slow`（0.15/0.25/0.35s）+ 官方缓动曲线
-  （`--wd-ease-out` = 小米默认 cubic-bezier(0.25,0.46,0.45,0.94)，
-  `--wd-ease-in-out` = Apple EaseInEaseOut cubic-bezier(0.42,0,0.58,1)）。
+| 原始刻度 | `styles/theme/base/*.scss` | 色阶/数值/圆角/字体/排版/透明度/描边/间距，主题无关 | `--wot-blue-6`、`--wot-n-16` |
+| 语义令牌 | `styles/theme/light.scss` / `dark.scss` | 亮/暗双主题语义别名 | `--wot-primary-6`、`--wot-text-main` |
+| 组件令牌 | 各组件 `index.scss` | 组件私有变量，回退到语义/原始刻度 | `--wot-button-primary-bg` |
+| SCSS 映射 | `styles/variable.scss` | SCSS 变量 → CSS 变量（含字面量回退），组件样式经它消费令牌 | `$primary-6: var(--wot-primary-6, #1C64FDFF)` |
 
 **主题机制**：`import 'wot-lynx-ui/theme'` 引入全部令牌；`WdConfigProvider`
-的 `theme="dark"` 给根 view 挂 `.wd-theme-dark` 类切换语义令牌；
-`themeVars`  prop 将 camelCase 键映射为 `--wd-<kebab>` 内联变量。
+的 `theme="dark"` 给根 view 挂 `wot-theme-dark` 类切换语义令牌；
+`themeVars` prop 将 camelCase 键映射为 `--wot-<kebab>` 内联变量
+（完整键集合见 `composables/theme-vars.ts`，与 wot-ui 的 theme-vars 生成物一致）。
 `position: fixed` 弹层被提升到页面根节点后会脱离主题子树，因此
-`.wd-root-portal` 容器内镜像同名变量（见 `_semantic.scss` 选择器）。
+`.wd-root-portal` 容器内镜像同名变量（见 `styles/theme/index.scss` 选择器）。
 
 **JS 镜像**：需要"用 JS 算颜色"的场景（如 svg content 不继承 currentColor），
-用 `common/theme.ts` 的色板常量，与 `_primitive.scss` 保持一致。
+用 `common/theme.ts` 的色板常量，与 `styles/theme/base/color.scss` 保持一致
+（`test/theme-token-parity.test.ts` 机器守护两侧不漂移）。
 
 ## 4. .vue 文件模板
 
@@ -114,11 +102,12 @@ defineProps(xxxProps)
 
 ## 5. SCSS 规范（index.scss）
 
-1. 只消费 `--wd-*` 令牌（语义令牌优先），**禁止**引用已删除的 `--wot-*` 体系。
+1. 只消费 `--wot-*` 令牌（语义令牌优先，原始刻度次之）；组件私有令牌以
+   `--wot-<component>-*` 命名（即 wot-ui 文档 cssVars 表中的定制点，消费者按名覆盖）。
 2. 共享 mixin（`styles/mixin/mixin.scss`）：BEM 的 `b/e/m/when/me`、
    `halfPixelBorder` / `pixelBorder` 系列（原生 border + 1ppx）、`lineEllipsis`。
 3. 组件私有令牌定义在文件头部，回退到语义令牌：
-   `$button-primary-bg: var(--wd-button-primary-bg, var(--wd-color-primary)) !default;`
+   `$button-primary-bg: var(--wot-button-primary-bg, $primary-6) !default;`
 4. 需要作者处理的 Lynx 限制：
    - `::before` / `::after` → 模板中的真实元素 + 对应类名（如 `__bar`、`__hairline`）
    - `:nth-child()` / `:first-child` / `:last-child` → `v-for` 中按索引生成类名或内联样式
@@ -217,7 +206,7 @@ composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
   `<text>` 字形；命中扩展注册的 SVG 集时渲染 `<svg :content>`（多 path 图标
   输出多个 `path`，fill 统一注入）；name 含 `/` 时按图片渲染 `<image>`；
   `css-icon` 走 CSS 类名模式。
-- 默认颜色 `var(--wd-icon-1)`。组件内使用图标时，如需跟随文字色，显式传 `:color`
+- 默认颜色由 `--wot-icon-main`（CSS 继承，需宿主开启 enableCSSInheritance）。组件内使用图标时，如需跟随文字色，显式传 `:color`
   （Lynx 的 svg content 与字体字形均不继承 CSS currentColor，需 JS 侧用
   `common/theme.ts` 常量计算）。
 
@@ -455,7 +444,7 @@ vue-lynx 的 `patchProp`（`runtime/dist/node-ops.js`）对 `style` 只处理
 | 组件 | 字符串样式 | 故障表现 |
 | --- | --- | --- |
 | wd-picker-view（及 picker / datetime-picker / calendar 时间面板） | 列项高度、列内容 `translateY`、指示带/遮罩定高 | 列不滚动（选中项不居中）、行高塌成文本高、指示带消失 |
-| wd-config-provider | themeVars 的 `--wd-*` 变量串 | 定制主题整体失效 |
+| wd-config-provider | themeVars 的 `--wot-*` 变量串 | 定制主题整体失效 |
 | wd-progress / wd-table / wd-qr-code / wd-bar-code / wd-switch / wd-slider / wd-tabs / wd-popover / wd-tooltip / wd-watermark / wd-backtop / wd-floating-panel / wd-swipe-action / wd-notice-bar … | 各自定位/尺寸计算串 | 进度条宽度、表格列宽、二维码尺寸、滑块位移、气泡定位等全部失效 |
 
 **规则**：

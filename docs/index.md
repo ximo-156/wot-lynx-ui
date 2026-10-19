@@ -16,7 +16,7 @@ hero:
 features:
   - icon: 🎨
     title: 样式一致
-    details: 全新 --wd-* 三层设计令牌体系（色阶 → 语义 → 组件），亮暗双主题；BEM 类名与 wot-ui 一致，API 完全兼容。
+    details: 与 wot-ui 2.3.2 同源的 --wot-* 设计令牌体系（原始刻度 → 亮暗语义 → 组件令牌），亮暗双主题；BEM 类名与 wot-ui 一致，API 完全兼容。
   - icon: ⚡
     title: 原生性能
     details: 基于 Lynx 双线程架构，Vue 运行在后台线程、渲染在主线程；细线边框使用 1ppx 物理像素，按压缩态由渲染器原生处理。

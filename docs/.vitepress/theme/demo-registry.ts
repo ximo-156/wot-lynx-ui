@@ -44,7 +44,7 @@ const SAMPLE_TEXT: Record<string, string> = {
 const PLACEHOLDER_IMG =
   'data:image/svg+xml,' +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="320"><rect width="640" height="320" fill="#7F5CFF"/><text x="320" y="172" font-size="36" fill="#fff" text-anchor="middle">预览图片</text></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="320"><rect width="640" height="320" fill="#1C64FD"/><text x="320" y="172" font-size="36" fill="#fff" text-anchor="middle">预览图片</text></svg>'
   )
 
 const PICKER_COLUMNS = ['选项一', '选项二', '选项三', '选项四']

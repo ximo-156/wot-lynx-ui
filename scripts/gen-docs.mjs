@@ -4,7 +4,7 @@
  *
  * 重写版规范：
  * - 组件导入名 PascalCase（WdButton），模板标签 <WdButton>；
- * - 设计令牌为 --wd-* 三层体系（见 CONVENTIONS.md §3）；
+ * - 设计令牌为 --wot-* 体系（与 wot-ui 2.3.2 同源，见 CONVENTIONS.md §3）；
  * - props 表格从 types.ts 的 JSDoc 注释提取。
  *
  * 用法：node scripts/gen-docs.mjs [组件名...]
@@ -129,7 +129,9 @@ const pascal = (name) => name.replace('wd-', '').split('-').map((p) => p.charAt(
 function parseProps(typesPath) {
   const t = readFileSync(typesPath, 'utf8')
   const props = []
-  const pattern = /\/\*\*(.*?)\*\/[ \t]*\r?\n[ \t]*(\w+):[ \t]*[^,\n]*/gs
+  // 注释体不得跨越下一个 *\/（types.ts 中类型声明与 props 注释交错时，
+  // 贪婪/非贪婪的 .*? 都会把多个注释块吞成一个；用 tempered token 锁定单块）
+  const pattern = /\/\*\*((?:(?!\*\/)[\s\S])*?)\*\/[ \t]*\r?\n[ \t]*(\w+):[ \t]*[^,\n]*/g
   let m
   while ((m = pattern.exec(t)) !== null) {
     const comment = m[1]
@@ -139,6 +141,13 @@ function parseProps(typesPath) {
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim()
+      // JSDoc 里的泛型写法（Partial<LoadingProps> 等）必须转义：
+      // markdown 会把 <X> 当 HTML 标签解析，未闭合即 Vue SFC 编译错误
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      // 对象字面量默认值（{ top: 16, ... }）会被 markdown 的属性语法
+      // （{.class #id}）吞成 HTML 属性，包进 code span 规避
+      .replace(/(默认值:\s*)(\{[^{}]*\})/g, '$1`$2`')
     props.push({ name: m[2], comment })
   }
   if (t.includes('...baseProps')) {
@@ -156,7 +165,7 @@ function genDoc(name) {
   lines.push('')
   lines.push('## 介绍')
   lines.push('')
-  lines.push(`${title.split(' ').slice(1).join(' ') || title}组件，API 与 wot-ui 对齐；样式基于 \`--wd-*\` 设计令牌。`)
+  lines.push(`${title.split(' ').slice(1).join(' ') || title}组件，API 与 wot-ui 对齐；样式基于与 wot-ui 2.3.2 同源的 \`--wot-*\` 设计令牌。`)
   lines.push('')
 
   if (existsSync(typesPath)) {

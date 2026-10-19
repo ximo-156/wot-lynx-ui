@@ -1,5 +1,5 @@
 /**
- * wd-swiper 回归测试（scroll-view 自研分页实现）。
+ * wd-swiper 回归测试（scroll-view 自研分页实现，类名与 DOM 对齐 wot-ui 2.3.2）。
  */
 import { describe, it, expect } from 'vitest'
 import { h, ref } from 'vue-lynx'
@@ -24,8 +24,8 @@ describe('wd-swiper', () => {
     } as any)
     await pause(50)
     expect(container.querySelectorAll('.wd-swiper__item').length).toBe(3)
-    expect(container.querySelectorAll('.wd-swiper__dot').length).toBe(3)
-    expect(container.querySelectorAll('.wd-swiper__img').length).toBe(3)
+    expect(container.querySelectorAll('.wd-swiper-nav__item--dots').length).toBe(3)
+    expect(container.querySelectorAll('.wd-swiper__image').length).toBe(3)
     cleanup()
   })
 
@@ -65,7 +65,7 @@ describe('wd-swiper', () => {
       } as any)
       await pause(50)
       // scrollLeft=300 → index=1
-      const scroll = container.querySelector('.wd-swiper__scroll') as Element
+      const scroll = container.querySelector('.wd-swiper__track') as Element
       expect(scroll).toBeTruthy()
       fireEvent.scroll(scroll, { detail: { scrollLeft: 300 } })
       await pause(50)
@@ -77,14 +77,26 @@ describe('wd-swiper', () => {
     cleanup()
   })
 
-  it('空 list 时渲染默认插槽', async () => {
+  it('空 list 时不渲染任何滑块（默认插槽位于 v-for 内，对齐参考源）', async () => {
     const { container } = render({
       setup() {
         return () => h(Swiper, { list: [] }, { default: () => h('view', { class: 'custom-slide' }, 'slide') })
       }
     } as any)
     await pause(50)
-    expect(container.querySelector('.custom-slide')).toBeTruthy()
+    expect(container.querySelector('.custom-slide')).toBeNull()
+    expect(container.querySelectorAll('.wd-swiper__item').length).toBe(0)
+    cleanup()
+  })
+
+  it('默认插槽经 list 渲染（slot 位于 v-for 内，对齐参考源）', async () => {
+    const { container } = render({
+      setup() {
+        return () => h(Swiper, { list }, { default: () => h('view', { class: 'custom-slide' }, 'slide') })
+      }
+    } as any)
+    await pause(50)
+    expect(container.querySelectorAll('.custom-slide').length).toBe(3)
     cleanup()
   })
 })

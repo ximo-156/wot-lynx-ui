@@ -3,7 +3,7 @@
  * 1. Lynx 元素语义在 DOM 中的重建：view 默认 linear（flex column）布局、
  *    scroll-view 的滚动方向，均与 Lynx 引擎默认行为对齐；
  * 2. 预览演示页的页面级样式（与 packages/demo/src/App.vue 的 demo-* 类同构，
- *    但改用 --wd-* 令牌，随亮暗主题切换）；
+ *    但改用 --wot-* 令牌，随亮暗主题切换）；
  * 3. 右侧栏布局适配：组件文档页（body.has-h5-preview）加宽 VitePress 的
  *    aside 以容纳手机预览；窄屏下 aside 回落为内容下方的通栏。
  *
@@ -93,7 +93,7 @@
   margin: 0;
   padding: 0;
   font-size: 14px;
-  color: var(--wd-text-1, #1d1d1f);
+  color: var(--wot-text-main);
 }
 
 :where(.wd-h5-phone__screen) image {
@@ -129,7 +129,7 @@
 /* ConfigProvider 根：撑满屏幕并铺主题底色 */
 .wd-h5-phone__screen .wd-h5-screen-root {
   height: 100%;
-  background: var(--wd-bg-page);
+  background: var(var(--wot-filled-bottom));
 }
 
 /* ---- 演示页（与 demo App.vue 同构，令牌化） ---- */
@@ -148,21 +148,21 @@
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: var(--wd-text-1);
+  color: var(var(--wot-text-main));
   margin: 0 4px 8px;
 }
 
 .wd-h5-phone__screen .wd-h5-demo__panel {
-  background: var(--wd-bg-container);
+  background: var(var(--wot-filled-oppo));
   border-radius: 12px;
-  border: 1px solid var(--wd-border-1);
+  border: 1px solid var(var(--wot-border-main));
   padding: 12px;
 }
 
 .wd-h5-phone__screen .wd-h5-demo__panel-label {
   display: block;
   font-size: 11px;
-  color: var(--wd-text-3);
+  color: var(var(--wot-text-auxiliary));
   margin: 8px 0;
 }
 
@@ -181,8 +181,8 @@
 
 .wd-h5-phone__screen .wd-h5-demo__tag {
   font-size: 11px;
-  color: var(--wd-color-primary);
-  background: var(--wd-color-primary-bg);
+  color: var(var(--wot-primary-6));
+  background: var(var(--wot-primary-1));
   border-radius: 6px;
   padding: 4px 8px;
 }
@@ -195,5 +195,5 @@
 
 .wd-h5-phone__screen .wd-h5-placeholder__text {
   font-size: 12px;
-  color: var(--wd-text-3);
+  color: var(var(--wot-text-auxiliary));
 }

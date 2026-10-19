@@ -36,7 +36,7 @@ import WdTag from 'wot-lynx-ui/components/wd-tag/wd-tag.vue'
     <view class="wd-h5-demo__section">
       <text class="wd-h5-demo__section-title">themeVars 自定义令牌</text>
       <view class="wd-h5-demo__panel">
-        <wd-config-provider :theme-vars="{ '--wd-color-primary': '#00A06D' }">
+        <wd-config-provider :theme-vars="{ 'var(--wot-primary-6)': '#00A06D' }">
           <view class="wd-h5-demo__row">
             <wd-button type="primary">绿色主色</wd-button>
           </view>

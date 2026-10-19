@@ -1,14 +1,17 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
 
+// wd-bar-code 为本地独有组件（wot-ui 无对应组件），样式按 --wot-* 令牌体系重写：
+// 间距取 spacing-tight(8px) / spacing-super-tight(4px)，容器背景取 filled-oppo
 @include b(bar-code) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--wd-space-2);
-  background-color: var(--wd-bg-container);
+  padding: $spacing-tight;
+  background-color: $filled-oppo;
 
   @include e(text) {
-    margin-top: var(--wd-space-1);
+    margin-top: $spacing-super-tight;
     letter-spacing: 2px;
   }
 }

@@ -1,10 +1,15 @@
 /*
  * wd-img — 图片
  *
- * Lynx 实现说明：基于原生 image 元素，加载 / 错误态经插槽定制；
- * 圆形与圆角经 border-radius 实现；enablePreview 时点击经
- * common/uni 兼容层调 uni.previewImage（宿主可注入，未注入时降级
- * warning，不崩溃）。
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
+ * - 结构对齐参考源：image（v-if 非错误态）+ loading / error 占位插槽；
+ * - @click → @tap 且 emits 声明转发 'tap'（CONVENTIONS §6/§14）；
+ * - enablePreview 的 uni.previewImage 经 common/uni 兼容层下发（宿主可注入，
+ *   未注入时降级 warning 不崩溃）；
+ * - rootStyle 对象语法（CONVENTIONS §19），radius 时按参考源补 overflow:hidden；
+ * - 图标兜底：内置集无 'image' / 'image-failloading' 字形，分别回退
+ *   'picture' / 'error'（同语义）；cssIcon / 图片链接模式不回退；
+ * - src 变化时复位加载态（本地修复：旧 src 失败后换有效 URL 不再卡在错误占位）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -14,6 +19,7 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { imgProps } from './types'
 import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
 import { uni } from '../../common/uni'
+import { resolveIcon } from '../../icons/registry'
 
 const props = defineProps(imgProps)
 const emit = defineEmits(['load', 'error', 'click', 'tap'])
@@ -29,6 +35,12 @@ watch(
   }
 )
 
+/** 图标名兜底：注册表解析不到时回退同语义字形 */
+function resolveIconName(name: string): string {
+  if (!name || name.includes('/')) return name
+  return resolveIcon(name) ? name : name === 'image-failloading' ? 'error' : 'picture'
+}
+
 const rootClass = computed(() => {
   const classes = ['wd-img']
   if (props.round) classes.push('is-round')
@@ -38,9 +50,12 @@ const rootClass = computed(() => {
 
 const rootStyle = computed(() => {
   const style: Record<string, string> = {}
-  if (isDef(props.width)) style.width = addUnit(props.width)
   if (isDef(props.height)) style.height = addUnit(props.height)
-  if (isDef(props.radius)) style['border-radius'] = addUnit(props.radius)
+  if (isDef(props.width)) style.width = addUnit(props.width)
+  if (isDef(props.radius)) {
+    style['border-radius'] = addUnit(props.radius)
+    style['overflow'] = 'hidden'
+  }
   return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
@@ -78,12 +93,12 @@ function handleClick(event: any) {
     />
     <view v-if="status === 'loading' && showLoading" class="wd-img__loading">
       <slot name="loading">
-        <wd-icon name="picture" custom-class="wd-img__loading-icon" />
+        <wd-icon :name="resolveIconName('image')" custom-class="wd-img__loading-icon" />
       </slot>
     </view>
     <view v-if="status === 'error' && showError" class="wd-img__error">
       <slot name="error">
-        <wd-icon name="error" custom-class="wd-img__error-icon" />
+        <wd-icon :name="resolveIconName('image-failloading')" custom-class="wd-img__error-icon" />
       </slot>
     </view>
   </view>

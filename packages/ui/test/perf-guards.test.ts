@@ -82,7 +82,7 @@ describe('性能专项守护', () => {
     // 留白 = (visibleItemCount - 1) / 2 * itemHeight = (3-1)/2*44 = 44
     expect(pads[0]!.getAttribute('style') || '', '上下留白应为 44px').toContain('height: 44px')
 
-    const indicator = container.querySelector('.wd-picker-view__indicator')
+    const indicator = container.querySelector('.wd-picker-view__roller')
     const indStyle = indicator?.getAttribute('style') || ''
     expect(indStyle, '指示带 top 应为 44px').toContain('top: 44px')
     expect(indStyle, '指示带高度应为 44px').toContain('height: 44px')

@@ -121,7 +121,7 @@ const safeAreaText = computed(() => {
         屏幕高度——滚动容器与内容等高即无可滚动范围（页面无法滚动）。
         链路：page 根(屏幕高，确定) > app-root(100%) > scroll-view.page(100%) > 内容。
         wd-config-provider 的根 view 现已内置 height:100%，此处显式声明使布局契约不依赖组件内部实现。
-        theme 受控切换：亮/暗令牌由 provider 根 view 的 wd-theme-* 类翻转（第 8 组验证）。 -->
+        theme 受控切换：亮/暗令牌由 provider 根 view 的 wot-theme-* 类翻转（第 8 组验证）。 -->
   <wd-config-provider :theme="themeMode" custom-class="app-root">
     <scroll-view scroll-orientation="vertical" class="page">
       <!-- ============ 头部：设备信息 ============ -->
@@ -298,7 +298,7 @@ const safeAreaText = computed(() => {
         <text class="card__hint">{{ testSections[6].hint }}</text>
         <view class="row">
           <wd-icon name="close" size="20" />
-          <wd-icon name="loading" size="24" color="#7F5CFF" />
+          <wd-icon name="loading" size="24" color="#1C64FD" />
           <wd-icon name="arrow-left-bold" size="20" />
           <wd-icon name="setting" size="20" color="#FF8800" />
         </view>
@@ -354,7 +354,7 @@ const safeAreaText = computed(() => {
         <wd-config-provider :theme="themeMode" :theme-vars="{ colorPrimary: '#FF8800' }">
           <view class="row">
             <wd-button type="primary" size="small">themeVars 覆盖主色</wd-button>
-            <text class="tag">--wd-color-primary 被覆盖为 #FF8800</text>
+            <text class="tag">var(--wot-primary-6) 被覆盖为 #FF8800</text>
           </view>
         </wd-config-provider>
         <!-- rpx 与 px 对比：Lynx 仅支持 px/% ，rpx 解析为 0（web-core convertLengthToPx） -->
@@ -407,7 +407,7 @@ const safeAreaText = computed(() => {
 .page {
   height: 100%;
   padding: 12px;
-  background-color: var(--wd-bg-page, #f5f5f7);
+  background-color: var(--wot-filled-bottom);
 }
 
 .header {
@@ -417,12 +417,12 @@ const safeAreaText = computed(() => {
 .header__title {
   font-size: 20px;
   font-weight: 600;
-  color: var(--wd-text-1, #171b26);
+  color: var(--wot-text-main);
 }
 
 .header__sub {
   font-size: 12px;
-  color: var(--wd-text-3, #667085);
+  color: var(--wot-text-auxiliary);
   margin-top: 2px;
 }
 
@@ -436,18 +436,18 @@ const safeAreaText = computed(() => {
 
 .header__device-item {
   font-size: 11px;
-  color: var(--wd-text-2, #4a5568);
-  background: var(--wd-bg-secondary, #eff1f5);
+  color: var(--wot-text-secondary);
+  background: var(--wot-filled-bottom);
   border-radius: 4px;
   padding: 2px 6px;
 }
 
 .card {
-  background: var(--wd-bg-container, #ffffff);
+  background: var(--wot-filled-oppo);
   border-radius: 12px;
   border-width: 1px;
   border-style: solid;
-  border-color: var(--wd-border-1, #e4e7ed);
+  border-color: var(--wot-border-main);
   padding: 12px;
   margin-bottom: 12px;
 }
@@ -455,12 +455,12 @@ const safeAreaText = computed(() => {
 .card__title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--wd-text-1, #171b26);
+  color: var(--wot-text-main);
 }
 
 .card__hint {
   font-size: 11px;
-  color: var(--wd-text-3, #8b93a3);
+  color: var(--wot-text-auxiliary);
   margin: 2px 0 8px;
 }
 
@@ -479,7 +479,7 @@ const safeAreaText = computed(() => {
 
 .tag {
   font-size: 11px;
-  color: var(--wd-text-2, #4a5568);
+  color: var(--wot-text-secondary);
 }
 
 .tab-panel {
@@ -494,12 +494,12 @@ const safeAreaText = computed(() => {
 .popup__title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--wd-text-1, #171b26);
+  color: var(--wot-text-main);
 }
 
 .popup__hint {
   font-size: 11px;
-  color: var(--wd-text-3, #8b93a3);
+  color: var(--wot-text-auxiliary);
   margin: 4px 0 12px;
 }
 
@@ -513,13 +513,13 @@ const safeAreaText = computed(() => {
 
 .overlay-box {
   padding: 20px;
-  background-color: var(--wd-bg-container, #ffffff);
+  background-color: var(--wot-filled-oppo);
   border-radius: 12px;
 }
 
 .overlay-box__text {
   font-size: 13px;
-  color: var(--wd-text-1, #171b26);
+  color: var(--wot-text-main);
 }
 
 .unit-box {
@@ -530,13 +530,13 @@ const safeAreaText = computed(() => {
 /* 375rpx：Lynx 不支持 rpx，宽度解析为 0（不可见）——适配结论验证 */
 .unit-box--rpx {
   width: 375rpx;
-  background: var(--wd-color-danger, #dc4038);
+  background: --wot-;
 }
 
 /* 187.5px：正常渲染的对照组 */
 .unit-box--px {
   width: 187.5px;
-  background: var(--wd-color-success, #00a06d);
+  background: var(--wot-success-main);
 }
 
 .progress__row {
@@ -548,31 +548,31 @@ const safeAreaText = computed(() => {
 
 .progress__count {
   font-size: 13px;
-  color: var(--wd-text-1, #171b26);
+  color: var(--wot-text-main);
 }
 
 .progress__reset {
   padding: 4px 10px;
   border-radius: 6px;
-  background: var(--wd-color-primary-bg, #edf1ff);
+  background: var(--wot-primary-1);
 }
 
 .progress__reset-text {
   font-size: 12px;
-  color: var(--wd-color-primary, #7f5cff);
+  color: var(--wot-primary-6);
 }
 
 .progress__bar {
   height: 6px;
   border-radius: 3px;
-  background: var(--wd-bg-secondary, #eff1f5);
+  background: var(--wot-filled-bottom);
   margin-top: 8px;
   overflow: hidden;
 }
 
 .progress__bar-inner {
   height: 100%;
-  background: var(--wd-color-primary, #7f5cff);
+  background: var(--wot-primary-6);
   border-radius: 3px;
 }
 </style>

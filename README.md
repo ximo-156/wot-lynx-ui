@@ -1,16 +1,16 @@
 # wot-lynx-ui
 
-> 基于 [Vue Lynx](https://vue.lynxjs.org) 的 [wot-ui](https://wot-ui.cn/) API 兼容组件库 —— 原生性能、API 兼容，视觉与设计令牌全新设计。
+> 基于 [Vue Lynx](https://vue.lynxjs.org) 的 [wot-ui](https://wot-ui.cn/) 严格对齐组件库 —— 原生性能、API 兼容，**视觉与设计令牌与 wot-ui 2.3.2 一致**。
 
-`wot-lynx-ui` 参照 wot-ui（uni-app 生态最流行的 Vue3 组件库之一）的 **API 与交互**，为 **Vue Lynx** 框架从零重写的组件库：使用 Lynx 的双线程架构与原生渲染管线，在 iOS / Android / HarmonyOS / Web 四端获得接近原生的性能。组件名、props、slots、events、BEM 类名与 wot-ui 对齐，迁移成本低；设计令牌为全新的 `--wd-*` 三层体系（色阶 → 语义 → 组件），亮/暗双主题开箱即用。
+`wot-lynx-ui` 参照 wot-ui（uni-app 生态最流行的 Vue3 组件库之一）的 **API、交互与视觉**，为 **Vue Lynx** 框架从零重写的组件库：使用 Lynx 的双线程架构与原生渲染管线，在 iOS / Android / HarmonyOS / Web 四端获得接近原生的性能。组件名、props、slots、events、BEM 类名与 wot-ui 对齐；设计令牌直接沿用 wot-ui 2.3.2 的 `--wot-*` 体系（原始刻度 → 亮暗语义 → 组件令牌），迁移成本低。
 
 ## 特性
 
-- **🎨 全新设计系统** — `--wd-*` 三层令牌体系（原始色阶/间距/圆角 → 亮暗语义令牌 → 组件令牌），小米 HyperOS 生命感美学 × 苹果 HIG 合成设计：品牌紫 `#7F5CFF`、Apple systemGray 中性阶梯、大圆角现代质感、base/elevated 暗色海拔；换肤只需覆盖 CSS 变量（设计依据见[设计美学研究](./docs/guide/design-research.md)）
+- **🎨 wot-ui 同源设计系统** — 与 wot-ui 2.3.2 完全一致的 `--wot-*` 令牌体系（原始色阶/间距/圆角 → 亮暗语义令牌 → 组件令牌）：品牌蓝 `#1C64FD`、coolgrey 中性阶梯、亮/暗双主题开箱即用；换肤只需覆盖 CSS 变量（令牌用法见[主题与设计令牌](./docs/guide/theme.md)）
 - **⚡ 原生性能** — Lynx 双线程架构：Vue 运行在后台线程，渲染在主线程；拖动/滑动等高频交互在后台线程以响应式实现，跟手时段禁用 CSS transition、落位时恢复；细线边框使用 `1ppx` 物理像素；图标使用原生字体渲染
 - **🧩 API 兼容** — 101 个 `wd-*` 组件的名称、props、slots、events 与 wot-ui 对齐，迁移成本低
 - **📦 开箱即用** — 发布预编译 CSS，消费者无需安装 Sass 工具链；组件以源码分发，由 Rspeedy 直接编译，天然支持 Tree-shaking
-- **🌗 主题系统** — CSS 变量驱动的亮色/暗色主题，`wd-config-provider` 全局配置
+- **🌗 主题系统** — 与 wot-ui 一致的 CSS 变量驱动亮色/暗色主题，`wd-config-provider` 全局配置（`wot-theme-light` / `wot-theme-dark`）
 - **🧰 命令式 API** — `useToast` / `useDialog` / `useNotify` / `useImagePreview` 等弹层命令式调用；`uni` 兼容层支持宿主经 `configureUniAdapter` 注入路由等能力
 - **🧪 可测试** — 基于 @lynx-js/testing-environment 的 Vue Lynx 双线程测试环境，27 个测试文件覆盖组件渲染、交互回归与构建约束
 
@@ -54,7 +54,7 @@ export default defineConfig({
 ```ts
 // main.ts
 import { createApp } from 'vue-lynx'
-import 'wot-lynx-ui/theme' // --wd-* 设计令牌
+import 'wot-lynx-ui/theme' // --wot-* 设计令牌（与 wot-ui 2.3.2 同源）
 import App from './App.vue'
 
 createApp(App).mount()

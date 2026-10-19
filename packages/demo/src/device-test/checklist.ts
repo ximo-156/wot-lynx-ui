@@ -28,7 +28,7 @@ export const testSections: TestSection[] = [
     title: 'Button 按钮',
     hint: '验证类型/变体/按压缩态/禁用/加载态',
     items: [
-      { id: 'button-types', name: '五种类型渲染', expect: '主要/成功/危险/警告/信息 按钮使用 --wd-* 令牌色' },
+      { id: 'button-types', name: '五种类型渲染', expect: '主要/成功/危险/警告/信息 按钮使用 --wot-* 令牌色' },
       { id: 'button-variants', name: '六种变体渲染', expect: '实心/朴素/虚线/柔和/淡雅/文字 变体样式正确' },
       { id: 'button-active', name: '按压缩态（:active）', expect: '手指按下时背景色即时变深，松开恢复，无 JS 延迟感' },
       { id: 'button-disabled', name: '禁用态', expect: '禁用按钮不可点击，无按压反馈' },

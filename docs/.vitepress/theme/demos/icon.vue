@@ -41,7 +41,7 @@ const icons = ['setting', 'picture', 'film', 'file', 'home', 'camera', 'user', '
         <view class="wd-h5-demo__row" style="gap: 14px">
           <view v-for="name in icons" :key="name" style="align-items: center; gap: 4px; width: 56px">
             <wd-icon :name="name" :size="22" />
-            <text style="font-size: 10px; color: var(--wd-text-3)">{{ name }}</text>
+            <text style="font-size: 10px; color: var(var(--wot-text-auxiliary))">{{ name }}</text>
           </view>
         </view>
       </view>

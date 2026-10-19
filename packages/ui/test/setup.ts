@@ -8,7 +8,11 @@
 import { JSDOM } from 'jsdom'
 import { LynxTestingEnv } from '@lynx-js/testing-environment'
 
-const jsdom = new JSDOM('<!DOCTYPE html><html><body></body></html>')
+// url 必须给 http(s) origin：about:blank 是不透明 origin，jsdom 的
+// localStorage getter 会抛 SecurityError；断言失败时 vitest 序列化 DOM
+// 元素会走到 window，把真正的断言信息掩盖成 "localStorage is not
+// available for opaque origins"。
+const jsdom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http://localhost/' })
 const lynxTestingEnv = new LynxTestingEnv(jsdom)
 
 ;(globalThis as any).lynxTestingEnv = lynxTestingEnv

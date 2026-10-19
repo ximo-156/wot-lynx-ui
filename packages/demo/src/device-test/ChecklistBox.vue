@@ -44,7 +44,7 @@ const emit = defineEmits<{
   border-radius: 4px;
   border-width: 1px;
   border-style: solid;
-  border-color: var(--wd-border-2, #b4bac7);
+  border-color: var(--wot-border-light);
   margin-top: 2px;
   margin-right: 8px;
   align-items: center;
@@ -52,8 +52,8 @@ const emit = defineEmits<{
 }
 
 .checklist__box--on {
-  background: var(--wd-color-primary, #7f5cff);
-  border-color: var(--wd-color-primary, #7f5cff);
+  background: var(--wot-primary-6);
+  border-color: var(--wot-primary-6);
 }
 
 .checklist__box-tick {
@@ -67,12 +67,12 @@ const emit = defineEmits<{
 
 .checklist__name {
   font-size: 13px;
-  color: var(--wd-text-1, #171b26);
+  color: var(--wot-text-main);
 }
 
 .checklist__expect {
   font-size: 11px;
-  color: var(--wd-text-3, #8b93a3);
+  color: var(--wot-text-auxiliary);
   margin-top: 1px;
 }
 </style>

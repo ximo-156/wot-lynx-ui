@@ -42,7 +42,7 @@ function open(pos: 'center' | 'top' | 'bottom' | 'left' | 'right') {
     </view>
 
     <wd-popup v-model="visible" :position="position" round closable custom-style="padding: 24px; min-width: 60%">
-      <text style="font-size: 14px; color: var(--wd-text-1)">position: {{ position }}</text>
+      <text style="font-size: 14px; color: var(var(--wot-text-main))">position: {{ position }}</text>
     </wd-popup>
   </scroll-view>
 </template>

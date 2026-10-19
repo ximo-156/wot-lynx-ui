@@ -13,7 +13,7 @@ export const iconProps = {
    */
   name: makeStringProp(''),
   /**
-   * 图标颜色（svg content 不继承 CSS 变量，未传时按主题取 --wd-icon-1 对应值）
+   * 图标颜色（svg content 不继承 CSS 变量，未传时由 CSS 类承担；SVG 集经 JS 注入主题默认色）
    * 类型: string
    */
   color: String,

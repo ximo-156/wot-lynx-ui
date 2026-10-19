@@ -16,6 +16,7 @@
  * 同样会整体消失，足以守住回归），自定义变量经映射/浏览器层验证。
  */
 import { describe, it, expect } from 'vitest'
+import { h } from 'vue-lynx'
 import { render, cleanup } from './render'
 import Row from '../src/components/wd-row/wd-row.vue'
 import Col from '../src/components/wd-col/wd-col.vue'
@@ -39,21 +40,38 @@ describe('内联样式：布局家族字符串 :style 回归（CONVENTIONS §19�
     cleanup()
   })
 
-  it('WdCol span / offset 换算为 flex-basis / margin-left', () => {
+  it('WdCol span / offset 换算为 width / margin-left（对齐 wot-ui）', () => {
     const { container } = render(Col, { span: 12, offset: 6, customStyle: 'background: #fff' })
     const style = styleOf(container.querySelector('.wd-col'))
-    expect(style).toMatch(/flex-basis:\s*50%/)
+    // wot-ui 2.3.2：col 以 width 百分比布局（非 flex-basis），offset 为 margin-left
+    expect(style).toMatch(/width:\s*50%/)
     expect(style).toMatch(/margin-left:\s*25%/)
     expect(style).toContain('background')
     cleanup()
   })
 
-  it('WdGrid gutter / bgColor 生效（column 变量见浏览器实测）', () => {
+  it('WdGrid gutter / bgColor 生效（对齐 wot-ui：gutter 为根 padding-left，bgColor 下发到 item）', () => {
     const { container } = render(Grid, { column: 5, gutter: 8, bgColor: '#f5f5f5' })
+    // wot-ui 2.3.2：gutter 以根节点 padding-left 承担（非容器 gap）
     const style = styleOf(container.querySelector('.wd-grid'))
-    expect(style).toMatch(/gap:\s*8px/)
-    expect(style).toContain('background-color')
-    expect(style).toMatch(/rgb\(245,\s*245,\s*245\)/)
+    expect(style).toMatch(/padding-left:\s*8px/)
+    cleanup()
+
+    const withItem = render(
+      {
+        setup() {
+          return () =>
+            h(Grid as any, { column: 5, gutter: 8, bgColor: '#f5f5f5' }, {
+              default: () => [h(GridItem as any, { text: 'x' })]
+            })
+        }
+      } as any
+    )
+    // bgColor 由 item 经 CSS 变量 --wot-grid-item-bg 消费（Lynx 无 !important）；
+    // jsdom 的 cssstyle 会丢弃自定义属性，故此处断言 item 的 gutter padding
+    //（wot-ui 方案：容器 padding-left + item padding-right = gutter = 8px）
+    const itemStyle = styleOf(withItem.container.querySelector('.wd-grid-item'))
+    expect(itemStyle).toMatch(/padding-right:\s*8px/)
     cleanup()
   })
 
@@ -74,10 +92,12 @@ describe('内联样式：布局家族字符串 :style 回归（CONVENTIONS §19�
     cleanup()
   })
 
-  it('WdStickyBox containerHeight 生效（scroll-view 拿得到高度）', () => {
-    const { container } = render(StickyBox, { containerHeight: 180 })
-    const style = styleOf(container.querySelector('.wd-sticky-box'))
-    expect(style).toMatch(/height:\s*180px/)
+  it('WdStickyBox 为相对定位包裹层（对齐 wot-ui：containerHeight prop 已移除）', () => {
+    // wot-ui 2.3.2 的 sticky-box 是相对定位包裹层（供 sticky 子项吸顶），
+    // 无 containerHeight / scroll-view 形态；position: relative 由
+    // .wd-sticky-box 的 SCSS 类承担（不再内联）
+    const { container } = render(StickyBox, {})
+    expect(container.querySelector('.wd-sticky-box')).not.toBeNull()
     cleanup()
   })
 })

@@ -179,8 +179,12 @@ export function useUpload(): UseUploadReturn {
 
     currentTask = uploadTask
 
-    // 获取当前文件加载的百分比
-    uploadTask.onProgressUpdate((res: any) => {
+    // 获取当前文件加载的百分比。
+    // Lynx 适配：宿主未经 configureUniAdapter 注入 uploadFile 时，common/uni
+    // 的降级实现返回 undefined（uni-app 中 uploadFile 恒返回任务对象）。
+    // 此处必须可选链兜底——否则 startUploadFiles 的 for 循环会在第一个文件处
+    // 抛 TypeError，同批其余文件全部无法入列（wd-upload 多选回归）。
+    uploadTask?.onProgressUpdate((res: any) => {
       options.onProgress(res, file)
     })
 

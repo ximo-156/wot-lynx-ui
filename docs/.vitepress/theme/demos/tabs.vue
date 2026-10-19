@@ -16,13 +16,13 @@ const value = ref(0)
       <view class="wd-h5-demo__panel">
         <wd-tabs v-model="value">
           <wd-tab title="标签一">
-            <text style="font-size: 13px; color: var(--wd-text-2)">标签一的内容</text>
+            <text style="font-size: 13px; color: var(var(--wot-text-secondary))">标签一的内容</text>
           </wd-tab>
           <wd-tab title="标签二">
-            <text style="font-size: 13px; color: var(--wd-text-2)">标签二的内容</text>
+            <text style="font-size: 13px; color: var(var(--wot-text-secondary))">标签二的内容</text>
           </wd-tab>
           <wd-tab title="标签三">
-            <text style="font-size: 13px; color: var(--wd-text-2)">标签三的内容</text>
+            <text style="font-size: 13px; color: var(var(--wot-text-secondary))">标签三的内容</text>
           </wd-tab>
         </wd-tabs>
         <text class="wd-h5-demo__panel-label">当前索引：{{ value }}</text>

@@ -54,13 +54,15 @@ describe('Tier 2b 选择器 / 键盘 / 日历', () => {
       cleanup()
     })
 
-    it('WdCalendarView 生成 42 格月历', () => {
+    it('WdCalendarView 按月面板渲染日期格（对齐 wot-ui 结构）', () => {
       const { container } = render(CalendarView, {
         modelValue: Date.now(),
         type: 'date'
       })
-      expect(container.querySelectorAll('.wd-calendar-view__day').length).toBe(42)
-      expect(container.querySelectorAll('.wd-calendar-view__week').length).toBe(7)
+      // wot-ui 2.3.2 结构：月面板内 .wd-month > .wd-month__days > .wd-month__day，
+      // 默认范围约 13 个月（当前月 ±6），不再有 42 格单月与 week 行概念
+      expect(container.querySelectorAll('.wd-month').length).toBeGreaterThan(1)
+      expect(container.querySelectorAll('.wd-month__day').length).toBeGreaterThan(28)
       cleanup()
     })
 
@@ -121,12 +123,13 @@ describe('Tier 2b 选择器 / 键盘 / 日历', () => {
     })
 
     it('WdUpload 上传按钮与 limit', () => {
+      // wot-ui 2.3.2 结构：触发按钮为 .wd-upload__evoke；达 limit 时隐藏
       const { container } = render(Upload, { limit: 2, showLimitNum: true })
-      expect(container.querySelector('.wd-upload__upload')).not.toBeNull()
+      expect(container.querySelector('.wd-upload__evoke')).not.toBeNull()
       cleanup()
 
       const full = render(Upload, { fileList: [{ uid: 1, url: 'x', name: 'a' }, { uid: 2, url: 'y', name: 'b' }] as any, limit: 2 })
-      expect(full.container.querySelector('.wd-upload__upload')).toBeNull()
+      expect(full.container.querySelector('.wd-upload__evoke')).toBeNull()
       cleanup()
     })
 

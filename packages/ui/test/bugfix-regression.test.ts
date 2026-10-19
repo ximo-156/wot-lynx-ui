@@ -73,8 +73,10 @@ describe('修复清单回归', () => {
   })
 
   it('#3 WdSignature 页脚按钮走语言包 key（无裸 key）', () => {
-    const { container } = render(Signature, {})
-    const texts = Array.from(container.querySelectorAll('.wd-signature__footer-button')).map((el) => el.textContent)
+    // wot-ui 结构：页脚按钮为 wd-button + custom-class="wd-signature__button"；
+    // 撤销/恢复仅在 enableHistory 为真时渲染（默认 false）
+    const { container } = render(Signature, { enableHistory: true } as any)
+    const texts = Array.from(container.querySelectorAll('.wd-signature__button')).map((el) => el.textContent?.trim())
     expect(texts).toEqual(['撤销', '恢复', '清空', '确认'])
     cleanup()
   })
@@ -109,8 +111,10 @@ describe('修复清单回归', () => {
     cleanup()
   })
 
-  it('#7 WdSearch focus=true 渲染 input 并聚焦', () => {
+  it('#7 WdSearch focus=true 渲染 input 并聚焦', async () => {
+    // wot-ui 的聚焦展开经 onMounted → closeCover → pause(100) 异步驱动
     const { container } = render(Search, { focus: true } as any)
+    await pause(150)
     expect(container.querySelector('.wd-search__input')).not.toBeNull()
     cleanup()
   })
@@ -157,19 +161,33 @@ describe('修复清单回归', () => {
     cleanup()
   })
 
-  it('#12 WdInputNumber allowNull 空值时加减均禁用，普通值可步进', () => {
+  it('#12 WdInputNumber 禁用态由 min/max 边界决定（对齐 wot-ui）', () => {
+    // wot-ui 2.3.2 BEM：加减按钮为 .wd-input-number__action.wd-input-number__sub / --add。
+    // 禁用逻辑（minDisabled/maxDisabled）：val <= min / val >= max 时禁用；
+    // allowNull + 空值时 toNumber 返回 NaN，比较为 false——wot-ui 不禁用（与旧本地行为不同）。
     const empty = render(InputNumber, { modelValue: '', allowNull: true, min: 0, max: 10 } as any)
-    expect(empty.container.querySelector('.wd-input-number__action--sub')!.classList.contains('is-disabled')).toBe(true)
-    expect(empty.container.querySelector('.wd-input-number__action--add')!.classList.contains('is-disabled')).toBe(true)
+    expect(empty.container.querySelector('.wd-input-number__sub')!.classList.contains('is-disabled')).toBe(false)
+    expect(empty.container.querySelector('.wd-input-number__add')!.classList.contains('is-disabled')).toBe(false)
+    cleanup()
+
+    // 到达边界：min 处减号禁用、max 处加号禁用
+    const atMin = render(InputNumber, { modelValue: 0, min: 0, max: 10 } as any)
+    expect(atMin.container.querySelector('.wd-input-number__sub')!.classList.contains('is-disabled')).toBe(true)
+    expect(atMin.container.querySelector('.wd-input-number__add')!.classList.contains('is-disabled')).toBe(false)
+    cleanup()
+
+    const atMax = render(InputNumber, { modelValue: 10, min: 0, max: 10 } as any)
+    expect(atMax.container.querySelector('.wd-input-number__add')!.classList.contains('is-disabled')).toBe(true)
+    expect(atMax.container.querySelector('.wd-input-number__sub')!.classList.contains('is-disabled')).toBe(false)
     cleanup()
 
     const normal = render(InputNumber, { modelValue: 5, min: 0, max: 10 } as any)
-    expect(normal.container.querySelector('.wd-input-number__action--sub')!.classList.contains('is-disabled')).toBe(false)
-    expect(normal.container.querySelector('.wd-input-number__action--add')!.classList.contains('is-disabled')).toBe(false)
+    expect(normal.container.querySelector('.wd-input-number__sub')!.classList.contains('is-disabled')).toBe(false)
+    expect(normal.container.querySelector('.wd-input-number__add')!.classList.contains('is-disabled')).toBe(false)
     cleanup()
   })
 
-  it('#13 WdUpload beforeUpload 逐文件调用，false 只移除该文件', async () => {
+  it('#13 WdUpload beforeUpload 接收 { files, fileList }，返回 false 阻止整批入列', async () => {
     configureUniAdapter({
       chooseMedia: (opts: any) => {
         opts.success({
@@ -181,7 +199,9 @@ describe('修复清单回归', () => {
         })
       }
     })
-    const seen: string[] = []
+    // wot-ui 2.3.2 契约：beforeUpload({ files, fileList }) 为**整批**钩子，
+    // 返回 false（或 reject）时本批文件全部不入列（非逐文件过滤）
+    const payloads: any[] = []
     const fileLists: any[] = []
     const { container } = render(
       {
@@ -189,9 +209,9 @@ describe('修复清单回归', () => {
           return () =>
             h(Upload, {
               multiple: true,
-              beforeUpload: (file: any) => {
-                seen.push(file.url)
-                return file.url !== 'b.png'
+              beforeUpload: (payload: any) => {
+                payloads.push(payload)
+                return false
               },
               'onUpdate:fileList': (list: any) => fileLists.push(list)
             })
@@ -199,11 +219,44 @@ describe('修复清单回归', () => {
       } as any
     )
     await pause(50)
-    fireEvent.tap(container.querySelector('.wd-upload__upload')!)
+    fireEvent.tap(container.querySelector('.wd-upload__evoke')!)
     await pause(100)
-    expect(seen).toEqual(['a.png', 'b.png', 'c.png'])
-    expect(fileLists.length).toBeGreaterThan(0)
-    expect(fileLists[fileLists.length - 1].map((f: any) => f.url).sort()).toEqual(['a.png', 'c.png'])
+    expect(payloads).toHaveLength(1)
+    expect(payloads[0].files.map((f: any) => f.path)).toEqual(['a.png', 'b.png', 'c.png'])
+    expect(payloads[0].fileList).toEqual([])
+    // 返回 false：整批被拦截，fileList 保持为空
+    expect(fileLists.every((l) => l.length === 0)).toBe(true)
+    cleanup()
+  })
+
+  it('#13b WdUpload beforeUpload 返回 true 时整批入列', async () => {
+    configureUniAdapter({
+      chooseMedia: (opts: any) => {
+        opts.success({
+          tempFiles: [
+            { fileType: 'image', tempFilePath: 'a.png', size: 10 },
+            { fileType: 'image', tempFilePath: 'b.png', size: 10 }
+          ]
+        })
+      }
+    })
+    const fileLists: any[] = []
+    const { container } = render(
+      {
+        setup() {
+          return () =>
+            h(Upload, {
+              multiple: true,
+              beforeUpload: () => true,
+              'onUpdate:fileList': (list: any) => fileLists.push(list)
+            })
+      }
+      } as any
+    )
+    await pause(50)
+    fireEvent.tap(container.querySelector('.wd-upload__evoke')!)
+    await pause(100)
+    expect(fileLists[fileLists.length - 1].map((f: any) => f.url).sort()).toEqual(['a.png', 'b.png'])
     cleanup()
   })
 })
