@@ -210,7 +210,12 @@ defineExpose<SelectPickerExpose>({
           <view v-if="loading" class="wd-select-picker__loading">
             <wd-loading :color="loadingColor" />
           </view>
-          <block v-else>
+          <!-- 无渲染占位：uni-app 的 block 标签不是 Lynx 内置元素，编译后会走
+               __CreateElement('block')，真机报 603 sub_code 60301
+               "Can't find ui tag" 并崩掉整张卡片。这里用 Vue 的 template v-else
+               （编译为 Fragment，不产生元素）。注释中禁止出现尖括号形式的
+               template 字面量：会干扰 tag-transform loader 的模板块扫描。 -->
+          <template v-else>
             <!-- 多选 -->
             <view v-if="isCheckbox" class="wd-select-picker__checkbox">
               <wd-checkbox-group
@@ -240,7 +245,7 @@ defineExpose<SelectPickerExpose>({
                 </view>
               </wd-radio-group>
             </view>
-          </block>
+          </template>
         </scroll-view>
         <view v-if="showConfirm" class="wd-select-picker__footer">
           <wd-button type="primary" block @tap="onConfirm">

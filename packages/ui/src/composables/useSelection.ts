@@ -1,7 +1,8 @@
 import { computed, ref, watch, type Ref } from 'vue-lynx'
 import { deepClone, getType, isArray, isDef, isObj } from '../common/util'
 import type { Numeric } from '../common/props'
-import type { PickerOption } from '../components/wd-picker-view/types'
+// 类型来自 L2（common），不得反向 import 组件（INV-1 / ARCHITECTURE §2.3）
+import type { PickerOption } from '../common/picker'
 
 /**
  * 列数据格式化：统一为二维 PickerOption 数组。
@@ -60,16 +61,21 @@ export function useSelection(options: UseSelectionOptions) {
   const formatColumns: Ref<PickerOption[][]> = ref<PickerOption[][]>([])
   const selectedIndex = ref<number[]>([])
 
-  const selectedOptions = computed(() => selectedIndex.value.map((row, col) => formatColumns.value[col][row]))
+  // 取值一律经可选链：columns 缩减 / 清空时 selectedIndex 可能短暂残留旧下标，
+  // 直接两段下标会在渲染或 expose 取值时抛 TypeError（真机整卡崩溃）。
+  const selectedOptions = computed(() =>
+    selectedIndex.value.map((row, col) => formatColumns.value[col]?.[row] ?? ({} as PickerOption))
+  )
 
   const selectedValues = computed(() =>
-    selectedIndex.value.map((row, col) => formatColumns.value[col][row][valueKey] as Numeric)
+    selectedIndex.value.map((row, col) => formatColumns.value[col]?.[row]?.[valueKey] as Numeric)
   )
 
   const selectedLabels = computed(() =>
-    selectedIndex.value.map((row, col) =>
-      String(isDef(formatColumns.value[col][row][labelKey]) ? formatColumns.value[col][row][labelKey] : '')
-    )
+    selectedIndex.value.map((row, col) => {
+      const option = formatColumns.value[col]?.[row]
+      return String(isDef(option?.[labelKey]) ? option[labelKey] : '')
+    })
   )
 
   /** 根据 value 选中 */

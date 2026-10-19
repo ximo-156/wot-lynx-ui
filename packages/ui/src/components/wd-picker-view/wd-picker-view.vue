@@ -47,6 +47,23 @@ const {
   cascade: props.cascade
 })
 
+/**
+ * 列数据格式化安全出口。
+ *
+ * `formatColumnsData` 对混用对象/原始值、缺少 valueKey/labelKey 的脏数据会
+ * throw（对外 API 的既有契约）。但该调用发生在 watch 回调里，真机上抛错会
+ * 变成未捕获异常并崩掉整张卡片。这里就地接住并降级为空列，保持页面可用。
+ */
+function safeResetColumns(columns: any) {
+  try {
+    resetColumns(columns)
+  } catch (error) {
+    console.error('[wd-picker-view] columns 数据不合法，已降级为空列（页面保持可用）：', error)
+    formatColumns.value = []
+    selectedIndex.value = []
+  }
+}
+
 watch(
   [() => props.modelValue, () => props.columns, () => props.cascade],
   (newValue, oldValue) => {
@@ -54,7 +71,7 @@ watch(
     const [, oldColumns] = oldValue
 
     if (!isEqual(oldColumns, newColumns)) {
-      resetColumns(newColumns)
+      safeResetColumns(newColumns)
       if (newCascade && isDef(newModelValue) && (newModelValue as any[]).length > 0 && (newColumns as any[]).length > 0) {
         formatColumns.value = buildCascadeColumns(newColumns as PickerOption[], newModelValue as any[])
       }

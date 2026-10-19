@@ -15,11 +15,13 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { gridItemProps } from './types'
 import { uni } from '../../common/uni'
 import { GRID_CONFIG_KEY } from '../wd-grid/types'
+import { useAlive } from '../../composables/useAlive'
 import { filterStyle, getRect, parseStyle, uuid } from '../../common/util'
 
 const props = defineProps(gridItemProps)
 const slots = useSlots()
 const emit = defineEmits(['click', 'tap'])
+const isAlive = useAlive()
 
 /** 父级 grid 下发的 square/border/clickable 配置（无父级 grid 时全 false） */
 const gridConfig = inject(
@@ -51,6 +53,8 @@ onMounted(() => {
   if (!gridConfig.value.square) return
   getRect(`.${instanceId}`)
     .then((rect) => {
+      // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
+      if (!isAlive()) return
       if (rect && rect.width) squareHeight.value = rect.width
     })
     .catch(() => {})

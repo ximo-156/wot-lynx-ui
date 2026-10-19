@@ -231,6 +231,37 @@ const RULES = [
       '条件写样式（内联形式）：同上，省略键不会清除旧内联值。改用 resolveStyle + defineStyleKeys'
   },
 
+  // ================= §7 依赖方向（INV-1） =================
+  //
+  // ARCHITECTURE §2.3 / §3.1：依赖只能向上（components → composables → common → styles），
+  // 下层不得 import 上层。历史上 `useSelection`（L3）曾 import
+  // `components/wd-picker-view/types`（L4），把组件契约耦合进组合式层，
+  // 导致 picker 类型无法在非组件场景复用。本规则把「文档约定」升级为机器约束。
+  //
+  // 只检查跨层 import：同层（如 common 内部）与相对工具模块不受影响。
+  {
+    id: 'dep-direction',
+    ref: '§7',
+    severity: 'error',
+    ext: ['.ts', '.vue'],
+    dirs: ['packages/ui/src/composables'],
+    kind: 'line',
+    pattern: /^\s*(?:import|export)\b[^\n]*\bfrom\s+['"][^'"]*\/components\//,
+    message:
+      '依赖方向反转：composables（L3）不得 import 组件（L4）。共享契约请下沉到 common（L2），再由组件侧 re-export（INV-1 / ARCHITECTURE §3.1）'
+  },
+  {
+    id: 'dep-direction',
+    ref: '§7',
+    severity: 'error',
+    ext: ['.ts', '.vue'],
+    dirs: ['packages/ui/src/common', 'packages/ui/src/icons', 'packages/ui/src/locale'],
+    kind: 'line',
+    pattern: /^\s*(?:import|export)\b[^\n]*\bfrom\s+['"][^'"]*\/(?:components|composables)\//,
+    message:
+      '依赖方向反转：基础能力层（L2）不得 import 组件（L4）或组合式（L3）。需要共享的契约请留在本层（INV-1 / ARCHITECTURE §3.1）'
+  },
+
   // ================= §5 SCSS =================
   {
     id: 'scss/no-pseudo-element',

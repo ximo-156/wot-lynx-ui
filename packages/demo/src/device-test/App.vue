@@ -384,8 +384,12 @@ const safeAreaText = computed(() => {
         </view>
       </wd-popup>
       <wd-overlay :show="overlayVisible" @click="overlayVisible = false">
-        <view class="overlay-box">
-          <text class="overlay-box__text">遮罩内容（点击任意处关闭）</text>
+        <!-- 内容不可用 position: fixed：fixed 节点被引擎提升到页面根节点后
+             脱离遮罩子树，遮罩隐藏时仍常驻、tap 也不再冒泡到遮罩（CONVENTIONS §9） -->
+        <view class="overlay-center">
+          <view class="overlay-box">
+            <text class="overlay-box__text">遮罩内容（点击任意处关闭）</text>
+          </view>
         </view>
       </wd-overlay>
       <wd-dialog ref="dialogRef" selector="device-test-dialog" />
@@ -499,11 +503,15 @@ const safeAreaText = computed(() => {
   margin: 4px 0 12px;
 }
 
+.overlay-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .overlay-box {
-  position: fixed;
-  left: 50%;
-  top: 40%;
-  transform: translate(-50%, -50%);
   padding: 20px;
   background-color: var(--wd-bg-container, #ffffff);
   border-radius: 12px;

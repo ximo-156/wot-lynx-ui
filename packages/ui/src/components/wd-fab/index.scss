@@ -42,6 +42,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* 菜单项之间留出间距：此前相邻 wd-button 直接贴在一起（视觉上像一整块） */
+    gap: var(--wd-space-2);
     margin-bottom: var(--wd-space-2);
   }
 

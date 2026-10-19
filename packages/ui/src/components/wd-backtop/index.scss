@@ -6,8 +6,13 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  /* 尺寸按内容自适应：固定 40×40 时带 text 的场景（图标 + 文案竖排）
+     会溢出方框（2026-10-19 文档 H5 预览实测「按钮文字」溢出到框外），
+     故只保底 40×40，其余交给内容撑开 */
+  min-width: 40px;
+  min-height: 40px;
+  padding: 4px 6px;
+  box-sizing: border-box;
   background-color: var(--wd-bg-container);
   border-width: 1px;
   border-style: solid;

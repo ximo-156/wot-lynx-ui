@@ -2,9 +2,10 @@ import type { ExtractPropTypes } from 'vue-lynx'
 import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
 import type { Numeric } from '../../common/props'
 
-export type PickerOption = {
-  [key: string]: any
-}
+// 类型下沉到 L2：composables（L3）需要它，不能反向依赖组件（INV-1）。
+// 这里 re-export 保持既有引用路径不变。
+export type { PickerOption } from '../../common/picker'
+import type { PickerOption } from '../../common/picker'
 
 export type ColumnItem = PickerOption
 

@@ -71,4 +71,59 @@ const tag = 'wd-button'
     )
     expect(notVue).toBe(source)
   })
+
+  it('嵌套 template / 注释中的 template 字面量不影响块定位', () => {
+    const source = `<!--
+<template>
+  <wd-not-a-real-tag />
+</template>
+-->
+<script setup lang="ts">
+const tag = 'wd-button'
+</script>
+
+<template>
+  <view>
+    <!-- 注释里的 template 字面量不应打乱深度配对 -->
+    <template v-else>
+      <wd-button>按钮</wd-button>
+    </template>
+    <wd-search v-model="keyword" />
+  </view>
+</template>
+
+<style>
+.wd-button { color: red; }
+</style>
+`
+    const out = transform(source)
+    // 嵌套 template 内部的组件仍被转换
+    expect(out).toContain('<WdButton>按钮</WdButton>')
+    // 带 v-model 的组件必须被转换：否则编译器会按原生元素校验 v-model 而失败
+    expect(out).toContain('<WdSearch v-model="keyword" />')
+    // 模板块内不得残留原始 wd-* 标签（顶层注释里的示例字面量不在改写范围）
+    expect(out).not.toContain('<wd-button')
+    expect(out).not.toContain('</wd-button')
+    expect(out).not.toContain('<wd-search')
+    // 嵌套 template 的闭合标签保持原样（不是组件）
+    expect(out).toContain('<template v-else>')
+    expect(out).toContain('</template>')
+    // 模板块之外的 script / style 内容不被改写
+    expect(out).toContain(`const tag = 'wd-button'`)
+    expect(out).toContain('.wd-button { color: red; }')
+  })
+
+  it('顶层 template 未闭合时构建期报错（而不是静默产出 603 崩溃包）', () => {
+    expect(() => transform(`<template>
+  <view><wd-button /></view>
+`)).toThrow(/未找到配对的/)
+  })
+
+  it('无法识别的 wd-* 标签残留时构建期报错', () => {
+    expect(() => transform(`<template>
+  <wd-
+button />
+</template>
+`)).toThrow(/仍有未转换的 wd-\* 标签/)
+  })
 })

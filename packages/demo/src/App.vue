@@ -139,6 +139,8 @@ function cycleLoadmoreState() {
 // Fab 展开状态（v-model:active）
 const fabActive = ref(false)
 const fabActiveLeft = ref(false)
+// 悬浮按钮是否挂载：fixed 节点会一直浮在整页之上，演示页默认不渲染
+const fabDemoVisible = ref(false)
 
 // ---- 展示 / 布局类组件 Demo 状态（Tier 5 补齐） ----
 // Skeleton 骨架屏
@@ -874,19 +876,25 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">Fab 悬浮按钮</text>
         <view class="demo-panel">
           <view class="demo-row">
+            <wd-button size="small" @tap="fabDemoVisible = !fabDemoVisible">{{ fabDemoVisible ? '隐藏悬浮按钮' : '显示悬浮按钮' }}</wd-button>
             <wd-button size="small" @tap="fabActive = true">展开</wd-button>
             <wd-button size="small" @tap="fabActive = false">收起</wd-button>
             <text class="demo-tag">active: {{ fabActive }}</text>
           </view>
           <text class="demo-panel__label">右下角向上展开（默认）；左上角向下展开（position="left-top" + direction="bottom"）</text>
+          <!-- 悬浮按钮是 position: fixed，会固定悬浮在整页之上；演示页默认不挂载，
+               避免它压住其它章节的内容（需要时点「显示悬浮按钮」） -->
+          <text class="demo-panel__label">当前：{{ fabDemoVisible ? '已显示（页面右下 / 左上各一枚）' : '未显示' }}</text>
         </view>
-        <wd-fab v-model:active="fabActive" @click="() => console.log('[demo] fab click')">
-          <wd-button size="small" @tap="() => console.log('[demo] fab 菜单一')">菜单一</wd-button>
-          <wd-button size="small" @tap="() => console.log('[demo] fab 菜单二')">菜单二</wd-button>
-        </wd-fab>
-        <wd-fab v-model:active="fabActiveLeft" position="left-top" direction="bottom" type="warning" inactive-icon="edit">
-          <wd-button size="small" type="warning" @tap="() => console.log('[demo] fab 左上菜单')">编辑</wd-button>
-        </wd-fab>
+        <view v-if="fabDemoVisible">
+          <wd-fab v-model:active="fabActive" @click="() => console.log('[demo] fab click')">
+            <wd-button size="small" @tap="() => console.log('[demo] fab 菜单一')">菜单一</wd-button>
+            <wd-button size="small" @tap="() => console.log('[demo] fab 菜单二')">菜单二</wd-button>
+          </wd-fab>
+          <wd-fab v-model:active="fabActiveLeft" position="left-top" direction="bottom" type="warning" inactive-icon="edit">
+            <wd-button size="small" type="warning" @tap="() => console.log('[demo] fab 左上菜单')">编辑</wd-button>
+          </wd-fab>
+        </view>
       </view>
 
       <!-- 展示 / 布局类组件（Tier 5 补齐） -->
@@ -1485,8 +1493,13 @@ const portalBarVisible = ref(false)
         </view>
       </wd-popup>
       <wd-overlay :show="overlayVisible" @click="overlayVisible = false">
-        <view style="position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); padding: 20px; background-color: #ffffff; border-radius: 12px">
-          <text class="demo-panel__label">遮罩内容（点击任意处关闭）</text>
+        <!-- 遮罩内容不能用 position: fixed：Lynx 会把 fixed 节点提升到页面根节点，
+             它就不再是遮罩的子节点——遮罩隐藏时它照样常驻、点击也不会冒泡到遮罩
+             （2026-10-19 演示页实测「点任意处关闭」失效）。这里用撑满 + flex 居中。 -->
+        <view class="overlay-center">
+          <view class="overlay-box">
+            <text class="demo-panel__label">遮罩内容（点击任意处关闭）</text>
+          </view>
         </view>
       </wd-overlay>
       <wd-tour v-model="tourVisible" :steps="tourSteps" @finish="() => console.log('[demo] tour finish')" />
@@ -1586,5 +1599,20 @@ const portalBarVisible = ref(false)
 .demo-transition-box__text {
   color: #ffffff;
   font-size: 13px;
+}
+
+/* Overlay 演示：撑满遮罩 + flex 居中（禁止对内容用 position: fixed） */
+.overlay-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-box {
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 12px;
 }
 </style>

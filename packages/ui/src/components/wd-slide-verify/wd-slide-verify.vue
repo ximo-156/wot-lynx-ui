@@ -17,10 +17,12 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { slideVerifyProps, type SlideVerifyEmits } from './types'
 import { useTouch } from '../../composables/useTouch'
 import { useTranslate } from '../../composables/useTranslate'
+import { useAlive } from '../../composables/useAlive'
 import { getRect, uuid, filterStyle, parseStyle } from '../../common/util'
 
 const props = defineProps(slideVerifyProps)
 const emit = defineEmits<SlideVerifyEmits>()
+const isAlive = useAlive()
 
 const slideVerifyId = ref<string>(`wd-slide-verify-${uuid()}`)
 const { proxy } = getCurrentInstance() as any
@@ -70,11 +72,14 @@ const trackStyle = computed(() => {
 })
 
 onMounted(() => {
-  // 轨道宽度一次性度量（CONVENTIONS §16）
+  // 轨道宽度一次性度量（CONVENTIONS §16）。回调晚于卸载落地时丢弃：
+  // 在已销毁树上写 ref 会触发晚到的 remove/insert（真机 9902 家族）。
   getRect(`#${slideVerifyId.value}`, false, proxy).then((data) => {
+    if (!isAlive()) return
     containerWidth.value = Number(data.width) || 0
   })
   getRect('.wd-slide-verify__button', false, proxy).then((data) => {
+    if (!isAlive()) return
     buttonWidth.value = Number(data.width) || 44
   })
 })

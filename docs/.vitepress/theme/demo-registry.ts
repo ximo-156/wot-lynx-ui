@@ -105,7 +105,7 @@ const FALLBACK_SPECS: Record<string, FallbackSpec> = {
     }
   },
   'sort-button': { props: { title: '价格', modelValue: 0 } },
-  backtop: { props: { scrollTop: 200, top: 60 } },
+  backtop: { props: { scrollTop: 200, top: 60, text: '顶部', shape: 'square' } },
   'count-to': { props: { startVal: 0, endVal: 2024, duration: 2000 } },
   'password-input': { props: { modelValue: '123456', length: 6 } },
   upload: { props: { fileList: [] } },

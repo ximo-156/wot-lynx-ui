@@ -108,7 +108,8 @@ defineProps(xxxProps)
 | 按压缩态 | 用 `:active` 伪类（CSS 实现），**不要**用 touch 事件 + JS state |
 | options 块 | 不需要 `<script>` options 块 |
 | 条件编译 | 禁止 `// #ifdef` / `// #ifndef` / `// #endif` 等 uni-app 条件编译残留 |
-| 组件标签 | 模板内组件一律 PascalCase（`<WdButton>`）；kebab-case 会被 Lynx 编译器判为原生元素 |
+| 组件标签 | 模板内组件一律 PascalCase（`<WdButton>`）；kebab-case 会被 Lynx 编译器判为原生元素。业务代码若沿用 wot-ui 的 `<wd-button>` 写法，必须启用 `pluginWotLynxTags()`（构建期改写，见 `plugin/tag-transform-loader.cjs`） |
+| 原生元素 | 只允许 Lynx 内置元素（view / text / image / scroll-view / list / list-item / swiper / swiper-item / input / textarea / switch / checkbox / radio / slider / form / label / svg / video / web-view / page）。**禁止 uni-app 的 `<block>`**（用 `<template v-else>` 做无渲染占位）；误用会触发 603 sub_code 60301 "Can't find ui tag" 并白屏。守卫测试：`test/native-tag-whitelist.test.ts` |
 | 横向布局 | 依赖横向排列的容器必须显式 `display: flex`（见 §14） |
 
 ## 5. SCSS 规范（index.scss）
@@ -245,6 +246,12 @@ composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
 - 结构：`wd-root-portal > wd-popup-wrapper > [wd-overlay + wd-transition]`，与 wot-ui 一致。
 - Lynx 中 `position: fixed` 节点会被提升到页面根节点，因此**不需要** teleport；wd-root-portal 仅作为携带主题变量的容器。
 - 弹出层定位一律 `position: fixed`（center 用 `left/right/top/bottom: 0` + flex 居中；bottom/top/left/right 用对应贴边）。
+- **`fixed` 节点必须是动画/显隐节点本身，不能是它的子节点**（2026-10-19 演示页实测）：
+  提升后的节点不再受父级 `display:none` 约束——`wd-backtop` 旧实现把 `position: fixed`
+  放在 `wd-transition` 的子 view 上，阈值未到时按钮照样常驻屏幕；同理，**弹层插槽内容
+  禁止写 `position: fixed`**（演示页的遮罩内容因此「遮罩关不掉、内容常驻、点击不冒泡」），
+  需要居中就撑满父级 + flex 居中。新增带显隐的 fixed 组件时，用 `custom-class` /
+  `custom-style` 把定位下发到 `wd-transition` 根节点。
 - 全局单例（toast/notify）用模块级 `ref` + 条件渲染实现，参考 wot-ui 的 `useToast` 模式（`showToast(options)` 返回关闭函数）。
 
 ## 10. Main Thread Script（禁止引入）

@@ -17,10 +17,12 @@ import { sliderProps, type SliderEmits, type SliderExpose, type SliderMarks, typ
 import { deepClone, getRect, isArray, isDef, isEqual, uuid, parseStyle, filterStyle } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useTouch } from '../../composables/useTouch'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(sliderProps)
 const emit = defineEmits<SliderEmits>()
 const isDisabled = useFormDisabled(props)
+const isAlive = useAlive()
 
 const sliderId = ref<string>(`wd-slider-${uuid()}`)
 const trackId = ref<string>(`${sliderId.value}-track`)
@@ -153,6 +155,8 @@ function clamp(value: number, min: number, max: number): number {
 
 function initSlider() {
   getRect(`#${trackId.value}`, false, proxy).then((data) => {
+    // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
+    if (!isAlive()) return
     if (props.vertical) {
       trackSize.value = Number(data.height)
     } else {
@@ -283,6 +287,8 @@ function onTouchEnd() {
 function onBarClick(event: any) {
   if (isDisabled.value) return
   getRect(`#${trackId.value}`, false, proxy).then((data) => {
+    // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
+    if (!isAlive()) return
     const pointer = getPointerPosition(event)
     const start = props.vertical ? Number(data.top) : Number(data.left)
     handleBarClickAt(pointer - start)
