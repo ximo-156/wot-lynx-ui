@@ -1,53 +1,62 @@
 /*
  * wd-datetime-picker — 日期时间选择器
  *
- * Lynx 实现说明：
- * - 结构：wd-popup（bottom）+ toolbar + wd-datetime-picker-view；
- * - 区间模式（modelValue 为数组）展示 start/end tab，分别编辑两端；
- * - 滑动未结束点确认时挂起，pickend 后自动确认。
+ * Lynx 实现说明（相对 wot-ui 2.3.2）：
+ * - 结构：wd-popup（bottom）+ toolbar + 两个 wd-datetime-picker-view（start/end），
+ *   经 __show/__hidden 切换可见性（与 wot-ui 一致）；
+ * - 区间模式（modelValue 为数组）展示 start/end tab，两端经 columnFormatter
+ *   （isOutOfBoundary）做跨边界禁用，保证 start <= end；
+ * - 事件：@click→@tap；裸文本包 text 元素；customStyle 经 parseStyle 归一为对象
+ *   （CONVENTIONS §19）；标题容器的 @touchmove="noop" 按 §14 省略（锁滚走
+ *   overlay/transition 的 disable-touch-move 链路）；
+ * - 滑动未结束点确认时挂起，pickend 后自动确认（含 beforeConfirm 拦截）；
+ * - beforeConfirm 可返回未决 Promise：done 落地时经 useAlive 守卫，避免在已销毁
+ *   树上写 ref（真机 9902 晚到 patch 家族）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onBeforeMount, onMounted, ref, watch } from 'vue-lynx'
+import { computed, nextTick, onMounted, ref, watch } from 'vue-lynx'
 import WdPopup from '../wd-popup/wd-popup.vue'
 import WdDatetimePickerView from '../wd-datetime-picker-view/wd-datetime-picker-view.vue'
+import { deepClone, isArray, isDef, isEqual, padZero, parseStyle } from '../../common/util'
 import { callInterceptor } from '../../common/interceptor'
-import { isArray, parseStyle } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
+import type { DatetimePickerViewColumn, DatetimePickerViewColumnType, DatetimePickerViewOption } from '../wd-datetime-picker-view/types'
 import { useTranslate } from '../../composables/useTranslate'
 import { datetimePickerProps, type DatetimePickerExpose } from './types'
+import { formatDate } from '../../common/formatDate'
+import { getPickerValue } from '../wd-datetime-picker-view/util'
 
 const { translate } = useTranslate('datetimePicker')
 
 const props = defineProps(datetimePickerProps)
-const emit = defineEmits(['confirm', 'open', 'cancel', 'update:modelValue', 'update:visible'])
+const isAlive = useAlive()
+const emit = defineEmits(['change', 'open', 'toggle', 'cancel', 'confirm', 'update:modelValue', 'update:visible'])
 
 const popupShow = ref<boolean>(false)
-const pickerValue = ref<string | number>('')
-const startValue = ref<string | number>('')
-const endValue = ref<string | number>('')
 const showStart = ref<boolean>(true)
-const isPicking = ref<boolean>(false)
-const hasConfirmed = ref<boolean>(false)
-
-const region = computed(() => isArray(props.modelValue))
+const region = ref<boolean>(false)
+const innerValue = ref<string | number>('')
+const endInnerValue = ref<string | number>('')
 
 const showTabLabel = computed(() => {
-  const format = props.displayFormatTabLabel
-  if (!format) return [startValue.value, endValue.value]
-  return [format(startValue.value), format(endValue.value)]
+  if (region.value) {
+    const items = (innerValue.value && getPickerSelectedItems('before')) || []
+    const endItems = (endInnerValue.value && getPickerSelectedItems('after')) || []
+    return [defaultDisplayFormat(items as Record<string, any>[], true), defaultDisplayFormat(endItems as Record<string, any>[], true)]
+  }
+  return []
 })
+
+const isPicking = ref<boolean>(false) // 判断pickview是否还在滑动中
+const hasConfirmed = ref<boolean>(false) // 判断用户是否点击了确认按钮
 
 watch(
   () => props.modelValue,
-  (val) => {
-    if (isArray(val)) {
-      startValue.value = val[0]
-      endValue.value = val[1]
-      pickerValue.value = showStart.value ? val[0] : val[1]
-    } else {
-      pickerValue.value = val
-    }
+  (val, oldVal) => {
+    if (isEqual(val, oldVal)) return
+    resetInnerValue()
   },
   { deep: true, immediate: true }
 )
@@ -67,84 +76,234 @@ watch(popupShow, (val) => {
   emit('update:visible', val)
 })
 
+function resetInnerValue() {
+  const { modelValue } = props
+  if (isArray(modelValue)) {
+    region.value = true
+    innerValue.value = deepClone(getDefaultInnerValue(true))
+    endInnerValue.value = deepClone(getDefaultInnerValue(true, true))
+  } else {
+    // 每次value更新时都需要刷新整个列表
+    innerValue.value = deepClone(getDefaultInnerValue())
+  }
+}
+
+/**
+ * 处理时间边界值判断：当前列之前的所有列都在边界上时，start 不能超过 / end 不能低于边界值。
+ */
+function isOutOfBoundary(isStart: boolean, columnType: DatetimePickerViewColumnType, value: number, currentArray: number[], boundary: number[]): boolean {
+  const { type, useSecond } = props
+
+  // 定义各类型的列顺序
+  const typeColumns: Record<string, DatetimePickerViewColumnType[]> = {
+    datetime: useSecond ? ['year', 'month', 'date', 'hour', 'minute', 'second'] : ['year', 'month', 'date', 'hour', 'minute'],
+    'year-month': ['year', 'month'],
+    year: ['year'],
+    date: ['year', 'month', 'date'],
+    time: useSecond ? ['hour', 'minute', 'second'] : ['hour', 'minute']
+  }
+
+  const columns = typeColumns[type]
+  const columnIndex = columns.indexOf(columnType)
+
+  // 如果当前列不在类型定义中，直接返回 false
+  if (columnIndex === -1) return false
+
+  // 检查当前列之前的所有列是否都在边界上
+  const isPreColumnsBoundary = columns.slice(0, columnIndex).every((col, index) => {
+    return currentArray[index] === boundary[index]
+  })
+
+  if (isPreColumnsBoundary) {
+    const boundaryValue = boundary[columnIndex]
+    return isStart ? value > boundaryValue : value < boundaryValue
+  }
+
+  return false
+}
+
+/** 开始时间列格式化 */
+function startColumnFormatter(columns: DatetimePickerViewOption[][]) {
+  return customColumnFormatter(columns, 'start')
+}
+
+/** 结束时间列格式化 */
+function endColumnFormatter(columns: DatetimePickerViewOption[][]) {
+  return customColumnFormatter(columns, 'end')
+}
+
+/** 自定义列项筛选规则：区间模式下对超出对端边界的选项置 disabled */
+const customColumnFormatter = (columns: DatetimePickerViewOption[][], pickerType: 'start' | 'end') => {
+  const { type } = props
+  const startSymbol = pickerType === 'start'
+
+  const start = innerValue.value
+  const end = endInnerValue.value
+
+  const currentValue = startSymbol ? getPickerValue(start, type, props.useSecond) : getPickerValue(end, type, props.useSecond)
+  const boundary = startSymbol ? getPickerValue(end, type, props.useSecond) : getPickerValue(start, type, props.useSecond)
+
+  const typeColumns: Record<string, DatetimePickerViewColumnType[]> = {
+    datetime: props.useSecond ? ['year', 'month', 'date', 'hour', 'minute', 'second'] : ['year', 'month', 'date', 'hour', 'minute'],
+    'year-month': ['year', 'month'],
+    year: ['year'],
+    date: ['year', 'month', 'date'],
+    time: props.useSecond ? ['hour', 'minute', 'second'] : ['hour', 'minute']
+  }
+  const currentColumnTypes = typeColumns[type]
+
+  return columns.map((column, index) => {
+    const columnType = currentColumnTypes[index]
+    return column.map((option) => {
+      const disabled = isOutOfBoundary(startSymbol, columnType, option.value, currentValue, boundary)
+      return {
+        ...option,
+        disabled
+      }
+    })
+  })
+}
+
 onMounted(() => {
   if (props.visible) {
     showPopup()
   }
 })
 
-onBeforeMount(() => {
-  if (isArray(props.modelValue)) {
-    startValue.value = props.modelValue[0]
-    endValue.value = props.modelValue[1]
-    pickerValue.value = props.modelValue[0]
-  } else {
-    pickerValue.value = props.modelValue
+/** 根据传入的 picker 获取当前 cell 展示值（选中项 {label,value} 数组） */
+function getPickerSelectedItems(picker: 'before' | 'after') {
+  let value = picker === 'before' ? innerValue.value : endInnerValue.value
+  let selected: number[] = []
+  if (value) {
+    selected = getPickerValue(value, props.type, props.useSecond)
   }
-})
 
+  const typeColumns: Record<string, DatetimePickerViewColumnType[]> = {
+    datetime: props.useSecond ? ['year', 'month', 'date', 'hour', 'minute', 'second'] : ['year', 'month', 'date', 'hour', 'minute'],
+    'year-month': ['year', 'month'],
+    year: ['year'],
+    date: ['year', 'month', 'date'],
+    time: props.useSecond ? ['hour', 'minute', 'second'] : ['hour', 'minute']
+  }
+  const currentColumnTypes = typeColumns[props.type]
+
+  return selected.map((value, index) => {
+    const type = currentColumnTypes[index]
+    return {
+      [props.labelKey]: props.formatter ? props.formatter(type, padZero(value)) : padZero(value),
+      [props.valueKey]: value
+    }
+  })
+}
+
+/** 获取默认内部值 */
+function getDefaultInnerValue(isRegion?: boolean, isEnd?: boolean): string | number {
+  const { modelValue: value, maxDate, minDate, type } = props
+  if (isRegion) {
+    const index = isEnd ? 1 : 0
+    const targetValue = isArray(value) ? (value[index] as string) : ''
+    const maxValue = type === 'time' ? formatDate(maxDate, 'HH:mm') : maxDate
+    const minValue = type === 'time' ? formatDate(minDate, 'HH:mm') : minDate
+    return targetValue || (isEnd ? maxValue : minValue)
+  } else {
+    return isDef(value) ? (value as string) : ''
+  }
+}
+
+/** 对外暴露接口，打开弹框 */
 function open() {
   showPopup()
 }
 
+/** 对外暴露接口，关闭弹框 */
 function close() {
   onCancel()
 }
 
+/** 显示弹窗 */
 function showPopup() {
+  if (popupShow.value) return
   emit('open')
-  // 从 props.modelValue 重置内部未提交值：此前只置 popupShow，取消后
-  // 重开仍显示上次拖到一半的旧值（pickerValue 未回滚）。
-  if (isArray(props.modelValue)) {
-    startValue.value = props.modelValue[0]
-    endValue.value = props.modelValue[1]
-    showStart.value = true
-    pickerValue.value = startValue.value
-  } else {
-    pickerValue.value = props.modelValue
-  }
+  resetInnerValue()
   popupShow.value = true
+  showStart.value = true
 }
 
+/** 区域选择时 tab 标签切换 */
+function onTabChange(tab: 'start' | 'end') {
+  const isStart = tab === 'start'
+  if (showStart.value === isStart) return
+  showStart.value = isStart
+  emit('toggle', showStart.value ? innerValue.value : endInnerValue.value)
+}
+
+/** 开始时间 datetimePickerView change 事件 */
+function onChangeStart({ value, columns }: { value: number | string; columns: DatetimePickerViewColumn[] }) {
+  if (region.value) {
+    const currentArray = getPickerValue(value, props.type, props.useSecond)
+    const boundaryArray = getPickerValue(endInnerValue.value, props.type, props.useSecond)
+
+    const needsAdjust = columns.some((column, index) => {
+      return isOutOfBoundary(true, column.type, currentArray[index], currentArray, boundaryArray)
+    })
+
+    innerValue.value = deepClone(needsAdjust ? endInnerValue.value : value)
+
+    nextTick(() => {
+      emit('change', {
+        value: [innerValue.value, endInnerValue.value]
+      })
+    })
+  } else {
+    // 非区间选择直接设置值即可
+    innerValue.value = deepClone(value)
+    emit('change', {
+      value: innerValue.value
+    })
+  }
+}
+
+/** 结束时间 datetimePickerView change 事件 */
+function onChangeEnd({ value, columns }: { value: number | string; columns: DatetimePickerViewColumn[] }) {
+  const currentArray = getPickerValue(value, props.type, props.useSecond)
+  const boundaryArray = getPickerValue(innerValue.value, props.type, props.useSecond)
+
+  const needsAdjust = columns.some((column, index) => {
+    return isOutOfBoundary(false, column.type, currentArray[index], currentArray, boundaryArray)
+  })
+
+  endInnerValue.value = deepClone(needsAdjust ? innerValue.value : value)
+
+  nextTick(() => {
+    emit('change', {
+      value: [innerValue.value, endInnerValue.value]
+    })
+  })
+}
+
+/** 点击取消按钮触发。关闭popup，触发cancel事件。 */
 function onCancel() {
   popupShow.value = false
   emit('cancel')
 }
 
-function onTabChange(tab: 'start' | 'end') {
-  showStart.value = tab === 'start'
-  pickerValue.value = showStart.value ? startValue.value : endValue.value
-}
-
+/** 点击确定按钮触发 */
 function onConfirm() {
+  // 如果当前还在滑动且未停止下来，则锁住先不确认，等滑完再自动确认
   if (isPicking.value) {
     hasConfirmed.value = true
     return
   }
-  callInterceptor(props.beforeConfirm, {
-    args: [region.value ? [startValue.value, endValue.value] : pickerValue.value],
+
+  const { beforeConfirm } = props
+  callInterceptor(beforeConfirm, {
+    args: [region.value ? [innerValue.value, endInnerValue.value] : innerValue.value],
     done: () => {
+      // beforeConfirm 可返回未决 Promise：done 落地时组件可能已卸载
+      if (!isAlive()) return
       handleConfirm()
     }
   })
-}
-
-function handleConfirm() {
-  const value = region.value ? [startValue.value, endValue.value] : pickerValue.value
-  popupShow.value = false
-  emit('update:modelValue', value)
-  emit('confirm', { value })
-}
-
-function onPickerChange({ value }: any) {
-  pickerValue.value = value
-  if (region.value) {
-    if (showStart.value) {
-      startValue.value = value
-    } else {
-      endValue.value = value
-    }
-  }
 }
 
 function onPickStart() {
@@ -153,15 +312,52 @@ function onPickStart() {
 
 function onPickEnd() {
   isPicking.value = false
-  if (hasConfirmed.value) {
-    hasConfirmed.value = false
-    onConfirm()
+
+  // 延迟一会，因为组件层级嵌套过多，日期的计算时间也较长
+  setTimeout(() => {
+    if (hasConfirmed.value) {
+      hasConfirmed.value = false
+      onConfirm()
+    }
+  }, 50)
+}
+
+function handleConfirm() {
+  const value = region.value ? [innerValue.value, endInnerValue.value] : innerValue.value
+  popupShow.value = false
+  emit('update:modelValue', value)
+  emit('confirm', {
+    value
+  })
+}
+
+/** 设置展示值 / tab 标签 */
+function defaultDisplayFormat(items: Record<string, any>[], tabLabel: boolean = false) {
+  if (items.length === 0) return ''
+
+  if (tabLabel && props.displayFormatTabLabel) {
+    return props.displayFormatTabLabel(items)
+  }
+
+  switch (props.type) {
+    case 'year':
+      return items[0].label
+    case 'date':
+      return `${items[0].label}-${items[1].label}-${items[2].label}`
+    case 'year-month':
+      return `${items[0].label}-${items[1].label}`
+    case 'time':
+      return props.useSecond ? `${items[0].label}:${items[1].label}:${items[2].label}` : `${items[0].label}:${items[1].label}`
+    case 'datetime':
+      return props.useSecond
+        ? `${items[0].label}-${items[1].label}-${items[2].label} ${items[3].label}:${items[4].label}:${items[5].label}`
+        : `${items[0].label}-${items[1].label}-${items[2].label} ${items[3].label}:${items[4].label}`
   }
 }
 
 defineExpose<DatetimePickerExpose>({
-  close,
-  open
+  open,
+  close
 })
 </script>
 
@@ -199,29 +395,60 @@ defineExpose<DatetimePickerExpose>({
             <text>{{ showTabLabel[1] || translate('end') }}</text>
           </view>
         </view>
-        <wd-datetime-picker-view
-          :custom-class="customViewClass"
-          :type="type"
-          :item-height="itemHeight"
-          :visible-item-count="visibleItemCount"
-          :value-key="valueKey"
-          :label-key="labelKey"
-          :min-date="minDate"
-          :max-date="maxDate"
-          :min-hour="minHour"
-          :max-hour="maxHour"
-          :min-minute="minMinute"
-          :max-minute="maxMinute"
-          :use-second="useSecond"
-          :min-second="minSecond"
-          :max-second="maxSecond"
-          :filter="filter"
-          :formatter="formatter"
-          v-model="pickerValue"
-          @change="onPickerChange"
-          @pickstart="onPickStart"
-          @pickend="onPickEnd"
-        />
+        <view :class="showStart ? 'wd-datetime-picker__show' : 'wd-datetime-picker__hidden'">
+          <wd-datetime-picker-view
+            :custom-class="customViewClass"
+            :type="type"
+            v-model="innerValue"
+            :item-height="itemHeight"
+            :visible-item-count="visibleItemCount"
+            :value-key="valueKey"
+            :label-key="labelKey"
+            :formatter="formatter"
+            :filter="filter"
+            :column-formatter="isArray(modelValue) ? startColumnFormatter : undefined"
+            :max-hour="maxHour"
+            :min-hour="minHour"
+            :max-date="maxDate"
+            :min-date="minDate"
+            :max-minute="maxMinute"
+            :min-minute="minMinute"
+            :use-second="useSecond"
+            :min-second="minSecond"
+            :max-second="maxSecond"
+            :immediate-change="immediateChange"
+            @change="onChangeStart"
+            @pickstart="onPickStart"
+            @pickend="onPickEnd"
+          />
+        </view>
+        <view :class="showStart ? 'wd-datetime-picker__hidden' : 'wd-datetime-picker__show'">
+          <wd-datetime-picker-view
+            :custom-class="customViewClass"
+            :type="type"
+            v-model="endInnerValue"
+            :item-height="itemHeight"
+            :visible-item-count="visibleItemCount"
+            :value-key="valueKey"
+            :label-key="labelKey"
+            :formatter="formatter"
+            :filter="filter"
+            :column-formatter="isArray(modelValue) ? endColumnFormatter : undefined"
+            :max-hour="maxHour"
+            :min-hour="minHour"
+            :max-date="maxDate"
+            :min-date="minDate"
+            :max-minute="maxMinute"
+            :min-minute="minMinute"
+            :use-second="useSecond"
+            :min-second="minSecond"
+            :max-second="maxSecond"
+            :immediate-change="immediateChange"
+            @change="onChangeEnd"
+            @pickstart="onPickStart"
+            @pickend="onPickEnd"
+          />
+        </view>
       </view>
     </wd-popup>
   </view>

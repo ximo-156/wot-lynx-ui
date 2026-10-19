@@ -1,101 +1,191 @@
-import type { ExtractPropTypes, PropType } from 'vue-lynx'
-import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeRequiredProp, makeStringProp, numericProp } from '../../common/props'
+import type { ComponentPublicInstance, ExtractPropTypes, PropType } from 'vue-lynx'
+import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeStringProp, numericProp } from '../../common/props'
+import { type TabsLineTheme } from '../wd-tabs/types'
 
-export interface CascaderOption {
+/**
+ * 级联选项数据结构
+ */
+export type CascaderOption = {
+  /** 选项值 */
+  value?: string | number
+  /** 选项文本 */
+  text?: string
+  /** 子选项 */
+  children?: CascaderOption[]
+  /** 是否禁用 */
+  disabled?: boolean
+  /** 提示文案 */
+  tip?: string
+  /** 是否为叶子节点，为 true 时点击直接触发 confirm，不再调用 lazyLoad */
+  isLeaf?: boolean
+  /** 允许自定义其他属性 */
   [key: string]: any
 }
 
-export type CascaderBeforeConfirm = (value: string | number | (string | number)[], selectedOptions: CascaderOption[]) => boolean | Promise<boolean>
-
-export type CascaderLazyLoad = (
-  node: CascaderOption | null,
-  resolve: (children: CascaderOption[]) => void
-) => void
+/**
+ * 级联面板状态数据
+ */
+export type CascaderTab = {
+  /** 选项列表 */
+  options: CascaderOption[]
+  /** 已选中的选项 */
+  selectedOption: CascaderOption | null
+}
 
 export const cascaderProps = {
   ...baseProps,
   /**
-   * 当前值
+   * 选中项。静态模式下绑定叶子节点的值；异步模式下支持传入完整路径数组以自动逐级加载回显。
+   * 类型: string | number | (string | number)[]
+   * 默认值: -
    */
-  modelValue: makeRequiredProp([String, Number, Array] as PropType<string | number | (string | number)[]>),
+  modelValue: [String, Number, Array] as PropType<string | number | (string | number)[]>,
   /**
-   * 选项数据（树形）
+   * 层级选项数据，树形结构
+   * 类型: Array<CascaderOption>
+   * 默认值: []
    */
   options: makeArrayProp<CascaderOption>(),
   /**
-   * 标题
+   * 弹出层标题
+   * 类型: string
+   * 默认值: -
    */
   title: String,
   /**
-   * 确认前拦截
+   * 确定前校验函数，接收 (value, selectedOptions) 参数
+   * 返回 false 可阻止确认，支持返回 Promise<boolean>。
+   * 类型: CascaderBeforeConfirm
+   * 默认值: -
    */
   beforeConfirm: Function as PropType<CascaderBeforeConfirm>,
   /**
-   * 是否允许选择任意一级
-   * 暂未支持：当前仅支持选择到叶子节点（选择中间级不会收窄路径）
+   * 是否开启任意级可选。开启后点击节点仅更新当前路径，需通过右上角确认按钮提交。
+   * 类型: boolean
+   * 默认值: false
    */
   checkStrictly: makeBooleanProp(false),
   /**
-   * 确认按钮文字
+   * 严格模式下确认按钮文案，为空时使用内置国际化文案。
+   * 类型: string
+   * 默认值: ''
    */
   confirmText: makeStringProp(''),
   /**
-   * 选项对象中 value 对应的 key
+   * 选项对象中，value 对应的 key
+   * 类型: string
+   * 默认值: 'value'
    */
   valueKey: makeStringProp('value'),
   /**
-   * 选项对象中展示文本对应的 key
+   * 选项对象中，展示的文本对应的 key
+   * 类型: string
+   * 默认值: 'text'
    */
   textKey: makeStringProp('text'),
   /**
-   * 选项对象中 children 对应的 key
+   * 选项对象中，子节点对应的 key
+   * 类型: string
+   * 默认值: 'children'
    */
   childrenKey: makeStringProp('children'),
   /**
-   * 选项对象中提示对应的 key
-   * 暂未支持：选项副标题渲染未实现，当前版本不读取
+   * 选项对象中，提示文案对应的 key
+   * 类型: string
+   * 默认值: 'tip'
    */
   tipKey: makeStringProp('tip'),
   /**
    * 点击遮罩是否关闭
+   * 类型: boolean
+   * 默认值: true
    */
   closeOnClickModal: makeBooleanProp(true),
   /**
-   * 层级
+   * 弹窗层级
+   * 类型: number
+   * 默认值: 15
    */
   zIndex: makeNumberProp(15),
   /**
-   * 底部安全区适配
+   * 弹出面板是否设置底部安全距离（iPhone X 等全面屏机型）
+   * 类型: boolean
+   * 默认值: true
    */
   safeAreaInsetBottom: makeBooleanProp(true),
   /**
-   * 是否挂载到根节点
+   * 底部条宽度，单位像素或带单位的字符串
+   * 类型: number | string
+   * 默认值: -
+   */
+  lineWidth: numericProp,
+  /**
+   * 底部条高度，单位像素或带单位的字符串
+   * 类型: number | string
+   * 默认值: -
+   */
+  lineHeight: numericProp,
+  /**
+   * 底部条位置样式
+   * 类型: string
+   * 可选值: 'normal' | 'text' | 'underline' | 'dot'
+   * 默认值: 'normal'
+   */
+  lineTheme: makeStringProp<TabsLineTheme>('normal'),
+  /**
+   * 是否使用 root-portal 脱离文档流（用于解决 fixed 失效或层级冲突问题）
+   * 类型: boolean
+   * 默认值: false
    */
   rootPortal: makeBooleanProp(false),
   /**
-   * 是否显示
+   * 弹窗是否显示
+   * 类型: boolean
+   * 默认值: false
    */
   visible: makeBooleanProp(false),
   /**
-   * 懒加载
-   * 暂未支持：异步加载子级需要额外的 loading / 展开态管理，
-   * 当前版本仅在 types 中保留声明，传入不生效
+   * 异步加载子节点的回调函数，提供后将启用异步加载模式。
+   * option 为 null 时表示加载根节点；resolve([]) 表示该节点为叶子节点，触发 confirm。
+   * 类型: CascaderLazyLoad
+   * 默认值: -
    */
   lazyLoad: Function as PropType<CascaderLazyLoad>,
   /**
-   * 叶子节点标识 key
-   * 暂未支持：配合 lazyLoad 使用，当前版本不读取
+   * 选项对象中，标识叶子节点的 key，值为 true 时点击直接触发 confirm
+   * 类型: string
+   * 默认值: 'isLeaf'
    */
-  isLeafKey: makeStringProp('isLeaf'),
-  /**
-   * 选项高度
-   */
-  itemHeight: numericProp
+  isLeafKey: makeStringProp('isLeaf')
 }
 
 export type CascaderProps = ExtractPropTypes<typeof cascaderProps>
 
+/**
+ * 确认前的回调函数类型
+ */
+export type CascaderBeforeConfirm = (value: string | number, selectedOptions: CascaderOption[]) => boolean | Promise<boolean>
+
+/**
+ * 异步加载子节点的回调类型
+ * @param option 父节点选项，null 表示加载根节点
+ * @param tabIndex 当前加载的列下标
+ * @param resolve 加载完成后调用，传入子选项列表；传入空数组表示该节点为叶子节点
+ */
+export type CascaderLazyLoad = (option: CascaderOption | null, tabIndex: number, resolve: (children: CascaderOption[]) => void) => void
+
+/**
+ * 组件暴露的方法实例
+ */
 export type CascaderExpose = {
-  open: () => void
+  /**
+   * 关闭 picker 弹框
+   */
   close: () => void
+  /**
+   * 打开 picker 弹框
+   */
+  open: () => void
 }
+
+export type CascaderInstance = ComponentPublicInstance<CascaderExpose, CascaderProps>

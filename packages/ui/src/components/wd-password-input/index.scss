@@ -1,87 +1,142 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 输入区域高度
+$password-input-height: var(--wot-password-input-height, $n-50) !default;
+// 组件外边距
+$password-input-margin: var(--wot-password-input-margin, $n-16) !default;
+// 输入字号
+$password-input-font-size: var(--wot-password-input-font-size, $typography-title-size-large) !default;
+// 输入行高
+$password-input-line-height: var(--wot-password-input-line-height, $typography-title-line-height-size-large) !default;
+// 输入格圆角
+$password-input-radius: var(--wot-password-input-radius, $n-6) !default;
+// 输入格背景色
+$password-input-bg: var(--wot-password-input-bg, $filled-oppo) !default;
+// 提示信息颜色
+$password-input-info-color: var(--wot-password-input-info-color, $text-auxiliary) !default;
+// 提示信息字号
+$password-input-info-font-size: var(--wot-password-input-info-font-size, $typography-body-size-main) !default;
+// 边框颜色
+$password-input-border-color: var(--wot-password-input-border-color, $border-main) !default;
+// 边框宽度
+$password-input-border-width: var(--wot-password-input-border-width, $stroke-main) !default;
+// 错误提示颜色
+$password-input-error-info-color: var(--wot-password-input-error-info-color, $danger-main) !default;
+// 密码点尺寸
+$password-input-dot-size: var(--wot-password-input-dot-size, $n-10) !default;
+// 密码点颜色
+$password-input-dot-color: var(--wot-password-input-dot-color, $text-main) !default;
+// 密码点圆角
+$password-input-dot-radius: var(--wot-password-input-dot-radius, $radius-full) !default;
+// 输入文本颜色
+$password-input-text-color: var(--wot-password-input-text-color, $text-main) !default;
+// 光标颜色
+$password-input-cursor-color: var(--wot-password-input-cursor-color, $text-main) !default;
+// 光标宽度
+$password-input-cursor-width: var(--wot-password-input-cursor-width, $n-1) !default;
+// 光标高度
+$password-input-cursor-height: var(--wot-password-input-cursor-height, 40%) !default;
+// 光标闪烁周期
+$password-input-cursor-duration: var(--wot-password-input-cursor-duration, 1s) !default;
+
 @include b(password-input) {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
+  position: relative;
+  margin: 0 $password-input-margin;
 
   @include e(security) {
     display: flex;
     flex-direction: row;
-    align-items: center;
     width: 100%;
+    height: $password-input-height;
   }
 
   @include e(item) {
+    position: relative;
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    flex-grow: 1;
-    flex-basis: 0;
-    height: 48px;
-    background-color: var(--wd-bg-container);
+    flex: 1;
+    height: 100%;
+    color: $password-input-text-color;
+    font-size: $password-input-font-size;
+    line-height: $password-input-line-height;
+    background: $password-input-bg;
 
     @include when(border) {
-      border-width: 1px;
-      border-style: solid;
-      border-color: var(--wd-border-1);
-      border-left-width: 0;
-    }
+      border: $password-input-border-width solid $password-input-border-color;
 
-    /* 首格补齐左边框与左圆角（Lynx 不支持 :first-child，用索引类名） */
-    @include when(first) {
-      border-left-width: 1px;
-      border-top-left-radius: var(--wd-radius-sm);
-      border-bottom-left-radius: var(--wd-radius-sm);
-    }
+      // Lynx 适配：wot-ui 用 `:not(:last-child) { border-right: none }` 去掉
+      // 相邻格右边框避免双线，用结构伪类；Lynx 不支持，改为默认无右边框、
+      // 仅末格（is-last 索引类名）补回，视觉等价。
+      border-right-width: 0;
 
-    /* 末格右圆角 */
-    @include when(last) {
-      border-top-right-radius: var(--wd-radius-sm);
-      border-bottom-right-radius: var(--wd-radius-sm);
-    }
-  }
+      // Lynx 适配：wot-ui 的 `:first-child` / `:last-child` 端部圆角改用
+      // 模板按索引下发的 is-first / is-last 索引类名。
+      @include when(first) {
+        border-top-left-radius: $password-input-radius;
+        border-bottom-left-radius: $password-input-radius;
+      }
 
-  @include e(value) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
+      @include when(last) {
+        border-right-width: $password-input-border-width;
+        border-top-right-radius: $password-input-radius;
+        border-bottom-right-radius: $password-input-radius;
+      }
+    }
   }
 
   @include e(mask) {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--wd-text-1);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: $password-input-dot-size;
+    height: $password-input-dot-size;
+    background: $password-input-dot-color;
+    border-radius: $password-input-dot-radius;
+    transform: translate(-50%, -50%);
+    visibility: hidden;
   }
 
   @include e(cursor) {
-    width: 1px;
-    height: 20px;
-    background-color: var(--wd-color-primary);
-    animation: wd-password-input-cursor 1s step-end infinite;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: $password-input-cursor-width;
+    height: $password-input-cursor-height;
+    background: $password-input-cursor-color;
+    transform: translate(-50%, -50%);
+    animation: $password-input-cursor-duration cursor-flicker infinite;
   }
 
   @include e(info) {
-    margin-top: var(--wd-space-2);
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-3);
+    // Lynx 适配：text-align 依赖文本节点撑满容器（linear 布局下不保证），
+    // 补 flex 居中确保水平居中生效。
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    margin-top: $password-input-margin;
+    font-size: $password-input-info-font-size;
+    text-align: center;
+    color: $password-input-info-color;
 
     @include when(error) {
-      color: var(--wd-color-danger);
+      color: $password-input-error-info-color;
     }
   }
 }
 
-@keyframes wd-password-input-cursor {
-  0%,
-  100% {
-    opacity: 1;
+@keyframes cursor-flicker {
+  from {
+    opacity: 0;
   }
 
   50% {
+    opacity: 1;
+  }
+
+  100% {
     opacity: 0;
   }
 }

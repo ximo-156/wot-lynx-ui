@@ -40,9 +40,11 @@ export interface TagConfig {
 
 /**
  * 自定义主题变量：键为 camelCase 令牌名（如 primaryColor），
- * 由 ConfigProvider 映射为 `--wd-<kebab-case>` 内联变量下发。
+ * 由 ConfigProvider 映射为 `--wot-<kebab-case>` 内联变量下发。
+ * 完整键集合见 ./theme-vars（与 wot-ui 的 theme-vars 生成物一致）。
  */
-export type ConfigProviderThemeVars = Record<string, string>
+export type { ConfigProviderThemeVars } from './theme-vars'
+import type { ConfigProviderThemeVars } from './theme-vars'
 
 /** 全局配置 */
 export interface GlobalConfig {
@@ -92,7 +94,7 @@ function omitUndefined<T extends object>(obj: T): Partial<T> {
 /** ConfigProvider 向下提供的上下文 */
 export type ConfigProviderProvide = {
   globalConfig: ComputedRef<GlobalConfig>
-  /** themeVars 映射出的 --wd-* 变量（对象样式，CONVENTIONS §19） */
+  /** themeVars 映射出的 --wot-* 变量（对象样式，CONVENTIONS §19） */
   themeStyle: ComputedRef<Record<string, string>>
 }
 

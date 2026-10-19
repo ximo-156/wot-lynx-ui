@@ -279,7 +279,9 @@ defineExpose<PickerViewExpose>({
   getColumnData,
   getColumnIndex,
   getSelectedLabels: () => selectedLabels.value,
-  getSelectedIndex
+  getSelectedIndex,
+  // 对外重置列数据入口；内部走 safeResetColumns（脏数据降级为空列，不抛错崩卡片）
+  resetColumns: safeResetColumns
 })
 </script>
 
@@ -313,10 +315,11 @@ defineExpose<PickerViewExpose>({
         </view>
       </view>
 
-      <!-- 选中指示带：必须排在列之后 + z-index 低于列。Web 预览的绘制
-           不遵循 z-index（按 DOM 逆序绘制），排在最前会连底色带文字一起
-           盖掉；真机按 z-index 绘制，indicator(1) < column(2) 同样在下方。 -->
-      <view class="wd-picker-view__indicator" :style="indicatorStyle" />
+      <!-- 选中指示带（对齐参考源 indicator-class：roller）：必须排在列之后 +
+           z-index 低于列。Web 预览的绘制不遵循 z-index（按 DOM 逆序绘制），
+           排在最前会连底色带文字一起盖掉；真机按 z-index 绘制，
+           roller(0) < column(2) 同样在下方。 -->
+      <view class="wd-picker-view__roller" :style="indicatorStyle" />
     </view>
   </view>
 </template>

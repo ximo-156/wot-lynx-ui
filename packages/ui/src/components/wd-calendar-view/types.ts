@@ -1,20 +1,147 @@
-import type { ExtractPropTypes, PropType } from 'vue-lynx'
+import type { ComponentPublicInstance, ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeRequiredProp, makeStringProp } from '../../common/props'
-import type { DatetimePickerViewFilter, DatetimePickerViewFormatter } from '../wd-datetime-picker-view/types'
+import { type DatetimePickerViewFormatter, type DatetimePickerViewFilter } from '../wd-datetime-picker-view/types'
+
+const now = new Date()
+const defaultMinDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()).getTime()
+const defaultMaxDate = new Date(now.getFullYear(), now.getMonth() + 6, now.getDate(), 23, 59, 59).getTime()
 
 export type CalendarType = 'date' | 'dates' | 'datetime' | 'week' | 'month' | 'daterange' | 'datetimerange' | 'weekrange' | 'monthrange'
+
+export const calendarViewProps = {
+  ...baseProps,
+  /**
+   * 选中值，为 13 位时间戳或时间戳数组
+   * 类型: number | number[] | null
+   * 默认值: null
+   */
+  modelValue: makeRequiredProp([Number, Array, null] as PropType<number | number[] | null>),
+  /**
+   * 日期类型
+   * 类型: CalendarType
+   * 可选值: 'date' | 'dates' | 'datetime' | 'week' | 'month' | 'daterange' | 'datetimerange' | 'weekrange' | 'monthrange'
+   * 默认值: 'date'
+   */
+  type: makeStringProp<CalendarType>('date'),
+  /**
+   * 最小日期，为 13 位时间戳
+   * 类型: number
+   * 默认值: 当前日期 - 6个月
+   */
+  minDate: makeNumberProp(defaultMinDate),
+  /**
+   * 最大日期，为 13 位时间戳
+   * 类型: number
+   * 默认值: 当前日期 + 6个月
+   */
+  maxDate: makeNumberProp(defaultMaxDate),
+  /**
+   * 周起始天
+   * 类型: number
+   * 默认值: 0
+   */
+  firstDayOfWeek: makeNumberProp(0),
+  /**
+   * 日期格式化函数
+   * 类型: CalendarFormatter
+   */
+  formatter: Function as PropType<CalendarFormatter>,
+  /**
+   * type 为范围选择时有效，最大日期范围
+   * 类型: number
+   */
+  maxRange: Number,
+  /**
+   * type 为范围选择时有效，选择超出最大日期范围时的错误提示文案
+   * 类型: string
+   */
+  rangePrompt: String,
+  /**
+   * type 为范围选择时有效，是否允许选择同一天
+   * 类型: boolean
+   * 默认值: false
+   */
+  allowSameDay: makeBooleanProp(false),
+  /**
+   * 是否展示面板标题，自动计算当前滚动的日期月份
+   * 类型: boolean
+   * 默认值: true
+   */
+  showPanelTitle: makeBooleanProp(true),
+  /**
+   * 选中日期所使用的当日内具体时刻
+   * 类型: string | string[]
+   * 默认值: '00:00:00'
+   */
+  defaultTime: {
+    type: [String, Array] as PropType<string | string[]>,
+    default: '00:00:00'
+  },
+  /**
+   * 可滚动面板的高度
+   * 类型: number
+   * 默认值: 316
+   */
+  panelHeight: makeNumberProp(316),
+  /**
+   * type 为 'datetime' 或 'datetimerange' 时有效，用于过滤时间选择器的数据
+   * 类型: CalendarTimeFilter
+   */
+  timeFilter: Function as PropType<CalendarTimeFilter>,
+  /**
+   * 选项高度
+   * 类型: number
+   * 默认值: 44
+   */
+  timeItemHeight: makeNumberProp(44),
+  /**
+   * 可见选项数量
+   * 类型: number
+   * 默认值: 3
+   */
+  timeVisibleItemCount: makeNumberProp(3),
+  /**
+   * type 为 'datetime' 或 'datetimerange' 时有效，是否不展示秒修改
+   * 类型: boolean
+   * 默认值: false
+   */
+  hideSecond: makeBooleanProp(false),
+  /**
+   * 是否在手指松开时立即触发picker-view的 change 事件。若不开启则会在滚动动画结束后触发 change 事件，1.2.25版本起提供，仅微信小程序和支付宝小程序支持。
+   * 类型: boolean
+   * 默认值: false
+   */
+  immediateChange: makeBooleanProp(false),
+  /**
+   * 切换模式
+   * 类型: 'none' | 'month' | 'year-month'
+   * 可选值: none 平铺展示所有月份/年份，不展示切换按钮 | month 支持按月切换，展示上个月/下个月按钮 | year-month 支持按年切换，也支持按月切换，展示上一年/下一年，上个月/下个月按钮
+   * 默认值: 'none'
+   */
+  switchMode: makeStringProp<'none' | 'month' | 'year-month'>('none')
+}
+
+export type CalendarViewProps = ExtractPropTypes<typeof calendarViewProps>
 
 export type CalendarDayType = '' | 'start' | 'middle' | 'end' | 'selected' | 'same' | 'current' | 'multiple-middle' | 'multiple-selected'
 
 export type CalendarDayItem = {
+  /** 日期时间戳 */
   date: number
-  type: CalendarDayType
-  text: number
+  /** 日期显示文本 */
+  text?: number | string
+  /** 顶部信息 */
   topInfo?: string
+  /** 底部信息 */
   bottomInfo?: string
+  /** 日期类型 */
+  type?: CalendarDayType
+  /** 是否禁用 */
   disabled?: boolean
+  /** 是否是这行的最后一个日期 */
   isLastRow?: boolean
-  isFirstRow?: boolean
+  /** 自定义类名 */
+  customClass?: string
 }
 
 export type CalendarFormatter = (day: CalendarDayItem) => CalendarDayItem
@@ -23,86 +150,17 @@ export type CalendarTimeFilter = DatetimePickerViewFilter
 
 export type CalendarTimeFormatter = DatetimePickerViewFormatter
 
-const defaultMinDate = new Date(new Date().getFullYear() - 5, 0, 1).getTime()
-const defaultMaxDate = new Date(new Date().getFullYear() + 5, 11, 31).getTime()
-
-export const calendarViewProps = {
-  ...baseProps,
-  /**
-   * 当前值（时间戳 / 时间戳数组）
-   */
-  modelValue: makeRequiredProp([Number, Array, null] as PropType<number | number[] | null>),
-  /**
-   * 日期类型
-   */
-  type: makeStringProp<CalendarType>('date'),
-  /**
-   * 最小日期
-   */
-  minDate: makeNumberProp(defaultMinDate),
-  /**
-   * 最大日期
-   */
-  maxDate: makeNumberProp(defaultMaxDate),
-  /**
-   * 每周第一天（0 周日 ~ 6 周六）
-   */
-  firstDayOfWeek: makeNumberProp(0),
-  /**
-   * 日期格式化
-   */
-  formatter: Function as PropType<CalendarFormatter>,
-  /**
-   * 范围选择最大天数
-   */
-  maxRange: Number,
-  /**
-   * 范围超出提示
-   */
-  rangePrompt: String,
-  /**
-   * 是否允许同一天
-   */
-  allowSameDay: makeBooleanProp(false),
-  /**
-   * 是否显示面板标题
-   */
-  showPanelTitle: makeBooleanProp(true),
-  /**
-   * 默认时间（datetime 类型的时分秒）
-   */
-  defaultTime: {
-    type: Object as PropType<{ hour?: number; minute?: number; second?: number }>,
-    default: () => ({ hour: 0, minute: 0, second: 0 })
-  },
-  /**
-   * 面板高度
-   */
-  panelHeight: makeNumberProp(316),
-  /**
-   * 时间列过滤
-   */
-  timeFilter: Function as PropType<CalendarTimeFilter>,
-  /**
-   * 时间项高度
-   */
-  timeItemHeight: makeNumberProp(44),
-  /**
-   * 时间可见项数
-   */
-  timeVisibleItemCount: makeNumberProp(3),
-  /**
-   * 是否隐藏秒
-   */
-  hideSecond: makeBooleanProp(false),
-  /**
-   * 拖动过程中是否立即更新
-   */
-  immediateChange: makeBooleanProp(false),
-  /**
-   * 面板切换模式
-   */
-  switchMode: makeStringProp<'none' | 'month' | 'year-month'>('none')
+export type CalendarItem = {
+  label: string
+  value: number
+  disabled: boolean
 }
 
-export type CalendarViewProps = ExtractPropTypes<typeof calendarViewProps>
+export type CalendarViewExpose = {
+  /**
+   * 使当前日期或者选中日期滚动到可视区域
+   */
+  scrollIntoView: () => void
+}
+
+export type CalendarViewInstance = ComponentPublicInstance<CalendarViewProps, CalendarViewExpose>

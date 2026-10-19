@@ -1,121 +1,207 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 主色模式颜色
+$loading-color-main: var(--wot-loading-color-main, $primary-6) !default;
+// 常规模式颜色
+$loading-color-normal: var(--wot-loading-color-normal, $icon-secondary) !default;
+// 白色模式颜色
+$loading-color-white: var(--wot-loading-color-white, $icon-white) !default;
+// 文本颜色
+$loading-color-text: var(--wot-loading-color-text, $text-main) !default;
+// 组件基准尺寸
+$loading-size: var(--wot-loading-size, $n-28) !default;
+// 容器宽度
+$loading-size-width: var(--wot-loading-size-width, 1em) !default;
+// 容器高度
+$loading-size-height: var(--wot-loading-size-height, 1em) !default;
+// 圆形加载器描边宽度
+$loading-spinner-circle-stroke-width: var(--wot-loading-spinner-circle-stroke-width, 15%) !default;
+// 圆形加载器圆角
+$loading-spinner-circle-radius: var(--wot-loading-spinner-circle-radius, $radius-full) !default;
+// 旋转动画时长
+$loading-spinner-animation-duration: var(--wot-loading-spinner-animation-duration, 0.8s) !default;
+// 条状点宽度
+$loading-spinner-dot-width: var(--wot-loading-spinner-dot-width, 10%) !default;
+// 条状点高度
+$loading-spinner-dot-height: var(--wot-loading-spinner-dot-height, 25%) !default;
+// 条状点圆角
+$loading-spinner-dot-radius: var(--wot-loading-spinner-dot-radius, $radius-full) !default;
+// 点状加载器单点尺寸
+$loading-spinner-dots-dot-size: var(--wot-loading-spinner-dots-dot-size, 20%) !default;
+// 点状加载器单点圆角
+$loading-spinner-dots-dot-radius: var(--wot-loading-spinner-dots-dot-radius, $radius-full) !default;
+// 波形加载器间距
+$loading-wave-gap: var(--wot-loading-wave-gap, 6.25%) !default;
+// 波形加载器单柱宽度
+$loading-wave-bar-width: var(--wot-loading-wave-bar-width, 12.5%) !default;
+// 波形加载器单柱高度
+$loading-wave-bar-height: var(--wot-loading-wave-bar-height, 83.333333%) !default;
+// 波形加载器单柱圆角
+$loading-wave-bar-radius: var(--wot-loading-wave-bar-radius, $radius-full) !default;
+// 波形加载器动画时长
+$loading-wave-animation-duration: var(--wot-loading-wave-animation-duration, 834ms) !default;
+// 加载器内边距
+$loading-spinner-padding: var(--wot-loading-spinner-padding, $padding-ultra-tight) !default;
+// 文本与加载器间距
+$loading-text-spacing: var(--wot-loading-text-spacing, $spacing-extra-tight) !default;
+// 文本字号
+$loading-text-font-size: var(--wot-loading-text-font-size, $typography-body-size-main) !default;
+// 文本行高
+$loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-line-height-size-main) !default;
 
 @include b(loading) {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--wd-color-primary);
+  color: $loading-color-main;
+  font-size: $loading-size;
 
   @include m(horizontal) {
     flex-direction: row;
 
-    .wd-loading__text {
-      margin-left: var(--wd-space-2);
+    @include me(text) {
+      margin-left: $loading-text-spacing;
     }
   }
 
-  @include e(text) {
-    margin-top: var(--wd-space-15);
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-2);
+  @include m(vertical) {
+    flex-direction: column;
+
+    @include me(text) {
+      margin-top: $loading-text-spacing;
+    }
   }
 
   @include e(spinner) {
+    flex: none;
     position: relative;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    padding: var(--wd-space-05);
+    font-size: inherit;
+    width: $loading-size-width;
+    height: $loading-size-height;
+    animation: wd-rotate $loading-spinner-animation-duration linear infinite;
+    padding: $loading-spinner-padding;
+    box-sizing: border-box;
 
-    /* circular：border 圆环 + 旋转 */
     @include m(circular) {
-      .wd-loading__spinner-wraper {
-        width: 100%;
-        height: 100%;
-        border-width: 2px;
-        border-style: solid;
-        border-color: currentColor;
-        border-top-color: transparent;
-        border-radius: 50%;
-        animation: wd-loading-rotate 0.8s linear infinite;
-      }
-    }
-
-    /* spinner：12 点环绕，容器整体旋转 */
-    @include m(spinner) {
-      .wd-loading__spinner-wraper {
+      @include me(spinner-wraper) {
+        border-radius: $loading-spinner-circle-radius;
+        border: none;
+        // Lynx 适配：wot-ui 用 mask + conic-gradient 绘制圆环，Lynx 不支持，
+        // 改为内嵌 SVG circle（stroke-dasharray 圆弧，见 wd-loading.vue）。
         position: relative;
         width: 100%;
         height: 100%;
-        animation: wd-loading-rotate 1s linear infinite;
       }
 
-      .wd-loading__spinner-dot {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 12%;
-        height: 12%;
-        margin-left: -6%;
-        margin-top: -6%;
-        border-radius: 50%;
-        background-color: currentColor;
+      // Lynx 适配新增元素：承载 SVG 圆弧，撑满 wraper
+      .wd-loading__spinner-circular {
+        width: 100%;
+        height: 100%;
       }
     }
 
-    /* dots：三点呼吸 */
+    @include m(spinner) {
+      animation-timing-function: steps(12);
+    }
+
     @include m(dots) {
-      .wd-loading__spinner-wraper {
+      animation: none;
+
+      @include me(spinner-wraper) {
         display: flex;
-        flex-direction: row;
+        justify-content: space-between;
         align-items: center;
-        width: 100%;
-        height: 100%;
       }
 
-      .wd-loading__spinner-dot {
-        width: 25%;
-        height: 25%;
-        margin: 0 4%;
-        border-radius: 50%;
+      @include me(spinner-dot) {
+        position: static;
+        width: $loading-spinner-dots-dot-size;
+        height: $loading-spinner-dots-dot-size;
+        border-radius: $loading-spinner-dots-dot-radius;
         background-color: currentColor;
-        animation: wd-loading-dot 1.2s ease-in-out infinite;
+        animation-name: wd-dotting;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        animation-fill-mode: both;
       }
     }
 
-    /* wave：四柱起伏 */
     @include m(wave) {
-      .wd-loading__spinner-wraper {
+      animation: none;
+
+      @include me(spinner-wraper) {
         display: flex;
-        flex-direction: row;
         align-items: center;
-        width: 100%;
-        height: 100%;
+        justify-content: center;
+        margin: 0 auto;
       }
 
-      .wd-loading__spinner-wave-bar {
+      @include me(spinner-wave-bar) {
         display: flex;
-        flex-direction: row;
         align-items: center;
-        width: 15%;
-        height: 100%;
-        margin: 0 5%;
-      }
+        animation-duration: $loading-wave-animation-duration;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
 
-      .wd-loading__spinner-wave-bar-inner {
-        width: 100%;
-        height: 100%;
-        border-radius: var(--wd-radius-full);
-        background-color: currentColor;
-        animation: wd-loading-wave 1.2s ease-in-out infinite;
+        &:nth-of-type(n + 2) {
+          margin-left: $loading-wave-gap;
+        }
       }
     }
   }
+
+  @include e(spinner-dot) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    // Lynx 适配：wot-ui 的 ::before 条状图形改为真实子元素
+    .wd-loading__spinner-dot-bar {
+      display: block;
+      width: $loading-spinner-dot-width;
+      height: $loading-spinner-dot-height;
+      margin: 0 auto;
+      background-color: currentColor;
+      border-radius: $loading-spinner-dot-radius;
+    }
+  }
+
+  @include e(spinner-wraper) {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  @include e(spinner-wave-bar) {
+    flex: none;
+    width: $loading-wave-bar-width;
+    height: $loading-wave-bar-height;
+  }
+
+  @include e(spinner-wave-bar-inner) {
+    width: 100%;
+    height: 100%;
+    border-radius: $loading-wave-bar-radius;
+    background-color: currentColor;
+    animation-duration: $loading-wave-animation-duration;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    // Lynx 适配：wot-ui 直接动画 height，Lynx 对布局属性关键帧支持有限，降级 scaleY
+    transform-origin: center bottom;
+    will-change: transform;
+  }
+
+  @include e(text) {
+    font-size: $loading-text-font-size;
+    line-height: $loading-text-line-height;
+    color: currentColor;
+  }
 }
 
-@keyframes wd-loading-rotate {
+@keyframes wd-rotate {
   from {
     transform: rotate(0deg);
   }
@@ -125,26 +211,99 @@
   }
 }
 
-@keyframes wd-loading-dot {
-  0%,
-  100% {
-    opacity: 0.3;
-    transform: scale(0.8);
+@keyframes wd-dotting {
+  0% {
+    opacity: 0.15;
   }
 
-  50% {
-    opacity: 1;
-    transform: scale(1);
+  1% {
+    opacity: 0.8;
+  }
+
+  33% {
+    opacity: 0.8;
+  }
+
+  34% {
+    opacity: 0.15;
+  }
+
+  100% {
+    opacity: 0.15;
   }
 }
 
-@keyframes wd-loading-wave {
+// Lynx 适配：wot-ui 的 wd-wave-bar-1..4 动画 height，此处以 scaleY 等效表达
+@keyframes wd-wave-bar-1 {
+  0%,
+  100% {
+    transform: scaleY(0.2);
+  }
+
+  25.779376%,
+  87.889688% {
+    transform: scaleY(0.4);
+  }
+
+  37.889688%,
+  75.779376% {
+    transform: scaleY(0.7);
+  }
+
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes wd-wave-bar-2 {
   0%,
   100% {
     transform: scaleY(0.4);
   }
 
+  25.779376%,
+  87.889688%,
   50% {
+    transform: scaleY(0.7);
+  }
+
+  37.889688%,
+  75.779376% {
     transform: scaleY(1);
+  }
+}
+
+@keyframes wd-wave-bar-3 {
+  0%,
+  100%,
+  37.889688%,
+  75.779376% {
+    transform: scaleY(0.7);
+  }
+
+  25.779376%,
+  87.889688% {
+    transform: scaleY(1);
+  }
+
+  50% {
+    transform: scaleY(0.4);
+  }
+}
+
+@keyframes wd-wave-bar-4 {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  25.779376%,
+  87.889688% {
+    transform: scaleY(0.7);
+  }
+
+  37.889688%,
+  75.779376% {
+    transform: scaleY(0.4);
   }
 }

@@ -10,10 +10,14 @@ export const CAR_KEYBOARD_AREAS = [
 
 /**
  * 车牌号键盘 - 数字和字母（不含 I / O）
+ *
+ * 键序与 wot-ui 对齐：1-9、0 之后按 QWERTY 顺序排布
+ * （QWERTYUIOP / ASDFGHJKL / ZXCVBNM，车牌规则不用 I、O）。
+ * 早期实现按 A-Z 字母序排列，英文键盘布局与 wot-ui 不一致。
  */
 export const CAR_KEYBOARD_KEYS = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K',
-  'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
-  'W', 'X', 'Y', 'Z'
+  'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'P',
+  'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
+  'Z', 'X', 'C', 'V', 'B', 'N', 'M'
 ]

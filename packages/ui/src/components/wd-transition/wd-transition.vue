@@ -49,6 +49,7 @@ const vShowLynx = vShow
 const props = defineProps(transitionProps)
 const emit = defineEmits([
   'tap',
+  'click',
   'transitionend',
   'touchmove',
   'before-enter',
@@ -177,6 +178,8 @@ function onPhase(event: PhaseEvent, phase: 'enter' | 'leave') {
 
 function handleTap(e?: any) {
   emit('tap', e)
+  // click 保持 wot-ui API 对齐（Lynx 引擎只派发 tap，见 CONVENTIONS §14 订正）
+  emit('click', e)
 }
 
 function onTouchMove(e?: any) {

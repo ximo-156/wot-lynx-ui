@@ -8,7 +8,7 @@ import type {
 
 export type DatetimePickerBeforeConfirm = (value: string | number | Array<string | number>) => boolean | Promise<boolean>
 
-export type DatetimePickerDisplayFormatTabLabel = (value: string | number) => string
+export type DatetimePickerDisplayFormatTabLabel = (items: Record<string, any>[]) => string
 
 const defaultMinDate = new Date(new Date().getFullYear() - 10, 0, 1).getTime()
 const defaultMaxDate = new Date(new Date().getFullYear() + 10, 11, 31).getTime()
@@ -126,7 +126,11 @@ export const datetimePickerProps = {
   /**
    * picker-view 自定义类名
    */
-  customViewClass: makeStringProp('')
+  customViewClass: makeStringProp(''),
+  /**
+   * 是否在手指松开时立即触发 picker-view 的 change 事件。若不开启则会在滚动动画结束后触发 change 事件，1.2.25版本起提供，仅微信小程序和支付宝小程序支持。
+   */
+  immediateChange: makeBooleanProp(false)
 }
 
 export type DatetimePickerProps = ExtractPropTypes<typeof datetimePickerProps>

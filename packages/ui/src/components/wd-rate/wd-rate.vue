@@ -1,11 +1,21 @@
 /*
  * wd-rate — 评分
  *
- * Lynx 实现说明：
- * - 星星经 wd-icon 渲染（favorite-filling），半星用左半裁剪容器叠加；
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 星星经 wd-icon 渲染；wot-ui 默认图标为 star-fill，内置 iconfont 集无该
+ *   字形，改用同语义的 favorite-filling（实心星）；
+ * - wot-ui 用 `-webkit-background-clip: text` + `background`（渐变）给字体
+ *   图标上色，Lynx 不支持该属性且不支持 conic/linear 渐变文字，改为普通
+ *   `color`（activeColor 传渐变串时由浏览器/引擎忽略，取纯色场景）；
+ * - `:not(:last-child)` 的项间距无 Lynx 兄弟选择器等价物，改为按索引输出的
+ *   内联 margin-right（末项为 0），默认值经 var(--wot-rate-item-space, 4px)
+ *   表达以保留 CSS 变量定制能力；
+ * - `display: inline-block` → display: flex + row；`touch-action` /
+ *   `cursor` 等 Web 专有属性删除；
+ * - 半星用左半裁剪容器叠加（overflow: hidden + width: 50%）；
  * - 滑动评分：星星矩形一次性度量并缓存（num/space 变化时失效），
- *   touchmove 热路径只读缓存（CONVENTIONS §16）；
- * - 横向排列容器显式 display: flex。
+ *   touchmove 热路径只读缓存（CONVENTIONS §16）；根 view 的 touchmove 经
+ *   emits 声明转发（CONVENTIONS §14）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -69,7 +79,10 @@ watch(
   () => {
     computeRateList()
   },
-  { immediate: true, deep: true }
+  {
+    immediate: true,
+    deep: true
+  }
 )
 
 watch([() => props.num, () => props.space], () => {
@@ -80,7 +93,10 @@ onMounted(() => {
   refreshRects(true)
 })
 
-const isActive = (rate: string) => rate !== '0'
+// 当前选项是否为激活状态
+const isActive = (rate: string) => {
+  return rate !== '0'
+}
 
 const rootClass = computed(() => {
   const classes = ['wd-rate']
@@ -90,11 +106,24 @@ const rootClass = computed(() => {
   return classes.join(' ')
 })
 
+/**
+ * 项间距：wot-ui 用 `.wd-rate__item:not(:last-child) { margin-right }`，
+ * Lynx 无兄弟/伪类选择器，改为按索引输出内联 margin-right（末项为 0）。
+ * 未传 space 时取 var(--wot-rate-item-space, 4px)，与 SCSS 令牌默认值等价，
+ * 消费者经 CSS 变量定制依然生效。
+ */
+function itemStyle(index: number): Record<string, string> {
+  const isLast = index === rateList.value.length - 1
+  const space = isDef(props.space) ? addUnit(props.space) : 'var(--wot-rate-item-space, 4px)'
+  return { 'margin-right': isLast ? '0' : space }
+}
+
 function computeRateList() {
   const { modelValue, num, allowHalf } = props
+  // value和num都准备好才能计算
   if (modelValue === null || !num) return
   if (typeof modelValue !== 'number') {
-    console.error('[wot-lynx-ui] error(wd-rate): the value of wd-rate should be a number')
+    console.error('[wot ui] error(wd-rate): the value of wd-rate should be a number')
     return
   }
   const tempRateList: string[] = []
@@ -131,6 +160,7 @@ function handleClick(index: number, isHalf: boolean) {
   const { readonly, clearable, allowHalf, modelValue } = props
   if (readonly || isDisabled.value) return
   let value = isHalf ? index + 0.5 : index + 1
+  // 点击清空逻辑：当点击的值与当前modelValue相等且等于最小值时允许清空
   if (clearable) {
     const minValue = allowHalf ? 0.5 : 1
     if (value === modelValue && value === minValue) {
@@ -140,9 +170,14 @@ function handleClick(index: number, isHalf: boolean) {
   updateValue(value)
 }
 
+/**
+ * 设置评分值并触发事件
+ */
 function updateValue(value: number) {
   emit('update:modelValue', value)
-  emit('change', { value })
+  emit('change', {
+    value
+  })
 }
 
 async function onTouchMove(event: any) {
@@ -165,12 +200,7 @@ async function onTouchMove(event: any) {
 
 <template>
   <view :class="rootClass" :style="parseStyle(customStyle)" @touchmove="onTouchMove">
-    <view
-      v-for="(rate, index) in rateList"
-      :key="index"
-      class="wd-rate__item"
-      :style="isDef(space) ? { 'margin-right': index == rateList.length - 1 ? 0 : addUnit(space) } : {}"
-    >
+    <view v-for="(rate, index) in rateList" :key="index" class="wd-rate__item" :style="itemStyle(index)">
       <wd-icon
         :custom-class="`wd-rate__item-star ${rate === '100%' ? 'wd-rate__item-star--active' : ''}`"
         :name="isActive(rate) ? activeIcon : icon"

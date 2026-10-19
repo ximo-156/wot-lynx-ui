@@ -24,7 +24,7 @@ export const mapThemeVarsToCSSVars = (themeVars: Record<string, string>) => {
   if (!themeVars) return
   const cssVars: Record<string, string> = {}
   Object.keys(themeVars).forEach((key) => {
-    cssVars[`--wd-${kebabCase(key)}`] = themeVars[key]
+    cssVars[`--wot-${kebabCase(key)}`] = themeVars[key]
   })
 
   return cssVars
@@ -40,7 +40,7 @@ export interface UseConfigProviderOptions {
 export function useConfigProvider(options: UseConfigProviderOptions = {}) {
   const { themeVars, theme, button, tag } = options
 
-  // themeVars 映射为 --wd-* CSS 变量对象（对象语法：字符串 :style 会被
+  // themeVars 映射为 --wot-* CSS 变量对象（对象语法：字符串 :style 会被
   // vue-lynx patchProp 静默丢弃，themeVars 定制主题整体失效，CONVENTIONS §19）
   const themeStyle = computed<Record<string, string>>(() => {
     const styleObj = mapThemeVarsToCSSVars(unref(themeVars) || {})

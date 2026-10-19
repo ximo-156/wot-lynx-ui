@@ -1,13 +1,19 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(checkbox-group) {
+  // Lynx 适配：wot-ui 的参考样式为空（块级容器 + 子项 inline-flex 行内流式
+  // 排列）。Lynx 3.x 默认 linear 布局（纵向逐行）且不识别 inline-flex，
+  // 故在此显式声明 flex 方向；横向间距由 gap 承担（参考源用
+  // `.wd-checkbox--horizontal:not(:last-child)` 的 margin，Lynx 无兄弟选择器）。
   display: flex;
   flex-direction: column;
 
   @include m(horizontal) {
-    display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    // 与 --wot-checkbox-horizontal-margin 的水平间距一致
+    gap: $spacing-extra-loose;
   }
 }

@@ -1,21 +1,26 @@
 /*
  * wd-keyboard — 键盘
  *
- * Lynx 实现说明：
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
  * - 基于 wd-popup（bottom）；default / custom / car 三种模式；
  * - car 模式支持中英切换（省份简称键盘 / 数字字母键盘），
  *   autoSwitchLang 时输入首位后自动切英文；
- * - randomKeyOrder 打乱数字键序（安全键盘场景）。
+ * - wot-ui 的 hover-class="wd-keyboard__close--hover" 按压态改用 CSS
+ *   :active 伪类（CONVENTIONS §17）；
+ * - wot-ui 用相邻兄弟选择器 `.wd-keyboard__header + .wd-keyboard__body`
+ *   取消有头部时的上内边距，Lynx 不支持，改为模板按 showHeader 下发的
+ *   is-with-header 类名（见 index.scss）；
+ * - customStyle 为字符串，经 parseStyle 归一为对象后绑定（CONVENTIONS §19）。
  */
 <script lang="ts" setup>
 import './index.css'
-import { parseStyle } from '../../common/util'
 
 import { computed, ref, watch, useSlots } from 'vue-lynx'
 import WdPopup from '../wd-popup/wd-popup.vue'
 import WdKey from './key/index.vue'
 import { keyboardProps, type CarKeyboardLang, type Key } from './types'
 import type { NumberKeyType } from './key/types'
+import { parseStyle } from '../../common/util'
 import { CAR_KEYBOARD_AREAS, CAR_KEYBOARD_KEYS } from './constants'
 
 const props = defineProps(keyboardProps)
@@ -40,110 +45,118 @@ const carKeyboardLang = computed({
 
 const keys = computed(() => (props.mode !== 'car' ? (props.mode === 'custom' ? genCustomKeys() : genDefaultKeys()) : genCarKeys()))
 
-/**
- * 每行槽位数：普通键占 1 槽，wider 键（车牌键盘的中英切换 / 删除键、
- * 自定义键盘加宽的 0 键）占 2 槽。
- */
-const KEY_ROW_SLOTS = 3
-
-/**
- * 按键按 3 槽一行切分成显式行。
- *
- * Lynx 新 CSS 引擎下 flex-wrap 的 flex line 会被拉伸（参照 wd-calendar-view：
- * 行高从 52px 涨到 ~150px），且 flex-basis:0 时所有按键假设主尺寸为 0、
- * 永不换行——12 个键全部挤成一行。故与 calendar-view 一样用显式行容器，
- * 行内再用 flex-grow 分配宽度（普通键 grow:1、wider 键 grow:2），
- * Web / Lynx 两端布局一致。
- */
-const keyRows = computed(() => {
-  const rows: Key[][] = []
-  let row: Key[] = []
-  let slots = 0
-  for (const key of keys.value) {
-    const need = key.wider ? 2 : 1
-    if (slots + need > KEY_ROW_SLOTS) {
-      rows.push(row)
-      row = []
-      slots = 0
-    }
-    row.push(key)
-    slots += need
-  }
-  if (row.length) rows.push(row)
-  return rows
-})
-
 const showClose = computed(() => {
-  return Boolean(props.closeText && (props.mode === 'default' || props.mode === 'car'))
+  return props.closeText && (props.mode === 'default' || props.mode === 'car')
 })
 
 const showTitle = computed(() => {
-  return Boolean(props.title || slots.title)
+  return !!props.title || !!slots.title
 })
 
 const showHeader = computed(() => {
   return showTitle.value || showClose.value
 })
 
+/**
+ * 随机打乱数组的顺序
+ * @param {T[]} arr 要打乱顺序的数组
+ * @returns {T[]} 打乱顺序后的数组
+ */
 function shuffleArray<T>(arr: T[]): T[] {
   const newArr = [...arr]
   for (let i = newArr.length - 1; i > 0; i--) {
+    // 生成一个随机索引 j，范围是 [0, i]
     const j = Math.floor(Math.random() * (i + 1))
+
+    // 交换索引 i 和 j 处的元素
     ;[newArr[i], newArr[j]] = [newArr[j], newArr[i]]
   }
   return newArr
 }
 
+/**
+ * 生成基础按键（1-9）
+ * @returns {Key[]} 基础按键数组
+ */
 function genBasicKeys(): Key[] {
   const keys = Array.from({ length: 9 }, (_, i) => ({ text: i + 1 }))
+
+  // 如果需要随机顺序，则调用 shuffleArray 方法打乱数组顺序
   return props.randomKeyOrder ? shuffleArray(keys) : keys
 }
 
+/**
+ * 生成默认键盘按键
+ * @returns {Key[]} 默认键盘按键数组
+ */
 function genDefaultKeys(): Key[] {
   return [
     ...genBasicKeys(),
-    { text: (props.extraKey as string) || '', type: 'extra' },
+    { text: props.extraKey as string, type: 'extra' },
     { text: 0 },
     {
-      text: props.showDeleteKey ? props.deleteText || '' : '',
+      // 根据条件是否显示删除键的文本和类型
+      text: props.showDeleteKey ? props.deleteText : '',
       type: props.showDeleteKey ? 'delete' : ''
     }
   ]
 }
 
+/**
+ * 生成自定义键盘按键
+ * @returns {Key[]} 自定义键盘按键数组
+ */
 function genCustomKeys(): Key[] {
   const keys = genBasicKeys()
-  const extraKeys = (Array.isArray(props.extraKey) ? props.extraKey : [props.extraKey]).map((k) => k || '')
+  const extraKeys = Array.isArray(props.extraKey) ? props.extraKey : [props.extraKey]
   if (extraKeys.length === 1) {
+    // 如果只有一个额外按键，则添加一个宽度较大的数字0和一个额外按键
     keys.push({ text: 0, wider: true }, { text: extraKeys[0], type: 'extra' })
   } else if (extraKeys.length === 2) {
+    // 如果有两个额外按键，则添加两个额外按键和一个数字0
     keys.push({ text: extraKeys[0], type: 'extra' }, { text: 0 }, { text: extraKeys[1], type: 'extra' })
   }
+
   return keys
 }
 
-function genCarKeys(): Key[] {
+/**
+ * 生成车牌键盘按键
+ * @returns {Array<Key>} 车牌键盘按键数组
+ */
+function genCarKeys(): Array<Key> {
   const [keys, remainKeys] = splitCarKeys()
   return [
     ...keys,
     { text: carKeyboardLang.value === 'zh' ? 'ABC' : '省份', type: 'extra', wider: true },
     ...remainKeys,
-    { text: props.deleteText || '', type: 'delete', wider: true }
+    { text: props.deleteText, type: 'delete', wider: true }
   ]
 }
 
-function splitCarKeys(): Array<Key[]> {
-  const keys =
-    carKeyboardLang.value === 'zh' ? CAR_KEYBOARD_AREAS.map((key) => ({ text: key })) : CAR_KEYBOARD_KEYS.map((key) => ({ text: key }))
+/**
+ * 分割车牌键盘按键
+ * @returns {Array<Array<Key>>} 分割后的按键数组
+ */
+function splitCarKeys(): Array<Array<Key>> {
+  const keys = carKeyboardLang.value === 'zh' ? CAR_KEYBOARD_AREAS.map((key) => ({ text: key })) : CAR_KEYBOARD_KEYS.map((key) => ({ text: key }))
   return [keys.slice(0, 30), keys.slice(30)]
 }
 
-function handleClose() {
+/**
+ * 处理关闭事件
+ */
+const handleClose = () => {
   emit('close')
   emit('update:visible', false)
 }
 
-function handlePress(text: string, type: NumberKeyType) {
+/**
+ * 处理按键点击事件
+ * @param {string} text 按键文本
+ * @param {NumberKeyType} type 按键类型
+ */
+const handlePress = (text: string, type: NumberKeyType) => {
   if (type === 'extra') {
     if (text === '') {
       return handleClose()
@@ -170,11 +183,12 @@ function handlePress(text: string, type: NumberKeyType) {
     }
   } else if (type === 'close') {
     handleClose()
-  } else if (value.length < Number(props.maxlength)) {
+  } else if (value.length < +props.maxlength) {
     emit('input', text)
     const newValue = value + text
     emit('update:modelValue', newValue)
     if (props.mode === 'car' && newValue.length === 1 && props.autoSwitchLang) {
+      // 输入第一位（省份）后，自动切换到英文
       carKeyboardLang.value = 'en'
     }
   }
@@ -203,11 +217,9 @@ function handlePress(text: string, type: NumberKeyType) {
         </view>
       </view>
       <template v-if="mode !== 'car'">
-        <view class="wd-keyboard__body">
+        <view :class="`wd-keyboard__body ${showHeader ? 'is-with-header' : ''}`">
           <view class="wd-keyboard__keys">
-            <view v-for="(row, rowIndex) in keyRows" :key="`row-${rowIndex}`" class="wd-keyboard__row">
-              <wd-key v-for="(key, keyIndex) in row" :key="`${key.type}-${key.text}-${keyIndex}`" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
-            </view>
+            <wd-key v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
           </view>
           <view v-if="mode === 'custom'" class="wd-keyboard__sidebar">
             <wd-key v-if="showDeleteKey" large :text="deleteText" type="delete" @press="handlePress" />
@@ -216,11 +228,9 @@ function handlePress(text: string, type: NumberKeyType) {
         </view>
       </template>
       <template v-else>
-        <view class="wd-keyboard__body">
-          <view class="wd-keyboard__keys">
-            <view v-for="(row, rowIndex) in keyRows" :key="`row-${rowIndex}`" class="wd-keyboard__row">
-              <wd-key v-for="(key, keyIndex) in row" :key="`${key.type}-${key.text}-${keyIndex}`" :text="key.text" :type="key.type" :wider="key.wider" is-car @press="handlePress" />
-            </view>
+        <view :class="`wd-keyboard__body ${showHeader ? 'is-with-header' : ''}`">
+          <view class="wd-keyboard__car-keys">
+            <wd-key v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" is-car @press="handlePress" />
           </view>
         </view>
       </template>

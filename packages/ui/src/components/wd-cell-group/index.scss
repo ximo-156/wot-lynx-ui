@@ -1,42 +1,61 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
-@include b(cell-group) {
-  display: flex;
-  flex-direction: column;
-  background-color: var(--wd-bg-container);
+// 单元格组背景色
+$cell-group-bg: var(--wot-cell-group-bg, $filled-oppo) !default;
+// 标题区域内边距
+$cell-group-padding: var(--wot-cell-group-padding, $padding-loose) !default;
+// 标题文字字重
+$cell-group-font-weight: var(--wot-cell-group-font-weight, $font-weight-medium) !default;
+// 标题文字颜色
+$cell-group-title-color: var(--wot-cell-group-title-color, $text-main) !default;
+// 右侧辅助文字颜色
+$cell-group-value-color: var(--wot-cell-group-value-color, $text-secondary) !default;
+// 右侧辅助文字字号
+$cell-group-value-font-size: var(--wot-cell-group-value-font-size, $typography-body-size-main) !default;
+// 标题文字字号
+$cell-group-title-font-size: var(--wot-cell-group-title-font-size, $typography-body-size-main) !default;
+// 插入模式圆角
+$cell-group-insert-radius: var(--wot-cell-group-insert-radius, $radius-large) !default;
+// 插入模式外边距
+$cell-group-insert-margin: var(--wot-cell-group-insert-margin, $spacing-zero $spacing-extra-loose) !default;
 
-  @include e(title) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--wd-space-3);
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-3);
+@include b(cell-group) {
+  background: $cell-group-bg;
+
+  /* Lynx 适配：参考源 when(border) 内以 halfPixelBorder 的 ::after 伪元素
+     绘制标题下分割线，此处改为主元素真实 border-bottom（1ppx）；
+     mixin 前置的 position: relative 显式保留 */
+  @include when(border) {
+    @include edeep(title) {
+      position: relative;
+      @include halfPixelBorder;
+    }
   }
 
-  @include e(left) {
+  @include e(title) {
+    position: relative;
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    justify-content: space-between;
+    padding: $cell-group-padding;
+    background: $cell-group-bg;
+    font-size: $cell-group-title-font-size;
+    color: $cell-group-title-color;
+    font-weight: $cell-group-font-weight;
   }
 
   @include e(right) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
+    color: $cell-group-value-color;
+    font-size: $cell-group-value-font-size;
   }
 
   @include e(body) {
-    display: flex;
-    flex-direction: column;
+    background: $cell-group-bg;
   }
 
-  /* 卡片式分组：圆角 + 水平边距 */
   @include m(insert) {
-    margin-left: var(--wd-space-4);
-    margin-right: var(--wd-space-4);
-    border-radius: var(--wd-radius-lg);
+    border-radius: $cell-group-insert-radius;
     overflow: hidden;
+    margin: $cell-group-insert-margin;
   }
 }

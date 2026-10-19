@@ -141,14 +141,14 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     cleanup()
   })
 
-  it('WdConfigProvider themeVars 映射为 --wd-* 对象（定制主题曾整体失效）', () => {
+  it('WdConfigProvider themeVars 映射为 --wot-* 对象（定制主题曾整体失效）', () => {
     // mapThemeVarsToCSSVars 输出对象（字符串形式会被 patchProp 丢弃）；
     // 真机经 enableCSSInlineVariables 支持内联 CSS 变量，测试环境的
     // JSDOM 不支持 setProperty 自定义属性，故在单元层断言映射结果。
     const vars = mapThemeVarsToCSSVars({ colorPrimary: '#ff0000', fontSizeSmall: '12px' })
     expect(vars).toEqual({
-      '--wd-color-primary': '#ff0000',
-      '--wd-font-size-small': '12px'
+      '--wot-color-primary': '#ff0000',
+      '--wot-font-size-small': '12px'
     })
   })
 
@@ -157,7 +157,7 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
       theme: 'light',
       customStyle: 'background-color: rgb(1, 2, 3)'
     })
-    const root = container.querySelector('.wd-theme-light')
+    const root = container.querySelector('.wot-theme-light')
     expect(styleOf(root)).toContain('background-color')
     expect(styleOf(root)).toContain('rgb(1, 2, 3)')
     cleanup()

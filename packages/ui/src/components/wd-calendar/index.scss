@@ -1,109 +1,135 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 日历弹层背景色
+$calendar-bg: var(--wot-calendar-bg, $filled-oppo) !default;
+// Tabs 宽度
+$calendar-tabs-width: var(--wot-calendar-tabs-width, 100%) !default;
+// Tabs 内边距
+$calendar-tabs-padding: var(--wot-calendar-tabs-padding, $padding-zero $padding-extra-loose) !default;
+// 快捷选项内边距
+$calendar-shortcuts-padding: var(--wot-calendar-shortcuts-padding, $padding-extra-tight $padding-zero) !default;
+// 标签右间距
+$calendar-tag-spacing-right: var(--wot-calendar-tag-spacing-right, $spacing-extra-loose) !default;
+// 范围标签内边距
+$calendar-range-padding: var(--wot-calendar-range-padding, $padding-zero $padding-loose $padding-extra-loose) !default;
+// 范围标签字号
+$calendar-range-font-size: var(--wot-calendar-range-font-size, $typography-body-size-main) !default;
+// 范围标签项字号
+$calendar-range-item-font-size: var(--wot-calendar-range-item-font-size, $typography-body-size-extra-large) !default;
+// 范围标签项字重
+$calendar-range-item-font-weight: var(--wot-calendar-range-item-font-weight, $font-weight-medium) !default;
+// 范围标签项行高
+$calendar-range-item-line-height: var(--wot-calendar-range-item-line-height, $typography-body-line-height-size-extra-large) !default;
+// 范围标签项内边距
+$calendar-range-item-padding: var(--wot-calendar-range-item-padding, $spacing-loose $spacing-zero) !default;
+// 范围标签项颜色
+$calendar-range-item-color: var(--wot-calendar-range-item-color, $primary-6) !default;
+// 占位符颜色
+$calendar-range-item-color-placeholder: var(--wot-calendar-range-item-color-placeholder, $text-placeholder) !default;
+// 范围标签项下划线颜色
+$calendar-range-item-line-color: var(--wot-calendar-range-item-line-color, $primary-6) !default;
+// 范围标签项下划线占位符颜色
+$calendar-range-item-line-color-placeholder: var(--wot-calendar-range-item-line-color-placeholder, $border-main) !default;
+// 分隔符水平间距
+$calendar-range-separator-margin: var(--wot-calendar-range-separator-margin, $spacing-zero $spacing-tight) !default;
+// 分隔符颜色
+$calendar-range-separator-color: var(--wot-calendar-range-separator-color, $text-auxiliary) !default;
+// 分隔符宽度
+$calendar-range-separator-width: var(--wot-calendar-range-separator-width, $n-8) !default;
+// 分隔符高度
+$calendar-range-separator-height: var(--wot-calendar-range-separator-height, $stroke-main) !default;
+// 确认区域内边距
+$calendar-confirm-padding: var(--wot-calendar-confirm-padding, $padding-tight $padding-loose) !default;
+// 确认区域上边框颜色
+$calendar-confirm-border-color: var(--wot-calendar-confirm-border-color, $border-light) !default;
+
 @include b(calendar) {
-  @include e(popup) {
-    border-top-left-radius: var(--wd-radius-xl);
-    border-top-right-radius: var(--wd-radius-xl);
-  }
 
   @include e(header) {
-    display: flex;
-    flex-direction: column;
-    padding: var(--wd-space-2) var(--wd-space-4) 0;
+    position: relative;
+    overflow: hidden;
   }
 
-  @include e(title) {
-    padding: var(--wd-space-2) 0;
-    font-size: var(--wd-font-md);
-    font-weight: var(--wd-font-weight-medium);
-    color: var(--wd-text-1);
-    text-align: center;
+  // Lynx 适配：wot-ui 的 :deep() 在本地无 shadow DOM，等价为后代选择器。
+  @include edeep(popup) {
+    background: $calendar-bg;
   }
 
   @include e(tabs) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-  }
-
-  @include e(tab) {
-    padding: 0 var(--wd-space-4);
-    border-radius: var(--wd-radius-full);
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-2);
-
-    @include when(active) {
-      background-color: var(--wd-color-primary-bg);
-      color: var(--wd-color-primary);
-    }
+    box-sizing: border-box;
+    width: $calendar-tabs-width;
+    padding: $calendar-tabs-padding;
   }
 
   @include e(shortcuts) {
+    // Lynx 适配：wot-ui 用 text-align: center 居中行内标签；Lynx 下标签为
+    // view 节点，补 flex 居中确保水平居中生效。
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    align-items: center;
-    padding: var(--wd-space-15) 0;
+    justify-content: center;
+    padding: $calendar-shortcuts-padding;
+    text-align: center;
   }
 
-  @include e(tag) {
-    padding: var(--wd-space-1) var(--wd-space-3);
-    margin-right: var(--wd-space-4);
-    margin-bottom: var(--wd-space-1);
-    border-radius: var(--wd-radius-full);
-    background-color: var(--wd-bg-secondary);
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-2);
-
-    @include when(active) {
-      background-color: var(--wd-color-primary);
-      color: var(--wd-color-on-primary);
-    }
-
-    @include m(last-tag) {
+  // Lynx 适配：wot-ui 的 :deep() 在本地无 shadow DOM，等价为后代选择器。
+  @include edeep(tag) {
+    margin-right: $calendar-tag-spacing-right;
+    @include when(last-tag) {
       margin-right: 0;
     }
   }
-
   @include e(range) {
     display: flex;
     flex-direction: row;
+    justify-content: center;
     align-items: center;
-    padding: 0 var(--wd-space-3) var(--wd-space-4);
+    font-size: $calendar-range-font-size;
+    padding: $calendar-range-padding;
   }
 
   @include e(range-item) {
-    flex-grow: 1;
-    flex-basis: 0;
-    padding: var(--wd-space-3) 0;
-    border-radius: var(--wd-radius-sm);
-    background-color: var(--wd-bg-secondary);
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-1);
+    // Lynx 适配：本地 pixelBorder 混入只下发原生 border（wot-ui 另含
+    // ::after 描边，Lynx 无伪元素），position: relative 显式补齐。
+    position: relative;
+    flex: 1;
+    color: $calendar-range-item-color;
+    font-size: $calendar-range-item-font-size;
+    font-weight: $calendar-range-item-font-weight;
+    line-height: $calendar-range-item-line-height;
+    padding: $calendar-range-item-padding;
     text-align: center;
+    @include pixelBorder(bottom, 0, $calendar-range-item-line-color);
 
     @include when(placeholder) {
-      color: var(--wd-text-4);
+      position: relative;
+      color: $calendar-range-item-color-placeholder;
+      @include pixelBorder(bottom, 0, $calendar-range-item-line-color-placeholder);
+
     }
   }
 
   @include e(range-separator) {
-    width: var(--wd-space-4);
-    height: 1ppx;
-    background-color: var(--wd-border-1);
-    margin: 0 var(--wd-space-2);
+    width: $calendar-range-separator-width;
+    height: $calendar-range-separator-height;
+    position: relative;
+    margin: $calendar-range-separator-margin;
+    background: $calendar-range-separator-color;
   }
 
-  @include e(view) {
+  @include e(confirm) {
+    // Lynx 适配：本地 pixelBorder 混入只下发原生 border（wot-ui 另含
+    // ::after 描边，Lynx 无伪元素），position: relative 显式补齐。
+    position: relative;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    padding: $calendar-confirm-padding;
+    @include pixelBorder(top, 0, $calendar-confirm-border-color);
   }
 
-  @include e(footer) {
-    padding: var(--wd-space-3) var(--wd-space-4);
-    border-top-width: 1ppx;
-    border-top-style: solid;
-    border-top-color: var(--wd-border-1);
+  @include e(confirm-btn-wrapper) {
+    flex-grow: 1;
   }
 }

@@ -1,39 +1,30 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
-@include b(resize) {
-  width: 100%;
+// 组件级 CSS 变量定义
+$resize-container-min-size: var(--wot-resize-container-min-size, $n-1) !default; // 容器最小宽高
+$resize-wrapper-z-index: var(--wot-resize-wrapper-z-index, -9999) !default; // wrapper 层级
 
-  /* 容器保持在文档流：宽度 100%（跟随父级），高度由插槽内容驱动；
-     探测 scroll-view 绝对定位铺满容器（见 wrapper） */
+@include b(resize) {
   @include e(container) {
-    position: relative;
-    width: 100%;
-    min-height: 1px;
+    position: absolute;
+    min-width: $resize-container-min-size;
+    min-height: $resize-container-min-size;
   }
 
-  /* 探测 scroll-view：绝对定位铺满容器、隐藏、置于底层，不拦截交互 */
   @include e(wrapper) {
     position: absolute;
     top: 0;
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: -9999;
+    z-index: $resize-wrapper-z-index;
     overflow: hidden;
     visibility: hidden;
-  }
 
-  /* expand 探测占位：100000px（远超任何容器，用于检测变大） */
-  @include e(placeholder) {
-    @include when(expand) {
-      height: 100000px;
-      width: 100000px;
-    }
-
-    /* shrink 探测占位：250%（随容器伸缩，用于检测变小） */
-    @include when(shrink) {
-      height: 250%;
-      width: 250%;
+    @include m(placeholder) {
+      transition: 0s;
+      animation: none;
     }
   }
 }

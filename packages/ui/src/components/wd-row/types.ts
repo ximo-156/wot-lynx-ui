@@ -1,22 +1,34 @@
-import type { ExtractPropTypes } from 'vue-lynx'
+import type { ExtractPropTypes, InjectionKey } from 'vue-lynx'
 import { baseProps, makeNumberProp, makeStringProp } from '../../common/props'
 
-export type RowJustify = 'start' | 'end' | 'center' | 'space-around' | 'space-between'
+/**
+ * 水平对齐方式
+ */
+export type RowJustify = 'start' | 'center' | 'end' | 'space-between' | 'space-around' | 'space-evenly'
 
-export type RowAlign = 'top' | 'center' | 'bottom'
+/**
+ * 垂直对齐方式
+ */
+export type RowAlign = 'top' | 'middle' | 'bottom'
+
+export type RowProvide = {
+  props: { gutter?: number }
+}
+
+export const ROW_KEY: InjectionKey<RowProvide> = Symbol('wd-row')
 
 export const rowProps = {
   ...baseProps,
   /**
-   * 列间距（px）
+   * 列元素之间的间距（单位为 px）
    */
   gutter: makeNumberProp(0),
   /**
-   * 水平排列
+   * 主轴对齐方式
    */
   justify: makeStringProp<RowJustify>('start'),
   /**
-   * 垂直对齐
+   * 交叉轴对齐方式
    */
   align: makeStringProp<RowAlign>('top')
 }

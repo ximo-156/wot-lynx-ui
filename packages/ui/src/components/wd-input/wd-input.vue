@@ -1,12 +1,19 @@
 /*
  * wd-input — 输入框
  *
- * Lynx 实现说明：
- * - 基于 Lynx 原生 input 元素（value/type/password/focus/confirm-type 等
- *   原生属性透传），经 :value + @input 双向同步（避免运行时 vModel 指令）；
- * - readonly 经遮罩 view 拦截交互（Lynx input 无可靠 readonly 属性）；
- * - 清空 / 密码可见 / 前后置图标均为 wd-icon + @tap；
- * - blur 时经 FORM_ITEM_VALIDATE_KEY 通知 form-item 校验。
+ * 与 wot-ui 2.3.2 对齐；Lynx 适配点（相对参考源的差异）：
+ * - 基于 Lynx 原生 input 元素；参考源用 v-model 双向绑定，vue-lynx 运行时
+ *   对原生元素不挂 vModel 指令，故改 :value 受控绑定 + @input 回写
+ *   inputValue 后再向上同步（语义与 v-model 一致）；
+ * - @click → @tap（CONVENTIONS §6：Lynx view/图标只派发 tap）；
+ * - customStyle 经 parseStyle() 归一为对象后下发（CONVENTIONS §19）；
+ * - 根 view 绑 @tap 并在 emits 声明 'tap' 转发（CONVENTIONS §14：消费方
+ *   在组件上绑 @tap 才不会落入同名监听合并崩溃）；
+ * - 内置图标集无 close-circle / eye / eye-invisible 字形，清空取
+ *   close-bold、密码可见取 browse、不可见取 eye-close（图标注册表差异）；
+ * - pause() 续写前经 useAlive() 判存活，避免卸载后晚到 patch（真机 9902）；
+ * - always-embed / enable-native / ignore-composition-event / inputmode 为
+ *   小程序 / H5 专有属性，保留透传、Lynx 侧不生效。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -42,10 +49,10 @@ const isDisabled = useFormDisabled(props)
 const isAlive = useAlive()
 
 const isPwdVisible = ref<boolean>(false)
-const clearing = ref<boolean>(false)
-const focused = ref<boolean>(false)
-const focusing = ref<boolean>(false)
-const inputValue = ref<string | number>(getInitValue())
+const clearing = ref<boolean>(false) // 是否正在清空操作，避免重复触发失焦
+const focused = ref<boolean>(false) // 控制聚焦
+const focusing = ref<boolean>(false) // 当前是否激活状态
+const inputValue = ref<string | number>(getInitValue()) // 输入框的值
 
 watch(
   () => props.focus,
@@ -66,44 +73,56 @@ const placeholderValue = computed(() => {
   return isDef(props.placeholder) ? props.placeholder : translate('placeholder')
 })
 
+/**
+ * 展示清空按钮
+ */
 const showClear = computed(() => {
   const { readonly, clearable, clearTrigger } = props
-  return Boolean(
+  if (
     clearable &&
-      !readonly &&
-      !isDisabled.value &&
-      inputValue.value &&
-      (clearTrigger === 'always' || (clearTrigger === 'focus' && focusing.value))
-  )
+    !readonly &&
+    !isDisabled.value &&
+    inputValue.value &&
+    (clearTrigger === 'always' || (props.clearTrigger === 'focus' && focusing.value))
+  ) {
+    return true
+  } else {
+    return false
+  }
 })
 
+/**
+ * 展示字数统计
+ */
 const showWordCount = computed(() => {
   const { readonly, maxlength, showWordLimit } = props
-  return Boolean(!isDisabled.value && !readonly && isDef(maxlength) && Number(maxlength) > -1 && showWordLimit)
+  return Boolean(!isDisabled.value && !readonly && isDef(maxlength) && maxlength > -1 && showWordLimit)
 })
 
-/** 当前输入框文字长度（Array.from 正确处理多码元字符） */
+// 当前输入框文字长度
 const currentLength = computed(() => {
+  /**
+   * 使用Array.from处理多码元字符以获取正确的长度
+   * @link https://github.com/Moonofweisheng/wot-design-uni/issues/933
+   */
   return Array.from(String(formatValue(props.modelValue))).length
 })
 
 const rootClass = computed(() => {
-  const classes = ['wd-input']
-  if (props.error) classes.push('is-error')
-  if (isDisabled.value) classes.push('is-disabled')
-  if (isCompact.value) classes.push('is-compact')
-  if (props.customClass) classes.push(props.customClass)
-  return classes.join(' ')
+  return `wd-input ${props.error ? 'is-error' : ''} ${isDisabled.value ? 'is-disabled' : ''}  ${isCompact.value ? 'is-compact' : ''} ${
+    props.customClass
+  }`
 })
 
 const inputPlaceholderClass = computed(() => {
-  return `wd-input__placeholder ${props.placeholderClass}`
+  return `wd-input__placeholder  ${props.placeholderClass}`
 })
 
 const isCompact = computed(() => {
   return isDef(props.compact) ? props.compact : isDef(formItemValidate.value)
 })
 
+// 状态初始化
 function getInitValue() {
   const formatted = formatValue(props.modelValue)
   if (!isValueEqual(formatted, props.modelValue)) {
@@ -112,30 +131,21 @@ function getInitValue() {
   return formatted
 }
 
-/**
- * 值归一：null 与 undefined 一视同仁归一为 ''。
- *
- * Vue 只对 undefined 应用 prop 默认值，显式传入的 null 不套用：此前
- * null 会被原样返回，模板 `:value="String(inputValue)"` 渲染出字面量
- * "null"，maxlength 场景下 `value.toString()` 还会直接抛 TypeError。
- */
-function formatValue(value: string | number | null | undefined) {
+function formatValue(value: string | number) {
+  // null 与 undefined 一视同仁归一为 ''：Vue 只对 undefined 应用 prop 默认值，
+  // 显式传入的 null 不套用，原样返回会在 :value="String(inputValue)" 渲染出
+  // 字面量 "null"（maxlength 场景下 value.toString() 还会抛 TypeError）
   const normalized = isDef(value) ? value : ''
   const { maxlength } = props
-  if (isDef(maxlength) && Number(maxlength) !== -1 && String(normalized).length > Number(maxlength)) {
-    return normalized.toString().slice(0, Number(maxlength))
+  if (isDef(maxlength) && maxlength !== -1 && String(normalized).length > maxlength) {
+    return normalized.toString().slice(0, maxlength)
   }
   return normalized
-}
-
-function isValueEqual(value1: number | string, value2: number | string) {
-  return isEqual(String(value1), String(value2))
 }
 
 function togglePwdVisible() {
   isPwdVisible.value = !isPwdVisible.value
 }
-
 async function handleClear() {
   focusing.value = false
   inputValue.value = ''
@@ -145,7 +155,7 @@ async function handleClear() {
   }
   await pause()
   // 暂停窗口内组件可能已卸载：续写在已销毁树上 patch 会产生晚到的
-  // remove/insert（真机 9902 removeNode 家族）。与 wd-textarea 保持一致。
+  // remove/insert（真机 9902 removeNode 家族）
   if (!isAlive()) return
   if (props.focusWhenClear) {
     focused.value = true
@@ -154,9 +164,8 @@ async function handleClear() {
   emit('update:modelValue', inputValue.value)
   emit('clear')
 }
-
 async function handleBlur() {
-  // 等待 150ms，确保 clear 执行完毕
+  // 等待150毫秒，clear执行完毕
   await pause(150)
   if (!isAlive()) return
   if (clearing.value) {
@@ -164,39 +173,40 @@ async function handleBlur() {
     return
   }
   focusing.value = false
-  emit('blur', { value: inputValue.value })
+  emit('blur', {
+    value: inputValue.value
+  })
   await formItemValidate.value?.validateByTrigger('blur')
 }
-
 function handleFocus({ detail }: any) {
   focusing.value = true
   emit('focus', detail)
 }
-
 function handleInput({ detail }: any) {
+  // Lynx 适配：参考源经 v-model 由运行时回写 inputValue；:value 受控绑定
+  // 下需在此用 detail.value 自行回写，保持与 v-model 一致的双向语义
+  inputValue.value = detail.value
   emit('update:modelValue', inputValue.value)
   emit('input', detail)
 }
-
 function handleKeyboardheightchange({ detail }: any) {
   emit('keyboardheightchange', detail)
 }
-
 function handleConfirm({ detail }: any) {
   emit('confirm', detail)
 }
-
 function onClickSuffixIcon() {
   emit('clicksuffixicon')
 }
-
 function onClickPrefixIcon() {
   emit('clickprefixicon')
 }
-
 function handleClick(event: any) {
   emit('click', event)
   emit('tap', event)
+}
+function isValueEqual(value1: number | string, value2: number | string) {
+  return isEqual(String(value1), String(value2))
 }
 </script>
 
@@ -211,7 +221,7 @@ function handleClick(event: any) {
         :css-icon="cssIcon"
         @tap="onClickPrefixIcon"
       />
-      <slot v-else name="prefix" />
+      <slot v-else name="prefix"></slot>
     </view>
     <input
       :class="[
@@ -248,18 +258,11 @@ function handleClick(event: any) {
       @confirm="handleConfirm"
       @keyboardheightchange="handleKeyboardheightchange"
     />
-    <view v-if="readonly" class="wd-input__readonly-mask" />
+    <view v-if="props.readonly" class="wd-input__readonly-mask" />
     <view v-if="showClear || showPassword || suffixIcon || showWordCount || $slots.suffix" class="wd-input__suffix">
       <wd-icon v-if="showClear" custom-class="wd-input__clear" name="close-bold" @tap="handleClear" />
-      <wd-icon
-        v-if="showPassword"
-        custom-class="wd-input__icon"
-        :name="isPwdVisible ? 'browse' : 'eye-close'"
-        @tap="togglePwdVisible"
-      />
-      <view v-if="showWordCount" class="wd-input__count">
-        <text>{{ currentLength }}/{{ maxlength }}</text>
-      </view>
+      <wd-icon v-if="showPassword" custom-class="wd-input__icon" :name="isPwdVisible ? 'browse' : 'eye-close'" @tap="togglePwdVisible" />
+      <view v-if="showWordCount" class="wd-input__count"><text>{{ currentLength }}/{{ maxlength }}</text></view>
       <wd-icon
         v-if="suffixIcon && !$slots.suffix"
         custom-class="wd-input__icon"
@@ -268,7 +271,7 @@ function handleClick(event: any) {
         :css-icon="cssIcon"
         @tap="onClickSuffixIcon"
       />
-      <slot v-else name="suffix" />
+      <slot v-else name="suffix"></slot>
     </view>
   </view>
 </template>

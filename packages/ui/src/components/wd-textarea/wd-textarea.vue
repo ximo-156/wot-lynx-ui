@@ -1,15 +1,24 @@
 /*
  * wd-textarea — 文本域
  *
- * Lynx 实现说明：
- * - 基于 Lynx 原生 textarea 元素（auto-height / show-confirm-bar /
- *   cursor-spacing 等原生属性透传），经 :value + @input 双向同步；
- * - readonly 经遮罩 view 拦截交互；blur 通知 form-item 校验。
+ * 与 wot-ui 2.3.2 对齐；Lynx 适配点（相对参考源的差异）：
+ * - 基于 Lynx 原生 textarea 元素；参考源用 v-model 双向绑定，vue-lynx
+ *   运行时对原生元素不挂 vModel 指令，故改 :value 受控绑定 + @input 回写
+ *   inputValue 后再向上同步（语义与 v-model 一致）；
+ * - @click → @tap（CONVENTIONS §6：Lynx view/图标只派发 tap）；
+ * - customStyle 经 parseStyle() 归一为对象后下发（CONVENTIONS §19）；
+ * - readonly 经遮罩 view 拦截交互（Lynx textarea 无可靠 readonly 属性）；
+ * - blur 时经 FORM_ITEM_VALIDATE_KEY 通知 form-item 校验；
+ * - 内置图标集无 close-circle 字形，清空取 close-bold（图标注册表差异）；
+ * - pause() 续写前经 useAlive() 判存活，避免卸载后晚到 patch（真机 9902）；
+ * - customTextareaContainerClass 参考源已声明但未接线，此处按 JSDoc 语义
+ *   接到 body 容器上（改进项，不影响参考行为）；
+ * - enable-native 为支付宝小程序专有属性，保留透传、Lynx 侧不生效。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref, watch } from 'vue-lynx'
+import { computed, onBeforeMount, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { textareaProps } from './types'
 import { isDef, isString, pause, parseStyle } from '../../common/util'
@@ -34,9 +43,9 @@ const placeholderValue = computed(() => {
 })
 
 const clearing = ref<boolean>(false)
-const focused = ref<boolean>(false)
-const focusing = ref<boolean>(false)
-const inputValue = ref<string>('')
+const focused = ref<boolean>(false) // 控制聚焦
+const focusing = ref<boolean>(false) // 当前是否激活状态
+const inputValue = ref<string>('') // 输入框的值
 
 watch(
   () => props.focus,
@@ -54,40 +63,73 @@ watch(
   { immediate: true, deep: true }
 )
 
+/**
+ * 展示清空按钮
+ */
 const showClear = computed(() => {
   const { readonly, clearable, clearTrigger } = props
-  return Boolean(
+  if (
     clearable &&
-      !readonly &&
-      !isDisabled.value &&
-      inputValue.value &&
-      (clearTrigger === 'always' || (clearTrigger === 'focus' && focusing.value))
-  )
+    !readonly &&
+    !isDisabled.value &&
+    inputValue.value &&
+    (clearTrigger === 'always' || (props.clearTrigger === 'focus' && focusing.value))
+  ) {
+    return true
+  } else {
+    return false
+  }
 })
 
+/**
+ * 展示字数统计
+ */
 const showWordCount = computed(() => {
   const { readonly, maxlength, showWordLimit } = props
-  return Boolean(!isDisabled.value && !readonly && isDef(maxlength) && Number(maxlength) > -1 && showWordLimit)
+  return Boolean(!isDisabled.value && !readonly && isDef(maxlength) && maxlength > -1 && showWordLimit)
 })
 
+// 当前文本域文字长度
 const currentLength = computed(() => {
-  // 读本地 inputValue 而非 props.modelValue：modelValue 为 null 时
-  // String(null)="null"（长度 4），字数统计会显示 "4/50"。inputValue
-  // 已由 watch（immediate）把 null/undefined 归一为 ''。
-  return Array.from(String(inputValue.value)).length
+  /**
+   * 使用Array.from处理多码元字符以获取正确的长度
+   * @link https://github.com/Moonofweisheng/wot-design-uni/issues/933
+   */
+  return Array.from(String(formatValue(props.modelValue))).length
 })
 
 const rootClass = computed(() => {
-  const classes = ['wd-textarea']
-  if (props.error) classes.push('is-error')
-  if (isDisabled.value) classes.push('is-disabled')
-  if (props.customClass) classes.push(props.customClass)
-  return classes.join(' ')
+  return `wd-textarea ${props.error ? 'is-error' : ''} ${isDisabled.value ? 'is-disabled' : ''} ${props.autoHeight ? 'is-auto-height' : ''} ${
+    isCompact.value ? 'is-compact' : ''
+  } ${props.customClass}`
+})
+
+const isCompact = computed(() => {
+  return isDef(props.compact) ? props.compact : isDef(formItemValidate.value)
 })
 
 const inputPlaceholderClass = computed(() => {
-  return `wd-textarea__placeholder ${props.placeholderClass}`
+  return `wd-textarea__placeholder  ${props.placeholderClass}`
 })
+
+onBeforeMount(() => {
+  initState()
+})
+
+// 状态初始化
+function initState() {
+  inputValue.value = formatValue(inputValue.value)
+  emit('update:modelValue', inputValue.value)
+}
+
+function formatValue(value: string | number) {
+  if (value === null || value === undefined) return ''
+  const { maxlength, showWordLimit } = props
+  if (showWordLimit && maxlength !== -1 && String(value).length > maxlength) {
+    return value.toString().substring(0, maxlength)
+  }
+  return `${value}`
+}
 
 async function handleClear() {
   focusing.value = false
@@ -98,7 +140,7 @@ async function handleClear() {
   }
   await pause()
   // 暂停窗口内组件可能已卸载：续写在已销毁树上 patch 会产生晚到的
-  // remove/insert（真机 9902 removeNode 家族）。
+  // remove/insert（真机 9902 removeNode 家族）
   if (!isAlive()) return
   if (props.focusWhenClear) {
     focused.value = true
@@ -107,39 +149,42 @@ async function handleClear() {
   emit('update:modelValue', inputValue.value)
   emit('clear')
 }
-
-async function handleBlur() {
+async function handleBlur({ detail }: any) {
+  // 等待150毫秒，clear执行完毕
   await pause(150)
   if (!isAlive()) return
+
   if (clearing.value) {
     clearing.value = false
     return
   }
+
   focusing.value = false
-  emit('blur', { value: inputValue.value })
+  emit('blur', {
+    value: inputValue.value,
+    cursor: detail.cursor ? detail.cursor : null
+  })
   await formItemValidate.value?.validateByTrigger('blur')
 }
-
 function handleFocus({ detail }: any) {
   focusing.value = true
   emit('focus', detail)
 }
-
 function handleInput({ detail }: any) {
+  // Lynx 适配：参考源经 v-model 由运行时回写 inputValue；:value 受控绑定
+  // 下需在此用 detail.value 自行回写，保持与 v-model 一致的双向语义
+  inputValue.value = formatValue(detail.value)
   emit('update:modelValue', inputValue.value)
   emit('input', detail)
 }
-
+function handleKeyboardheightchange({ detail }: any) {
+  emit('keyboardheightchange', detail)
+}
 function handleConfirm({ detail }: any) {
   emit('confirm', detail)
 }
-
 function handleLineChange({ detail }: any) {
   emit('linechange', detail)
-}
-
-function handleKeyboardheightchange({ detail }: any) {
-  emit('keyboardheightchange', detail)
 }
 </script>
 
@@ -189,8 +234,6 @@ function handleKeyboardheightchange({ detail }: any) {
       <view v-if="readonly" class="wd-textarea__readonly-mask" />
       <wd-icon v-if="showClear" custom-class="wd-textarea__clear" name="close-bold" @tap="handleClear" />
     </view>
-    <view v-if="showWordCount" class="wd-textarea__count">
-      <text>{{ currentLength }}/{{ maxlength }}</text>
-    </view>
+    <view v-if="showWordCount" class="wd-textarea__count"><text>{{ currentLength }}/{{ maxlength }}</text></view>
   </view>
 </template>

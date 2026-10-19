@@ -1,16 +1,28 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeNumericProp, makeRequiredProp, makeStringProp, numericProp } from '../../common/props'
 
-export type OperationType = 'sub' | 'add'
-
-export type InputNumberTheme = 'default' | 'card'
-
+/**
+ * 输入框值变化前的回调函数类型定义
+ * @param value 输入框的新值
+ * @returns 返回布尔值或Promise<boolean>，用于控制是否允许值的变化
+ */
 export type InputNumberBeforeChange = (value: number | string) => boolean | Promise<boolean>
+
+/**
+ * 计数器主题类型
+ * - default: 无边框，简洁风格
+ * - outline: 有边框描边
+ * - outline-split: 有边框，按钮分离
+ * - primary: 圆形主色按钮
+ */
+export type InputNumberTheme = 'default' | 'outline' | 'outline-split' | 'primary'
+
+export type OperationType = 'add' | 'sub'
 
 export const inputNumberProps = {
   ...baseProps,
   /**
-   * 当前值
+   * 绑定值
    */
   modelValue: makeRequiredProp(numericProp),
   /**
@@ -22,15 +34,15 @@ export const inputNumberProps = {
    */
   max: makeNumberProp(Number.MAX_SAFE_INTEGER),
   /**
-   * 步进
+   * 步进值
    */
   step: makeNumberProp(1),
   /**
-   * 是否只能输入步进的整数
+   * 是否严格按照步进值递增或递减
    */
   stepStrictly: makeBooleanProp(false),
   /**
-   * 小数位数
+   * 数值精度
    */
   precision: makeNumericProp(0),
   /**
@@ -42,11 +54,11 @@ export const inputNumberProps = {
    */
   disableInput: makeBooleanProp(false),
   /**
-   * 是否禁用减号
+   * 是否禁用减号按钮
    */
   disableMinus: makeBooleanProp(false),
   /**
-   * 是否禁用加号
+   * 是否禁用加号按钮
    */
   disablePlus: makeBooleanProp(false),
   /**
@@ -58,43 +70,51 @@ export const inputNumberProps = {
    */
   inputWidth: numericProp,
   /**
-   * 是否允许空值
+   * 是否允许为空
    */
   allowNull: makeBooleanProp(false),
   /**
-   * 占位提示
+   * 输入框占位符
    */
   placeholder: makeStringProp(''),
   /**
-   * 键盘弹起时是否自动上推页面
+   * 原生属性，键盘弹起时，是否自动上推页面
    */
   adjustPosition: makeBooleanProp(true),
   /**
-   * 改变前执行的函数
+   * 输入值变化前的回调函数，返回 `false` 可阻止输入，支持返回 `Promise`
    */
   beforeChange: Function as PropType<InputNumberBeforeChange>,
   /**
-   * 是否支持长按连续步进
+   * 是否开启长按加减手势
    */
   longPress: makeBooleanProp(false),
   /**
-   * 是否立即触发 change（输入过程中）
+   * 是否立即响应输入变化，false 时仅在失焦和按钮点击时更新
    */
   immediateChange: makeBooleanProp(true),
   /**
-   * 初始化时是否自动修正值
+   * 是否在初始化时更新 v-model 为修正后的值
+   * true: 自动修正并更新 v-model
+   * false: 保持原始值不修正，但仍会进行显示格式化
    */
   updateOnInit: makeBooleanProp(true),
   /**
    * 输入框类型
+   * number: 数字输入
+   * digit: 整数输入
    */
   inputType: makeStringProp<'number' | 'digit'>('digit'),
   /**
-   * 主题
+   * 主题风格
+   * - default: 无边框，简洁风格
+   * - outline: 有边框描边
+   * - outline-split: 有边框，按钮分离
+   * - primary: 圆形主色按钮
    */
   theme: makeStringProp<InputNumberTheme>('default'),
   /**
-   * 是否圆角
+   * 是否圆形按钮
    */
   round: Boolean
 }

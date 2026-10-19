@@ -1,0 +1,62 @@
+@use '../../styles/variable.scss' as *;
+@use '../../styles/mixin/mixin.scss' as *;
+// 未激活图标颜色
+$rate-color: var(--wot-rate-color, $filled-extra-strong) !default;
+// 激活图标颜色
+$rate-active-color: var(--wot-rate-active-color, $classifyapplication-yellow-content) !default;
+// 图标尺寸
+$rate-size: var(--wot-rate-size, $n-24) !default;
+// 禁用态透明度
+$rate-disabled-opacity: var(--wot-rate-disabled-opacity, $opacity-disabled) !default;
+// 图标间距（Lynx 适配：由模板按索引输出的内联 margin-right 承担）
+$rate-item-space: var(--wot-rate-item-space, $spacing-extra-tight) !default;
+
+@include b(rate) {
+  // Lynx 适配：wot-ui 为 inline-block + vertical-align（Web 行内流式排列），
+  // Lynx 不识别 inline-block，改为 display: flex + row（§15）。
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  line-height: 1;
+
+  @include e(item) {
+    position: relative;
+    // Lynx 适配：wot-ui 为 inline-block，改为 display: flex + row（§15）
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include edeep(item-star) {
+    // Lynx 适配：wot-ui 用 -webkit-background-clip: text + background 给字体
+    // 图标上色（支持渐变），Lynx 不支持该属性，改用普通 color。
+    color: $rate-color;
+    font-size: $rate-size;
+
+    @include m(active) {
+      color: $rate-active-color;
+    }
+  }
+
+  @include e(item-half) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: hidden;
+    width: 50%;
+  }
+
+  @include when(disabled) {
+    opacity: $rate-disabled-opacity;
+  }
+
+  @include when(block) {
+    // Lynx 适配：wot-ui 为 display: block（撑满父容器），Lynx 只认
+    // flex/linear/none，用 display: flex + width: 100% 等价表达。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+  }
+}

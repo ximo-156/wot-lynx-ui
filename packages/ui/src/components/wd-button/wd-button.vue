@@ -1,14 +1,17 @@
 /*
  * wd-button — 按钮
  *
- * Lynx 实现说明：
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
  * - 根元素为 view（Lynx 无 button 元素），点击经 @tap 捕获后向用户
- *   emit 'click'（CONVENTIONS §6 事件映射）；
- * - 按压缩态用 :active 伪类（渲染器原生处理，零 JS 开销）；
+ *   emit 'click' / 'tap'（CONVENTIONS §6 事件映射、§14 同名事件转发）；
+ * - hover-class 按压态改用 CSS :active 伪类（渲染器原生处理，零 JS 开销）；
  * - disabled / loading 时不响应点击；loading 时内置 wd-loading，
  *   颜色经 loadingColor 显式下发（svg content 不继承 currentColor）；
- * - uni-app 开放能力 props（open-type / session-from 等）在 Lynx 无
- *   对应能力，已在重写中移除（见文档「与 wot-ui 的差异」）。
+ * - wot-ui 的 ::after 边框技巧（plain/dashed/hairline 描边）在 Lynx 无伪元素，
+ *   改为根节点真实 border，见 index.scss；
+ * - uni-app 开放能力 props（open-type / session-from 等）及其回调事件
+ *   （getuserinfo / contact 等）在 Lynx 无对应能力：props 保留声明仅为
+ *   API 对齐（传入不生效），事件不声明（无原生事件可转发）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -90,7 +93,7 @@ function handleClick(event: any) {
 <template>
   <!-- customStyle 为字符串，需 parseStyle 归一为对象（CONVENTIONS §19：
        vue-lynx 的 patchProp 对字符串 style 会静默替换为 {}） -->
-  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
+  <view :id="buttonId" :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
     <view class="wd-button__content">
       <wd-loading v-if="loading" v-bind="customLoadingProps" />
       <wd-icon

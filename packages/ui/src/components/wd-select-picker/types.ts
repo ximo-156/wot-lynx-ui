@@ -1,6 +1,5 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeRequiredProp, makeStringProp } from '../../common/props'
-import { PURPLE } from '../../common/theme'
 
 export type SelectPickerType = 'checkbox' | 'radio'
 
@@ -33,9 +32,9 @@ export const selectPickerProps = {
    */
   loading: makeBooleanProp(false),
   /**
-   * 加载颜色
+   * 加载的颜色，只能使用十六进制的色值写法，且不能使用缩写
    */
-  loadingColor: makeStringProp(PURPLE[6]),
+  loadingColor: makeStringProp('#4D80F0'),
   /**
    * 点击遮罩是否关闭
    */

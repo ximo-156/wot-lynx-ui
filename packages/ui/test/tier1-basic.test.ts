@@ -75,11 +75,11 @@ describe('Tier 1 基础组件', () => {
 
     it('WdConfigProvider 默认挂亮色主题类', () => {
       const { container } = render(ConfigProvider)
-      expect(container.querySelector('.wd-theme-light')).not.toBeNull()
+      expect(container.querySelector('.wot-theme-light')).not.toBeNull()
       cleanup()
 
       const dark = render(ConfigProvider, { theme: 'dark' })
-      expect(dark.container.querySelector('.wd-theme-dark')).not.toBeNull()
+      expect(dark.container.querySelector('.wot-theme-dark')).not.toBeNull()
       cleanup()
     })
 

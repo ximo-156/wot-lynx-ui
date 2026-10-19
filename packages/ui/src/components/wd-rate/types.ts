@@ -4,19 +4,19 @@ import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp, numericProp
 export const rateProps = {
   ...baseProps,
   /**
-   * 评分星星个数
+   * 评分最大值
    * 类型: number
    * 默认值: 5
    */
   num: makeNumberProp(5),
   /**
-   * 当前评分
-   * 类型: number
-   * 默认值: 0
+   * 当前分数，使用v-model进行双向绑定
+   * 类型: string | number | null
+   * 默认值: null
    */
   modelValue: {
-    type: Number,
-    default: 0
+    type: [String, Number, null] as PropType<string | number | null>,
+    default: null
   },
   /**
    * 是否只读
@@ -25,46 +25,49 @@ export const rateProps = {
    */
   readonly: makeBooleanProp(false),
   /**
-   * 星星大小
+   * 图标大小
    * 类型: string
    */
   size: String,
   /**
-   * 星星间距
-   * 类型: string | number
+   * 图标间距
+   * 类型: string
    */
   space: numericProp,
   /**
-   * 未选中颜色
+   * 未选中的图标颜色
    * 类型: string
-   * 默认值: #E7E8ED
    */
-  color: makeStringProp('#E4E7ED'),
+  color: String,
   /**
-   * 选中颜色（数组时为 [低分色, 高分色]）
+   * 选中的图标颜色，支持传颜色数组（用于分段颜色）
+   * 类型: string | Array<string>
+   * 默认值: 'linear-gradient(180deg, rgba(255,238,0,1) 0%,rgba(250,176,21,1) 100%)'
    */
   activeColor: {
-    type: [String, Array] as PropType<string | string[]>,
-    default: ''
+    type: [String, Array] as PropType<string | Array<string>>
   },
   /**
-   * 未选中图标
+   * 未选中的图标类名
    * 类型: string
-   * 默认值: favorite-filling
+   * 默认值: 'star'
    */
-  icon: makeStringProp('favorite-filling'),
+  icon: makeStringProp('star-fill'),
   /**
-   * 选中图标
+   * 选中的图标类名
    * 类型: string
-   * 默认值: favorite-filling
+   * 默认值: 'star-on'
    */
-  activeIcon: makeStringProp('favorite-filling'),
+  activeIcon: makeStringProp('star-fill'),
   /**
-   * 图标类名前缀
+   * 图标类名前缀，用法参考 Icon 组件
+   * 类型: string
    */
   iconPrefix: String,
   /**
-   * CSS 图标类名
+   * CSS 图标，用法参考 Icon 组件
+   * 类型: boolean | string
+   * 默认值: false
    */
   cssIcon: {
     type: [Boolean, String],
@@ -77,19 +80,19 @@ export const rateProps = {
    */
   disabled: makeBooleanProp(false),
   /**
-   * 是否允许半星
+   * 是否允许半选
    * 类型: boolean
    * 默认值: false
    */
   allowHalf: makeBooleanProp(false),
   /**
-   * 是否允许点击清空
+   * 当 clearable 属性设置为 true，再次点击相同的值时，可以将值重置为 0。
    * 类型: boolean
    * 默认值: false
    */
   clearable: makeBooleanProp(false),
   /**
-   * 是否撑满
+   * 是否为块级元素
    * 类型: boolean
    * 默认值: false
    */

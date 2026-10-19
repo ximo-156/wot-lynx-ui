@@ -72,8 +72,15 @@
   }
 }
 
-/* ---- Lynx 元素语义 ---- */
-.wd-h5-phone__screen view {
+/* ---- Lynx 元素语义 ----
+   注意：选择器必须用 :where() 包住 .wd-h5-phone__screen —— 裸写时
+   「.class + 元素」特异性 (0,1,1) 会压过组件库的单类选择器 (0,1,0)，
+   把 .wd-keyboard__row / .wd-calendar-view__row 等声明了
+   flex-direction:row 的行容器全部改回 column，预览里键盘、日历网格
+   等一律竖着挤成一列（与真机不符）。:where() 特异性为 0，基准规则只
+   兜底「组件没写 display/flex-direction」的裸 view/text，与 Lynx 引擎
+   「view 默认 linear、组件样式优先」的层级一致。 */
+:where(.wd-h5-phone__screen) view {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -81,7 +88,7 @@
   box-sizing: border-box;
 }
 
-.wd-h5-phone__screen text {
+:where(.wd-h5-phone__screen) text {
   display: inline;
   margin: 0;
   padding: 0;
@@ -89,24 +96,24 @@
   color: var(--wd-text-1, #1d1d1f);
 }
 
-.wd-h5-phone__screen image {
+:where(.wd-h5-phone__screen) image {
   display: block;
   flex-shrink: 0;
 }
 
-.wd-h5-phone__screen scroll-view {
+:where(.wd-h5-phone__screen) scroll-view {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   -webkit-overflow-scrolling: touch;
 }
 
-.wd-h5-phone__screen scroll-view[scroll-orientation='vertical'] {
+:where(.wd-h5-phone__screen) scroll-view[scroll-orientation='vertical'] {
   overflow-x: hidden;
   overflow-y: auto;
 }
 
-.wd-h5-phone__screen scroll-view[scroll-orientation='horizontal'] {
+:where(.wd-h5-phone__screen) scroll-view[scroll-orientation='horizontal'] {
   flex-direction: row;
   overflow-x: auto;
   overflow-y: hidden;

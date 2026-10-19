@@ -1,29 +1,38 @@
 /*
  * wd-select-picker — 下拉选择
  *
- * Lynx 实现说明：
- * - 结构：wd-popup（bottom）+ 可选 wd-search 过滤 + 选项列表
- *   （radio 单选 / checkbox 多选）+ 确认按钮；
- * - 打开时可滚动到首个选中项（scrollIntoView）；
- * - filterable 时按 label 过滤，命中片段高亮。
+ * Lynx 实现说明（相对 wot-ui 2.3.2）：
+ * - 结构：wd-action-sheet（bottom，标题经 action-sheet 顶栏）+ 可选 wd-search 过滤
+ *   + 选项列表（radio 单选 / checkbox 多选）+ 底部确认按钮，与 wot-ui 一致；
+ * - 打开后可滚动到首个选中项（scrollIntoView，经 getRect 一次性度量，不在触摸
+ *   热路径重复查询，CONVENTIONS §16）；
+ * - filterable 时按 labelKey 过滤，命中片段以 text-active 高亮；
+ * - 事件：@click→@tap；block→template；裸文本包 text 元素；customStyle 经
+ *   parseStyle 归一为对象（CONVENTIONS §19）；
+ * - 过滤触发：参考源经 wd-search 的 @change 驱动；本地 wd-search 不派发 change
+ *   事件（仅 update:modelValue 等），故改用 watch(filterVal) 驱动 applyFilter
+ *   （共享层 wd-search 缺口，见交付报告）；
+ * - radio-group 的 cell / size、checkbox 的 size：本地 wd-radio-group 未声明
+ *   cell/size（共享层缺口），透传后落入 $attrs，不生效（见交付报告）；
+ * - beforeConfirm 可返回未决 Promise：done 落地时经 useAlive 守卫。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, nextTick, ref, watch } from 'vue-lynx'
-import WdPopup from '../wd-popup/wd-popup.vue'
-import WdSearch from '../wd-search/wd-search.vue'
-import WdRadio from '../wd-radio/wd-radio.vue'
-import WdRadioGroup from '../wd-radio-group/wd-radio-group.vue'
+import { computed, getCurrentInstance, nextTick, onBeforeMount, ref, watch } from 'vue-lynx'
+import WdActionSheet from '../wd-action-sheet/wd-action-sheet.vue'
 import WdCheckbox from '../wd-checkbox/wd-checkbox.vue'
 import WdCheckboxGroup from '../wd-checkbox-group/wd-checkbox-group.vue'
-import WdLoading from '../wd-loading/wd-loading.vue'
+import WdRadio from '../wd-radio/wd-radio.vue'
+import WdRadioGroup from '../wd-radio-group/wd-radio-group.vue'
 import WdButton from '../wd-button/wd-button.vue'
-import { selectPickerProps, type SelectPickerExpose } from './types'
+import WdLoading from '../wd-loading/wd-loading.vue'
+import WdSearch from '../wd-search/wd-search.vue'
+import { getRect, isArray, isDef, isFunction, parseStyle, pause } from '../../common/util'
 import { callInterceptor } from '../../common/interceptor'
 import { useAlive } from '../../composables/useAlive'
-import { isArray, isDef, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
+import { selectPickerProps, type SelectPickerExpose } from './types'
 
 const { translate } = useTranslate('select-picker')
 
@@ -34,154 +43,263 @@ const emit = defineEmits(['change', 'cancel', 'confirm', 'update:modelValue', 'o
 const pickerShow = ref<boolean>(false)
 const selectList = ref<Array<string | number | boolean> | string | number | boolean>([])
 const isConfirm = ref<boolean>(false)
+const lastSelectList = ref<Array<string | number | boolean> | string | number | boolean>([])
 const filterVal = ref<string>('')
 const filterColumns = ref<Array<Record<string, any>>>([])
-const scrollTop = ref<number>(0)
+const scrollTop = ref<number>(0) // 滚动位置
 
-const isCheckbox = computed(() => props.type === 'checkbox')
+const { proxy } = getCurrentInstance() as any
 
-/**
- * checkbox 模式值（数组视图）。
- *
- * setter 只同步状态、不发 change：change 统一经模板上 wd-checkbox-group 的
- * @change 派发一次（setter 与 @change 处理器各 emit 一次会导致每次勾选
- * 触发双倍 change）。
- */
-const checkboxValue = computed<any[]>({
-  get: () => (isArray(selectList.value) ? selectList.value : []),
-  set: (val) => {
-    selectList.value = val
-  }
+const valueItemMap = computed(() => {
+  const map = new Map<string | number | boolean, Record<string, any>>()
+  const { columns, valueKey } = props
+  columns.forEach((item) => {
+    map.set(item[valueKey], item)
+  })
+  return map
 })
 
-/** radio 模式值（单值视图）；同样只同步状态，change 经 @change 单发 */
-const radioValue = computed<string | number | boolean>({
-  get: () => (isArray(selectList.value) ? (selectList.value[0] ?? '') : selectList.value),
-  set: (val) => {
-    selectList.value = val
-  }
+const showHighlightText = computed(() => {
+  return props.filterable && !!filterVal.value
 })
 
-/** 过滤 + 高亮 */
-filterColumns.value = props.columns.map((item) => ({ ...item }))
+function getModelValueWatchKey(value: string | number | boolean | (string | number | boolean)[]) {
+  if (props.type === 'checkbox') {
+    return isArray(value) ? value.join('|') : ''
+  }
+  return isDef(value) ? String(value) : ''
+}
+
+function getColumnsWatchKey(columns: Record<string, any>[]) {
+  const { valueKey, labelKey } = props
+  return columns
+    .map((item) => {
+      const value = isDef(item[valueKey]) ? String(item[valueKey]) : ''
+      const label = isDef(item[labelKey]) ? String(item[labelKey]) : ''
+      return `${value}|${label}|${item.disabled ? '1' : '0'}`
+    })
+    .join('||')
+}
 
 watch(
-  () => props.columns,
-  (val) => {
-    filterColumns.value = (val as Record<string, any>[]).map((item) => ({ ...item }))
-    applyFilter()
+  () => getModelValueWatchKey(props.modelValue),
+  () => {
+    const newValue = props.modelValue
+    if (newValue === selectList.value) return
+    selectList.value = valueFormat(newValue)
+    lastSelectList.value = valueFormat(newValue)
   },
-  { deep: true, immediate: true }
+  { immediate: true }
 )
 
 watch(
-  () => props.modelValue,
-  (val) => {
-    selectList.value = isArray(val) ? [...val] : val
+  () => getColumnsWatchKey(props.columns),
+  () => {
+    const newValue = props.columns
+    if (props.filterable && filterVal.value) {
+      formatFilterColumns(newValue, filterVal.value)
+    } else {
+      filterColumns.value = newValue
+    }
   },
-  { deep: true, immediate: true }
+  { immediate: true }
 )
 
 watch(
   () => props.visible,
   (val) => {
-    if (val) {
-      open()
-    } else {
-      pickerShow.value = false
-    }
-  }
+    pickerShow.value = val
+  },
+  { immediate: true }
 )
 
-watch(pickerShow, (val) => {
-  emit('update:visible', val)
-})
-
-// 过滤关键字变化即应用过滤（含清空按钮）：wd-search 只 emit
-// update:modelValue/clear/cancel/focus/blur/confirm，从不 emit 'change'，
-// 此前 @change="handleFilterChange" 是死监听，filterable 搜索完全失效。
+// 过滤关键字变化即应用过滤（含清空）：本地 wd-search 不派发 change，故监听 filterVal
 watch(
   () => filterVal.value,
   () => {
-    applyFilter()
+    handleFilterChange({ value: filterVal.value })
   }
 )
 
-function applyFilter() {
-  const keyword = filterVal.value.trim()
-  if (!keyword) {
-    filterColumns.value = props.columns.map((item) => ({ ...item }))
-    return
-  }
+onBeforeMount(() => {
+  selectList.value = valueFormat(props.modelValue)
   filterColumns.value = props.columns
-    .filter((item) => String(item[props.labelKey] || '').includes(keyword))
-    .map((item) => ({ ...item }))
+})
+
+/** 打开后滚动到首个选中项（getRect 一次性度量，CONVENTIONS §16） */
+async function setScrollIntoView() {
+  let wraperSelector: string = ''
+  let targetSelector: string = ''
+  if (isDef(selectList.value) && selectList.value !== '' && !isArray(selectList.value)) {
+    wraperSelector = '#wd-radio-group'
+    targetSelector = `#radio${selectList.value}`
+  } else if (isArray(selectList.value) && selectList.value.length > 0) {
+    wraperSelector = '#wd-checkbox-group'
+    targetSelector = `#check${selectList.value[0]}`
+  }
+  if (wraperSelector && targetSelector) {
+    await pause(2000 / 30)
+    if (!isAlive()) return
+    const [scrollView, wraper, target] = await Promise.all([
+      getRect('.wd-select-picker__wrapper', false, proxy),
+      getRect(wraperSelector, false, proxy),
+      getRect(targetSelector, false, proxy)
+    ])
+
+    if (isDef(wraper) && isDef(scrollView) && isDef(target)) {
+      const isVisible = target.bottom > scrollView.top && target.top < scrollView.bottom
+      if (!isVisible) {
+        scrollTop.value = -1
+        nextTick(() => {
+          scrollTop.value = Math.max(0, target.top - wraper.top - scrollView.height / 2)
+        })
+      }
+    }
+  }
 }
 
-function handleChange({ value }: any) {
-  selectList.value = value
-  emit('change', { value })
-}
-
-async function open() {
-  emit('open')
-  pickerShow.value = true
-  selectList.value = isArray(props.modelValue) ? [...props.modelValue] : props.modelValue
-  await nextTick()
-  // nextTick 刷新前组件可能已卸载（打开后立刻摘除）
-  if (!isAlive()) return
+function onAfterEnter() {
   if (props.scrollIntoView) {
     setScrollIntoView()
   }
 }
 
-function setScrollIntoView() {
-  const list = isArray(selectList.value) ? selectList.value : [selectList.value]
-  const index = filterColumns.value.findIndex((item) => list.some((v) => String(v) === String(item[props.valueKey])))
-  if (index > 0) {
-    // 行高按默认选项行高 44px 估算（组件未暴露 itemHeight prop，
-    // 与默认样式中的行高保持一致；低优先，暂不加 prop）
-    scrollTop.value = index * 44
+function getSelectedItem(value: string | number | boolean) {
+  const { valueKey, labelKey } = props
+  const selected = valueItemMap.value.get(value)
+
+  if (selected) {
+    return selected
+  }
+
+  return {
+    [valueKey]: value,
+    [labelKey]: ''
+  }
+}
+
+function valueFormat(value: string | number | boolean | (string | number | boolean)[]) {
+  return props.type === 'checkbox' ? (isArray(value) ? value : []) : value
+}
+
+function handleChange({ value }: { value: string | number | boolean | (string | number | boolean)[] }) {
+  selectList.value = value
+  emit('change', { value })
+  if (props.type === 'radio' && !props.showConfirm) {
+    onConfirm()
   }
 }
 
 function close() {
   pickerShow.value = false
-  emit('close')
+  emit('update:visible', false)
+  // 未确定选项时，数据还原复位
+  if (!isConfirm.value) {
+    selectList.value = valueFormat(lastSelectList.value)
+  }
   emit('cancel')
+  emit('close')
+}
+
+function open() {
+  selectList.value = valueFormat(props.modelValue)
+  pickerShow.value = true
+  emit('update:visible', true)
+  isConfirm.value = false
+  emit('open')
 }
 
 function onConfirm() {
+  if (props.loading) {
+    pickerShow.value = false
+    emit('update:visible', false)
+    emit('confirm')
+    emit('close')
+    return
+  }
   callInterceptor(props.beforeConfirm, {
     args: [selectList.value],
     done: () => {
-      // beforeConfirm 可返回未决 Promise：期间组件/页面可能已卸载，
-      // done 落地时不得在已销毁树上写 ref（真机 9902 晚到 patch 家族）。
+      // beforeConfirm 可返回未决 Promise：done 落地时组件可能已卸载
       if (!isAlive()) return
-      isConfirm.value = true
-      pickerShow.value = false
-      emit('update:modelValue', selectList.value)
-      emit('confirm', { value: selectList.value, selectedItems: getSelectedItems() })
+      handleConfirm()
     }
   })
 }
 
-function getSelectedItems(): Record<string, any>[] {
-  const list = isArray(selectList.value) ? selectList.value : [selectList.value]
-  return props.columns.filter((item) => list.some((v) => String(v) === String(item[props.valueKey])))
+function handleConfirm() {
+  isConfirm.value = true
+  pickerShow.value = false
+  emit('update:visible', false)
+  lastSelectList.value = valueFormat(selectList.value)
+  let selectedItems: Record<string, any> = {}
+  if (props.type === 'checkbox') {
+    selectedItems = (isArray(lastSelectList.value) ? lastSelectList.value : []).map((item) => {
+      return getSelectedItem(item)
+    })
+  } else {
+    selectedItems = getSelectedItem(lastSelectList.value as string | number | boolean)
+  }
+  emit('update:modelValue', lastSelectList.value)
+  emit('confirm', {
+    value: lastSelectList.value,
+    selectedItems
+  })
+  emit('close')
 }
 
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function getFilterText(label: string, filterVal: string): Array<{ type: 'active' | 'normal'; label: string }> {
+  const reg = new RegExp(`(${escapeRegExp(filterVal)})`, 'g')
+
+  return label.split(reg).map((text) => {
+    return {
+      type: text === filterVal ? 'active' : 'normal',
+      label: text
+    }
+  })
+}
+
+function handleFilterChange({ value }: { value: string }) {
+  filterVal.value = value
+  if (value === '') {
+    filterColumns.value = props.columns
+  } else {
+    formatFilterColumns(props.columns, value)
+  }
+}
+
+function formatFilterColumns(columns: Record<string, any>[], filterVal: string) {
+  const filterColumnsTemp = columns.filter((item) => {
+    return String(item[props.labelKey]).indexOf(filterVal) > -1
+  })
+
+  const formatFilterColumns = filterColumnsTemp.map((item) => {
+    return {
+      ...item,
+      [props.labelKey]: getFilterText(item[props.labelKey], filterVal)
+    }
+  })
+  filterColumns.value = formatFilterColumns
+}
+
+const showConfirm = computed(() => {
+  return (props.type === 'radio' && props.showConfirm) || props.type === 'checkbox'
+})
+
 defineExpose<SelectPickerExpose>({
-  open,
-  close
+  close,
+  open
 })
 </script>
 
 <template>
   <view :class="`wd-select-picker ${customClass}`" :style="parseStyle(customStyle)">
-    <wd-popup
+    <wd-action-sheet
       v-model="pickerShow"
-      position="bottom"
       :title="title || translate('title')"
       :close-on-click-modal="closeOnClickModal"
       :z-index="zIndex"
@@ -189,70 +307,69 @@ defineExpose<SelectPickerExpose>({
       :root-portal="rootPortal"
       custom-class="wd-select-picker__popup"
       @close="close"
+      @after-enter="onAfterEnter"
     >
-      <view class="wd-select-picker__wraper">
-        <view class="wd-select-picker__header">
-          <text class="wd-select-picker__title">{{ title || translate('title') }}</text>
-        </view>
-        <wd-search
-          v-if="filterable"
-          v-model="filterVal"
-          :placeholder="filterPlaceholder || translate('filterPlaceholder')"
-          hide-cancel
-          placeholder-left
-        />
-        <scroll-view
-          :class="`wd-select-picker__wrapper ${loading ? 'is-loading' : ''} ${customContentClass}`"
-          :scroll-y="!loading"
-          :scroll-top="scrollTop"
-          :scroll-with-animation="true"
-        >
-          <view v-if="loading" class="wd-select-picker__loading">
-            <wd-loading :color="loadingColor" />
-          </view>
-          <!-- 无渲染占位：uni-app 的 block 标签不是 Lynx 内置元素，编译后会走
-               __CreateElement('block')，真机报 603 sub_code 60301
-               "Can't find ui tag" 并崩掉整张卡片。这里用 Vue 的 template v-else
-               （编译为 Fragment，不产生元素）。注释中禁止出现尖括号形式的
-               template 字面量：会干扰 tag-transform loader 的模板块扫描。 -->
-          <template v-else>
-            <!-- 多选 -->
-            <view v-if="isCheckbox" class="wd-select-picker__checkbox">
-              <wd-checkbox-group
-                v-model="checkboxValue"
-                :size="selectSize"
-                :checked-color="checkedColor"
-                :min="min"
-                :max="max"
-                type="square"
-                placement="right"
-                @change="handleChange"
-              >
-                <view v-for="(item, index) in filterColumns" :key="index" class="wd-select-picker__checkbox-item">
-                  <wd-checkbox :name="item[valueKey]" :disabled="item.disabled" custom-label-class="wd-select-picker__checkbox-label">
-                    <text>{{ item[labelKey] }}</text>
-                  </wd-checkbox>
-                </view>
-              </wd-checkbox-group>
+      <wd-search
+        v-if="filterable"
+        v-model="filterVal"
+        :placeholder="filterPlaceholder || translate('filterPlaceholder')"
+        hide-cancel
+        placeholder-left
+      />
+      <scroll-view
+        :class="`wd-select-picker__wrapper ${loading ? 'is-loading' : ''} ${customContentClass}`"
+        :scroll-y="!loading"
+        :scroll-top="scrollTop"
+        :scroll-with-animation="true"
+      >
+        <!-- 多选 -->
+        <view v-if="type === 'checkbox' && isArray(selectList)" class="wd-select-picker__checkbox" id="wd-checkbox-group">
+          <wd-checkbox-group
+            v-model="selectList"
+            :size="selectSize"
+            :checked-color="checkedColor"
+            :min="min"
+            :max="max"
+            type="square"
+            placement="right"
+            @change="handleChange"
+          >
+            <view v-for="(item, index) in filterColumns" :key="index" :id="'check' + item[valueKey]" class="wd-select-picker__checkbox-item">
+              <wd-checkbox :name="item[valueKey]" :disabled="item.disabled" custom-label-class="wd-select-picker__checkbox-label">
+                <template v-if="showHighlightText">
+                  <template v-for="(text, textIndex) in item[labelKey]" :key="textIndex">
+                    <text v-if="text.type === 'active'" class="wd-select-picker__text-active">{{ text.label }}</text>
+                    <text v-else>{{ text.label }}</text>
+                  </template>
+                </template>
+                <text v-else>{{ item[labelKey] }}</text>
+              </wd-checkbox>
             </view>
-            <!-- 单选 -->
-            <view v-else class="wd-select-picker__radio">
-              <wd-radio-group v-model="radioValue" :checked-color="checkedColor" @change="handleChange">
-                <view v-for="(item, index) in filterColumns" :key="index" class="wd-select-picker__radio-item">
-                  <wd-radio :value="item[valueKey]" :disabled="item.disabled" placement="right">
-                    <text>{{ item[labelKey] }}</text>
-                  </wd-radio>
-                </view>
-              </wd-radio-group>
-            </view>
-          </template>
-        </scroll-view>
-        <view v-if="showConfirm" class="wd-select-picker__footer">
-          <wd-button type="primary" block @tap="onConfirm">
-            {{ confirmButtonText || translate('confirm') }}
-          </wd-button>
+          </wd-checkbox-group>
         </view>
+        <!-- 单选 -->
+        <view v-if="type === 'radio' && !isArray(selectList)" class="wd-select-picker__radio" id="wd-radio-group">
+          <wd-radio-group v-model="selectList" cell :size="selectSize" :checked-color="checkedColor" placement="right" type="dot" @change="handleChange">
+            <view v-for="(item, index) in filterColumns" :key="index" :id="'radio' + item[valueKey]" class="wd-select-picker__radio-item">
+              <wd-radio :value="item[valueKey]" :disabled="item.disabled" custom-label-class="wd-select-picker__radio-label">
+                <template v-if="showHighlightText">
+                  <template v-for="(text, textIndex) in item[labelKey]" :key="textIndex">
+                    <text :class="`${text.type === 'active' ? 'wd-select-picker__text-active' : ''}`">{{ text.label }}</text>
+                  </template>
+                </template>
+                <text v-else>{{ item[labelKey] }}</text>
+              </wd-radio>
+            </view>
+          </wd-radio-group>
+        </view>
+        <view v-if="loading" class="wd-select-picker__loading">
+          <wd-loading :color="loadingColor" custom-class="wd-select-picker__loading-icon" />
+        </view>
+      </scroll-view>
+      <!-- 确认按钮 -->
+      <view v-if="showConfirm" class="wd-select-picker__footer">
+        <wd-button type="primary" block size="large" :disabled="loading" @tap="onConfirm">{{ confirmButtonText || translate('confirm') }}</wd-button>
       </view>
-    </wd-popup>
+    </wd-action-sheet>
   </view>
 </template>

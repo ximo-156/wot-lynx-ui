@@ -64,6 +64,130 @@ function removeEventListener(el: AnyEl, event: string) {
 }
 
 // ---------------------------------------------------------------------------
+// 鼠标 → 触摸事件合成
+//
+// 组件库的滑动类交互（slide-verify / slider / signature / swipe-action /
+// picker-view / floating-panel / index-bar / fab / img-cropper…）全部基于
+// 原生 touch 事件。桌面浏览器里鼠标交互只派发 mouse 事件、不派发 touch
+// 事件，这些组件在文档预览中会完全无法拖动。这里在捕获阶段把鼠标序列
+// 翻译为等价的 Touch 事件派发到同一节点：
+// - mousedown → touchstart，mousemove（按住）→ touchmove，
+//   mouseup → touchend；touch 系列事件目标固定为 mousedown 所在节点
+//   （与真机 touch 语义一致：touchmove/touchend 不因划出元素而改目标）；
+// - 仅在目标节点或其祖先上注册过对应 touch 监听时才合成（EVENT_STORE），
+//   不影响只绑 @tap 的元素与文档站自身的交互；
+// - 合成拖拽期间对真实 mousemove preventDefault，避免划选文字/滚页面。
+// ---------------------------------------------------------------------------
+type SyntheticTouch = {
+  identifier: number
+  target: EventTarget | null
+  clientX: number
+  clientY: number
+  pageX: number
+  pageY: number
+  screenX: number
+  screenY: number
+}
+
+let activeTouch: { target: AnyEl; x: number; y: number } | null = null
+
+function hasTouchListener(node: EventTarget | null, type: string): boolean {
+  let el = node as AnyEl | null
+  while (el && el.addEventListener) {
+    const store: Record<string, any> = el[EVENT_STORE]
+    if (store && store[type]) return true
+    el = el.parentElement as AnyEl | null
+  }
+  return false
+}
+
+function makeTouchEvent(
+  type: 'touchstart' | 'touchmove' | 'touchend',
+  x: number,
+  y: number,
+  target: EventTarget | null
+): Event {
+  const init: any = { bubbles: true, cancelable: true }
+  const touch: SyntheticTouch = {
+    identifier: 1,
+    target,
+    clientX: x,
+    clientY: y,
+    pageX: x + (window.scrollX || 0),
+    pageY: y + (window.scrollY || 0),
+    screenX: x,
+    screenY: y
+  }
+  if (typeof TouchEvent !== 'undefined' && typeof Touch !== 'undefined') {
+    const t = new Touch({
+      identifier: 1,
+      target: target as Element,
+      clientX: x,
+      clientY: y,
+      pageX: touch.pageX,
+      pageY: touch.pageY,
+      screenX: x,
+      screenY: y
+    })
+    if (type === 'touchend') {
+      init.touches = []
+      init.targetTouches = []
+    } else {
+      init.touches = [t]
+      init.targetTouches = [t]
+    }
+    init.changedTouches = [t]
+    return new TouchEvent(type, init)
+  }
+  // 无 TouchEvent 构造器的环境：普通 Event + 手挂 touches/changedTouches
+  // （useTouch 等消费方只读这两个字段）
+  const ev = new Event(type, init) as any
+  ev.touches = type === 'touchend' ? [] : [touch]
+  ev.targetTouches = ev.touches
+  ev.changedTouches = [touch]
+  return ev
+}
+
+function installMouseToTouchBridge(): void {
+  if (typeof window === 'undefined' || (window as any).__wdH5TouchBridge) return
+  ;(window as any).__wdH5TouchBridge = true
+
+  window.addEventListener(
+    'mousedown',
+    (e: MouseEvent) => {
+      if (e.button !== 0) return
+      if (!hasTouchListener(e.target, 'touchstart')) return
+      activeTouch = { target: e.target as AnyEl, x: e.clientX, y: e.clientY }
+      ;(e.target as AnyEl).dispatchEvent(makeTouchEvent('touchstart', e.clientX, e.clientY, e.target))
+    },
+    true
+  )
+
+  window.addEventListener(
+    'mousemove',
+    (e: MouseEvent) => {
+      if (!activeTouch) return
+      // 阻断默认划选/滚动，模拟真机 touchmove.preventDefault 语义
+      e.preventDefault()
+      activeTouch.x = e.clientX
+      activeTouch.y = e.clientY
+      activeTouch.target.dispatchEvent(makeTouchEvent('touchmove', e.clientX, e.clientY, activeTouch.target))
+    },
+    true
+  )
+
+  const finish = (e: MouseEvent) => {
+    if (!activeTouch) return
+    const { target } = activeTouch
+    activeTouch = null
+    target.dispatchEvent(makeTouchEvent('touchend', e.clientX, e.clientY, target))
+  }
+  window.addEventListener('mouseup', finish, true)
+  // 拖出窗口释放：mouseup 可能不再派发到页面
+  window.addEventListener('mouseleave', finish, true)
+}
+
+// ---------------------------------------------------------------------------
 // normalizeClass —— vue-lynx 公开导出、vue 未公开导出，复刻最小实现
 // （与 @vue/shared normalizeClass 语义一致）
 // ---------------------------------------------------------------------------
@@ -227,7 +351,9 @@ const vShowLynx = {
  *   回退 375×812 —— 与预览手机框一致，这里显式声明以免歧义；
  * - 不注入 lynx 全局：使 getRect 走 common/util.ts 的 DOM 度量兜底
  *   （querySelector 真实元素），比零矩形兜底更能保持 slider / swipe-action
- *   等依赖度量的交互可用。
+ *   等依赖度量的交互可用；
+ * - 鼠标 → touch 事件桥：桌面浏览器用鼠标也能驱动 slide-verify / slider /
+ *   signature 等基于原生 touch 事件的交互组件。
  */
 export function installLynxGlobals(): void {
   if (installed || typeof window === 'undefined') return
@@ -239,6 +365,7 @@ export function installLynxGlobals(): void {
     platform: 'web',
     ...((globalThis as any).SystemInfo || {})
   }
+  installMouseToTouchBridge()
 }
 
 // ---------------------------------------------------------------------------

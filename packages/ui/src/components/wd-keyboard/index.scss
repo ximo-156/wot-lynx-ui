@@ -1,57 +1,115 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 键盘背景色
+$keyboard-bg: var(--wot-keyboard-bg, $filled-content) !default;
+// 键盘文字颜色
+$keyboard-color: var(--wot-keyboard-color, $text-main) !default;
+// 键盘内容间距
+$keyboard-padding: var(--wot-keyboard-padding, $padding-tight) !default;
+// 键盘头部高度
+$keyboard-header-height: var(--wot-keyboard-header-height, $n-40) !default;
+// 键盘标题颜色
+$keyboard-title-color: var(--wot-keyboard-title-color, $text-secondary) !default;
+// 键盘标题字号
+$keyboard-title-font-size: var(--wot-keyboard-title-font-size, $typography-body-size-main) !default;
+// 关闭按钮文字颜色
+$keyboard-close-color: var(--wot-keyboard-close-color, $primary-6) !default;
+// 关闭按钮悬浮透明度
+$keyboard-close-opacity-hover: var(--wot-keyboard-close-opacity-hover, $opacity-dimmer) !default;
+// 关闭按钮字号
+$keyboard-close-font-size: var(--wot-keyboard-close-font-size, $typography-body-size-main) !default;
+// 关闭按钮内边距
+$keyboard-close-padding: var(--wot-keyboard-close-padding, $padding-zero $padding-loose) !default;
+
 @include b(keyboard) {
-  background-color: var(--wd-bg-secondary);
+  width: 100%;
+  background: $keyboard-bg;
+  color: $keyboard-color;
 
   @include e(header) {
+    position: relative;
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
-    height: 44px;
-    padding: 0 var(--wd-space-4);
+    justify-content: center;
+    height: $keyboard-header-height;
+    color: $keyboard-title-color;
+    font-size: $keyboard-title-font-size;
   }
 
   @include e(title) {
-    font-size: var(--wd-font-md);
-    color: var(--wd-text-1);
-  }
+    // Lynx 适配：wot-ui 为 inline-block，Lynx 不识别，改为 flex + row
+    // （内容宽度自适应，语义等价）。
+    display: flex;
+    flex-direction: row;
+    font-weight: normal;
 
-  @include e(close) {
-    padding: 0 var(--wd-space-3);
-    font-size: var(--wd-font-md);
-    color: var(--wd-color-primary);
+    &-left {
+      position: absolute;
+      left: 0;
+    }
   }
 
   @include e(body) {
     display: flex;
     flex-direction: row;
-    align-items: stretch;
-    padding-left: var(--wd-space-2);
-    padding-top: var(--wd-space-2);
+    padding-left: $keyboard-padding;
+    padding-top: $keyboard-padding;
+
+    // Lynx 适配：wot-ui 用相邻兄弟选择器 `.wd-keyboard__header + &`
+    // 取消有头部时的上内边距；Lynx 不支持兄弟选择器，改为模板按
+    // showHeader 下发的 is-with-header 类名。
+    @include when(with-header) {
+      padding-top: 0;
+    }
   }
 
-  /* 按键区：显式行容器（不用 flex-wrap —— Lynx 新引擎下 wrap 的 flex line
-     会被拉伸；且 flex-basis:0 时按键假设主尺寸为 0 永不换行，会全部挤成
-     一行。行切分见 wd-keyboard.vue 的 keyRows，行内宽度由 wd-key-wrapper 的
-     flex-grow 分配：普通键 1、wider 键 2） */
   @include e(keys) {
     display: flex;
-    flex-direction: column;
-    flex-grow: 3;
-    flex-basis: 0;
+    flex-direction: row;
+    flex: 3;
+    flex-wrap: wrap;
   }
 
-  @include e(row) {
+  @include e(car-keys) {
     display: flex;
     flex-direction: row;
-    align-items: stretch;
+    flex: 10;
+    flex-wrap: wrap;
+
+    .wd-key-wrapper {
+      flex-basis: 10%;
+
+      @include m(wider) {
+        flex-basis: 20%;
+      }
+    }
+  }
+
+  @include e(close) {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    right: 0;
+    height: 100%;
+    padding: $keyboard-close-padding;
+    color: $keyboard-close-color;
+    font-size: $keyboard-close-font-size;
+    background-color: transparent;
+    border: none;
+
+    // Lynx 适配：wot-ui 的 hover-class="wd-keyboard__close--hover" 按压态
+    // 改用 :active 伪类（CONVENTIONS §17）。
+    &:active {
+      opacity: $keyboard-close-opacity-hover;
+    }
   }
 
   @include e(sidebar) {
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
-    flex-basis: 0;
+    flex: 1;
   }
 }

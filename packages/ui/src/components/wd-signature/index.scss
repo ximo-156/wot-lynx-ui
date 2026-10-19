@@ -1,53 +1,42 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 签名区域背景色
+$signature-bg: var(--wot-signature-bg, $filled-oppo) !default;
+// 签名区域圆角
+$signature-radius: var(--wot-signature-radius, $radius-main) !default;
+// 签名区域边框
+$signature-border: var(--wot-signature-border, $stroke-main solid $border-main) !default;
+// 底部操作区上间距
+$signature-footer-margin-top: var(--wot-signature-footer-margin-top, $spacing-tight) !default;
+// 底部按钮左间距
+$signature-button-margin-left: var(--wot-signature-button-margin-left, $spacing-tight) !default;
 
 @include b(signature) {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-
   @include e(content) {
-    position: relative;
-    width: 100%;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+    overflow: hidden;
+    background: $signature-bg;
+    border-radius: $signature-radius;
+    border: $signature-border;
   }
 
   @include e(content-canvas) {
     width: 100%;
+    // Lynx 适配：view 元素无 canvas 的内在高度，度量（getRect）前需要
+    // 一个引导高度，否则零高度节点无法度量（度量不可用时保留该默认值）
     height: 200px;
-    background-color: var(--wd-bg-container);
-    border-width: 1px;
-    border-style: dashed;
-    border-color: var(--wd-border-1);
-    border-radius: var(--wd-radius-sm);
-    overflow: hidden;
-  }
-
-  @include e(touch) {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    background-color: transparent;
   }
 
   @include e(footer) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
+    margin-top: $signature-footer-margin-top;
     justify-content: flex-end;
-    margin-top: var(--wd-space-3);
-  }
-
-  @include e(footer-button) {
-    padding: var(--wd-space-2) var(--wd-space-3);
-    margin-left: var(--wd-space-2);
-    border-radius: var(--wd-radius-sm);
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-2);
-
-    @include m(confirm) {
-      background-color: var(--wd-color-primary);
-      color: var(--wd-color-on-primary);
-    }
+    display: flex;
+    // Lynx 适配：wot-ui 用 `.wd-signature__button:not(:first-child)`
+    // 兄弟伪类控制按钮左间距，Lynx 无该伪类，改由容器 gap 承担
+    // （PORTING §4.5）
+    gap: $signature-button-margin-left;
   }
 }

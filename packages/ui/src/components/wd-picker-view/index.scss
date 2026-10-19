@@ -1,8 +1,60 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+/**
+ * wd-picker-view 样式（对齐 wot-ui 2.3.2）
+ *
+ * Lynx 适配点（相对 wot-ui，均属 §4 既定适配）：
+ * - **Lynx 无原生 picker-view / picker-view-column 元素**：参考源把
+ *   mask-class / indicator-class 挂到原生组件的内部遮罩 / 指示带上。本组件用
+ *   view + 触摸 + transform 自研滚动列，遮罩与指示带改为模板真实元素：
+ *     · 指示带 `.wd-picker-view__roller`（对齐参考源 indicator-class 名与取值）；
+ *     · 上下渐隐遮罩拆为 `.wd-picker-view__mask--top/--bottom` 两个真实元素
+ *       （参考源用单元素双渐变 + `background-position: top,bottom`，Lynx 对多
+ *       背景/位置列表支持有限，故拆分；渐变色取同一批 --wot-picker-view-mask-* 令牌）。
+ * - 参考源 `.wd-picker-view__column:first-child/:last-child .wd-picker-view__roller`
+ *   的首末列圆角依赖原生 picker-view-column 包裹 + 相邻/伪类选择器，Lynx 无对应
+ *   结构（单一指示带横跨所有列），舍弃（兄弟/伪类选择器既定适配）。
+ * - 参考源 roller 的 `::before/::after { display:none }` 为伪元素，Lynx 无伪元素，剔除。
+ * - **text 不继承**（CONVENTIONS §8）：列项文字包在 `.wd-picker-view__column-label`
+ *   文本元素中，字号/颜色/行高及 active 字重、disabled 颜色需显式下发到该文本节点。
+ * - 列内容 flex-shrink:0（禁收缩，避免行高被可视区按比例压缩，CONVENTIONS §19 附注）。
+ */
+
+// 选择器视图背景色
+$picker-view-bg: var(--wot-picker-view-bg, $filled-oppo) !default;
+// 选择器视图内边距
+$picker-view-padding: var(--wot-picker-view-padding, $padding-zero $padding-loose) !default;
+// 遮罩渐变起始色
+$picker-view-mask-start-color: var(--wot-picker-view-mask-start-color, $opacwhite-10_85) !default;
+// 遮罩渐变结束色
+$picker-view-mask-end-color: var(--wot-picker-view-mask-end-color, $opacwhite-5_20) !default;
+// 遮罩背景渐变（参考源单元素双渐变写法；Lynx 拆分为 top/bottom 两元素，见文件头）
+$picker-view-mask-bg: var(--wot-picker-view-mask-bg, linear-gradient(180deg, $picker-view-mask-start-color, $picker-view-mask-end-color), linear-gradient(0deg, $picker-view-mask-start-color, $picker-view-mask-end-color)) !default;
+// 禁用态透明度（参考源声明但未使用，保留作文档定制点）
+$picker-view-disabled-opacity: var(--wot-picker-view-disabled-opacity, $opacity-disabled) !default;
+// 列项高度
+$picker-view-column-item-height: var(--wot-picker-view-column-item-height, $n-44) !default;
+// 列项字号
+$picker-view-column-item-font-size: var(--wot-picker-view-column-item-font-size, $typography-body-size-extra-large) !default;
+// 列项文字颜色
+$picker-view-column-item-color: var(--wot-picker-view-column-item-color, $text-main) !default;
+// 列项内边距
+$picker-view-column-item-padding: var(--wot-picker-view-column-item-padding, 0 $padding-tight) !default;
+// 列项禁用文字颜色
+$picker-view-column-item-disabled-color: var(--wot-picker-view-column-item-disabled-color, $text-disabled) !default;
+// 列项激活字重
+$picker-view-column-item-font-weight-active: var(--wot-picker-view-column-item-font-weight-active, $font-weight-medium) !default;
+// 滚轮背景色
+$picker-view-roller-bg: var(--wot-picker-view-roller-bg, $filled-bottom) !default;
+// 滚轮圆角
+$picker-view-roller-border-radius: var(--wot-picker-view-roller-border-radius, $radius-main) !default;
 
 @include b(picker-view) {
-  width: 100%;
-  padding: 0 var(--wd-space-3);
+  position: relative;
+  padding: $picker-view-padding;
+  box-sizing: border-box;
+  background: $picker-view-bg;
 
   @include e(main) {
     position: relative;
@@ -13,20 +65,34 @@
     overflow: hidden;
   }
 
-  @include e(column) {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    flex-basis: 0;
-    height: 100%;
-    overflow: hidden;
-    /* 列内容（文字）必须盖在指示带之上：指示带是不透明底色，
-       z-index 高于列时会把选中项整行盖掉（表现为「选中行消失」）。 */
-    z-index: 2;
+  // 选中指示带（对齐参考源 indicator-class：roller）。
+  // 用普通嵌套（非 edeep/e）生成后代选择器 `.wd-picker-view .wd-picker-view__roller`，
+  // 与参考源 edeep 编译产物一致（Lynx 无 shadow DOM，后代选择器直接命中）。
+  .wd-picker-view__roller {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: $picker-view-column-item-height;
+    background: $picker-view-roller-bg;
+    border-radius: 0;
+    // 参考源 roller z-index:0；Lynx 下指示带须排在列之后且 z-index 低于列，
+    // 否则不透明底色会在 Web 预览（逆序绘制）盖掉选中项文字（CONVENTIONS §19 附注）。
+    z-index: 0;
+    pointer-events: none;
   }
 
-  /* 上下补位（高度与列项一致由内联定高给出，禁收缩） */
+  @include e(column) {
+    position: relative;
+    // 参考源 flex:1；Lynx 补 z-index:2 使列内容压在指示带之上（见 roller 注释）。
+    flex: 1;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  // 上下补位（高度与列项一致由内联定高给出，禁收缩）
   @include e(column-pad) {
     width: 100%;
     flex-shrink: 0;
@@ -36,9 +102,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    /* 列内容总高（pad + 全部列项）远超可视区，靠父级 overflow:hidden 裁切；
-       flex 项默认 flex-shrink:1 会被容器高度按比例压缩（行高塌成 1/4），
-       必须禁用收缩——真机与 Web 预览同现。 */
+    // 列内容总高远超可视区，禁收缩避免行高被按比例压缩（CONVENTIONS §19 附注）。
     flex-shrink: 0;
   }
 
@@ -49,64 +113,57 @@
     justify-content: center;
     width: 100%;
     flex-shrink: 0;
-    padding: 0 var(--wd-space-2);
-  }
-
-  /* 列项左右内边距 8px（对齐 wot-ui picker-view-column-item-padding） */
-
-  @include e(column-label) {
-    font-size: var(--wd-font-lg);
-    color: var(--wd-text-1);
-  }
-
-  @include e(column-item) {
-    /* 选中项：DOM 推 `wd-picker-view__column-item--active`（getItemClass 拼接），
-       必须用 m() 生成 `--active`；when() 生成的 `is-active` 不匹配会被静默丢弃。 */
-    @include m(active) {
-      .wd-picker-view__column-label {
-        font-weight: var(--wd-font-weight-semibold);
-      }
-    }
+    padding: $picker-view-column-item-padding;
+    color: $picker-view-column-item-color;
+    font-size: $picker-view-column-item-font-size;
+    line-height: $picker-view-column-item-height;
+    text-align: center;
+    @include lineEllipsis;
 
     @include m(disabled) {
-      opacity: 0.4;
+      color: $picker-view-column-item-disabled-color;
+    }
+
+    @include m(active) {
+      font-weight: $picker-view-column-item-font-weight-active;
     }
   }
 
-  /* 选中指示带 */
-  @include e(indicator) {
-    position: absolute;
-    left: 0;
-    right: 0;
-    border-top-width: 1ppx;
-    border-top-style: solid;
-    border-top-color: var(--wd-border-1);
-    border-bottom-width: 1ppx;
-    border-bottom-style: solid;
-    border-bottom-color: var(--wd-border-1);
-    background-color: var(--wd-bg-secondary);
-    pointer-events: none;
-    /* 指示带在列文字之下（不透明底色会盖住选中项） */
-    z-index: 1;
+  // Lynx：text 不继承，列项文字包在 label 文本节点，显式下发字号/颜色/行高；
+  // active 字重 / disabled 颜色由列项修饰类驱动到文本节点。
+  @include e(column-label) {
+    font-size: $picker-view-column-item-font-size;
+    color: $picker-view-column-item-color;
+    line-height: $picker-view-column-item-height;
   }
 
-  /* 上下渐隐遮罩 */
-  @include e(mask) {
+  .wd-picker-view__column-item--active .wd-picker-view__column-label {
+    font-weight: $picker-view-column-item-font-weight-active;
+  }
+
+  .wd-picker-view__column-item--disabled .wd-picker-view__column-label {
+    color: $picker-view-column-item-disabled-color;
+  }
+
+  // 上下渐隐遮罩（参考源为单元素双渐变；Lynx 拆分为 top/bottom 真实元素，见文件头）。
+  // 基类用普通嵌套生成后代选择器 `.wd-picker-view .wd-picker-view__mask`，与参考源
+  // edeep 编译产物一致；--top/--bottom 修饰类为 Lynx 拆分后的定位/渐变（既定适配）。
+  .wd-picker-view__mask {
     position: absolute;
     left: 0;
     right: 0;
     pointer-events: none;
-    /* 遮罩盖在文字之上形成上下渐隐（仅覆盖 pad 区，不压选中带） */
+    // 遮罩盖在文字之上形成上下渐隐（仅覆盖 pad 区，不压选中带）。
     z-index: 3;
 
-    @include m(top) {
+    &--top {
       top: 0;
-      background-image: linear-gradient(to bottom, var(--wd-bg-container), rgba(255, 255, 255, 0));
+      background-image: linear-gradient(to bottom, $picker-view-mask-start-color, $picker-view-mask-end-color);
     }
 
-    @include m(bottom) {
+    &--bottom {
       bottom: 0;
-      background-image: linear-gradient(to top, var(--wd-bg-container), rgba(255, 255, 255, 0));
+      background-image: linear-gradient(to top, $picker-view-mask-start-color, $picker-view-mask-end-color);
     }
   }
 }

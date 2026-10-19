@@ -6,59 +6,107 @@ import type { ButtonSize, ButtonType, ButtonVariant } from '../../composables/gl
 // 兼容历史从 wd-button/types 深度导入的用法
 export type { ButtonSize, ButtonType, ButtonVariant }
 
+/**
+ * 语言
+ * 可选值: 'zh_CN' | 'zh_TW' | 'en'
+ */
+export type ButtonLang = 'zh_CN' | 'zh_TW' | 'en'
+
+/**
+ * 开放能力类型
+ *
+ * Lynx 实现说明：以下开放能力均为 uni-app / 微信小程序专有属性，
+ * 在 Lynx 中无对应能力，保留声明仅为 API 对齐（传入不生效）。
+ */
+export type ButtonOpenType =
+  | 'feedback'
+  | 'share'
+  | 'getUserInfo'
+  | 'contact'
+  | 'getPhoneNumber'
+  | 'getRealtimePhoneNumber'
+  | 'launchApp'
+  | 'openSetting'
+  | 'chooseAvatar'
+  | 'getAuthorize'
+  | 'lifestyle'
+  | 'contactShare'
+  | 'openGroupProfile'
+  | 'openGuildProfile'
+  | 'openPublicProfile'
+  | 'shareMessageToFriend'
+  | 'addFriend'
+  | 'addColorSign'
+  | 'addGroupApp'
+  | 'addToFavorites'
+  | 'chooseAddress'
+  | 'chooseInvoiceTitle'
+  | 'login'
+  | 'subscribe'
+  | 'favorite'
+  | 'watchLater'
+  | 'openProfile'
+  | 'agreePrivacyAuthorization'
+
+/**
+ * 支付宝小程序授权范围
+ * 可选值: 'phoneNumber' | 'userInfo'
+ */
+export type ButtonScope = 'phoneNumber' | 'userInfo'
+
+/**
+ * 按钮属性定义
+ */
 export const buttonProps = {
   ...baseProps,
   /**
-   * 是否圆角
-   * 类型: boolean
-   * 默认值: false
+   * 圆角按钮
+   * 不传则继承全局配置
    */
-  round: makeBooleanProp(false),
+  round: {
+    type: Boolean,
+    default: void 0
+  },
   /**
-   * 是否禁用
-   * 类型: boolean
+   * 禁用按钮
    * 默认值: false
    */
   disabled: makeBooleanProp(false),
   /**
-   * 是否为细线（plain / dashed 变体下 1ppx 描边）
-   * 类型: boolean
+   * 是否细边框
    * 默认值: false
    */
   hairline: makeBooleanProp(false),
   /**
-   * 是否撑满父容器
-   * 类型: boolean
+   * 块状按钮
    * 默认值: false
    */
   block: makeBooleanProp(false),
   /**
-   * 类型
+   * 按钮类型
    * 类型: ButtonType
    * 可选值: 'primary' | 'success' | 'info' | 'warning' | 'danger'
-   * 默认值: 'primary'
+   * 不传则继承全局配置
    */
-  type: makeStringProp<ButtonType>('primary'),
+  type: String as PropType<ButtonType>,
   /**
-   * 尺寸
+   * 按钮尺寸
    * 类型: ButtonSize
    * 可选值: 'mini' | 'small' | 'medium' | 'large'
-   * 默认值: 'medium'
+   * 不传则继承全局配置
    */
-  size: makeStringProp<ButtonSize>('medium'),
+  size: String as PropType<ButtonSize>,
   /**
-   * 图标名称（wd-icon 的 name）
-   * 类型: string
+   * 图标类名
    */
   icon: String,
   /**
-   * 图标类名前缀
-   * 类型: string
-   * 默认值: wd-icon
+   * 类名前缀，用于使用自定义图标，用法参考 Icon 组件
+   * 默认值: 'wd-icon'
    */
   classPrefix: makeStringProp('wd-icon'),
   /**
-   * CSS 图标类名（配合 UnoCSS 等）
+   * CSS 图标，用法参考 Icon 组件
    * 类型: boolean | string
    * 默认值: false
    */
@@ -67,33 +115,91 @@ export const buttonProps = {
     default: false
   },
   /**
-   * 是否加载中
-   * 类型: boolean
+   * 加载中按钮
    * 默认值: false
    */
   loading: makeBooleanProp(false),
   /**
-   * 加载指示器颜色（默认继承按钮文字色）
-   * 类型: string
+   * 加载图标颜色
    */
   loadingColor: String,
   /**
-   * 加载配置项（透传给 wd-loading）
-   * 类型: object
+   * 开放能力（Lynx 无对应能力，保留声明仅为 API 对齐）
+   * 类型: ButtonOpenType
+   */
+  openType: String as PropType<ButtonOpenType>,
+  /**
+   * 指定是否阻止本节点的祖先节点出现点击态
+   * 默认值: false
+   */
+  hoverStopPropagation: Boolean,
+  /**
+   * 指定返回用户信息的语言，zh_CN 简体中文，zh_TW 繁体中文，en 英文
+   * 类型: ButtonLang
+   * 可选值: 'zh_CN' | 'zh_TW' | 'en'
+   */
+  lang: String as PropType<ButtonLang>,
+  /**
+   * 会话来源，open-type="contact"时有效
+   */
+  sessionFrom: String,
+  /**
+   * 会话内消息卡片标题，open-type="contact"时有效
+   */
+  sendMessageTitle: String,
+  /**
+   * 会话内消息卡片点击跳转小程序路径，open-type="contact"时有效
+   */
+  sendMessagePath: String,
+  /**
+   * 会话内消息卡片图片，open-type="contact"时有效
+   */
+  sendMessageImg: String,
+  /**
+   * 打开 APP 时，向 APP 传递的参数，open-type=launchApp时有效
+   */
+  appParameter: String,
+  /**
+   * 是否显示会话内消息卡片，设置此参数为 true，用户进入客服会话会在右下角显示"可能要发送的小程序"提示，用户点击后可以快速发送小程序消息，open-type="contact"时有效
+   * 默认值: false
+   */
+  showMessageCard: Boolean,
+  /**
+   * 按钮的唯一标识，可用于设置隐私同意授权按钮的id
+   */
+  buttonId: String,
+  /**
+   * 支付宝小程序，当 open-type 为 getAuthorize 时有效
+   * 类型: ButtonScope
+   * 可选值: 'phoneNumber' | 'userInfo'
+   */
+  scope: String as PropType<ButtonScope>,
+  /**
+   * 加载配置项
+   * 类型: Partial<LoadingProps>
    */
   loadingProps: Object as PropType<Partial<LoadingProps>>,
   /**
-   * 按钮文字
-   * 类型: string
+   * 点击按钮后，等待多少毫秒后出现点击态，单位毫秒
+   * 默认值: 20
+   */
+  hoverStartTime: makeNumberProp(20),
+  /**
+   * 手指松开后，等待多少毫秒后移除点击态，单位毫秒
+   * 默认值: 70
+   */
+  hoverStayTime: makeNumberProp(70),
+  /**
+   * 按钮文本
    */
   text: String,
   /**
-   * 变体
+   * 按钮变体
    * 类型: ButtonVariant
    * 可选值: 'base' | 'plain' | 'dashed' | 'soft' | 'subtle' | 'text'
-   * 默认值: 'base'
+   * 不传则继承全局配置
    */
-  variant: makeStringProp<ButtonVariant>('base')
+  variant: String as PropType<ButtonVariant>
 }
 
 export type ButtonProps = ExtractPropTypes<typeof buttonProps>

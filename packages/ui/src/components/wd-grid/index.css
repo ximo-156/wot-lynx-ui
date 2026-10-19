@@ -1,1 +1,1 @@
-.wd-grid{display:flex;flex-direction:row;flex-wrap:wrap;width:100%;background-color:var(--wd-bg-container)}.wd-grid.is-border{margin-right:-1ppx;margin-bottom:-1ppx}
+.wd-grid{position:relative;box-sizing:border-box;overflow:hidden;display:flex;flex-wrap:wrap;height:auto}

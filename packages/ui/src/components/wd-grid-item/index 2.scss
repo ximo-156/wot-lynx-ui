@@ -1,0 +1,145 @@
+@use '../../styles/variable.scss' as *;
+@use '../../styles/mixin/mixin.scss' as *;
+
+// 网格项文字字号
+$grid-item-font-size: var(--wot-grid-item-font-size, $typography-body-size-extra-large) !default;
+// 网格项文字行高
+$grid-item-line-height: var(--wot-grid-item-line-height, $typography-body-line-height-size-extra-large) !default;
+// 网格项背景色
+$grid-item-bg: var(--wot-grid-item-bg, $filled-oppo) !default;
+// 网格项内容内边距
+$grid-item-padding: var(--wot-grid-item-padding, $padding-loose $padding-loose) !default;
+// 网格项悬浮背景色
+$grid-item-hover-bg: var(--wot-grid-item-hover-bg, $feedback-hover) !default;
+// 网格项图标尺寸
+$grid-item-icon-size: var(--wot-grid-item-icon-size, $n-32) !default;
+// 网格项图标颜色
+$grid-item-icon-color: var(--wot-grid-item-icon-color, $icon-secondary) !default;
+// 网格项边框宽度
+$grid-item-border-width: var(--wot-grid-item-border-width, $stroke-main) !default;
+// 网格项边框颜色
+$grid-item-border-color: var(--wot-grid-item-border-color, $border-main) !default;
+// 网格项文字颜色
+$grid-item-text-color: var(--wot-grid-item-text-color, $text-main) !default;
+// 网格项文字间距
+$grid-item-text-spacing: var(--wot-grid-item-text-spacing, $spacing-super-tight) !default;
+
+@include b(grid-item) {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+
+  /* Lynx 适配：参考源 when(border) 的 ::before（上边线）/ ::after（右边线）
+     伪元素在无伪元素平台改为主元素真实 border；参考源以 scaleY/scaleX(0.5)
+     细化 1px 边框，此处用 1ppx 物理像素边框直接表达 0.5px 细线 */
+  @include when(border) {
+    border-top-width: 1ppx;
+    border-top-style: solid;
+    border-top-color: $grid-item-border-color;
+    border-right-width: 1ppx;
+    border-right-style: solid;
+    border-right-color: $grid-item-border-color;
+  }
+
+  // 第一行元素：仅有右边线（参考源 when(first) 的 ::after）
+  @include when(first) {
+    border-right-width: 1ppx;
+    border-right-style: solid;
+    border-right-color: $grid-item-border-color;
+  }
+
+  // 每行右侧的元素：去掉右边线（参考源 when(right) 的 ::after display:none）
+  @include when(right) {
+    border-right-width: 0;
+  }
+
+  @include when(last) {
+    border-right-width: 0;
+  }
+
+  @include e(wrapper) {
+    display: flex;
+    flex-direction: row;
+  }
+
+  @include e(content) {
+    height: 100%;
+    padding: $grid-item-padding;
+    background: $grid-item-bg;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* Lynx 适配：参考源以 `.wd-grid-item__wrapper + .wd-grid-item__text`
+       相邻兄弟选择器控制图标与文字间距（含 horizontal / reverse 变体），
+       Lynx 兄弟选择器支持有限，统一改用容器 gap（单子节点时无间隙，
+       语义等价；四种排列方向的间距值相同） */
+    gap: $grid-item-text-spacing;
+
+    @include when(square) {
+      box-sizing: border-box;
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 100%;
+    }
+
+    @include when(center) {
+      align-items: center;
+      justify-content: center;
+    }
+
+    @include when(horizontal) {
+      flex-direction: row;
+    }
+
+    @include when(reverse) {
+      flex-direction: column-reverse;
+
+      /* 参考源嵌套的 &.is-horizontal：reverse + horizontal 为 row-reverse */
+      &.is-horizontal {
+        flex-direction: row-reverse;
+      }
+    }
+
+    @include when(around) {
+      @include halfPixelBorderSurround($grid-item-border-color);
+    }
+
+    /* Lynx 适配：参考源 m(hover) 为 hover-class 的按压背景（带 !important
+       以压过 bgColor 内联样式）；Lynx 无 hover-class 与 !important，改为
+       :active + CSS 变量驱动（bgColor 经 --wot-grid-item-bg 下发），
+       按压背景由更具特异性的 :active 规则胜出 */
+    @include m(hover) {
+      &:active {
+        background-color: $grid-item-hover-bg;
+      }
+    }
+  }
+
+  @include e(text) {
+    width: 100%;
+    font-size: $grid-item-font-size;
+    line-height: $grid-item-line-height;
+    color: $grid-item-text-color;
+
+    @include when(ellipsis) {
+      @include lineEllipsis;
+    }
+  }
+
+  @include edeep(icon) {
+    font-size: $grid-item-icon-size;
+    color: $grid-item-icon-color;
+  }
+
+  @include e(badge) {
+    display: flex;
+    flex-direction: row;
+  }
+}

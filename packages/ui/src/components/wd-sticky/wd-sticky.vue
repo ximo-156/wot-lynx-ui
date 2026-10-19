@@ -1,48 +1,47 @@
 /*
  * wd-sticky — 粘性布局
  *
- * Lynx 实现说明：
- * - 采用 Lynx 渲染器原生支持的 position: sticky（与 wd-index-anchor
- *   同一方案）：吸顶元素保持在文档流内，滚动容器滚动到阈值位置时
- *   由渲染器原生贴住 offsetTop 处，无需 JS 滚动联动；
- * - 历史实现（fixed + 滚动联动）因 Lynx 的 scroll 事件不向子组件
- *   冒泡、fixed 永假而完全不工作，已移除；
- * - customStyle 经 parseStyle 归一后与内置样式合并（对象语法，
- *   CONVENTIONS §19：字符串 :style 会被 vue-lynx 静默丢弃）。
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
+ * - 吸顶机制降级：参考源依赖 uni.createIntersectionObserver（uni-app 小程序
+ *   专有 API，本地 common/uni 返回空实现、永不回调）+ getRect 手动补位驱动
+ *   fixed/absolute 定位；Lynx 无该能力，整套滚动联动不工作。改用渲染器原生
+ *   position: sticky（与 wd-index-anchor / wd-table 同方案）：吸顶元素保持
+ *   在文档流内，滚动到阈值位置时由引擎贴住 offsetTop 处，零 JS 开销；
+ * - 因此参考源的外层占位 view（JS 改定位时撑起高度）、wd-resize 尺寸监听、
+ *   defineExpose(setPosition/stickyState) 与 sticky-box 的 observerForChild
+ *   联动均不再需要，DOM 精简为 wd-sticky（sticky 元素）> wd-sticky__container，
+ *   类名与 id 保留；
+ * - 参考源 innerOffsetTop 的 H5 44px 导航栏补偿为条件编译（#ifdef H5），
+ *   Lynx 无该概念，直接取 props.offsetTop；
+ * - rootStyle 由参考源的「objToStyle 拼字符串 + customStyle 拼接」改为对象语法
+ *   （parseStyle 归一，CONVENTIONS §19：字符串 :style 会被静默丢弃）；
+ * - 无交互事件（按压/点击由插槽内容自行处理）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, inject } from 'vue-lynx'
+import { computed } from 'vue-lynx'
 import { stickyProps } from './types'
-import { filterStyle, isDef, parseStyle } from '../../common/util'
-import { STICKY_BOX_OFFSET_KEY } from '../wd-sticky-box/types'
+import { addUnit, parseStyle, uuid, type CSSProperties } from '../../common/util'
 
 const props = defineProps(stickyProps)
 
-/** 父级 sticky-box 下发的默认吸顶偏移（未显式传 offsetTop 时使用） */
-const boxOffset = inject(STICKY_BOX_OFFSET_KEY, computed(() => 0))
-// 用 isDef 而非真值判断：offsetTop=0 是合法值（贴顶），不得被当作未传
-const resolvedOffsetTop = computed(() => (isDef(props.offsetTop) ? props.offsetTop : boxOffset.value))
+const stickyId = `wd-sticky-${uuid()}`
 
-const rootClass = computed(() => {
-  const classes = ['wd-sticky']
-  if (props.customClass) classes.push(props.customClass)
-  return classes.join(' ')
-})
-
-const rootStyle = computed(() => {
-  return filterStyle({
+const rootStyle = computed<CSSProperties>(() => {
+  const style: CSSProperties = {
     position: 'sticky',
-    top: `${resolvedOffsetTop.value}px`,
-    'z-index': String(props.zIndex),
-    ...parseStyle(props.customStyle)
-  })
+    top: addUnit(props.offsetTop),
+    zIndex: String(props.zIndex)
+  }
+  return { ...style, ...parseStyle(props.customStyle) }
 })
 </script>
 
 <template>
-  <view :class="rootClass" :style="rootStyle">
-    <slot />
+  <view :class="`wd-sticky ${customClass}`" :style="rootStyle" :id="stickyId">
+    <view class="wd-sticky__container">
+      <slot />
+    </view>
   </view>
 </template>

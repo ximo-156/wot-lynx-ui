@@ -1,11 +1,13 @@
 /*
  * wd-form — 表单
  *
- * Lynx 实现说明：
- * - 经 useChildren 向 form-item 提供 props / errorMessages / validate；
- * - 校验驱动来自 schema（返回问题列表）；错误提示按 errorType 分流：
- *   message 写入 errorMessages（表单项内联展示），toast 经 useToast 弹出；
- * - errorType='toast' 时挂载命令式 toast 实例（selector 区分多表单）。
+ * 与 wot-ui 2.3.2 对齐；Lynx 适配点（相对参考源的差异）：
+ * - customStyle 经 parseStyle() 归一为对象后下发（CONVENTIONS §19：
+ *   vue-lynx 的 :style 只认对象，字符串样式会被静默丢弃）；
+ * - 平台 options 块（virtualHost / styleIsolation / addGlobalClass）为
+ *   小程序专有能力，Lynx 不需要，未声明；
+ * - errorType='toast' 时挂载命令式 toast 实例（selector 区分多表单），
+ *   与参考源一致。
  */
 <script lang="ts" setup>
 import './index.css'

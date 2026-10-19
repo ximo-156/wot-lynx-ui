@@ -1,0 +1,50 @@
+@use '../../../styles/mixin/mixin.scss' as *;
+@use '../index.scss' as *;
+
+@include b(year-panel) {
+
+  @include e(controls) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    padding: $calendar-view-controls-padding;
+  }
+
+  @include e(controls-title) {
+    font-size: $calendar-view-panel-title-font-size;
+    line-height: $calendar-view-panel-title-line-height;
+    color: $calendar-view-panel-title-color;
+    font-weight: $calendar-view-panel-title-font-weight;
+  }
+
+  @include edeep(control-icon) {
+    color: $calendar-view-control-icon-color;
+    font-size: $calendar-view-control-icon-size;
+    line-height: $calendar-view-control-icon-size;
+
+    // Lynx 适配：wot-ui 用 `&:not(:last-child) { margin-right: … }` 控制图标
+    // 间距，Lynx 不支持结构伪类，改为 __control 容器的 gap（语义等价）。
+    @include when(disabled){
+      color: $calendar-view-control-color-disabled;
+    }
+  }
+
+  @include e(control) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    // Lynx 适配：承接 :not(:last-child) 的图标间距（见 edeep(control-icon)）。
+    gap: $calendar-view-control-icon-spacing;
+  }
+
+  @include e(title) {
+    font-size: $calendar-view-panel-title-font-size;
+    line-height: $calendar-view-panel-title-line-height;
+    color: $calendar-view-panel-title-color;
+    padding: $calendar-view-panel-title-padding;
+    font-weight: $calendar-view-panel-title-font-weight;
+    margin: $calendar-view-panel-title-margin;
+  }
+}

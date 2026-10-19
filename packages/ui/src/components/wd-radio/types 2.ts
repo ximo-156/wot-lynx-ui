@@ -1,0 +1,66 @@
+import type { ExtractPropTypes, PropType } from 'vue-lynx'
+import { baseProps, makeRequiredProp } from '../../common/props'
+import type { RadioDirection, RadioPlacement, RadioType } from '../../composables/useRadioGroup'
+import { RADIO_GROUP_KEY } from '../../composables/useRadioGroup'
+
+// 兼容历史从 wd-radio/types、wd-radio-group/types 深度导入的用法
+export { RADIO_GROUP_KEY }
+export type { RadioDirection, RadioPlacement, RadioType }
+
+export const radioProps = {
+  ...baseProps,
+  /**
+   * 选中时的值
+   */
+  value: makeRequiredProp([String, Number, Boolean]),
+  /**
+   * 单选框类型
+   * 可选值: dot | circle | square | button
+   * 默认值: 继承自 radio-group
+   */
+  type: String as PropType<RadioType>,
+  /**
+   * 选中的颜色
+   * 默认值: 继承自 radio-group
+   */
+  checkedColor: String,
+  /**
+   * 未选中状态的颜色
+   * 默认值: 继承自 radio-group
+   */
+  uncheckedColor: String,
+  /**
+   * 是否禁用
+   * 默认值: 继承自 radio-group
+   */
+  disabled: {
+    type: Boolean,
+    default: void 0
+  },
+  /**
+   * 是否只读
+   * 默认值: 继承自 radio-group
+   */
+  readonly: {
+    type: Boolean,
+    default: void 0
+  },
+  /**
+   * 布局方向
+   * 可选值: 'horizontal' | 'vertical'
+   * 默认值: 继承自 radio-group
+   */
+  direction: String as PropType<RadioDirection>,
+  /**
+   * 图标位置
+   * 可选值: 'left' | 'right'
+   * 默认值: 继承自 radio-group
+   */
+  placement: String as PropType<RadioPlacement>,
+  /**
+   * 自定义label文本类名
+   */
+  customLabelClass: String
+}
+
+export type RadioProps = ExtractPropTypes<typeof radioProps>

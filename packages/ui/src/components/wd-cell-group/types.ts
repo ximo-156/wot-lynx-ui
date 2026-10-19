@@ -20,13 +20,13 @@ export const cellGroupProps = {
    */
   value: String,
   /**
-   * 是否显示边框线
+   * 是否展示外边框
    * 类型: boolean
    * 默认值: false
    */
   border: makeBooleanProp(false),
   /**
-   * 是否为卡片式分组（圆角 + 外边距）
+   * 是否展示为圆角卡片风格
    * 类型: boolean
    * 默认值: false
    */

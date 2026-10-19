@@ -26,7 +26,7 @@ const configProviderStyle = computed(() => {
 
 const themeClass = computed(() => {
   const theme = configProvider.value?.globalConfig?.value.theme
-  return theme ? `wd-theme-${theme}` : 'wd-theme-light'
+  return theme ? `wot-theme-${theme}` : 'wot-theme-light'
 })
 
 /** 主题变量 + customStyle 合并为对象（字符串 :style 会被丢弃，CONVENTIONS §19） */

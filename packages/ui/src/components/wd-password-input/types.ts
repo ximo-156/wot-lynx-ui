@@ -4,31 +4,31 @@ import { baseProps, makeBooleanProp, makeNumberProp, makeNumericProp, makeString
 export const passwordInputProps = {
   ...baseProps,
   /**
-   * 密码值
+   * 绑定的值
    */
   modelValue: makeStringProp(''),
   /**
-   * 是否显示掩码圆点
+   * 是否隐藏密码内容
    */
   mask: makeBooleanProp(true),
   /**
-   * 提示信息
+   * 输入框下方文字提示
    */
   info: makeStringProp(''),
   /**
-   * 错误信息
+   * 输入框下方错误提示
    */
   errorInfo: makeStringProp(''),
   /**
-   * 格子间距
+   * 输入框格子之间的间距，如 20px 2em，默认单位为 px
    */
   gutter: makeNumericProp(0),
   /**
-   * 格子数量
+   * 密码最大长度
    */
   length: makeNumberProp(6),
   /**
-   * 是否聚焦
+   * 是否已聚焦，聚焦时会显示光标
    */
   focused: makeBooleanProp(true)
 }

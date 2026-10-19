@@ -1,9 +1,14 @@
 /*
  * wd-password-input — 密码输入框
  *
- * Lynx 实现说明：
- * - 纯展示组件：N 个格子 + 光标 + 掩码圆点，聚焦事件经 touch  emit；
- * - 通常与 wd-keyboard 搭配使用（键盘输入密码）。
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
+ * - 纯展示组件：N 个格子 + 光标 + 掩码圆点，点击经 touchstart emit 'focus'；
+ * - wot-ui 用 `:not(:last-child) { border-right: none }` 与 `:first-child` /
+ *   `:last-child` 控制相邻格子的单线边框与端部圆角，Lynx 不支持结构伪类，
+ *   改为模板按索引下发的 is-first / is-last 索引类名（见 index.scss）；
+ * - customStyle 为字符串，经 parseStyle 归一为对象后绑定（CONVENTIONS §19）；
+ * - modelValue 显式传入 null 时 Vue 不套用默认值，直接读 length / 索引会在
+ *   渲染期崩溃，统一归一为字符串（空值 → ''）。
  */
 <script lang="ts" setup>
 import './index.css'

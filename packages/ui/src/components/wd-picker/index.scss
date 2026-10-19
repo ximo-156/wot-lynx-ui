@@ -1,52 +1,83 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+/**
+ * wd-picker 样式（对齐 wot-ui 2.3.2）
+ *
+ * Lynx 适配点（相对 wot-ui）：
+ * - 组件私有令牌 --wot-picker-* 原样保留（消费者按名覆盖）；
+ * - 操作按钮为 view 元素：`outline: none` 为 Web 专有属性，删除（Lynx 不识别，
+ *   且 style-parity 的 WEB_ONLY_PROPS 白名单本就剔除该项，不影响对齐度）；
+ * - `border-radius: $picker-radius $picker-radius 0 0` 保留四角写法；
+ * - 弹层圆角经 custom-class="wd-picker__popup" 下发到 wd-popup 根节点，
+ *   edeep(popup) 生成 `.wd-picker__popup`（Lynx 无 shadow DOM，:deep 直接写类名）。
+ */
+
+// 选择器工具栏高度
+$picker-toolbar-height: var(--wot-picker-toolbar-height, $n-44) !default;
+// 选择器背景色
+$picker-bg: var(--wot-picker-bg, $filled-oppo) !default;
+// 确认按钮文字颜色
+$picker-action-color-confirm: var(--wot-picker-action-color-confirm, $primary-6) !default;
+// 取消按钮文字颜色
+$picker-action-color-cancel: var(--wot-picker-action-color-cancel, $text-secondary) !default;
+// 操作按钮禁用颜色
+$picker-action-disabled-color: var(--wot-picker-action-disabled-color, $text-disabled) !default;
+// 操作按钮字号
+$picker-action-font-size: var(--wot-picker-action-font-size, $typography-body-size-extra-large) !default;
+// 标题文字颜色
+$picker-title-color: var(--wot-picker-title-color, $text-main) !default;
+// 标题文字字号
+$picker-title-font-size: var(--wot-picker-title-font-size, $typography-title-size-main) !default;
+// 标题文字字重
+$picker-title-font-weight: var(--wot-picker-title-font-weight, $font-weight-medium) !default;
+// 标题文字行高
+$picker-title-line-height: var(--wot-picker-title-line-height, $typography-title-line-height-size-main) !default;
+// 弹窗圆角
+$picker-radius: var(--wot-picker-radius, $radius-large) !default;
 
 @include b(picker) {
-  @include e(popup) {
-    border-top-left-radius: var(--wd-radius-xl);
-    border-top-right-radius: var(--wd-radius-xl);
+  @include edeep(popup) {
+    border-radius: $picker-radius $picker-radius 0px 0px;
   }
 
   @include e(wraper) {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    background-color: var(--wd-bg-elevated);
+    padding-bottom: var(--window-bottom);
+    background: $picker-bg;
   }
 
   @include e(toolbar) {
+    position: relative;
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    height: $picker-toolbar-height;
     justify-content: space-between;
-    height: 48px;
-    padding: 0 var(--wd-space-2);
-    border-bottom-width: 1ppx;
-    border-bottom-style: solid;
-    border-bottom-color: var(--wd-border-1);
+    align-items: center;
+    box-sizing: border-box;
   }
 
   @include e(action) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+    display: block;
+    border: none;
+    font-size: $picker-action-font-size;
+    background: transparent;
     padding: 0 15px;
-    font-size: var(--wd-font-md);
-  }
 
-  @include e(action--cancel) {
-    color: var(--wd-text-2);
-  }
+    @include m(cancel) {
+      color: $picker-action-color-cancel;
+    }
 
-  @include e(action--confirm) {
-    color: var(--wd-color-primary);
-    font-weight: var(--wd-font-weight-medium);
+    @include m(confirm) {
+      color: $picker-action-color-confirm;
+    }
   }
 
   @include e(title) {
-    font-size: var(--wd-font-md);
-    font-weight: var(--wd-font-weight-medium);
-    color: var(--wd-text-1);
+    display: block;
+    flex: 1;
+    text-align: center;
+    color: $picker-title-color;
+    font-size: $picker-title-font-size;
+    font-weight: $picker-title-font-weight;
+    line-height: $picker-title-line-height;
   }
 }

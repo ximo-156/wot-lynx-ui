@@ -1,7 +1,7 @@
 /*
  * wd-icon — 图标
  *
- * Lynx 实现说明：
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
  * - 内置图标经图标注册表（icons/registry.ts）解析，两种渲染形态：
  *   - 内置 iconfont 集（180 个）：.ttf 字体图标（fonts/iconfont.ttf），
  *     Lynx CSS 不支持 ::before/::after，码点字形直接作为 text 子节点渲染；
@@ -9,8 +9,17 @@
  *     content 标记过 sanitizeSvgContent 安全网（SVG 元素白名单，见 CONVENTIONS §8）；
  * - 寻址：不带前缀按注册顺序回退（内置集优先）；带 `集合键:图标名` 前缀
  *   （如 `iconfont:menu`）精确命中指定集合；
- * - svg content 不继承 CSS 变量/currentColor，未传 color 时按主题取
- *   --wd-icon-1 的对应值（common/theme.ts 镜像常量）；
+ * - 尺寸/颜色语义与 wot-ui 一致：默认由 CSS 承担（根视图 font-size 即
+ *   --wot-icon-font-size，默认 14px；消费方经 custom-class 的 font-size /
+ *   color 覆盖），仅当 color / size prop 显式传入时才写内联（内联优先级
+ *   高于类，prop 优先是 wot-ui 的既定语义）。这依赖宿主开启
+ *   enableCSSInheritance（README 快速上手的必需配置）：Lynx 默认不开 CSS
+ *   继承，text 不继承父视图的文本样式；
+ * - 字体字形需显式 font-family（注册表给出族名）；line-height 显式置 1，
+ *   避免 line-box 撑高图标容器；
+ * - svg content 不继承 CSS 变量 / currentColor，SVG 集的填充色由 JS 侧
+ *   按 color prop 或主题默认色（common/theme.ts 镜像）注入——SVG 集为本地
+ *   扩展能力，CSS 类的 color 覆盖不影响其填充色；
  * - name 含 '/' 按图片渲染原生 image 元素；cssIcon 走 CSS 类名模式。
  */
 <script lang="ts" setup>
@@ -29,7 +38,8 @@ const emit = defineEmits(['click', 'touch', 'tap'])
 
 const globalConfig = useGlobalConfig()
 
-const DEFAULT_ICON_SIZE = 20
+/** 默认图标尺寸：与 --wot-icon-font-size 的默认值（typography-body-size-main = 14px）一致 */
+const DEFAULT_ICON_SIZE = '14px'
 
 const isImage = computed(() => {
   return !props.cssIcon && isDef(props.name) && props.name.includes('/')
@@ -43,10 +53,10 @@ const resolvedIcon = computed(() => {
 const isSvgIcon = computed(() => resolvedIcon.value?.type === 'svg')
 const isFontIcon = computed(() => resolvedIcon.value?.type === 'font')
 
-/** 主题默认色（svg content 与字体字形均不继承 CSS 变量，需 JS 侧计算） */
-const iconColor = computed(() => {
-  return props.color || (globalConfig.value.theme === 'dark' ? THEME_ICON_COLOR.dark : THEME_ICON_COLOR.light)
-})
+/** 主题默认色（svg content 不继承 CSS 变量，需 JS 侧计算） */
+const themeColor = computed(() =>
+  globalConfig.value.theme === 'dark' ? THEME_ICON_COLOR.dark : THEME_ICON_COLOR.light
+)
 
 const rootClass = computed(() => {
   const clazz: Record<string, boolean> = {
@@ -73,13 +83,14 @@ const rootClass = computed(() => {
 })
 
 const iconSize = computed(() => {
-  return props.size ? addUnit(props.size) : `${DEFAULT_ICON_SIZE}px`
+  return props.size ? addUnit(props.size) : DEFAULT_ICON_SIZE
 })
 
 const rootStyle = computed(() => {
   const style: Record<string, string> = {}
-  if (iconColor.value) {
-    style['color'] = iconColor.value
+  // 仅 prop 显式传入时写内联；未传时由 CSS 类（custom-class / 组件样式）承担
+  if (isDef(props.color)) {
+    style['color'] = props.color
   }
   if (props.size) {
     style['font-size'] = iconSize.value
@@ -99,7 +110,7 @@ const svgContent = computed(() => {
   const paths = icon.paths.map((d) => `<path d="${d}"/>`).join('')
   const markup =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.viewBox}" ` +
-    `width="${iconSize.value}" height="${iconSize.value}" fill="${iconColor.value}">` +
+    `width="${iconSize.value}" height="${iconSize.value}" fill="${isDef(props.color) ? props.color : themeColor.value}">` +
     `${paths}</svg>`
   return sanitizeSvgContent(markup)
 })
@@ -111,19 +122,22 @@ const glyph = computed(() => {
   return String.fromCharCode(parseInt(icon.unicode, 16))
 })
 
-/** 字体字形样式：族名/字号/颜色显式设置（Lynx text 不依赖继承） */
+/** 字体字形样式：族名显式设置（Lynx text 不依赖继承）；字号/颜色仅在 prop 传入时内联 */
 const glyphStyle = computed(() => {
   const icon = resolvedIcon.value
   if (icon?.type !== 'font') return {}
-  return {
-    ...filterStyle({
-      fontFamily: icon.fontFamily,
-      fontSize: iconSize.value,
-      color: iconColor.value,
-      // line-height 取字号，避免 line-box 撑高图标容器
-      lineHeight: iconSize.value
-    })
+  const style: Record<string, string> = {
+    fontFamily: icon.fontFamily,
+    // line-height 取 1，避免 line-box 撑高图标容器（与 wot-ui 根视图一致）
+    lineHeight: '1'
   }
+  if (props.size) {
+    style.fontSize = iconSize.value
+  }
+  if (isDef(props.color)) {
+    style.color = props.color
+  }
+  return filterStyle(style)
 })
 
 function handleClick(event: any) {

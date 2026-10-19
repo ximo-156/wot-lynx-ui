@@ -105,7 +105,7 @@ export const checkboxProps = {
   /**
    * 自定义label文本类名
    */
-  customLabelClass: makeStringProp('')
+  customLabelClass: String
 }
 
 export type CheckboxProps = ExtractPropTypes<typeof checkboxProps>

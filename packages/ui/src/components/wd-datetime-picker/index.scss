@@ -1,69 +1,151 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+/**
+ * wd-datetime-picker 样式（对齐 wot-ui 2.3.2）
+ *
+ * Lynx 适配点（相对 wot-ui）：
+ * - 组件私有令牌 --wot-datetime-picker-* 原样保留；
+ * - 操作按钮/标题为 view 元素：`outline: none` 为 Web 专有属性，删除；
+ * - 参考源 `__title-text` 的 `float: 1` 为 wot-ui 笔误（应为 flex:1），此处按
+ *   `flex: 1` 实现（float 在 Lynx 无效且会被 style-parity 的 Web 白名单剔除）；
+ * - 弹层圆角经 edeep(popup) 生成 `.wd-datetime-picker .wd-datetime-picker__popup`
+ *   （Lynx 无 shadow DOM，:deep 直接写后代选择器）。
+ */
+
+// 日期时间选择器弹窗圆角
+$datetime-picker-popup-radius: var(--wot-datetime-picker-popup-radius, $radius-large $radius-large $radius-zero $radius-zero) !default;
+// 标题文字颜色
+$datetime-picker-title-color: var(--wot-datetime-picker-title-color, $text-main) !default;
+// 标题区域高度
+$datetime-picker-title-height: var(--wot-datetime-picker-title-height, $n-56) !default;
+// 标题文字字号
+$datetime-picker-title-font-size: var(--wot-datetime-picker-title-font-size, $typography-title-size-main) !default;
+// 标题文字行高
+$datetime-picker-title-line-height: var(--wot-datetime-picker-title-line-height, $typography-title-line-height-size-main) !default;
+// 标题文字字重
+$datetime-picker-title-font-weight: var(--wot-datetime-picker-title-font-weight, $font-weight-medium) !default;
+// 标题区域内边距
+$datetime-picker-title-padding: var(--wot-datetime-picker-title-padding, $padding-zero $padding-loose) !default;
+// 操作按钮字号
+$datetime-picker-action-font-size: var(--wot-datetime-picker-action-font-size, $typography-body-size-large) !default;
+// 操作按钮行高
+$datetime-picker-action-line-height: var(--wot-datetime-picker-action-line-height, $typography-body-line-height-size-large) !default;
+// 操作按钮文字颜色
+$datetime-picker-action-color: var(--wot-datetime-picker-action-color, $primary-6) !default;
+// 范围标签内边距
+$datetime-picker-range-padding: var(--wot-datetime-picker-range-padding, 0 $padding-loose $padding-extra-loose) !default;
+// 范围标签字号
+$datetime-picker-range-font-size: var(--wot-datetime-picker-range-font-size, $typography-body-size-main) !default;
+// 范围标签项字号
+$datetime-picker-range-item-font-size: var(--wot-datetime-picker-range-item-font-size, $typography-body-size-extra-large) !default;
+// 范围标签项字重
+$datetime-picker-range-item-font-weight: var(--wot-datetime-picker-range-item-font-weight, $font-weight-medium) !default;
+// 范围标签项行高
+$datetime-picker-range-item-line-height: var(--wot-datetime-picker-range-item-line-height, $typography-body-line-height-size-extra-large) !default;
+// 范围标签项内边距
+$datetime-picker-range-item-padding: var(--wot-datetime-picker-range-item-padding, $spacing-loose $spacing-zero) !default;
+// 范围标签项颜色
+$datetime-picker-range-item-color: var(--wot-datetime-picker-range-item-color, $primary-6) !default;
+// 占位符颜色
+$datetime-picker-range-item-placeholder-color: var(--wot-datetime-picker-range-item-placeholder-color, $text-placeholder) !default;
+// 范围标签项下划线颜色
+$datetime-picker-range-item-line-color: var(--wot-datetime-picker-range-item-line-color, $primary-6) !default;
+// 范围标签项下划线占位符颜色
+$datetime-picker-range-item-line-placeholder-color: var(--wot-datetime-picker-range-item-line-placeholder-color, $border-main) !default;
+// 分隔符水平间距
+$datetime-picker-range-separator-margin: var(--wot-datetime-picker-range-separator-margin, $spacing-zero $spacing-tight) !default;
+// 分隔符颜色
+$datetime-picker-range-separator-color: var(--wot-datetime-picker-range-separator-color, $text-auxiliary) !default;
+// 分隔符宽度
+$datetime-picker-range-separator-width: var(--wot-datetime-picker-range-separator-width, $n-8) !default;
+// 分隔符高度
+$datetime-picker-range-separator-height: var(--wot-datetime-picker-range-separator-height, $stroke-main) !default;
 
 @include b(datetime-picker) {
-  @include e(popup) {
-    border-top-left-radius: var(--wd-radius-xl);
-    border-top-right-radius: var(--wd-radius-xl);
+  @include edeep(popup) {
+    border-radius: $datetime-picker-popup-radius;
   }
 
   @include e(wraper) {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    background-color: var(--wd-bg-elevated);
+    position: relative;
+    padding-bottom: var(--window-bottom);
   }
 
   @include e(title) {
+    position: relative;
     display: flex;
-    flex-direction: row;
-    align-items: center;
     justify-content: space-between;
-    height: 48px;
-    padding: 0 var(--wd-space-3);
+    align-items: center;
+    box-sizing: border-box;
+    height: $datetime-picker-title-height;
+    padding: $datetime-picker-title-padding;
   }
 
   @include e(action) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    padding: 0 var(--wd-space-3);
-    font-size: var(--wd-font-md);
-    color: var(--wd-text-2);
+    display: block;
+    border: none;
+    font-size: $datetime-picker-action-font-size;
+    line-height: $datetime-picker-action-line-height;
+    color: $datetime-picker-action-color;
+    background: transparent;
   }
 
   @include e(title-text) {
-    font-size: var(--wd-font-md);
-    font-weight: var(--wd-font-weight-medium);
-    color: var(--wd-text-1);
+    display: block;
+    flex: 1;
+    color: $datetime-picker-title-color;
+    font-size: $datetime-picker-title-font-size;
+    line-height: $datetime-picker-title-height;
+    font-weight: $datetime-picker-title-font-weight;
   }
 
-  /* 区间 tab */
   @include e(range) {
     display: flex;
-    flex-direction: row;
-    align-items: center;
     justify-content: center;
-    padding: var(--wd-space-2) var(--wd-space-4) 0;
+    align-items: center;
+    font-size: $datetime-picker-range-font-size;
+    padding: $datetime-picker-range-padding;
   }
 
   @include e(range-item) {
-    padding: var(--wd-space-1) var(--wd-space-3);
-    border-radius: var(--wd-radius-full);
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-2);
+    // 参考源 pixelBorder 伪元素下发线需 position:relative 锚定；本地改用原生
+    // border-bottom，position:relative 无副作用，保留以对齐参考源取值。
+    position: relative;
+    flex: 1;
+    color: $datetime-picker-range-item-placeholder-color;
+    font-size: $datetime-picker-range-item-font-size;
+    font-weight: $datetime-picker-range-item-font-weight;
+    line-height: $datetime-picker-range-item-line-height;
+    padding: $datetime-picker-range-item-padding;
+    text-align: center;
+    @include pixelBorder(bottom, 0, $datetime-picker-range-item-line-placeholder-color);
 
     @include when(active) {
-      background-color: var(--wd-color-primary-bg);
-      color: var(--wd-color-primary);
+      position: relative;
+      color: $datetime-picker-range-item-color;
+      @include pixelBorder(bottom, 0, $datetime-picker-range-item-line-color);
     }
   }
 
   @include e(range-separator) {
-    width: var(--wd-space-4);
-    height: 1ppx;
-    background-color: var(--wd-border-1);
-    margin: 0 var(--wd-space-2);
+    width: $datetime-picker-range-separator-width;
+    height: $datetime-picker-range-separator-height;
+    position: relative;
+    margin: $datetime-picker-range-separator-margin;
+    background: $datetime-picker-range-separator-color;
+  }
+
+  @include e(hidden) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  @include e(show) {
+    visibility: visible;
   }
 }

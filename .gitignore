@@ -93,3 +93,6 @@ Thumbs.db
 # ===========================================================================
 CODE_REVIEW-2026-10-16.md
 docs/public/_t3.html
+
+# wot-ui reference material (local only)
+.wot-ref/

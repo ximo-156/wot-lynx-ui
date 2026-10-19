@@ -1,24 +1,34 @@
 /*
  * wd-calendar — 日历
  *
- * Lynx 实现说明：
- * - 结构：wd-popup（bottom）+ 头部（标题/类型切换/快捷选项）+ wd-calendar-view
- *   + 确认按钮；
- * - 区间模式展示起止标签；确认前可经 beforeConfirm 拦截；
- * - 类型切换用内置 tab（日/周/月），不依赖 wd-tabs。
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
+ * - 弹层用 wd-action-sheet（bottom）承载，与 wot-ui 一致；内部按
+ *   header（类型切换 tabs + 快捷选项）+ wd-calendar-view + 确认按钮组织；
+ * - @click → @tap（CONVENTIONS §6）；hover-class 按压态由 wd-tag /
+ *   wd-button 自身承担；
+ * - customStyle 为字符串，经 parseStyle 归一为对象后绑定（CONVENTIONS §19）；
+ * - handleOpened 里对 wd-tabs 的 scrollIntoView / updateLineStyle 做存在性
+ *   守卫：本地 wd-tabs 尚未对外暴露这两个方法（共享层缺口，调用即 no-op）；
+ * - onConfirm 落地前经 useAlive 判活：beforeConfirm 可返回未决 Promise，
+ *   期间组件/页面可能已卸载，晚到的 ref 写入会触发真机 9902 晚到 patch。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref, watch } from 'vue-lynx'
-import WdButton from '../wd-button/wd-button.vue'
+import { ref, computed, watch } from 'vue-lynx'
+import WdIcon from '../wd-icon/wd-icon.vue'
 import WdCalendarView from '../wd-calendar-view/wd-calendar-view.vue'
-import WdPopup from '../wd-popup/wd-popup.vue'
+import WdActionSheet from '../wd-action-sheet/wd-action-sheet.vue'
+import WdButton from '../wd-button/wd-button.vue'
+import WdTabs from '../wd-tabs/wd-tabs.vue'
+import WdTab from '../wd-tab/wd-tab.vue'
+import WdTag from '../wd-tag/wd-tag.vue'
 import { callInterceptor } from '../../common/interceptor'
-import { useAlive } from '../../composables/useAlive'
 import { formatDate } from '../../common/formatDate'
-import { deepClone, isArray, isEqual, parseStyle } from '../../common/util'
+import { deepClone, isArray, isEqual, padZero, pause, parseStyle } from '../../common/util'
+import { getWeekNumber, isRange } from '../wd-calendar-view/utils'
 import { useTranslate } from '../../composables/useTranslate'
+import { useAlive } from '../../composables/useAlive'
 import { calendarProps, type CalendarExpose } from './types'
 import type { CalendarType } from '../wd-calendar-view/types'
 
@@ -29,45 +39,45 @@ const { translate } = useTranslate('calendar')
 
 const pickerShow = ref<boolean>(false)
 const calendarValue = ref<null | number | number[]>(null)
-/** 打开时的值快照：非确认关闭时回滚（取消不回滚到旧值） */
 const lastCalendarValue = ref<null | number | number[]>(null)
 const confirmBtnDisabled = ref<boolean>(true)
 const currentTab = ref<number>(0)
+const lastTab = ref<number>(0)
 const currentType = ref<CalendarType>('date')
-const activeShortcutIndex = ref<number>(-1)
-/** 确认路径标记：确认关闭时不派发 cancel、不回滚未提交值 */
+const lastCurrentType = ref<CalendarType>()
+const inited = ref<boolean>(false)
+const calendarViewRef = ref()
+const calendarTabs = ref()
 const isConfirming = ref<boolean>(false)
+/** 当前激活的快捷选项索引，-1 表示无激活项 */
+const activeShortcutIndex = ref<number>(-1)
 
-const isRangeType = computed(() => currentType.value.indexOf('range') > -1)
-
-const TABS: Array<{ type: CalendarType; label: string }> = [
-  { type: 'date', label: '日' },
-  { type: 'week', label: '周' },
-  { type: 'month', label: '月' }
-]
-
-const RANGE_TABS: Array<{ type: CalendarType; label: string }> = [
-  { type: 'daterange', label: '日' },
-  { type: 'weekrange', label: '周' },
-  { type: 'monthrange', label: '月' }
-]
-
-function formatRange(value: number, rangeType: 'start' | 'end', type: CalendarType): string {
+const formatRange = (value: number, rangeType: 'start' | 'end', type: CalendarType) => {
   switch (type) {
     case 'daterange':
-      if (!value) return rangeType === 'end' ? translate('endTime') : translate('startTime')
+      if (!value) {
+        return rangeType === 'end' ? translate('endTime') : translate('startTime')
+      }
       return formatDate(value, translate('dateFormat'))
     case 'datetimerange':
-      if (!value) return rangeType === 'end' ? translate('endTime') : translate('startTime')
+      if (!value) {
+        return rangeType === 'end' ? translate('endTime') : translate('startTime')
+      }
       return formatDate(value, translate('timeFormat'))
-    case 'weekrange':
-      if (!value) return rangeType === 'end' ? translate('endWeek') : translate('startWeek')
-      return formatDate(value, translate('dateFormat'))
+    case 'weekrange': {
+      if (!value) {
+        return rangeType === 'end' ? translate('endWeek') : translate('startWeek')
+      }
+      const date = new Date(value)
+      const year = date.getFullYear()
+      const week = getWeekNumber(value)
+      return translate('weekFormat', year, padZero(week))
+    }
     case 'monthrange':
-      if (!value) return rangeType === 'end' ? translate('endMonth') : translate('startMonth')
+      if (!value) {
+        return rangeType === 'end' ? translate('endMonth') : translate('startMonth')
+      }
       return formatDate(value, translate('monthFormat'))
-    default:
-      return ''
   }
 }
 
@@ -85,20 +95,27 @@ watch(
     calendarValue.value = deepClone(val)
     confirmBtnDisabled.value = getConfirmBtnStatus(val)
   },
-  { immediate: true }
+  {
+    immediate: true
+  }
 )
 
 watch(
   () => props.type,
   (newValue) => {
     if (props.showTypeSwitch) {
-      const tabs = isRangeType.value ? RANGE_TABS : TABS
-      const index = tabs.findIndex((t) => t.type === newValue)
-      currentTab.value = index > -1 ? index : 0
+      const tabs = ['date', 'week', 'month']
+      const rangeTabs = ['daterange', 'weekrange', 'monthrange']
+
+      const index = newValue.indexOf('range') > -1 ? rangeTabs.indexOf(newValue) || 0 : tabs.indexOf(newValue)
+      currentTab.value = index
     }
     currentType.value = deepClone(newValue)
   },
-  { deep: true, immediate: true }
+  {
+    deep: true,
+    immediate: true
+  }
 )
 
 watch(
@@ -106,42 +123,117 @@ watch(
   (val) => {
     pickerShow.value = val
   },
-  { immediate: true }
+  {
+    immediate: true
+  }
 )
 
-watch(pickerShow, (val) => {
-  emit('update:visible', val)
-  if (val) {
-    // 打开时快照当前值：非确认关闭时回滚到此快照；
-    // 同时复位确认标记（beforeConfirm 未决期间用户已取消时防止残留）
-    isConfirming.value = false
-    lastCalendarValue.value = deepClone(calendarValue.value)
-    emit('open')
-  } else if (isConfirming.value) {
-    // 确认路径：不清标志位外的任何状态，由 onConfirm 负责复位
+function handleOpened() {
+  if (props.showTypeSwitch) {
+    calendarTabs.value && calendarTabs.value.scrollIntoView && calendarTabs.value.scrollIntoView()
+    calendarTabs.value && calendarTabs.value.updateLineStyle && calendarTabs.value.updateLineStyle(false)
+  }
+}
+
+function handleClosed() {
+  if (isConfirming.value) {
     isConfirming.value = false
   } else {
-    // 取消 / 点遮罩关闭：恢复快照，丢弃未提交的选择（参考实现 handleClosed）
     calendarValue.value = deepClone(lastCalendarValue.value)
-    confirmBtnDisabled.value = getConfirmBtnStatus(calendarValue.value)
-    emit('cancel')
+    currentTab.value = lastTab.value
+    currentType.value = lastCurrentType.value || 'date'
+    confirmBtnDisabled.value = getConfirmBtnStatus(lastCalendarValue.value)
+  }
+}
+
+watch(pickerShow, async (val) => {
+  emit('update:visible', val)
+  if (val) {
+    inited.value = true
+    lastCalendarValue.value = deepClone(calendarValue.value)
+    lastTab.value = currentTab.value
+    lastCurrentType.value = currentType.value
+
+    await pause()
+    scrollIntoView()
+    emit('open')
+  } else {
+    if (!isConfirming.value) {
+      emit('cancel')
+    }
   }
 })
 
-function getConfirmBtnStatus(value: number | number[] | null): boolean {
-  if (isArray(value)) {
-    return value.length === 0 || (isRangeType.value && value.filter((v) => !!v).length < 2)
+function scrollIntoView() {
+  calendarViewRef.value && calendarViewRef.value.scrollIntoView()
+}
+
+// 对外暴露方法
+function open() {
+  pickerShow.value = true
+}
+
+// 对外暴露方法
+function close() {
+  pickerShow.value = false
+}
+
+function handleTypeChange({ index }: { index: number }) {
+  const tabs = ['date', 'week', 'month']
+  const rangeTabs = ['daterange', 'weekrange', 'monthrange']
+  const type = props.type.indexOf('range') > -1 ? rangeTabs[index] : tabs[index]
+  currentTab.value = index
+  currentType.value = type as CalendarType
+}
+
+function getConfirmBtnStatus(value: number | number[] | null) {
+  let confirmBtnDisabled = false
+  // 范围选择未选择满，或者多日期选择未选择日期，按钮置灰不可点击
+  if (
+    (props.type.indexOf('range') > -1 && (!isArray(value) || !value[0] || !value[1] || !value)) ||
+    (props.type === 'dates' && (!isArray(value) || value.length === 0 || !value)) ||
+    !value
+  ) {
+    confirmBtnDisabled = true
   }
-  return !isDef(value)
+
+  return confirmBtnDisabled
 }
 
-function isDef(value: any): boolean {
-  return value !== undefined && value !== null
+function handleChange({ value }: { value: number | number[] | null }) {
+  calendarValue.value = deepClone(value)
+  confirmBtnDisabled.value = getConfirmBtnStatus(value)
+  // 用户手动切换日期时重置快捷选项激活状态
+  activeShortcutIndex.value = -1
+
+  emit('change', {
+    value
+  })
+
+  if (!props.showConfirm && !confirmBtnDisabled.value) {
+    handleConfirm()
+  }
 }
 
-function handleTypeChange(tab: { type: CalendarType; label: string }) {
-  currentType.value = tab.type
-  emit('change', { value: calendarValue.value, type: tab.type })
+function handleConfirm() {
+  callInterceptor(props.beforeConfirm, {
+    args: [calendarValue.value],
+    done: onConfirm
+  })
+}
+
+function onConfirm() {
+  // beforeConfirm 可返回未决 Promise：期间组件/页面可能已卸载，
+  // done 落地时不得在已销毁树上写 ref（真机 9902 晚到 patch 家族）。
+  if (!isAlive()) return
+  isConfirming.value = true
+  pickerShow.value = false
+  lastCurrentType.value = currentType.value
+  emit('update:modelValue', calendarValue.value)
+  emit('confirm', {
+    value: calendarValue.value,
+    type: currentType.value
+  })
 }
 
 function handleShortcutClick(index: number) {
@@ -149,7 +241,6 @@ function handleShortcutClick(index: number) {
   activeShortcutIndex.value = index
 
   if (props.onShortcutsClick && typeof props.onShortcutsClick === 'function') {
-    // 参考实现的入参形状为 { item, index }，返回值即新的选中值
     calendarValue.value = deepClone(
       props.onShortcutsClick({
         item: props.shortcuts[index],
@@ -159,111 +250,68 @@ function handleShortcutClick(index: number) {
     confirmBtnDisabled.value = getConfirmBtnStatus(calendarValue.value)
   }
 
-  // showConfirm=false 时无确认入口，选完即自动确认
   if (!props.showConfirm) {
-    onConfirm()
+    handleConfirm()
   }
-}
-
-function handleChange({ value }: any) {
-  calendarValue.value = value
-  confirmBtnDisabled.value = getConfirmBtnStatus(value)
-  // 用户手动切换日期时重置快捷选项激活状态
-  activeShortcutIndex.value = -1
-  emit('change', { value })
-
-  // showConfirm=false 时无确认入口，选完即自动确认
-  if (!props.showConfirm && !confirmBtnDisabled.value) {
-    onConfirm()
-  }
-}
-
-function onConfirm() {
-  callInterceptor(props.beforeConfirm, {
-    args: [calendarValue.value],
-    done: () => {
-      // beforeConfirm 可返回未决 Promise：期间组件/页面可能已卸载，
-      // done 落地时不得在已销毁树上写 ref（真机 9902 晚到 patch 家族）。
-      if (!isAlive()) return
-      // 先打确认标记再关：watch(pickerShow) 据此跳过 cancel 与回滚
-      //（此前确认时 cancel 与 confirm 会同时触发）
-      isConfirming.value = true
-      pickerShow.value = false
-      emit('update:modelValue', calendarValue.value)
-      emit('confirm', { value: calendarValue.value })
-    }
-  })
-}
-
-function open() {
-  pickerShow.value = true
-  emit('open')
-}
-
-function close() {
-  pickerShow.value = false
 }
 
 defineExpose<CalendarExpose>({
-  open,
-  close
+  close,
+  open
 })
 </script>
 
 <template>
   <view :class="`wd-calendar ${customClass}`" :style="parseStyle(customStyle)">
-    <wd-popup
+    <wd-action-sheet
       v-model="pickerShow"
-      position="bottom"
+      :duration="duration"
       :close-on-click-modal="closeOnClickModal"
       :safe-area-inset-bottom="safeAreaInsetBottom"
       :z-index="zIndex"
       :root-portal="rootPortal"
+      :title="title || translate('title')"
       custom-class="wd-calendar__popup"
       @close="close"
+      @after-enter="handleOpened"
+      @after-leave="handleClosed"
     >
       <view class="wd-calendar__header">
-        <!-- 弹层标题（title prop 此前从未渲染） -->
-        <text v-if="title" class="wd-calendar__title">{{ title }}</text>
-        <!-- 类型切换 -->
         <view v-if="showTypeSwitch" class="wd-calendar__tabs">
-          <view
-            v-for="(tab, index) in (isRangeType ? RANGE_TABS : TABS)"
-            :key="index"
-            :class="`wd-calendar__tab ${currentTab === index ? 'is-active' : ''}`"
-            @tap="handleTypeChange(tab)"
-          >
-            <text>{{ tab.label }}</text>
-          </view>
+          <wd-tabs ref="calendarTabs" v-model="currentTab" @change="handleTypeChange">
+            <wd-tab :title="translate('day')" :name="translate('day')" />
+            <wd-tab :title="translate('week')" :name="translate('week')" />
+            <wd-tab :title="translate('month')" :name="translate('month')" />
+          </wd-tabs>
         </view>
-        <!-- 快捷选项 -->
         <view v-if="shortcuts.length > 0" class="wd-calendar__shortcuts">
-          <view
+          <wd-tag
             v-for="(item, index) in shortcuts"
             :key="index"
-            :class="`wd-calendar__tag ${index === shortcuts.length - 1 ? 'wd-calendar__tag--last-tag' : ''} ${
-              activeShortcutIndex === index ? 'is-active' : ''
-            }`"
-            @tap="handleShortcutClick(index)"
+            :custom-class="`wd-calendar__tag ${index === shortcuts.length - 1 ? 'is-last-tag' : ''}`"
+            :type="activeShortcutIndex === index ? 'primary' : 'default'"
+            :variant="activeShortcutIndex === index ? 'dark' : 'light'"
+            @click="handleShortcutClick(index)"
           >
             <text>{{ item.text }}</text>
-          </view>
+          </wd-tag>
         </view>
       </view>
-
-      <view :class="`wd-calendar__view ${isRangeType ? 'is-range' : ''} ${showConfirm ? 'is-show-confirm' : ''}`">
-        <!-- 区间标签 -->
-        <view v-if="isRangeType" class="wd-calendar__range">
-          <view :class="`wd-calendar__range-item ${!isArray(calendarValue) || !calendarValue[0] ? 'is-placeholder' : ''}`">
+      <view
+        v-if="inited"
+        :class="`wd-calendar__view ${currentType.indexOf('range') > -1 ? 'is-range' : ''} ${showConfirm ? 'is-show-confirm' : ''}`"
+      >
+        <view v-if="isRange(currentType)" class="wd-calendar__range">
+          <view :class="`wd-calendar__range-item ${!calendarValue || !isArray(calendarValue) || !calendarValue[0] ? 'is-placeholder' : ''}`">
             <text>{{ rangeLabel[0] }}</text>
           </view>
           <view class="wd-calendar__range-separator" />
-          <view :class="`wd-calendar__range-item ${!isArray(calendarValue) || !calendarValue[1] ? 'is-placeholder' : ''}`">
+          <view :class="`wd-calendar__range-item ${!calendarValue || !isArray(calendarValue) || !calendarValue[1] ? 'is-placeholder' : ''}`">
             <text>{{ rangeLabel[1] }}</text>
           </view>
         </view>
-
         <wd-calendar-view
+          ref="calendarViewRef"
           v-model="calendarValue"
           :type="currentType"
           :min-date="minDate"
@@ -277,17 +325,21 @@ defineExpose<CalendarExpose>({
           :default-time="defaultTime"
           :time-filter="timeFilter"
           :hide-second="hideSecond"
+          :show-panel-title="showPanelTitle"
           :immediate-change="immediateChange"
-          :custom-class="customViewClass"
+          :switch-mode="switchMode"
           @change="handleChange"
         />
       </view>
-
-      <view v-if="showConfirm" class="wd-calendar__footer">
-        <wd-button type="primary" block :disabled="confirmBtnDisabled" @tap="onConfirm">
-          {{ confirmText || translate('confirm') }}
-        </wd-button>
+      <view v-if="showConfirm" class="wd-calendar__confirm">
+        <slot name="confirm-left" />
+        <view class="wd-calendar__confirm-btn-wrapper">
+          <wd-button size="large" block :disabled="confirmBtnDisabled" @tap="handleConfirm">
+            <text>{{ confirmText || translate('confirm') }}</text>
+          </wd-button>
+        </view>
+        <slot name="confirm-right" />
       </view>
-    </wd-popup>
+    </wd-action-sheet>
   </view>
 </template>

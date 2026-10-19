@@ -101,6 +101,10 @@ function getOriginColumns() {
   })
 }
 
+/**
+ * 根据 getBoundary 得到的范围计算所有的列的数据（对齐 wot-ui 2.3.2）：
+ * 当选中的年/月/日/时/分到达 min/max 边界时，后续列范围随之收紧。
+ */
 function getRanges(): Array<{ type: DatetimePickerViewColumnType; range: number[] }> {
   if (props.type === 'time') {
     const result: Array<{ type: DatetimePickerViewColumnType; range: number[] }> = [
@@ -113,45 +117,73 @@ function getRanges(): Array<{ type: DatetimePickerViewColumnType; range: number[
     return result
   }
 
-  const value = new Date((innerValue.value as number) || Date.now())
-  const maxBoundary = new Date(props.maxDate)
-  const minBoundary = new Date(props.minDate)
-
-  const maxYear = maxBoundary.getFullYear()
-  const maxMonth = maxBoundary.getMonth() + 1
-  const maxDate = maxBoundary.getDate()
-  const maxHour = maxBoundary.getHours()
-  const maxMinute = maxBoundary.getMinutes()
-  const maxSecond = maxBoundary.getSeconds()
-
-  const minYear = minBoundary.getFullYear()
-  const minMonth = minBoundary.getMonth() + 1
-  const minDate = minBoundary.getDate()
-  const minHour = minBoundary.getHours()
-  const minMinute = minBoundary.getMinutes()
-  const minSecond = minBoundary.getSeconds()
+  const { maxYear, maxDate, maxMonth, maxHour, maxMinute, maxSecond } = getBoundary('max', innerValue.value as number)
+  const { minYear, minDate, minMonth, minHour, minMinute, minSecond } = getBoundary('min', innerValue.value as number)
 
   const result: Array<{ type: DatetimePickerViewColumnType; range: number[] }> = [
     { type: 'year', range: [minYear, maxYear] },
-    { type: 'month', range: [1, 12] }
+    { type: 'month', range: [minMonth, maxMonth] },
+    { type: 'date', range: [minDate, maxDate] },
+    { type: 'hour', range: [minHour, maxHour] },
+    { type: 'minute', range: [minMinute, maxMinute] }
   ]
 
-  if (props.type === 'year') {
-    return result.slice(0, 1)
+  if (props.type === 'datetime' && props.useSecond) {
+    result.push({ type: 'second', range: [minSecond, maxSecond] })
   }
 
-  result.push({ type: 'date', range: [1, getMonthEndDay(value.getFullYear(), value.getMonth() + 1)] })
-
-  if (props.type === 'date') {
-    return result
-  }
-
-  result.push({ type: 'hour', range: [0, 23] })
-  result.push({ type: 'minute', range: [0, 59] })
-  if (props.useSecond) {
-    result.push({ type: 'second', range: [0, 59] })
-  }
+  if (props.type === 'date') result.splice(3, 2)
+  if (props.type === 'year-month') result.splice(2, 3)
+  if (props.type === 'year') result.splice(1, 4)
   return result
+}
+
+/**
+ * 根据时间戳，计算所有选项的边界范围（对齐 wot-ui 2.3.2 getBoundary）。
+ * @param {'min' | 'max'} type 类型
+ * @param {number} innerValue 时间戳
+ */
+function getBoundary(type: 'min' | 'max', innerValue: number) {
+  const value = new Date(innerValue)
+  const boundary = new Date(props[`${type}Date`])
+  const year = boundary.getFullYear()
+  let month: number = 1
+  let date: number = 1
+  let hour: number = 0
+  let minute: number = 0
+  let second: number = 0
+
+  if (type === 'max') {
+    month = 12
+    date = getMonthEndDay(value.getFullYear(), value.getMonth() + 1)
+    hour = 23
+    minute = 59
+    second = 59
+  }
+
+  if (value.getFullYear() === year) {
+    month = boundary.getMonth() + 1
+    if (value.getMonth() + 1 === month) {
+      date = boundary.getDate()
+      if (value.getDate() === date) {
+        hour = boundary.getHours()
+        if (value.getHours() === hour) {
+          minute = boundary.getMinutes()
+          if (value.getMinutes() === minute) {
+            second = boundary.getSeconds()
+          }
+        }
+      }
+    }
+  }
+  return {
+    [`${type}Year`]: year,
+    [`${type}Month`]: month,
+    [`${type}Date`]: date,
+    [`${type}Hour`]: hour,
+    [`${type}Minute`]: minute,
+    [`${type}Second`]: second
+  }
 }
 
 function updateColumnValue(value: string | number) {

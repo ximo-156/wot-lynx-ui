@@ -1,9 +1,12 @@
 /*
  * wd-key — 键盘按键
  *
- * Lynx 实现说明：
- * - 按压态用 :active（按键自身 active class 由 touch 驱动，滑动取消）；
- * - delete / extra 无文本时用内置 SVG 图标（del / keyboard）。
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
+ * - 按压态由 touch 事件驱动的 wd-key--active 类切换（滑动取消），
+ *   与 wot-ui 一致，不用 CSS :active（跟手态需可取消）；
+ * - delete / extra 无文本时的图标：wot-ui 用 name="del" / name="keyboard"，
+ *   本地图标集无这两个字形，分别取同义的 delete / keyboard-26；
+ * - 按键文本一律包在 text 元素中（Lynx 要求）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -21,20 +24,24 @@ const touch = useTouch()
 const active = ref<boolean>(false)
 
 const keyClass = computed(() => {
-  const classes = ['wd-key']
-  if (props.large) classes.push('wd-key--large')
-  if (props.type === 'delete') classes.push('wd-key--delete')
-  if (props.type === 'close') classes.push('wd-key--close')
-  if (props.isCar) classes.push('is-car')
-  if (active.value) classes.push('wd-key--active')
-  return classes.join(' ')
+  return `wd-key ${props.large ? 'wd-key--large' : ''} ${props.type === 'delete' ? 'wd-key--delete' : ''} ${
+    props.type === 'close' ? 'wd-key--close' : ''
+  } ${props.isCar ? 'is-car' : ''} ${active.value ? 'wd-key--active' : ''}`
 })
 
+/**
+ * 触摸开始事件处理
+ * @param {TouchEvent} event 触摸事件对象
+ */
 function onTouchStart(event: any) {
   touch.touchStart(event)
   active.value = true
 }
 
+/**
+ * 触摸移动事件处理
+ * @param {TouchEvent} event 触摸事件对象
+ */
 function onTouchMove(event: any) {
   touch.touchMove(event)
   if (touch.direction.value) {
@@ -42,6 +49,9 @@ function onTouchMove(event: any) {
   }
 }
 
+/**
+ * 触摸结束事件处理
+ */
 function onTouchEnd() {
   if (active.value) {
     active.value = false

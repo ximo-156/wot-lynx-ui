@@ -1,12 +1,19 @@
 /*
  * wd-segmented — 分段器
  *
- * Lynx 实现说明：
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
  * - card 主题的滑块位置经 getRect 一次性度量全部选项宽度并缓存
  *   （CONVENTIONS §16：不在触摸热路径重复度量；此处仅挂载后与
- *   值变化时度量），位移用 transform: translateX + transition；
- * - outline 主题无滑块，仅样式切换；
- * - 振动反馈经 common/uni 兼容层下发，失败静默。
+ *   值变化时度量），位移用 transform: translateX + transition，且经
+ *   Style Funnel（defineStyleKeys + resolveStyle）输出完整键集，
+ *   选中首项时显式写 translateX(0px)（CONVENTIONS §20）；
+ * - outline 主题的外描边：wot-ui 用 `&::before` 覆盖层绘制，Lynx 无伪元素，
+ *   改为主元素真实 border；
+ * - outline 主题选项间的分隔线：wot-ui 用 `.wd-segmented__item +
+ *   .wd-segmented__item` 相邻兄弟选择器，Lynx 无等价物，改为 v-for 索引类名
+ *   `is-not-first`；
+ * - `cursor: no-drop` 等 Web 专有属性删除；
+ * - `@click` → `@tap`；customStyle 经 parseStyle 归一为对象（CONVENTIONS §19）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -25,8 +32,8 @@ const isAlive = useAlive()
 /**
  * 滑块可切换的全部样式键 + 中性值（CONVENTIONS §20）。
  *
- * Lynx 的 SetStyle 是逐属性合并语义：省略某个键不会清除元素上已应用的内联属性。
- * 经 Style Funnel 统一下发后，无论条件如何翻转，键集始终完整——
+ * Lynx 的 SetStyle 是逐属性合并语义：省略某个键不会清除元素上已经应用的内联
+ * 属性。经 Style Funnel 统一下发后，无论条件如何翻转，键集始终完整——
  * 选中首项（位移为 0）时 `transform` 仍写 `translateX(0px)`，滑块必然归位。
  */
 const SLIDER_STYLE = defineStyleKeys({
@@ -50,6 +57,14 @@ const optionDisabled = (option: string | number | SegmentedOption): boolean => {
   return props.disabled || (isObj(option) ? option.disabled === true : false)
 }
 
+/**
+ * 当前激活项是否处于禁用状态
+ * 检查全局禁用或第一个选项的禁用状态
+ */
+const activeDisabled = computed(() => {
+  return props.disabled || (props.options[0] && isObj(props.options[0]) ? props.options[0].disabled : false)
+})
+
 watch(
   () => props.value,
   () => {
@@ -58,6 +73,9 @@ watch(
     if (props.vibrateShort) {
       uni.vibrateShort({ fail: () => {} })
     }
+  },
+  {
+    immediate: false
   }
 )
 
@@ -70,9 +88,16 @@ onMounted(async () => {
   updateActiveStyle(false)
 })
 
-/** 更新滑块位置（card 主题） */
+/**
+ * 更新滑块的位置和样式
+ * 仅在 card 主题下执行,outline 主题下滑块隐藏无需更新
+ * @param {boolean} animation 是否启用过渡动画,默认为 true
+ */
 function updateActiveStyle(animation: boolean = true) {
-  if (props.theme === 'outline') return
+  // outline 模式下滑块隐藏，无需计算样式
+  if (props.theme === 'outline') {
+    return
+  }
 
   getRect('.wd-segmented__item', true, proxy).then((rects: any[]) => {
     // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
@@ -91,6 +116,11 @@ function updateActiveStyle(animation: boolean = true) {
   })
 }
 
+/**
+ * 更新选中值并触发相应事件
+ * @param {string | number} newValue 新的选中值
+ * @param {string | number | SegmentedOption} option 对应的选项数据
+ */
 function updateValue(newValue: string | number, option: string | number | SegmentedOption) {
   if (!isEqual(newValue, props.value)) {
     emit('update:value', newValue)
@@ -98,7 +128,10 @@ function updateValue(newValue: string | number, option: string | number | Segmen
   }
 }
 
-/** 根据当前值更新激活索引，未匹配时回落第一项 */
+/**
+ * 根据当前值更新激活项的索引
+ * 如果未找到匹配项,则默认选中第一项
+ */
 function updateCurrentIndex() {
   // options 为空数组时早退：否则会 emit update:value=undefined
   if (!props.options.length) return
@@ -110,9 +143,15 @@ function updateCurrentIndex() {
   }
 }
 
+/**
+ * 处理选项点击事件
+ * @param {string | number | SegmentedOption} option 被点击的选项
+ * @param {number} index 选项索引
+ */
 function handleClick(option: string | number | SegmentedOption, index: number) {
   if (optionDisabled(option)) return
   const value = optionValue(option)
+
   state.activeIndex = index
   updateActiveStyle()
   updateValue(value, option)
@@ -122,7 +161,6 @@ function handleClick(option: string | number | SegmentedOption, index: number) {
 const rootClass = computed(() => {
   const classes = ['wd-segmented']
   if (props.theme) classes.push(`wd-segmented--${props.theme}`)
-  if (props.disabled) classes.push('is-disabled')
   if (props.customClass) classes.push(props.customClass)
   return classes.join(' ')
 })
@@ -140,7 +178,8 @@ defineExpose<SegmentedExpose>({
       :class="[
         'wd-segmented__item',
         state.activeIndex === index ? 'is-active' : '',
-        isObj(option) && option.disabled ? 'is-disabled' : ''
+        optionDisabled(option) ? 'is-disabled' : '',
+        index > 0 ? 'is-not-first' : ''
       ]"
       @tap="handleClick(option, index)"
     >
@@ -149,6 +188,6 @@ defineExpose<SegmentedExpose>({
         <text v-else>{{ isObj(option) ? option.value : option }}</text>
       </view>
     </view>
-    <view v-if="theme === 'card'" class="wd-segmented__slider" :style="state.activeStyle" />
+    <view v-if="theme === 'card'" :class="['wd-segmented__slider', activeDisabled ? 'is-disabled' : '']" :style="state.activeStyle" />
   </view>
 </template>

@@ -1,92 +1,173 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 组件整体内边距
+$search-padding: var(--wot-search-padding, $padding-tight $padding-loose) !default;
+// 输入框圆角
+$search-input-radius: var(--wot-search-input-radius, $radius-full) !default;
+// 输入框高度
+$search-input-height: var(--wot-search-input-height, $n-36) !default;
+// 输入框内边距
+$search-field-padding: var(--wot-search-field-padding, $padding-zero $padding-loose) !default;
+// 输入框左侧搜索图标向右间距
+$search-left-icon-margin-right: var(--wot-search-left-icon-margin-right, $spacing-super-tight) !default;
+// 输入框背景色 (filled)
+$search-input-bg: var(--wot-search-input-bg, $filled-bottom) !default;
+// 组件容器背景色 (filled)
+$search-bg: var(--wot-search-bg, $filled-oppo) !default;
+// 组件覆盖层背景色 (filled)
+$search-cover-bg: var(--wot-search-cover-bg, $filled-bottom) !default;
+// light 模式容器背景色
+$search-light-bg: var(--wot-search-light-bg, $filled-bottom) !default;
+// light 模式内容块背景色
+$search-light-block-bg: var(--wot-search-light-block-bg, $filled-oppo) !default;
+// light 模式覆盖层背景色
+$search-light-cover-bg: var(--wot-search-light-cover-bg, $filled-oppo) !default;
+// plain 模式容器背景色
+$search-plain-bg: var(--wot-search-plain-bg, $filled-oppo) !default;
+// plain 模式内容块背景色
+$search-plain-block-bg: var(--wot-search-plain-block-bg, $filled-oppo) !default;
+// plain 模式内容块边框
+$search-plain-block-border-color: var(--wot-search-plain-block-border-color, $border-light) !default;
+// plain 模式覆盖层背景色
+$search-plain-cover-bg: var(--wot-search-plain-cover-bg, $filled-oppo) !default;
+// block 向右间距
+$search-block-margin-right: var(--wot-search-block-margin-right, $spacing-extra-tight) !default;
+// 输入框字号
+$search-input-font-size: var(--wot-search-input-font-size, $typography-body-size-main) !default;
+// 输入框文字颜色
+$search-input-color: var(--wot-search-input-color, $text-main) !default;
+// 输入框文字行高
+$search-input-line-height: var(--wot-search-input-line-height, $typography-body-line-height-size-main) !default;
+// 搜索图标颜色
+$search-icon-color: var(--wot-search-icon-color, $icon-secondary) !default;
+// 搜索图标大小
+$search-icon-size: var(--wot-search-icon-size, $typography-title-size-main) !default;
+// 清除图标大小
+$search-clear-icon-size: var(--wot-search-clear-icon-size, $n-20) !default;
+// 清除图标颜色
+$search-clear-icon-color: var(--wot-search-clear-icon-color, $icon-disabled) !default;
+// 清除图标向右间距
+$search-clear-icon-margin-left: var(--wot-search-clear-icon-margin-left, $spacing-super-tight) !default;
+// 占位符颜色
+$search-placeholder-color: var(--wot-search-placeholder-color, $text-placeholder) !default;
+// 占位符字号
+$search-placeholder-font-size: var(--wot-search-placeholder-font-size, $typography-body-size-main) !default;
+// 占位符行高
+$search-placeholder-line-height: var(--wot-search-placeholder-line-height, $typography-body-line-height-size-main) !default;
+// 取消按钮字号
+$search-cancel-font-size: var(--wot-search-cancel-font-size, $typography-body-size-main) !default;
+// 取消按钮行高
+$search-cancel-line-height: var(--wot-search-cancel-line-height, $typography-body-line-height-size-main) !default;
+// 取消按钮颜色
+$search-cancel-color: var(--wot-search-cancel-color, $primary-6) !default;
 
 @include b(search) {
   display: flex;
-  flex-direction: row;
+  padding: $search-padding;
   align-items: center;
-  width: 100%;
-  padding: var(--wd-space-2) var(--wd-space-3);
+  background: $search-bg;
 
   @include e(block) {
+    flex: 1;
+    background-color: $search-input-bg;
+    border-radius: $search-input-radius;
     display: flex;
     flex-direction: row;
     align-items: center;
-    flex-grow: 1;
-    margin-right: var(--wd-space-15);
-  }
-
-  @include e(field) {
     position: relative;
+    box-sizing: border-box;
+    margin-right: $search-block-margin-right;
+  }
+  @include e(field) {
+    flex: 1;
     display: flex;
     flex-direction: row;
     align-items: center;
-    flex-grow: 1;
-    height: 36px;
-    padding: 0 var(--wd-space-3);
-    background-color: var(--wd-bg-container);
-    border-radius: var(--wd-radius-full);
-    border-width: 1px;
-    border-style: solid;
-    border-color: var(--wd-border-1);
+    position: relative;
+    padding: $search-field-padding;
   }
+  @include e(input) {
+    flex: 1;
+    height: $search-input-height;
+    font-size: $search-input-font-size;
+    line-height: $search-input-line-height;
+    color: $search-input-color;
+    box-sizing: border-box;
+    border: none;
+    background: transparent;
+    z-index: 0;
 
-  /* filled 变体：无边框灰底 */
-  @include m(filled) {
-    .wd-search__field {
-      background-color: var(--wd-bg-secondary);
-      border-color: transparent;
+    @include lineEllipsis;
+  }
+  @include e(cover) {
+    width: 100%;
+    height: $search-input-height;
+    background-color: $search-cover-bg;
+    line-height: $search-input-height;
+    font-size: $search-input-font-size;
+    border-radius: $search-input-radius;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    // Lynx 适配：view 默认 linear 布局，封面图标+文字需显式 flex 横向排列
+    //（参考源依赖小程序 view 默认 flex 与内联 display:flex，此处兜底）
+    display: flex;
+  }
+  // Lynx 适配：参考源为 @include edeep(...)（:deep 后代选择器），Lynx 无
+  // shadow DOM，:deep() 直接写成后代选择器
+  .wd-search__search-icon {
+    margin-right: $search-left-icon-margin-right;
+    color: $search-icon-color;
+    font-size: $search-icon-size;
+  }
+  .wd-search__search-left-icon {
+    margin-right: $search-left-icon-margin-right;
+    font-size: $search-icon-size;
+    color: $search-icon-color;
+  }
+  @include e(placeholder-txt) {
+    color: $search-placeholder-color;
+    font-size: $search-placeholder-font-size;
+    line-height: $search-placeholder-line-height;
+  }
+  @include edeep(clear-icon) {
+    font-size: $search-clear-icon-size;
+    color: $search-clear-icon-color;
+    margin-left: $search-clear-icon-margin-left;
+  }
+  @include e(cancel) {
+    line-height: $search-cancel-line-height;
+    font-size: $search-cancel-font-size;
+    color: $search-cancel-color;
+  }
+  @include when(light) {
+    background: $search-light-bg;
+
+    .wd-search__block {
+      background: $search-light-block-bg;
+    }
+
+    .wd-search__cover {
+      background: $search-light-cover-bg;
     }
   }
+  @include when(plain) {
+    background: $search-plain-bg;
 
-  @include e(cover) {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    background-color: transparent;
+    .wd-search__block {
+      background: $search-plain-block-bg;
+      // position:relative 与参考源 pixelBorderSurround 的输出保持一致
+      position: relative;
+      // Lynx 适配：参考源经 ::after 描边（伪元素），改为主元素真实 border
+      @include pixelBorderSurround($search-plain-block-border-color);
+    }
+
+    .wd-search__cover {
+      background: $search-plain-cover-bg;
+    }
   }
-
-  @include e(search-icon) {
-    color: var(--wd-icon-4);
-    margin-right: var(--wd-space-1);
-  }
-
-  @include e(search-left-icon) {
-    color: var(--wd-icon-4);
-    margin-right: var(--wd-space-1);
-  }
-
-  @include e(placeholder-txt) {
-    font-size: var(--wd-font-md);
-    color: var(--wd-text-4);
-  }
-
-  @include e(input) {
-    flex-grow: 1;
-    height: 100%;
-    font-size: var(--wd-font-md);
-    color: var(--wd-text-1);
-    background-color: transparent;
-    border-width: 0;
-  }
-
-  @include e(clear-icon) {
-    color: var(--wd-icon-4);
-    margin-left: var(--wd-space-1);
-  }
-
-  @include e(cancel) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    padding: 0 var(--wd-space-1) 0 var(--wd-space-3);
-    font-size: var(--wd-font-md);
-    color: var(--wd-color-primary);
+  @include when(without-cancel) {
+    // padding-right: $search-side-padding;
   }
 }

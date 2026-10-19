@@ -2,7 +2,7 @@ import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeStringProp, makeNumericProp, numericProp } from '../../common/props'
 import type { CellLayout, CellSize, CellValueAlign } from '../../composables/useCell'
 
-// 兼容历史从 wd-cell/types 深度导入的用法
+// 兼容历史从 wd-cell/types 深度导入的用法（参考源中这些类型声明在本文件）
 export type { CellLayout, CellSize, CellValueAlign }
 
 /**
@@ -27,20 +27,21 @@ export const cellProps = {
   /**
    * 右侧内容
    * 类型: string | number
+   * 默认值: ''
    */
   value: makeNumericProp(''),
   /**
-   * 占位内容
+   * 占位符，仅在 value 为空时显示
    * 类型: string
    */
   placeholder: String,
   /**
-   * 前置图标名称
+   * 前置图标类名
    * 类型: string
    */
   prefixIcon: String,
   /**
-   * 后置图标名称
+   * 后置图标类名
    * 类型: string
    */
   suffixIcon: String,
@@ -50,12 +51,12 @@ export const cellProps = {
    */
   iconSize: numericProp,
   /**
-   * 图标类名前缀
+   * 图标类名前缀，用于使用自定义图标
    * 类型: string
    */
   iconPrefix: String,
   /**
-   * CSS 图标类名
+   * CSS 图标，用法参考 Icon 组件
    * 类型: boolean | string
    * 默认值: false
    */
@@ -64,29 +65,29 @@ export const cellProps = {
     default: false
   },
   /**
-   * 标题下方的描述
+   * 标题下方的描述信息
    * 类型: string
    */
   label: String,
   /**
-   * 点击后跳转的页面地址（经 uni 兼容层下发）
+   * 点击后跳转的链接地址
    * 类型: string
    */
   to: String,
   /**
-   * 跳转时是否替换当前页面
+   * 跳转时是否替换当前页面历史
    * 类型: boolean
    * 默认值: false
    */
   replace: makeBooleanProp(false),
   /**
-   * 是否可点击
+   * 是否开启点击反馈
    * 类型: boolean
    * 默认值: false
    */
   clickable: makeBooleanProp(false),
   /**
-   * 是否展示右侧箭头
+   * 是否展示右侧箭头并开启点击反馈
    * 类型: boolean
    * 默认值: false
    */
@@ -98,8 +99,9 @@ export const cellProps = {
    */
   size: String as PropType<CellSize>,
   /**
-   * 是否显示边框线（默认取 cell-group 配置）
+   * 是否显示内边框
    * 类型: boolean
+   * 默认值: 继承自 CellGroup
    */
   border: makeBooleanProp(void 0),
   /**
@@ -108,12 +110,13 @@ export const cellProps = {
    */
   titleWidth: numericProp,
   /**
-   * 是否使内容垂直居中（默认取 cell-group 配置）
+   * 是否垂直居中
    * 类型: boolean
+   * 默认值: 继承自 CellGroup
    */
   center: makeBooleanProp(void 0),
   /**
-   * 是否显示必填星号
+   * 是否显示表单必填星号
    * 类型: boolean
    * 默认值: false
    */
@@ -131,19 +134,19 @@ export const cellProps = {
    */
   valueAlign: String as PropType<CellValueAlign>,
   /**
-   * 右侧内容超出是否省略
+   * 是否超出隐藏显示省略号
    * 类型: boolean
    * 默认值: false
    */
   ellipsis: makeBooleanProp(false),
   /**
-   * 是否使用 title 插槽
+   * 是否启用 title 插槽
    * 类型: boolean
    * 默认值: true
    */
   useTitleSlot: makeBooleanProp(true),
   /**
-   * 是否使用 label 插槽
+   * 是否启用 label 插槽
    * 类型: boolean
    * 默认值: true
    */
@@ -162,35 +165,40 @@ export const cellProps = {
    */
   hideAsterisk: makeBooleanProp(false),
   /**
-   * 箭头方向
+   * 箭头方向，仅在 isLink 为 true 时生效
    * 类型: CellArrowDirection
    * 可选值: 'left' | 'up' | 'down' | 'right'
    * 默认值: 'right'
    */
   arrowDirection: makeStringProp<CellArrowDirection>('right'),
   /**
-   * 前置图标自定义类名
+   * 前置图标自定义样式类
    * 类型: string
+   * 默认值: ''
    */
   customPrefixClass: makeStringProp(''),
   /**
-   * 后置图标自定义类名
+   * 后置图标自定义样式类
    * 类型: string
+   * 默认值: ''
    */
   customSuffixClass: makeStringProp(''),
   /**
-   * label 自定义类名
+   * label 插槽的自定义样式类
    * 类型: string
+   * 默认值: ''
    */
   customLabelClass: makeStringProp(''),
   /**
-   * value 自定义类名
+   * value 插槽的自定义样式类
    * 类型: string
+   * 默认值: ''
    */
   customValueClass: makeStringProp(''),
   /**
-   * title 自定义类名
+   * title 插槽的自定义样式类
    * 类型: string
+   * 默认值: ''
    */
   customTitleClass: makeStringProp('')
 }

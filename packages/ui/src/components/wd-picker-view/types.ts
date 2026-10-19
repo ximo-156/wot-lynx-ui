@@ -1,50 +1,71 @@
-import type { ExtractPropTypes } from 'vue-lynx'
+import type { ComponentPublicInstance, ExtractPropTypes } from 'vue-lynx'
 import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
 import type { Numeric } from '../../common/props'
 
-// 类型下沉到 L2：composables（L3）需要它，不能反向依赖组件（INV-1）。
-// 这里 re-export 保持既有引用路径不变。
+// 类型下沉到 common/picker：composables（useSelection）需要它，不能反向依赖组件。
+// 这里 re-export 保持既有引用路径不变（wd-picker/types 等深度导入）。
 export type { PickerOption } from '../../common/picker'
 import type { PickerOption } from '../../common/picker'
 
+/**
+ * @deprecated Use PickerOption instead
+ */
 export type ColumnItem = PickerOption
 
 export const pickerViewProps = {
   ...baseProps,
   /**
-   * 每项高度（px）
+   * 选项高度
+   * 类型: number
+   * 默认值: 44
    */
   itemHeight: makeNumberProp(44),
   /**
-   * 可见项数（奇数，选中项居中）
+   * 可见选项数量
+   * 类型: number
+   * 默认值: 6
    */
   visibleItemCount: makeNumberProp(6),
   /**
-   * 选项对象中 value 对应的 key
+   * 选项对象中，value对应的 key
+   * 类型: string
+   * 默认值: 'value'
    */
   valueKey: makeStringProp('value'),
   /**
-   * 选项对象中展示文本对应的 key
+   * 选项对象中，展示的文本对应的 key
+   * 类型: string
+   * 默认值: 'label'
    */
   labelKey: makeStringProp('label'),
   /**
-   * 是否立即触发 change（拖动过程中）
+   * 是否在手指松开时立即触发 picker-view 的 change 事件。若不开启则会在滚动动画结束后触发 change 事件
+   * 类型: boolean
+   * 默认值: false
    */
   immediateChange: makeBooleanProp(false),
   /**
-   * 是否启用级联模式
+   * 是否开启级联模式
+   * 类型: boolean
+   * 默认值: false
    */
   cascade: makeBooleanProp(false),
   /**
-   * 选项对象中 children 对应的 key
+   * 选项对象中，children 对应的 key
+   * 类型: string
+   * 默认值: 'children'
    */
   childrenKey: makeStringProp('children'),
   /**
-   * 选中值（数组，按列）
+   * 选中项
+   * 类型: (string | number)[]
+   * 默认值: []
    */
   modelValue: makeArrayProp<Numeric>(),
   /**
-   * 列数据
+   * 选择器数据，可以为字符串数组，也可以为对象数组，如果为二维数组，则为多列选择器
+   * 类型: Array<string | number | PickerOption | Array<string | number | PickerOption>>
+   * 默认值: []
    */
   columns: makeArrayProp<PickerOption | Array<PickerOption>>()
 }
@@ -52,11 +73,48 @@ export const pickerViewProps = {
 export type PickerViewProps = ExtractPropTypes<typeof pickerViewProps>
 
 export type PickerViewExpose = {
+  /**
+   * 获取所有列选中项
+   * @returns {PickerOption[]} 选中项
+   */
   getSelectedOptions: () => PickerOption[]
+  /**
+   * 获取所有列的选中值
+   * @returns {Numeric[]} 选中值
+   */
   getSelectedValues: () => Numeric[]
+  /**
+   * 获取所有列数据
+   * @returns {PickerOption[][]} 所有列数据
+   */
   getColumnsData: () => PickerOption[][]
+  /**
+   * 获取指定列的数据
+   * @param {number} columnIndex 列索引
+   * @returns {PickerOption[]} 指定列数据
+   */
   getColumnData: (columnIndex: number) => PickerOption[]
+  /**
+   * 获取指定列的选中项下标
+   * @param {number} columnIndex 列索引
+   * @returns {number} 选中项下标
+   */
   getColumnIndex: (columnIndex: number) => number
+  /**
+   * 获取所有列选中项的 label
+   * @returns {string[]} label 数组
+   */
   getSelectedLabels: () => string[]
+  /**
+   * 获取所有列的选中下标
+   * @returns {number[]} 选中下标数组
+   */
   getSelectedIndex: () => number[]
+  /**
+   * 重置列数据
+   * @param {Array<string | number | PickerOption | Array<string | number | PickerOption>>} columns 新的列数据
+   */
+  resetColumns: (columns: Array<string | number | PickerOption | Array<string | number | PickerOption>>) => void
 }
+
+export type PickerViewInstance = ComponentPublicInstance<PickerViewProps, PickerViewExpose>

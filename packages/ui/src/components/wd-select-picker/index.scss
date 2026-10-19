@@ -1,61 +1,99 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+/**
+ * wd-select-picker 样式（对齐 wot-ui 2.3.2）
+ *
+ * Lynx 适配点（相对 wot-ui）：
+ * - 组件私有令牌 --wot-select-picker-* 原样保留；
+ * - 弹层经 edeep(popup) 生成 `.wd-select-picker .wd-select-picker__popup` 后代选择器
+ *   （custom-class 下发到 wd-action-sheet 根；Lynx 无 shadow DOM，:deep 直接写类名）；
+ * - loading-icon / radio-label / checkbox-label 经 edeep 穿透到子组件根（wd-loading /
+ *   wd-radio / wd-checkbox），Lynx 全局样式下与后代选择器等价；
+ * - footer 的 pixelBorder(top) 参考源用 ::after 伪元素下发线，本地改用原生 border-top，
+ *   并补 position:relative 对齐参考源取值（无副作用）；
+ * - `overflow: auto` 保留（scroll-view 自身承担滚动，声明无害且对齐参考源）。
+ */
+
+// 选择器背景色
+$select-picker-bg: var(--wot-select-picker-bg, $filled-oppo) !default;
+// loading 状态下透明度
+$select-picker-loading-opacity: var(--wot-select-picker-loading-opacity, $opacity-disabled) !default;
+// loading 图标尺寸
+$select-picker-loading-icon-size: var(--wot-select-picker-loading-icon-size, $n-48) !default;
+// 内容区水平内边距
+$select-picker-wrapper-padding-horizontal: var(--wot-select-picker-wrapper-padding-horizontal, $padding-main) !default;
+// 内容区最大高度
+$select-picker-wrapper-max-height: var(--wot-select-picker-wrapper-max-height, $n-375) !default;
+// 选中态文字颜色
+$select-picker-text-active-color: var(--wot-select-picker-text-active-color, $primary-6) !default;
+// 底部内边距
+$select-picker-footer-padding: var(--wot-select-picker-footer-padding, $padding-tight $padding-loose) !default;
+// 确认区域上边框颜色
+$select-picker-footer-border-color: var(--wot-select-picker-footer-border-color, $border-light) !default;
+// 选项内边距
+$select-picker-item-padding: var(--wot-select-picker-item-padding, $padding-extra-loose $padding-zero) !default;
 
 @include b(select-picker) {
-  @include e(popup) {
-    border-top-left-radius: var(--wd-radius-xl);
-    border-top-right-radius: var(--wd-radius-xl);
-  }
-
-  @include e(wraper) {
+  @include e(loading) {
+    position: absolute;
     display: flex;
-    flex-direction: column;
-    width: 100%;
-    background-color: var(--wd-bg-elevated);
-  }
-
-  @include e(header) {
-    display: flex;
-    flex-direction: row;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
     align-items: center;
     justify-content: center;
-    height: 44px;
+    z-index: 3;
   }
 
-  @include e(title) {
-    font-size: var(--wd-font-md);
-    font-weight: var(--wd-font-weight-medium);
-    color: var(--wd-text-1);
+  @include edeep(loading-icon) {
+    opacity: 1;
+    font-size: $select-picker-loading-icon-size;
+  }
+
+  @include edeep(popup) {
+    background: $select-picker-bg;
   }
 
   @include e(wrapper) {
-    max-height: 320px;
+    padding: 0 $select-picker-wrapper-padding-horizontal;
+    position: relative;
+    height: $select-picker-wrapper-max-height;
+    box-sizing: border-box;
+    overflow: auto;
 
     @include when(loading) {
-      height: 200px;
+      overflow: hidden;
+
+      .wd-select-picker__checkbox,
+      .wd-select-picker__radio {
+        opacity: $select-picker-loading-opacity;
+      }
     }
   }
 
-  @include e(loading) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+  @include e(text-active) {
+    color: $select-picker-text-active-color;
   }
 
-  /* 选项行水平内边距 10px（对齐 wot-ui select-picker-wrapper-padding-horizontal） */
-  @include e(checkbox-item) {
-    padding: 0 var(--wd-space-25);
+  @include e(checkbox-item, radio-item) {
+    padding: $select-picker-item-padding;
   }
 
-  @include e(radio-item) {
-    padding: 0 var(--wd-space-25);
+  // 参考源 edeep(radio-label, checkbox-label) 生成单条逗号合并的后代选择器；
+  // 本地 edeep 对多参数逐条生成（不合并），故此处显式写逗号合并的嵌套选择器对齐。
+  .wd-select-picker__radio-label,
+  .wd-select-picker__checkbox-label {
+    @include lineEllipsis;
   }
 
   @include e(footer) {
-    padding: var(--wd-space-2) var(--wd-space-3);
-    border-top-width: 1ppx;
-    border-top-style: solid;
-    border-top-color: var(--wd-border-1);
+    display: flex;
+    align-items: center;
+    // 参考源 pixelBorder(top) 伪元素下发线需 position:relative；本地用原生 border-top。
+    position: relative;
+    padding: $select-picker-footer-padding;
+    @include pixelBorder(top, 0, $select-picker-footer-border-color);
   }
 }

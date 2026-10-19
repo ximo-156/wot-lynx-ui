@@ -1,9 +1,6 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(col) {
-  display: flex;
-  flex-direction: column;
-  /* gutter：读取 row 下发的变量，无则无内边距 */
-  padding-left: var(--wd-row-gutter, 0);
-  padding-right: var(--wd-row-gutter, 0);
+  box-sizing: border-box;
 }

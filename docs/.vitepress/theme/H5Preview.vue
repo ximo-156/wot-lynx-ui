@@ -17,6 +17,7 @@ import { defineComponent, h, computed, onBeforeUnmount, onMounted, ref, watch, t
 import { useRoute } from 'vitepress'
 import WdConfigProvider from 'wot-lynx-ui/components/wd-config-provider/wd-config-provider.vue'
 import { createLynxApp, installLynxGlobals } from './lynx-dom'
+import { installPreviewHostCapabilities } from './preview-host'
 import { loadDemo } from './demo-registry'
 
 /** 从路由路径提取组件 slug：/components/button(.html) → button */
@@ -77,6 +78,9 @@ export default defineComponent({
       if (gen !== mountGen) return
       try {
         installLynxGlobals()
+        // 宿主能力（文件选择 / 模拟上传）先于演示挂载注入，
+        // 保证 wd-upload 等组件的 uni.* 调用在预览里拿到浏览器等价实现
+        installPreviewHostCapabilities()
         // 注意：不可手动清空 container——加载提示由 v-if 托管，若在此处
         // innerHTML='' 会剥离旧 vnode 的 DOM 父节点，status 翻转时
         // patchBlockChildren 以 hostParentNode(oldVNode.el) 取 container

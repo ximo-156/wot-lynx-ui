@@ -1,5 +1,5 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
-import { baseProps, makeRequiredProp, makeStringProp } from '../../common/props'
+import { baseProps, makeRequiredProp } from '../../common/props'
 import type { RadioDirection, RadioPlacement, RadioType } from '../../composables/useRadioGroup'
 import { RADIO_GROUP_KEY } from '../../composables/useRadioGroup'
 
@@ -60,7 +60,7 @@ export const radioProps = {
   /**
    * 自定义label文本类名
    */
-  customLabelClass: makeStringProp('')
+  customLabelClass: String
 }
 
 export type RadioProps = ExtractPropTypes<typeof radioProps>

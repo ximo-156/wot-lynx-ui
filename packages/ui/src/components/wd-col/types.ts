@@ -4,11 +4,11 @@ import { baseProps, makeNumberProp } from '../../common/props'
 export const colProps = {
   ...baseProps,
   /**
-   * 栅格占据数（24 制）
+   * 列元素宽度（栅格占据的列数，共 24 列）
    */
   span: makeNumberProp(24),
   /**
-   * 栅格左侧偏移
+   * 列元素偏移距离（栅格左侧的间隔列数）
    */
   offset: makeNumberProp(0)
 }

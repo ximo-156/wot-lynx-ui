@@ -1,9 +1,9 @@
-import type { ExtractPropTypes, PropType } from 'vue-lynx'
+import type { ComponentPublicInstance, ExtractPropTypes, InjectionKey, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
 import type { CheckboxDirection, CheckboxPlacement, CheckboxType } from '../../composables/useCheckboxGroup'
 import { CHECKBOX_GROUP_KEY, type CheckboxGroupProvide } from '../../composables/useCheckboxGroup'
 
-// 兼容历史从 wd-checkbox-group/types 深度导入的用法
+// 兼容历史从 wd-checkbox/types、wd-checkbox-group/types 深度导入的用法
 export { CHECKBOX_GROUP_KEY }
 export type { CheckboxDirection, CheckboxPlacement, CheckboxType, CheckboxGroupProvide }
 
@@ -13,6 +13,15 @@ export type CheckboxGroupToggleAllOptions =
       checked?: boolean
       skipDisabled?: boolean
     }
+
+export type RequiredModelValue = {
+  modelValue: Array<string | number | boolean>
+}
+
+export type checkboxGroupProvide = {
+  props: Partial<Omit<CheckboxGroupProps, 'modelValue'>> & RequiredModelValue
+  changeSelectState: (value: string | number | boolean) => void
+}
 
 export const checkboxGroupProps = {
   ...baseProps,
@@ -54,10 +63,16 @@ export const checkboxGroupProps = {
    */
   min: makeNumberProp(0),
   /**
-   * 最大选中的数量，0 为无限数量
+   * 最大选中的数量
+   * 0 为无限数量
    * 默认值: 0
    */
   max: makeNumberProp(0),
+  /**
+   * 设置大小
+   * 可选值: large
+   */
+  size: String,
   /**
    * 文本位置
    * 可选值: left | right
@@ -73,3 +88,9 @@ export const checkboxGroupProps = {
 }
 
 export type CheckboxGroupProps = ExtractPropTypes<typeof checkboxGroupProps>
+
+export type CheckboxGroupExpose = {
+  toggleAll: (options?: CheckboxGroupToggleAllOptions) => void
+}
+
+export type CheckboxGroupInstance = ComponentPublicInstance<CheckboxGroupProps, CheckboxGroupExpose>

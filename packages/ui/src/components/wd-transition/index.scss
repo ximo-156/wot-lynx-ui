@@ -1,102 +1,71 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(transition) {
-  /* 过渡容器：不改变布局，仅承载动画类 */
-  display: flex;
-  flex-direction: column;
+  transition-timing-function: ease;
 
-  /* ===== fade ===== */
-  &--fade-enter-from,
-  &--fade-leave-to {
+  /* ===== 过渡帧（enter-from / leave-to 的起始-结束态）=====
+   * 类名遵循 Vue Transition 约定（vue-lynx 内置 Transition 下发）：
+   * -enter-from / -enter-active / -enter-to / -leave-from /
+   * -leave-active / -leave-to；wot-ui 原对应 -enter / -leave-to。 */
+  @include transitionFrame(fade) {
     opacity: 0;
   }
 
-  /* ===== fade 方向 ===== */
-  &--fade-up-enter-from,
-  &--fade-up-leave-to {
+  @include transitionActive(fade) {
+    transition-property: opacity;
+  }
+
+  @include transitionFrame(fade-up) {
+    transform: translate3d(0, 100%, 0);
     opacity: 0;
-    transform: translateY(20px);
   }
 
-  &--fade-down-enter-from,
-  &--fade-down-leave-to {
+  @include transitionFrame(fade-down) {
+    transform: translate3d(0, -100%, 0);
     opacity: 0;
-    transform: translateY(-20px);
   }
 
-  &--fade-left-enter-from,
-  &--fade-left-leave-to {
+  @include transitionFrame(fade-left) {
+    transform: translate3d(-100%, 0, 0);
     opacity: 0;
-    transform: translateX(20px);
   }
 
-  &--fade-right-enter-from,
-  &--fade-right-leave-to {
+  @include transitionFrame(fade-right) {
+    transform: translate3d(100%, 0, 0);
     opacity: 0;
-    transform: translateX(-20px);
   }
 
-  /* ===== slide 方向（全程位移，不透明度不变） ===== */
-  &--slide-up-enter-from,
-  &--slide-up-leave-to {
-    transform: translateY(100%);
+  @include transitionFrame(slide-up) {
+    transform: translate3d(0, 100%, 0);
   }
 
-  &--slide-down-enter-from,
-  &--slide-down-leave-to {
-    transform: translateY(-100%);
+  @include transitionFrame(slide-down) {
+    transform: translate3d(0, -100%, 0);
   }
 
-  &--slide-left-enter-from,
-  &--slide-left-leave-to {
-    transform: translateX(100%);
+  @include transitionFrame(slide-left) {
+    transform: translate3d(-100%, 0, 0);
   }
 
-  &--slide-right-enter-from,
-  &--slide-right-leave-to {
-    transform: translateX(-100%);
+  @include transitionFrame(slide-right) {
+    transform: translate3d(100%, 0, 0);
   }
 
-  /* ===== zoom ===== */
-  &--zoom-in-enter-from,
-  &--zoom-in-leave-to {
+  @include transitionFrame(zoom-in) {
     opacity: 0;
     transform: scale(0.8);
   }
 
-  &--zoom-out-enter-from,
-  &--zoom-out-leave-to {
-    opacity: 0;
+  @include transitionFrame(zoom-out) {
     transform: scale(1.2);
+    opacity: 0;
   }
 
-  /* 激活态：统一过渡属性（时长由根视图内联 transition-duration 控制，
-     此处仅兜底默认值；类名遵循 Vue Transition 约定：-enter-from /
-     -enter-active / -enter-to / -leave-from / -leave-active / -leave-to） */
-  &--fade-enter-active,
-  &--fade-leave-active,
-  &--fade-up-enter-active,
-  &--fade-up-leave-active,
-  &--fade-down-enter-active,
-  &--fade-down-leave-active,
-  &--fade-left-enter-active,
-  &--fade-left-leave-active,
-  &--fade-right-enter-active,
-  &--fade-right-leave-active,
-  &--slide-up-enter-active,
-  &--slide-up-leave-active,
-  &--slide-down-enter-active,
-  &--slide-down-leave-active,
-  &--slide-left-enter-active,
-  &--slide-left-leave-active,
-  &--slide-right-enter-active,
-  &--slide-right-leave-active,
-  &--zoom-in-enter-active,
-  &--zoom-in-leave-active,
-  &--zoom-out-enter-active,
-  &--zoom-out-leave-active {
+  @include transitionActive(zoom-in, zoom-out, fade-up, fade-down, fade-left, fade-right) {
     transition-property: opacity, transform;
-    transition-timing-function: var(--wd-ease-out);
-    transition-duration: 300ms;
+  }
+
+  @include transitionActive(slide-up, slide-down, slide-left, slide-right) {
+    transition-property: transform;
   }
 }

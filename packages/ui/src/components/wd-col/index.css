@@ -1,1 +1,1 @@
-.wd-col{display:flex;flex-direction:column;padding-left:var(--wd-row-gutter, 0);padding-right:var(--wd-row-gutter, 0)}
+.wd-col{box-sizing:border-box}

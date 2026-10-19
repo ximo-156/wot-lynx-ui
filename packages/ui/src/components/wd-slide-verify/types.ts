@@ -1,74 +1,112 @@
-import type { ExtractPropTypes } from 'vue-lynx'
-import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp, numericProp } from '../../common/props'
-
-export type SlideVerifyEmits = {
-  (e: 'update:modelValue', value: boolean): void
-  (e: 'change', value: { value: boolean }): void
-  (e: 'success', value: { value: boolean }): void
-  (e: 'fail', value: { value: boolean }): void
-  (e: 'move', value: { distanceX: number; containerWidth: number }): void
-}
+import type { ComponentPublicInstance, ExtractPropTypes } from 'vue-lynx'
+import { baseProps, makeBooleanProp, makeStringProp, numericProp } from '../../common/props'
 
 export const slideVerifyProps = {
   ...baseProps,
   /**
-   * 当前值（是否通过）
-   */
-  modelValue: makeBooleanProp(false),
-  /**
-   * 容错像素（距离终点小于该值视为通过）
+   * 容错范围（单位：px），距离终点多少距离内视为验证通过
+   * 类型: number
+   * 默认值: 10
    */
   tolerance: {
     type: Number,
-    default: 4
+    default: 10
   },
+
   /**
    * 提示文字
+   * 类型: string
+   * 默认值: ''
    */
   text: makeStringProp(''),
+
   /**
-   * 成功提示文字
+   * 验证成功提示文字
+   * 类型: string
+   * 默认值: ''
    */
   successText: makeStringProp(''),
+
   /**
    * 是否禁用
+   * 类型: boolean
+   * 默认值: false
    */
   disabled: makeBooleanProp(false),
+
   /**
-   * 背景色
+   * 背景颜色
+   * 类型: string
    */
   backgroundColor: String,
+
   /**
-   * 滑动后背景色
+   * 激活时的背景颜色
+   * 类型: string
    */
   activeBackgroundColor: String,
+
   /**
-   * 滑块图标
+   * 滑块图标名称
+   * 类型: string
+   * 默认值: 'double-right'
    */
-  icon: makeStringProp('arrow-double-right'),
+  icon: makeStringProp('double-right'),
+
   /**
-   * 成功图标
+   * 成功图标名称
+   * 类型: string
+   * 默认值: 'check-circle-fill'
    */
-  successIcon: makeStringProp('success-filling'),
+  successIcon: makeStringProp('check-circle-fill'),
   /**
-   * 图标类名前缀
+   * 图标类名前缀，用法参考 Icon 组件
+   * 类型: string
    */
   iconPrefix: String,
   /**
-   * CSS 图标类名
+   * CSS 图标，用法参考 Icon 组件
+   * 类型: boolean | string
+   * 默认值: false
    */
   cssIcon: {
     type: [Boolean, String],
     default: false
   },
+
   /**
-   * 图标大小
+   * 图标大小（单位：px）
+   * 类型: string | number
+   * 默认值: 20
    */
   iconSize: numericProp,
+
   /**
-   * 成功图标大小
+   * 成功图标大小（单位：px）
+   * 类型: string | number
+   * 默认值: 12
    */
   successIconSize: numericProp
 }
 
 export type SlideVerifyProps = ExtractPropTypes<typeof slideVerifyProps>
+
+export type SlideVerifyExpose = {
+  /**
+   * 初始化尺寸信息
+   */
+  init: () => Promise<void>
+  /**
+   * 重置验证组件到初始状态
+   */
+  reset: () => void
+}
+
+export type SlideVerifyEmits = {
+  /** 验证成功事件 */
+  (e: 'success'): void
+  /** 验证失败事件 */
+  (e: 'fail'): void
+}
+
+export type SlideVerifyInstance = ComponentPublicInstance<SlideVerifyProps, SlideVerifyExpose>

@@ -1,93 +1,141 @@
-import type { ExtractPropTypes, PropType } from 'vue-lynx'
-import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
+import type { ComponentPublicInstance, ExtractPropTypes, PropType } from 'vue-lynx'
+import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeStringProp, type Numeric } from '../../common/props'
 import type { PickerOption } from '../wd-picker-view/types'
-import type { Numeric } from '../../common/props'
-
-export type PickerBeforeConfirm = (value: Numeric[]) => boolean | Promise<boolean>
 
 export const pickerProps = {
   ...baseProps,
   /**
-   * 选中值（数组，按列）
+   * pickerView 外部自定义样式
+   * 类型: string
+   * 默认值: ''
    */
-  modelValue: makeArrayProp<Numeric>(),
+  customViewClass: makeStringProp(''),
+  /* popup */
   /**
-   * 列数据
-   */
-  columns: makeArrayProp<PickerOption | Array<PickerOption>>(),
-  /**
-   * 是否显示
-   */
-  visible: makeBooleanProp(false),
-  /**
-   * 标题
+   * 弹出层标题
+   * 类型: string
+   * 默认值: -
    */
   title: String,
   /**
-   * 取消按钮文字
+   * 取消按钮文案
+   * 类型: string
+   * 默认值: -
    */
   cancelButtonText: String,
   /**
-   * 确认按钮文字
+   * 确认按钮文案
+   * 类型: string
+   * 默认值: -
    */
   confirmButtonText: String,
   /**
-   * 确认前拦截
+   * 确定前校验函数，接收 (value) 参数，返回 boolean 或 Promise<boolean>
+   * 类型: PickerBeforeConfirm
+   * 默认值: -
    */
   beforeConfirm: Function as PropType<PickerBeforeConfirm>,
   /**
-   * 点击遮罩是否关闭
+   * 点击蒙层关闭
+   * 类型: boolean
+   * 默认值: true
    */
   closeOnClickModal: makeBooleanProp(true),
   /**
-   * 底部安全区适配
+   * 底部安全区域内
+   * 类型: boolean
+   * 默认值: true
    */
   safeAreaInsetBottom: makeBooleanProp(true),
   /**
-   * 每项高度（px）
+   * 选项高度
+   * 类型: number
+   * 默认值: 44
    */
   itemHeight: makeNumberProp(44),
   /**
-   * 可见项数
+   * 可见选项数量
+   * 类型: number
+   * 默认值: 6
    */
   visibleItemCount: makeNumberProp(6),
   /**
-   * 选项对象中 value 对应的 key
+   * 选项值对应的键名
+   * 类型: string
+   * 默认值: 'value'
    */
   valueKey: makeStringProp('value'),
   /**
-   * 选项对象中展示文本对应的 key
+   * 选项文本对应的键名
+   * 类型: string
+   * 默认值: 'label'
    */
   labelKey: makeStringProp('label'),
   /**
-   * 是否级联
+   * 是否开启级联模式
+   * 类型: boolean
+   * 默认值: false
    */
   cascade: makeBooleanProp(false),
   /**
-   * 选项对象中 children 对应的 key
+   * 选项对象中，children 对应的 key
+   * 类型: string
+   * 默认值: 'children'
    */
   childrenKey: makeStringProp('children'),
   /**
-   * 层级
+   * 选中项
+   * 类型: (string | number)[]
+   * 默认值: []
+   */
+  modelValue: makeArrayProp<Numeric>(),
+  /**
+   * 选择器数据，可以为字符串数组，也可以为对象数组，如果为二维数组，则为多列选择器
+   * 类型: Array<string | number | PickerOption | Array<string | number | PickerOption>>
+   * 默认值: []
+   */
+  columns: makeArrayProp<PickerOption | Array<PickerOption>>(),
+  /**
+   * 自定义层级
+   * 类型: number
+   * 默认值: 15
    */
   zIndex: makeNumberProp(15),
   /**
-   * 拖动过程中是否立即更新
+   * 是否在手指松开时立即触发 change 事件。若不开启则会在滚动动画结束后触发 change 事件，1.2.25版本起提供，仅微信小程序和支付宝小程序支持。
+   * 类型: boolean
+   * 默认值: false
    */
   immediateChange: makeBooleanProp(false),
   /**
-   * 是否挂载到根节点
+   * 是否从页面中脱离出来，用于解决各种 fixed 失效问题 (H5: teleport, APP: renderjs, 小程序: root-portal)
+   * 类型: boolean
+   * 默认值: false
    */
   rootPortal: makeBooleanProp(false),
   /**
-   * picker-view 自定义类名
+   * 控制弹窗显示
+   * 类型: boolean
+   * 默认值: false
    */
-  customViewClass: makeStringProp('')
+  visible: makeBooleanProp(false)
 }
 
 export type PickerProps = ExtractPropTypes<typeof pickerProps>
 
+export type PickerDisplayFormat = (item: PickerOption | PickerOption[], vl: { valueKey: string; labelKey: string }) => string
+
+export type PickerBeforeConfirm = (value: Numeric[]) => boolean | Promise<boolean>
+
 export type PickerExpose = {
+  /**
+   * 打开picker弹框
+   */
   open: () => void
+  /**
+   * 关闭picker弹框
+   */
   close: () => void
 }
+
+export type PickerInstance = ComponentPublicInstance<PickerExpose, PickerProps>

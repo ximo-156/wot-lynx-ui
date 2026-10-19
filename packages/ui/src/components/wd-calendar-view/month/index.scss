@@ -1,0 +1,162 @@
+@use '../../../styles/mixin/mixin.scss' as *;
+@use '../index.scss' as *;
+
+@include b(month) {
+  @include e(title) {
+    font-size: $calendar-view-panel-title-font-size;
+    line-height: $calendar-view-panel-title-line-height;
+    color: $calendar-view-panel-title-color;
+    padding: $calendar-view-panel-title-padding;
+    font-weight: $calendar-view-panel-title-font-weight;
+    margin: $calendar-view-panel-title-margin;
+  }
+
+  @include e(days) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    // Lynx 适配：多行 flex 容器默认 align-content: stretch 会把 flex line
+    // 拉伸（行高从内容高涨到容器高），显式改为 flex-start 保持内容高度。
+    align-content: flex-start;
+    font-size: $calendar-view-day-font-size;
+    color: $calendar-view-day-color;
+    padding: $calendar-view-item-padding;
+  }
+
+  @include e(day) {
+    position: relative;
+    width: calc(100% / 7);
+    height: $calendar-view-day-height;
+    line-height: $calendar-view-day-height;
+    font-weight: $calendar-view-day-font-weight;
+    margin-bottom: $calendar-view-item-margin-bottom;
+    text-align: center;
+
+    @include when(disabled) {
+      .wd-month__day-text {
+        color: $calendar-view-color-disabled;
+      }
+    }
+
+    @include when(current) {
+      color: $calendar-view-color-active;
+    }
+
+    @include when(selected, multiple-selected) {
+      .wd-month__day-container {
+        border-radius: $calendar-view-border-radius-active;
+        background: $calendar-view-color-active;
+        color: $calendar-view-color-selected;
+      }
+    }
+
+    @include when(middle) {
+      .wd-month__day-container {
+        background: $calendar-view-range-bg;
+        color: $calendar-view-range-color;
+      }
+    }
+    @include when(multiple-middle) {
+      .wd-month__day-container {
+        background: $calendar-view-color-active;
+        color: $calendar-view-color-selected;
+      }
+    }
+
+    @include when(start) {
+      // Lynx 适配：wot-ui 用 ::after 绘制起点右半格的区间背景（高度等于
+      // 日期格、右半边），Lynx 无伪元素，改为模板中的真实元素
+      // wd-month__day-range（排在内容节点之后、z-index 低于内容）。
+      .wd-month__day-range {
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 50%;
+        height: $calendar-view-day-height;
+        background: $calendar-view-range-bg;
+        z-index: 1;
+      }
+
+      &.is-without-end {
+        .wd-month__day-range {
+          display: none;
+        }
+      }
+
+      .wd-month__day-container {
+        background: $calendar-view-color-active;
+        color: $calendar-view-color-selected;
+        border-radius: $calendar-view-border-radius-active 0 0 $calendar-view-border-radius-active;
+      }
+    }
+
+    @include when(end) {
+      // Lynx 适配：同上，::after 改为真实元素 wd-month__day-range（左半边）。
+      .wd-month__day-range {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 50%;
+        height: $calendar-view-day-height;
+        background: $calendar-view-range-bg;
+        z-index: 1;
+      }
+
+      .wd-month__day-container {
+        background: $calendar-view-color-active;
+        color: $calendar-view-color-selected;
+        border-radius: 0 $calendar-view-border-radius-active $calendar-view-border-radius-active 0;
+      }
+    }
+
+    @include when(same) {
+      .wd-month__day-container {
+        background: $calendar-view-color-active;
+        color: $calendar-view-color-selected;
+        border-radius: $calendar-view-border-radius-active;
+      }
+    }
+
+    @include when(last-row){
+      margin-bottom: 0;
+    }
+  }
+
+  @include e(day-container) {
+    position: relative;
+    z-index: 2;
+  }
+
+  @include e(day-text) {
+    font-weight: $calendar-view-day-font-weight;
+  }
+
+  @include e(day-top) {
+    position: absolute;
+    top: $calendar-view-info-position;
+    left: 0;
+    right: 0;
+    // Lynx 适配：text-align 依赖文本节点撑满容器（linear 布局下不保证），
+    // 补 flex 居中确保水平居中生效。
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    line-height: $calendar-view-info-line-height;
+    font-size: $calendar-view-info-font-size;
+    text-align: center;
+  }
+
+  @include e(day-bottom) {
+    position: absolute;
+    bottom: $calendar-view-info-position;
+    left: 0;
+    right: 0;
+    // Lynx 适配：同上，补 flex 居中。
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    line-height: $calendar-view-info-line-height;
+    font-size: $calendar-view-info-font-size;
+    text-align: center;
+  }
+}

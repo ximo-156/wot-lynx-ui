@@ -1,51 +1,41 @@
 /*
  * wd-grid — 宫格
  *
- * Lynx 实现说明：列数经 CSS 变量 --wd-grid-column 下发，
- * grid-item 用 flex-basis 百分比换算（24 制不适用于可变列数）。
- * square / border / clickable 经 provide 下发给 grid-item
- * （Lynx 无属性选择器继承，CSS 变量无法驱动条件类名）。
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
+ * - 经 useChildren(GRID_KEY) 向子级 wd-grid-item 注入 props（列数、间距、
+ *   边框、点击反馈等配置由子项自行计算边框类名与宽度），与参考源一致；
+ * - rootStyle 由参考源的「objToStyle 拼字符串 + customStyle 拼接」改为对象语法
+ *   （parseStyle 归一，CONVENTIONS §19）；
+ * - 无交互、无事件。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, provide } from 'vue-lynx'
-import { gridProps, GRID_CONFIG_KEY } from './types'
-import { filterStyle, parseStyle } from '../../common/util'
+import { computed } from 'vue-lynx'
+import { useChildren } from '../../composables/useChildren'
+import { GRID_KEY, gridProps } from './types'
+import { addUnit, isDef, parseStyle, type CSSProperties } from '../../common/util'
 
 const props = defineProps(gridProps)
 
-const rootClass = computed(() => {
-  const classes = ['wd-grid']
-  if (props.clickable) classes.push('is-clickable')
-  if (props.square) classes.push('is-square')
-  if (props.border) classes.push('is-border')
-  if (props.customClass) classes.push(props.customClass)
-  return classes.join(' ')
-})
+const { linkChildren } = useChildren(GRID_KEY)
+linkChildren({ props })
 
-// 对象语法：字符串 :style 会被 vue-lynx patchProp 静默丢弃（CONVENTIONS §19）
-const rootStyle = computed(() => {
-  return filterStyle({
-    ...(props.column ? { '--wd-grid-column': String(props.column) } : {}),
-    ...(props.gutter ? { gap: `${props.gutter}px` } : {}),
-    ...(props.bgColor ? { 'background-color': props.bgColor } : {}),
-    ...parseStyle(props.customStyle)
-  })
-})
+const rootStyle = computed<CSSProperties>(() => {
+  const style: CSSProperties = {}
+  if (isDef(props.gutter)) {
+    style.paddingLeft = addUnit(props.gutter)
+    if (props.square) {
+      style.marginBottom = addUnit(-props.gutter)
+    }
+  }
 
-provide(
-  GRID_CONFIG_KEY,
-  computed(() => ({
-    square: props.square,
-    border: props.border,
-    clickable: props.clickable
-  }))
-)
+  return { ...style, ...parseStyle(props.customStyle) }
+})
 </script>
 
 <template>
-  <view :class="rootClass" :style="rootStyle">
+  <view :class="`wd-grid ${customClass}`" :style="rootStyle">
     <slot />
   </view>
 </template>

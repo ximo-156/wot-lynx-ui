@@ -1,99 +1,130 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 输入框内边距
+$input-padding: var(--wot-input-padding, $padding-loose $padding-loose) !default;
+// 输入框背景色
+$input-bg: var(--wot-input-bg, $filled-oppo) !default;
+// 输入框内高度
+$input-inner-height: var(--wot-input-inner-height, $n-20) !default;
+// 输入框内字号
+$input-inner-font-size: var(--wot-input-inner-font-size, $typography-body-size-main) !default;
+// 输入框文字颜色
+$input-inner-color: var(--wot-input-inner-color, $text-main) !default;
+// 输入框占位符颜色
+$input-inner-placeholder-color: var(--wot-input-inner-placeholder-color, $text-placeholder) !default;
+// 输入框禁用颜色
+$input-disabled-color: var(--wot-input-disabled-color, $text-disabled) !default;
+// 输入框图标颜色
+$input-icon-color: var(--wot-input-icon-color, $icon-secondary) !default;
+// 输入框图标字号
+$input-icon-font-size: var(--wot-input-icon-font-size, $n-18) !default;
+// 输入框图标间距
+$input-icon-margin: var(--wot-input-icon-margin, $spacing-tight) !default;
+// 输入框字数统计间距
+$input-count-margin: var(--wot-input-count-margin, $spacing-extra-loose) !default;
+// 输入框字数统计颜色
+$input-count-color: var(--wot-input-count-color, $text-auxiliary) !default;
+// 输入框字数统计字号
+$input-count-font-size: var(--wot-input-count-font-size, $typography-body-size-main) !default;
+// 输入框字数统计行高
+$input-count-line-height: var(--wot-input-count-line-height, $typography-body-line-height-size-main) !default;
+// 输入框错误颜色
+$input-error-color: var(--wot-input-error-color, $danger-main) !default;
 
 @include b(input) {
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: center;
-  width: 100%;
-  min-height: 44px;
-  padding: var(--wd-space-3) var(--wd-space-3);
-  background-color: var(--wd-bg-container);
-  border-radius: var(--wd-radius-sm);
-  border-width: 1px;
-  border-style: solid;
-  border-color: var(--wd-border-1);
-  color: var(--wd-text-1);
-  font-size: var(--wd-font-md);
+  padding: $input-padding;
+  text-align: left;
+  background: $input-bg;
 
   @include e(prefix) {
+    margin-right: $input-icon-margin;
+    font-size: $input-icon-font-size;
+    line-height: initial;
+    flex-shrink: 0;
     display: flex;
-    flex-direction: row;
     align-items: center;
-    margin-right: var(--wd-space-2);
+  }
+
+  // Lynx 适配：参考源为 @include edeep(icon, clear)（:deep 后代选择器），
+  // Lynx 无 shadow DOM，:deep() 直接写成后代选择器；此处按参考源编译结果
+  // 聚合为同一条选择器列表（与 edeep 逐元素生成等价）
+  .wd-input__icon,
+  .wd-input__clear {
+    font-size: $input-icon-font-size;
+    line-height: $input-icon-font-size;
+    color: $input-icon-color;
   }
 
   @include e(suffix) {
     display: flex;
-    flex-direction: row;
     align-items: center;
-    margin-left: var(--wd-space-2);
+    flex-shrink: 0;
+    line-height: initial;
+
+    .wd-input__icon,
+    .wd-input__clear {
+      margin-left: $input-icon-margin;
+    }
   }
 
-  @include e(icon) {
-    color: var(--wd-icon-3);
+  @include when(disabled) {
+    .wd-input__inner,
+    .wd-input__placeholder {
+      color: $input-disabled-color;
+    }
   }
 
-  @include e(clear) {
-    color: var(--wd-icon-4);
+  @include when(error) {
+    .wd-input__inner {
+      color: $input-error-color;
+    }
   }
 
   @include e(inner) {
-    flex-grow: 1;
-    height: 100%;
-    min-height: 20px;
-    font-size: var(--wd-font-md);
-    color: var(--wd-text-1);
-    background-color: transparent;
-    border-width: 0;
-
-    @include m(prefix) {
-      padding-left: var(--wd-space-1);
-    }
-
-    /* 显示字数统计时右侧留白，避免右对齐文字与计数器贴边 */
-    @include m(count) {
-      padding-right: var(--wd-space-2);
-    }
+    flex: 1;
+    height: $input-inner-height;
+    font-size: $input-inner-font-size;
+    color: $input-inner-color;
+    border: none;
+    background: none;
+    padding: 0;
+    box-sizing: border-box;
+    min-height: $input-inner-height;
 
     @include when(align-right) {
       text-align: right;
     }
   }
 
-  @include e(count) {
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-4);
+  // Lynx 适配：参考源的 &::-webkit-input-placeholder 伪元素规则剔除
+  // （占位符颜色由 placeholder-class 下发的 wd-input__placeholder 承担）
+  @include e(placeholder) {
+    color: $input-inner-placeholder-color;
   }
 
   @include e(readonly-mask) {
     position: absolute;
-    left: 0;
-    right: 0;
     top: 0;
-    bottom: 0;
-    background-color: transparent;
+    left: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
   }
 
-  @include e(placeholder) {
-    color: var(--wd-text-4);
+  @include e(count) {
+    margin-left: $input-count-margin;
+    font-size: $input-count-font-size;
+    line-height: $input-count-line-height;
+    color: $input-count-color;
   }
 
-  /* 标错 */
-  @include when(error) {
-    border-color: var(--wd-color-danger);
-  }
-
-  /* 禁用 */
-  @include when(disabled) {
-    background-color: var(--wd-bg-disabled);
-    opacity: 0.7;
-  }
-
-  /* 紧凑（form-item 内） */
   @include when(compact) {
-    border-width: 0;
-    background-color: transparent;
-    padding-left: 0;
-    padding-right: 0;
+    padding: 0;
+    background: transparent;
   }
 }
