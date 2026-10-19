@@ -1,33 +1,49 @@
 <script lang="ts">
 /**
- * H5Preview — 组件文档页的 H5（手机）预览外壳。
+ * H5Preview — 组件文档页右侧栏的 H5（手机）预览外壳。
  *
- * 结构：文档流中的一张预览卡 = 顶部工具条（组件名 / 亮暗主题 / 重载）+
- * 手机框（状态栏 + 可滚动屏幕）。屏幕内由 lynx-dom 垫片以独立渲染器
- * 挂载「真实组件源码」编译出的演示页（ConfigProvider 包裹，令牌主题
- * 随亮暗切换）。
+ * 结构：一张预览卡 = 顶部工具条（组件名 / 亮暗主题 / 重载）+ 手机框
+ * （状态栏 + 可滚动屏幕）。屏幕内由 lynx-dom 垫片以独立渲染器挂载
+ * 「真实组件源码」编译出的演示页（ConfigProvider 包裹，令牌主题随亮暗
+ * 切换）。
+ *
+ * 数据来源：优先取 name prop；未传时从当前路由派生（/components/button
+ * → button）——由 DocsLayout 注入右侧栏时依赖此路由派生，点击侧边栏
+ * 切换组件即实时重载预览。
  *
  * 容错：演示装载 / 渲染失败时由错误边界降级为提示，不影响文档页其余部分。
  */
-import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type App, type Component } from 'vue'
+import { defineComponent, h, computed, onBeforeUnmount, onMounted, ref, watch, type App, type Component } from 'vue'
+import { useRoute } from 'vitepress'
 import WdConfigProvider from 'wot-lynx-ui/components/wd-config-provider/wd-config-provider.vue'
 import { createLynxApp, installLynxGlobals } from './lynx-dom'
 import { loadDemo } from './demo-registry'
 
+/** 从路由路径提取组件 slug：/components/button(.html) → button */
+function slugFromPath(path: string): string {
+  const m = path.match(/^\/components\/([^/]+?)(?:\.html)?\/?$/)
+  return m ? m[1] : ''
+}
+
 export default defineComponent({
   name: 'H5Preview',
   props: {
-    /** 组件 slug（与 docs/components/<slug>.md 一致） */
-    name: { type: String, required: true }
+    /** 组件 slug（与 docs/components/<slug>.md 一致）；缺省时从路由派生 */
+    name: { type: String, default: '' }
   },
   setup(props) {
+    const route = useRoute()
+    /** 当前预览的组件 slug（prop 优先，否则跟随路由——侧边栏点击即切换） */
+    const slug = computed(() => props.name || slugFromPath(route.path))
+
     const theme = ref<'light' | 'dark'>('light')
     const status = ref<'loading' | 'ready' | 'error'>('loading')
     const errorMessage = ref('')
     const reloadKey = ref(0)
     const screen = ref<HTMLDivElement>()
     let app: App | null = null
-    let destroyed = false
+    /** 挂载代次：slug 连续变化时只认最后一次挂载，避免旧演示竞争写入容器 */
+    let mountGen = 0
 
     /** 主题为模块级 ref，跨渲染器响应式（reactivity 与渲染器无关） */
     const Shell = {
@@ -45,18 +61,20 @@ export default defineComponent({
     let currentDemo: Component = { render: () => null }
 
     async function mount() {
+      const gen = ++mountGen
       const container = screen.value
       if (!container) return
       status.value = 'loading'
       errorMessage.value = ''
       try {
-        currentDemo = await loadDemo(props.name)
+        currentDemo = await loadDemo(slug.value)
       } catch (err) {
         status.value = 'error'
         errorMessage.value = `演示装载失败：${(err as Error)?.message || err}`
         return
       }
-      if (destroyed) return
+      // 已被更新的挂载（再次切换组件 / 重载）取代，丢弃本次结果
+      if (gen !== mountGen) return
       try {
         installLynxGlobals()
         // 注意：不可手动清空 container——加载提示由 v-if 托管，若在此处
@@ -79,7 +97,8 @@ export default defineComponent({
     }
 
     function unmount() {
-      destroyed = true
+      // 代次自增使进行中的异步挂载失效
+      mountGen++
       if (app) {
         try {
           app.unmount()
@@ -95,13 +114,13 @@ export default defineComponent({
     })
     onBeforeUnmount(unmount)
 
-    watch([() => props.name, reloadKey], () => {
+    // slug 变化（侧边栏点击切换组件）或重载 → 重建演示
+    watch([slug, reloadKey], () => {
       unmount()
-      destroyed = false
       mount()
     })
 
-    return { theme, status, errorMessage, reloadKey, screen }
+    return { theme, status, errorMessage, reloadKey, screen, slug }
   }
 })
 </script>
@@ -112,7 +131,7 @@ export default defineComponent({
       <span class="wd-h5-preview__title">
         <span class="wd-h5-preview__dot" />H5 预览
       </span>
-      <span class="wd-h5-preview__name">{{ name }}</span>
+      <span class="wd-h5-preview__name">{{ slug }}</span>
       <span class="wd-h5-preview__actions">
         <button
           class="wd-h5-preview__btn"
@@ -156,7 +175,7 @@ export default defineComponent({
 
 <style scoped>
 .wd-h5-preview {
-  margin: 16px 0 24px;
+  /* 右侧栏上下文：无外边距（栏内自带间距），手机框自适应栏宽 */
   border: 1px solid var(--vp-c-divider);
   border-radius: 12px;
   overflow: hidden;
@@ -219,14 +238,14 @@ export default defineComponent({
 .wd-h5-preview__stage {
   display: flex;
   justify-content: center;
-  padding: 20px 12px 24px;
+  padding: 16px 10px 20px;
 }
 
 /* ---- 手机框 ---- */
 .wd-h5-phone {
   position: relative;
-  width: 328px;
-  height: 600px;
+  width: min(300px, 100%);
+  height: 560px;
   border-radius: 36px;
   background: #f5f5f7;
   box-shadow:

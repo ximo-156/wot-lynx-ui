@@ -113,6 +113,8 @@ const FALLBACK_SPECS: Record<string, FallbackSpec> = {
   loadmore: { props: { state: 'loading' } },
   'bar-code': { props: { text: '1234567890128', width: 180, height: 60 } },
   // ---- 需要插槽子节点 ----
+  'root-portal': { childText: '根节点容器内容（弹层挂载点）' },
+  'sticky-box': { childText: '粘性容器内容' },
   checkbox: { childText: '选项 A' },
   radio: { childText: '选项 A' },
   resize: { childText: '监听这块区域的尺寸变化' },

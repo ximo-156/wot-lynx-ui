@@ -1,14 +1,76 @@
 /**
- * H5 预览样式 —— 两件事：
+ * H5 预览样式 —— 三件事：
  * 1. Lynx 元素语义在 DOM 中的重建：view 默认 linear（flex column）布局、
  *    scroll-view 的滚动方向，均与 Lynx 引擎默认行为对齐；
  * 2. 预览演示页的页面级样式（与 packages/demo/src/App.vue 的 demo-* 类同构，
- *    但改用 --wd-* 令牌，随亮暗主题切换）。
+ *    但改用 --wd-* 令牌，随亮暗主题切换）；
+ * 3. 右侧栏布局适配：组件文档页（body.has-h5-preview）加宽 VitePress 的
+ *    aside 以容纳手机预览；窄屏下 aside 回落为内容下方的通栏。
  *
- * 全部规则限定在 .wd-h5-phone__screen 内，不污染文档站其余部分。
+ * 元素语义规则限定在 .wd-h5-phone__screen 内，不污染文档站其余部分。
  * 注意：.wd-h5-phone__screen 自身带 transform（见 H5Preview.vue），
  * 使 position:fixed 的弹层（popup / overlay / toast）相对手机框定位。
  */
+
+/* ---- 右侧栏加宽（组件文档页） ---- */
+@media (min-width: 1280px) {
+  /* 内容列允许收缩，把宽度让给预览栏（1280px 窄窗口不溢出） */
+  body.has-h5-preview .VPDoc .content {
+    min-width: 0;
+  }
+
+  /* 预览栏定宽不收缩，内含 fixed 定位的 aside-container */
+  body.has-h5-preview .VPDoc .aside {
+    max-width: 360px;
+    flex-shrink: 0;
+  }
+
+  body.has-h5-preview .VPDoc .aside-container {
+    width: 328px;
+  }
+
+  body.has-h5-preview .VPDoc .aside-curtain {
+    width: 328px;
+  }
+
+  /* 预览卡与大纲之间的间距 */
+  body.has-h5-preview .VPDoc .aside .wd-h5-preview {
+    margin-top: 20px;
+  }
+}
+
+/* ---- 窄屏回退：aside 变为内容下方通栏，预览不再隐藏 ---- */
+@media (max-width: 1279px) {
+  body.has-h5-preview .VPDoc .container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  body.has-h5-preview .VPDoc .aside {
+    display: block;
+    order: 2;
+    width: 100%;
+    max-width: 560px;
+    padding-left: 0;
+    margin: 24px auto 0;
+  }
+
+  body.has-h5-preview .VPDoc .content {
+    order: 1;
+  }
+
+  body.has-h5-preview .VPDoc .aside-container {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding-top: 0;
+    overflow: visible;
+  }
+
+  body.has-h5-preview .VPDoc .aside-curtain {
+    display: none;
+  }
+}
 
 /* ---- Lynx 元素语义 ---- */
 .wd-h5-phone__screen view {
