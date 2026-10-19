@@ -1,38 +1,31 @@
 /*
  * wd-steps — 步骤条
  *
- * Lynx 实现说明：经 useChildren 向 step 提供共享配置；
- * 横向排列显式 display: flex（Lynx 3.x linear 默认纵向）；
- * space 作为步骤间距经 gap 下发（横向 column-gap / 纵向 row-gap）。
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
+ * - 参考源根 view 直接绑定 customStyle 字符串，Lynx 的 patchProp 对字符串
+ *   style 会静默丢弃（CONVENTIONS §19），改为 parseStyle(customStyle) 归一
+ *   的对象语法；
+ * - 经 useChildren 向 wd-step 提供 props（active/vertical/dot/space/
+ *   alignCenter），step 的宽度（横向）/高度（纵向）由 step 侧 rootStyle 计算；
+ * - 根 view 非交互节点（无可点击语义），不涉及事件映射。
  */
 <script lang="ts" setup>
 import './index.css'
-import { addUnit, parseStyle } from '../../common/util'
 
-import { computed } from 'vue-lynx'
-import { stepsProps, STEPS_KEY } from './types'
+import { parseStyle } from '../../common/util'
+import { stepsProps } from './types'
 import { useChildren } from '../../composables/useChildren'
+import { STEPS_KEY } from './types'
 
 const props = defineProps(stepsProps)
 
 const { linkChildren } = useChildren(STEPS_KEY)
 
-linkChildren({ props: props as any })
-
-/** space：步骤间距（gap 随 flex 方向自动取列/行间距） */
-const rootStyle = computed(() => {
-  const style: Record<string, string> = {}
-  if (props.space) {
-    const gap = addUnit(props.space)
-    style['column-gap'] = gap
-    style['row-gap'] = gap
-  }
-  return { ...style, ...parseStyle(props.customStyle) }
-})
+linkChildren({ props })
 </script>
 
 <template>
-  <view :class="`wd-steps ${vertical ? 'is-vertical' : 'is-horizontal'} ${alignCenter ? 'is-align-center' : ''} ${dot ? 'is-dot' : ''} ${customClass}`" :style="rootStyle">
+  <view :class="`wd-steps ${customClass} ${vertical ? 'is-vertical' : ''}`" :style="parseStyle(customStyle)">
     <slot />
   </view>
 </template>

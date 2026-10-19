@@ -1,43 +1,60 @@
-import type { ExtractPropTypes, InjectionKey } from 'vue-lynx'
-import { baseProps, makeNumberProp, makeStringProp, numericProp } from '../../common/props'
-import type { AvatarShape } from '../wd-avatar/types'
+import type { ExtractPropTypes, InjectionKey, PropType } from 'vue-lynx'
+import { baseProps, makeStringProp } from '../../common/props'
+import type { AvatarShape, AvatarSize } from '../wd-avatar/types'
 
-/** 父子通信契约：group 经 useChildren 收集子头像，avatar 经 useParent 注册 */
+export type AvatarGroupCascadingValue = 'left-up' | 'right-up'
+
 export type AvatarGroupProvide = {
-  props: Record<string, any>
+  props: AvatarGroupProps
 }
 
 export const AVATAR_GROUP_KEY: InjectionKey<AvatarGroupProvide> = Symbol('wd-avatar-group')
 
 export const avatarGroupProps = {
   ...baseProps,
+
   /**
-   * 最多展示个数（超出折叠）
+   * 最多显示的头像数量
+   * 类型: string | number
+   * 默认值: undefined
    */
-  maxCount: makeNumberProp(-1),
+  maxCount: Number,
   /**
-   * 折叠时展示的文本
+   * 头像层叠方向
+   * 可选值: left-up(左侧叠层) / right-up(右侧叠层)
+   * 类型: string
+   * 默认值: 'left-up'
    */
-  collapseText: makeStringProp(''),
+  cascading: makeStringProp<AvatarGroupCascadingValue>('left-up'),
   /**
-   * 形状
+   * 统一设置组内所有头像的形状
+   * 类型: string
    */
-  shape: makeStringProp<AvatarShape>('circle'),
+  shape: {
+    type: String as PropType<AvatarShape>,
+    default: 'round'
+  },
+
   /**
-   * 尺寸
+   * 统一设置组内所有头像的尺寸，支持预设尺寸(large/medium/normal/small)或带单位的字符串(如 40px、100rpx)
+   * 类型: string | number
    */
-  size: numericProp,
+  size: {
+    type: [String, Number] as PropType<string | number | AvatarSize>,
+    default: 'normal'
+  },
   /**
-   * 层叠方向
+   * 超出最大数量时折叠头像显示的内容
+   * 类型: string
+   * 默认值: undefined
    */
-  direction: makeStringProp<'left' | 'right'>('right'),
+  collapseAvatar: makeStringProp(''),
   /**
-   * 是否层叠
+   * 是否垂直展示
+   * 类型: boolean
+   * 默认值: false
    */
-  overlap: {
-    type: Boolean,
-    default: true
-  }
+  vertical: Boolean
 }
 
 export type AvatarGroupProps = ExtractPropTypes<typeof avatarGroupProps>

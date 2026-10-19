@@ -1,46 +1,65 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 背景色
+$backtop-bg: var(--wot-backtop-bg, $filled-oppo) !default;
+// 边框颜色
+$backtop-border-color: var(--wot-backtop-border-color, $border-main) !default;
+// 按钮宽度
+$backtop-width: var(--wot-backtop-width, $n-48) !default;
+// 按钮高度
+$backtop-height: var(--wot-backtop-height, $n-48) !default;
+// 方形模式圆角
+$backtop-radius: var(--wot-backtop-radius, $radius-main) !default;
+// 圆形模式圆角
+$backtop-radius-circle: var(--wot-backtop-radius-circle, $radius-full) !default;
+// 按钮图标颜色
+$backtop-color: var(--wot-backtop-color, $icon-main) !default;
+// 按钮图标尺寸
+$backtop-icon-size: var(--wot-backtop-icon-size, $n-20) !default;
+// 文本字号
+$backtop-text-font-size: var(--wot-backtop-text-font-size, $typography-label-size-main) !default;
+// 文本颜色
+$backtop-text-color: var(--wot-backtop-text-color, $text-main) !default;
+// 文本行高
+$backtop-text-line-height: var(--wot-backtop-text-line-height, $typography-label-line-height-size-main) !default;
+// 组件层级
+$backtop-z-index: var(--wot-backtop-z-index, 100) !default;
+
 @include b(backtop) {
+  @include pixelBorderSurround($backtop-border-color);
   position: fixed;
+  background: $backtop-bg;
+  width: $backtop-width;
+  height: $backtop-height;
   display: flex;
-  flex-direction: row;
-  align-items: center;
   justify-content: center;
-  /* 尺寸按内容自适应：固定 40×40 时带 text 的场景（图标 + 文案竖排）
-     会溢出方框（2026-10-19 文档 H5 预览实测「按钮文字」溢出到框外），
-     故只保底 40×40，其余交给内容撑开 */
-  min-width: 40px;
-  min-height: 40px;
-  padding: 4px 6px;
-  box-sizing: border-box;
-  background-color: var(--wd-bg-container);
-  border-width: 1px;
-  border-style: solid;
-  border-color: var(--wd-border-1);
-  color: var(--wd-text-2);
-
-  @include m(circle) {
-    border-radius: 50%;
-  }
-
-  @include m(square) {
-    border-radius: var(--wd-radius-sm);
-  }
+  align-items: center;
+  color: $backtop-color;
+  z-index: $backtop-z-index;
 
   @include e(content) {
     display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-  }
-
-  @include e(backicon) {
-    color: var(--wd-icon-2);
-    font-size: 18px;
+    align-items: center;
+    flex-direction: column;
   }
 
   @include e(text) {
-    font-size: var(--wd-font-xs);
-    color: var(--wd-text-3);
+    font-size: $backtop-text-font-size;
+    line-height: $backtop-text-line-height;
+    color: $backtop-text-color;
+  }
+
+  @include edeep(backicon) {
+    font-size: $backtop-icon-size;
+  }
+
+  @include when(circle) {
+    border-radius: $backtop-radius-circle;
+  }
+
+  @include when(square) {
+    border-radius: $backtop-radius;
   }
 }

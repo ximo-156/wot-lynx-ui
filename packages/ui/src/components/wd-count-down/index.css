@@ -1,1 +1,1 @@
-.wd-count-down{display:flex;flex-direction:row;align-items:center;font-size:var(--wd-font-md);color:var(--wd-text-1);font-variant-numeric:tabular-nums}
+.wd-count-down{color:var(--wot-count-down-text-color, var(--wot-text-main, var(--wot-coolgrey-10, #1d1f29)));font-size:var(--wot-count-down-font-size, var(--wot-typography-body-size-main, var(--wot-n-14, 14px)));line-height:var(--wot-count-down-line-height, var(--wot-typography-body-line-height-size-main, var(--wot-n-20, 20px)))}

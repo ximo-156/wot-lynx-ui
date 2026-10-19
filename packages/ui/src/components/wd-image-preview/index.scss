@@ -1,58 +1,96 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 预览蒙层背景色
+$image-preview-bg: var(--wot-image-preview-bg, $opac-9_75) !default;
+// 页码文字颜色
+$image-preview-index-color: var(--wot-image-preview-index-color, $text-white) !default;
+// 页码顶部间距
+$image-preview-index-margin: var(--wot-image-preview-index-margin, $spacing-extra-loose) !default;
+// 页码文字字号
+$image-preview-index-font-size: var(--wot-image-preview-index-font-size, $typography-title-size-main) !default;
+// 页码文字字重
+$image-preview-index-font-weight: var(--wot-image-preview-index-font-weight, $typography-title-font-weight-main) !default;
+// 页码文字行高
+$image-preview-index-line-height: var(--wot-image-preview-index-line-height, $typography-title-line-height-size-main) !default;
+// 关闭图标尺寸
+$image-preview-close-size: var(--wot-image-preview-close-size, $n-24) !default;
+// 关闭图标颜色
+$image-preview-close-color: var(--wot-image-preview-close-color, $icon-white) !default;
+// 关闭按钮边距
+$image-preview-close-margin: var(--wot-image-preview-close-margin, $spacing-extra-loose) !default;
 
 @include b(image-preview) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: $image-preview-bg;
+
+  // 关闭按钮
+  @include e(close) {
+    position: absolute;
+    z-index: 10;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+
+    @include m(top-right) {
+      top: $image-preview-close-margin;
+      right: $image-preview-close-margin;
+    }
+
+    @include m(top-left) {
+      top: $image-preview-close-margin;
+      left: $image-preview-close-margin;
+    }
+  }
+
+  @include edeep(close-icon) {
+    font-size: $image-preview-close-size;
+    line-height: $image-preview-close-size;
+    color: $image-preview-close-color;
+  }
+
+  // 页码指示器
+  @include e(index) {
+    position: absolute;
+    top: $image-preview-index-margin;
+    left: 50%;
+    transform: translateX(-50%);
+    color: $image-preview-index-color;
+    font-size: $image-preview-index-font-size;
+    font-weight: $image-preview-index-font-weight;
+    line-height: $image-preview-index-line-height;
+    z-index: 10;
+  }
+
+  // 轮播容器
   @include e(swiper) {
     width: 100%;
     height: 100%;
   }
 
-  @include e(close) {
-    position: absolute;
+  // 轮播项（参考源中由 wd-swiper 内部渲染挂载，本地 swiper 未下发该类名，
+  // 规则保留以与参考源声明集对齐）
+  @include e(swiper-item) {
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: row;
+    justify-content: center;
     align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background-color: #00000080;
-    z-index: 10;
+    overflow: hidden;
   }
 
-  @include e(close-icon) {
-    color: var(--wd-white);
-    font-size: 16px;
-  }
-
-  @include e(close--top-left) {
-    left: var(--wd-space-4);
-    top: 10%;
-  }
-
-  @include e(close--top-right) {
-    right: var(--wd-space-4);
-    top: 10%;
-  }
-
-  @include e(close--bottom-left) {
-    left: var(--wd-space-4);
-    bottom: 10%;
-  }
-
-  @include e(close--bottom-right) {
-    right: var(--wd-space-4);
-    bottom: 10%;
-  }
-
-  @include e(index) {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 10%;
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    font-size: var(--wd-font-md);
-    color: var(--wd-white);
+  // 图片（同上，本地 swiper 内部使用 wd-swiper__img；Lynx 无 object-fit，
+  // 包含/裁剪由 image 元素的 mode 属性承担，故删除 object-fit 与 will-change）
+  @include e(image) {
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
   }
 }

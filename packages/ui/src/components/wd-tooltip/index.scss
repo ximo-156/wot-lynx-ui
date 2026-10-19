@@ -1,41 +1,88 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 背景色
+$tooltip-bg: var(--wot-tooltip-bg, $filled-oppo) !default;
+// 文字颜色
+$tooltip-color: var(--wot-tooltip-color, $text-secondary) !default;
+// 阴影效果
+$tooltip-box-shadow: var(--wot-tooltip-box-shadow, 0 12px 48px 16px rgba(39, 43, 59, 0.03), 0 9px 28px 8px rgba(39, 43, 59, 0.05), 0 5px 12px 4px rgba(39, 43, 59, 0.06)) !default;
+// 箭头阴影效果
+$tooltip-arrow-box-shadow: var(--wot-tooltip-arrow-box-shadow, 0 12px 48px 16px rgba(39, 43, 59, 0.03), 0 9px 28px 8px rgba(39, 43, 59, 0.05), 0 5px 12px 4px rgba(39, 43, 59, 0.06)) !default;
+// 圆角大小
+$tooltip-radius: var(--wot-tooltip-radius, $radius-main) !default;
+// 箭头大小
+$tooltip-arrow-size: var(--wot-tooltip-arrow-size, $n-8) !default;
+// 字号
+$tooltip-font-size: var(--wot-tooltip-font-size, $typography-body-size-main) !default;
+// 内边距
+$tooltip-padding: var(--wot-tooltip-padding, $padding-loose) !default;
+// 关闭按钮大小
+$tooltip-close-icon-size: var(--wot-tooltip-close-icon-size, $n-12) !default;
+// 关闭按钮颜色
+$tooltip-close-icon-color: var(--wot-tooltip-close-icon-color, $icon-secondary) !default;
+// 关闭按钮内边距
+$tooltip-close-icon-padding: var(--wot-tooltip-close-icon-padding, $padding-super-tight) !default;
+// 层级
+$tooltip-z-index: var(--wot-tooltip-z-index, 500) !default;
+// 行高
+$tooltip-line-height: var(--wot-tooltip-line-height, $typography-body-line-height-size-main) !default;
 
 @include b(tooltip) {
   position: relative;
+  // Lynx 适配：wot-ui 为 inline-block（内容宽度自适应），Lynx 不识别
+  // inline-block，改为 display: flex + row（CONVENTIONS §15）
   display: flex;
   flex-direction: row;
 
-  @include e(pos) {
+  @include edeep(pos) {
     position: absolute;
-    z-index: 10;
+    box-sizing: border-box;
+    min-width: 138px;
+    background-clip: padding-box;
+    z-index: $tooltip-z-index;
   }
 
   @include e(hidden) {
-    position: absolute;
-    opacity: 0;
+    // Lynx 适配：wot-ui 用 left: -100vw / bottom: -100vh 把度量副本移出
+    // 视口，Lynx 视口单位支持不确定，改用 -100%（相对定位包含块的等价偏移；
+    // 仅偏移不影响 getRect 对宽高的度量）。visibility: hidden 保留布局盒。
+    left: -100%;
+    bottom: -100%;
+    visibility: hidden;
     pointer-events: none;
-    z-index: -1;
   }
 
   @include e(container) {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    min-width: 60px;
-    padding: var(--wd-space-3);
-    background-color: var(--wd-gray-9);
-    border-radius: var(--wd-radius-xs);
+    z-index: $tooltip-z-index;
+    box-shadow: $tooltip-box-shadow;
+    border-radius: $tooltip-radius;
+    background: $tooltip-bg;
   }
 
   @include e(inner) {
-    font-size: var(--wd-font-sm);
-    color: var(--wd-white);
+    position: relative;
+    padding: $tooltip-padding;
+    white-space: nowrap;
+    line-height: $tooltip-line-height;
+    font-size: $tooltip-font-size;
+    text-align: center;
+    color: $tooltip-color;
   }
 
-  /* 箭头四方向三角形：补全 up/down/left/right（此前无方向规则 → 箭头不可见） */
-  @include triangleArrow(5px, var(--wd-gray-9));
+  @include edeep(close-icon) {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-size: $tooltip-close-icon-size;
+    padding: $tooltip-close-icon-padding;
+    color: $tooltip-close-icon-color;
+  }
 
-  /* 点击空白关闭的透明全屏 backdrop */
+  @include triangleArrow($tooltip-arrow-size, $tooltip-bg);
+
+  // 点击空白关闭的透明全屏 backdrop（fixed 提升至页面根，z-index 低于气泡与触发元素）
   @include e(backdrop) {
     position: fixed;
     left: 0;
@@ -43,16 +90,5 @@
     top: 0;
     bottom: 0;
     z-index: 1;
-  }
-
-  @include e(close-icon) {
-    color: var(--wd-white);
-  }
-
-  @include e(target) {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    flex-direction: row;
   }
 }

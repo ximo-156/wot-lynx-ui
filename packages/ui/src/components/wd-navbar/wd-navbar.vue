@@ -1,72 +1,158 @@
 /*
  * wd-navbar — 导航栏
  *
- * Lynx 实现说明：左（箭头/文字/插槽）+ 中（标题）+ 右（文字/插槽）
- * 三段式；fixed 时 position: fixed 由引擎提升；安全区经 env() 叠加。
- * height 同步下发到 __content（SCSS 的 44px 被内联覆盖）；placeholder
- * 控制外层占位 view 是否生成等高占位（wot-ui 语义：固定顶部时占位）。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 参考源外层占位 view 的 :style="{ height: addUnit(height) }" 在未度量时
+ *   产出非法值 "px"（浏览器忽略）；Lynx 的字符串 style 会被静默丢弃
+ *   （CONVENTIONS §19），故改为对象语法 + Style Funnel（§20）：height 未
+ *   度量时显式下发中性值 auto（视觉等同不设置），度量后下发实测高度，
+ *   避免条件写样式导致上一帧高度残留；
+ * - rootStyle 的 z-index / padding-top / height / line-height 同样经
+ *   resolveStyle 输出完整键集（§20）；customStyle 经 parseStyle 归一；
+ * - 安全区适配：参考源取 useDeviceInfo 的 statusBarHeight（Lynx 不提供
+ *   安全区数据，宿主未注入时为 0，即不额外 padding）；
+ * - 占位高度经 getRect('.wd-navbar') 实测（参考源行为），回调经 useAlive
+ *   守卫（真机 9902 防护）；
+ * - 参考源右侧文案的 hover-class="wd-navbar__text--hover"（uni-app 专有
+ *   按压态属性，参考源 SCSS 亦无对应规则）删除，按压反馈由 :active 承担；
+ * - 左侧箭头图标：参考源传 name="left"，本地内置图标集无该字形，映射到
+ *   arrow-left-bold（CONVENTIONS §8）；
+ * - 文本节点：参考源用 block 元素承载标题/两侧文案，Lynx 无 block，
+ *   统一改为 text 元素。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed } from 'vue-lynx'
+import { computed, getCurrentInstance, nextTick, onMounted, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { navbarProps } from './types'
-import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
+import { addUnit, getRect, isDef, parseStyle } from '../../common/util'
+import { useDeviceInfo } from '../../composables/useDeviceInfo'
+import { useAlive } from '../../composables/useAlive'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(navbarProps)
 const emit = defineEmits(['click-left', 'click-right'])
 
-/** 导航栏内容高度：height prop 下发到 content（覆盖 SCSS 中硬编码的 44px） */
-const contentHeight = computed(() => addUnit(isDef(props.height) ? props.height : 44))
+/** 组件存活守卫：getRect 回调晚于卸载落地时丢弃（真机 9902 防护） */
+const isAlive = useAlive()
 
-const contentStyle = computed(() => ({ height: contentHeight.value }))
+/**
+ * 占位高度
+ */
+const height = ref<number | ''>('')
 
-const rootStyle = computed(() => {
-  const style: Record<string, string> = {}
-  if (props.fixed) style['z-index'] = String(props.zIndex)
-  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
+const { statusBarHeight, navBarHeight } = useDeviceInfo()
+
+watch(
+  [() => props.fixed, () => props.placeholder],
+  () => {
+    setPlaceholderHeight()
+  },
+  { deep: true, immediate: false }
+)
+
+/**
+ * 根节点样式（对象语法 + Style Funnel：键集完整，条件翻转不残留旧值）
+ */
+const ROOT_STYLE = defineStyleKeys({
+  'z-index': 'auto',
+  'padding-top': '0px',
+  height: 'auto',
+  'line-height': 'auto'
+})
+
+const rootStyle = computed(() =>
+  resolveStyle(
+    ROOT_STYLE,
+    {
+      'z-index': props.fixed && isDef(props.zIndex) ? String(props.zIndex) : undefined,
+      'padding-top': props.safeAreaInsetTop ? addUnit(statusBarHeight.value || 0) : undefined,
+      height: navBarHeight.value ? addUnit(navBarHeight.value) : undefined,
+      'line-height': navBarHeight.value ? addUnit(navBarHeight.value) : undefined
+    },
+    parseStyle(props.customStyle)
+  )
+)
+
+/** 外层占位 view 样式：未度量时 height 为 auto（等同不设置） */
+const PLACEHOLDER_STYLE = defineStyleKeys({ height: 'auto' })
+
+const placeholderStyle = computed(() =>
+  resolveStyle(PLACEHOLDER_STYLE, {
+    height: height.value !== '' ? addUnit(height.value) : undefined
+  })
+)
+
+onMounted(() => {
+  if (props.fixed && props.placeholder) {
+    nextTick(() => {
+      setPlaceholderHeight()
+    })
+  }
 })
 
 /**
- * 外层占位 view 样式：placeholder 为 true 时才生成等高占位
- * （wot-ui 语义：固定顶部时在标签位置生成等高的占位元素）；
- * 不传时占位 view 自动高度包裹，不产生额外空白。
+ * 处理左侧点击事件
  */
-const placeholderStyle = computed(() => {
-  return props.placeholder ? { height: contentHeight.value } : {}
-})
-
 function handleClickLeft() {
-  if (!props.leftDisabled) emit('click-left')
+  if (!props.leftDisabled) {
+    emit('click-left')
+  }
 }
 
+/**
+ * 处理右侧点击事件
+ */
 function handleClickRight() {
-  if (!props.rightDisabled) emit('click-right')
+  if (!props.rightDisabled) {
+    emit('click-right')
+  }
+}
+
+/**
+ * 获取当前实例的代理对象
+ */
+const { proxy } = getCurrentInstance() as any
+
+/**
+ * 设置占位高度
+ */
+function setPlaceholderHeight() {
+  if (!props.fixed || !props.placeholder) {
+    return
+  }
+
+  getRect('.wd-navbar', false, proxy).then((res) => {
+    if (!isAlive()) return
+    height.value = res.height as number
+  })
 }
 </script>
 
 <template>
   <view :style="placeholderStyle">
-    <view :class="`wd-navbar ${customClass} ${fixed ? 'is-fixed' : ''} ${bordered ? 'is-border' : ''} ${safeAreaInsetTop ? 'is-safe-top' : ''}`" :style="rootStyle">
-      <view class="wd-navbar__content" :style="contentStyle">
-        <view v-if="$slots.capsule" class="wd-navbar__capsule">
+    <view :class="`wd-navbar ${customClass} ${fixed ? 'is-fixed' : ''} ${bordered ? 'is-border' : ''}`" :style="rootStyle">
+      <view class="wd-navbar__content">
+        <view class="wd-navbar__capsule" v-if="$slots.capsule">
           <slot name="capsule" />
         </view>
-        <view v-else-if="!$slots.left" :class="`wd-navbar__left ${leftDisabled ? 'is-disabled' : ''}`" @tap="handleClickLeft">
+
+        <view :class="`wd-navbar__left ${leftDisabled ? 'is-disabled' : ''}`" @tap="handleClickLeft" v-else-if="!$slots.left">
           <wd-icon v-if="leftArrow" name="arrow-left-bold" custom-class="wd-navbar__arrow" />
           <text v-if="leftText" class="wd-navbar__text">{{ leftText }}</text>
         </view>
+
         <view v-else :class="`wd-navbar__left ${leftDisabled ? 'is-disabled' : ''}`" @tap="handleClickLeft">
           <slot name="left" />
         </view>
 
         <view class="wd-navbar__title">
           <slot name="title" />
-          <text v-if="!$slots.title && title" class="wd-navbar__title-text">{{ title }}</text>
+          <text v-if="!$slots.title && title">{{ title }}</text>
         </view>
 
-        <view v-if="$slots.right || rightText" :class="`wd-navbar__right ${rightDisabled ? 'is-disabled' : ''}`" @tap="handleClickRight">
+        <view :class="`wd-navbar__right ${rightDisabled ? 'is-disabled' : ''}`" @tap="handleClickRight" v-if="$slots.right || rightText">
           <slot name="right" />
           <text v-if="!$slots.right && rightText" class="wd-navbar__text">{{ rightText }}</text>
         </view>

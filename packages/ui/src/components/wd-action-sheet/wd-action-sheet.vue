@@ -1,83 +1,146 @@
 /*
  * wd-action-sheet — 动作面板
  *
- * Lynx 实现说明：基于 wd-popup（bottom + round）；
- * 支持菜单列表（actions）与宫格面板（panels 分组）两种形态。
- * 命令式 API 经 defineExpose({ open / close }) 暴露（受控 modelValue 通道）。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 结构：view.wd-action-sheet-wrapper > wd-popup（bottom + round）> 内容视图，
+ *   与 wot-ui 一致；
+ * - 参考源用 watch + ref 维护 showPopup / formatPanels（受控 modelValue 与
+ *   panels 归一化），此处逐段保留该逻辑；
+ * - 参考源模板里的 block 元素（uni-app 专有、Lynx 无此内置元素）改为
+ *   template v-if / v-for；view 内的裸文本包 text 元素；
+ * - 参考源 :style 字符串拼接（popup 的 background: transparent、内容视图的
+ *   customStyle）改为对象语法并经 parseStyle 归一（字符串 :style 会被
+ *   vue-lynx 静默丢弃，CONVENTIONS §19）；
+ * - 命令式 API 经 defineExpose({ open / close }) 暴露（本地扩展，wot-ui 仅支持
+ *   v-model 受控）：open 走 update:modelValue(true)，与受控通道同一出口；
+ * - 选项/面板点击 @click → @tap（CONVENTIONS §6）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed } from 'vue-lynx'
+import { computed, ref, watch } from 'vue-lynx'
 import WdPopup from '../wd-popup/wd-popup.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
-import { actionSheetProps, type Action, type Panel } from './types'
+import { actionSheetProps, type Panel } from './types'
 import { isArray, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(actionSheetProps)
-const emit = defineEmits(['select', 'close', 'update:modelValue', 'enter', 'after-enter', 'leave', 'after-leave', 'click-modal'])
+const emit = defineEmits(['select', 'click-modal', 'cancel', 'leave', 'after-leave', 'close', 'enter', 'after-enter', 'update:modelValue'])
 
-const showPopup = computed({
-  get: () => props.modelValue,
-  set: (val) => emit('update:modelValue', val)
+const formatPanels = ref<Array<Panel[]>>([])
+
+/**
+ * 有内容（actions / panels）时弹层本身透明，由内容视图承担背景；无内容时回落
+ * 弹层自身的背景令牌（与 .wd-popup 的 background 声明等价）。
+ *
+ * 走 Style Funnel（CONVENTIONS §20）：background 键每帧都写全，条件由真转假时
+ * 回落中性值，不会残留 transparent。
+ */
+const POPUP_STYLE = defineStyleKeys({ background: 'var(--wot-popup-bg, var(--wot-filled-oppo))' })
+
+const popupStyle = computed<Record<string, string>>(() => {
+  const hasContent = Boolean((props.actions && props.actions.length) || (props.panels && props.panels.length))
+  return resolveStyle(POPUP_STYLE, { background: hasContent ? 'transparent' : '' })
 })
 
-const formatPanels = computed(() => {
-  if (!isArray(props.panels)) return []
-  // 一维数组自动按 3 个一组分组
-  const first = props.panels[0]
-  if (first && !isArray(first)) {
-    const panels = props.panels as Panel[]
-    const result: Panel[][] = []
-    for (let i = 0; i < panels.length; i += 3) {
-      result.push(panels.slice(i, i + 3))
-    }
-    return result
-  }
-  return props.panels as Panel[][]
-})
+const showPopup = ref<boolean>(false)
 
+watch(() => props.panels, computedValue, { deep: true, immediate: true })
+
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    showPopup.value = newValue
+  },
+  { deep: true, immediate: true }
+)
+
+/**
+ * 判断 panels 是否为一维数组
+ */
+function isPanelArray() {
+  return props.panels.length && !isArray(props.panels[0])
+}
+
+/**
+ * 计算面板数据
+ */
+function computedValue() {
+  formatPanels.value = isPanelArray() ? [props.panels as Panel[]] : (props.panels as Panel[][])
+}
+
+/**
+ * 点击选项
+ * @param rowIndex 行索引
+ * @param type 类型
+ * @param colIndex 列索引
+ */
 function select(rowIndex: number, type: 'action' | 'panels', colIndex?: number) {
   if (type === 'action') {
-    const action = props.actions[rowIndex] as Action
-    if (action.disabled || action.loading) return
-    emit('select', { item: action, index: rowIndex })
+    if (props.actions[rowIndex].disabled || props.actions[rowIndex].loading) {
+      return
+    }
+    emit('select', {
+      item: props.actions[rowIndex],
+      index: rowIndex
+    })
+  } else if (isPanelArray()) {
+    emit('select', {
+      item: props.panels[Number(colIndex)],
+      index: colIndex
+    })
   } else {
-    const panel = (formatPanels.value[rowIndex] as Panel[])[colIndex!]
-    if (panel.disabled) return
-    emit('select', { item: panel, index: colIndex })
+    emit('select', {
+      item: (props.panels as Panel[][])[rowIndex][Number(colIndex)],
+      rowIndex,
+      colIndex
+    })
   }
   if (props.closeOnClickAction) {
-    close()
+    emit('update:modelValue', false)
   }
 }
 
+/**
+ * 点击遮罩层
+ */
+function handleClickModal() {
+  emit('click-modal')
+}
+
+/**
+ * 点击取消按钮
+ */
+function handleCancel() {
+  emit('cancel')
+  emit('update:modelValue', false)
+}
+
+/**
+ * 关闭动作面板
+ */
 function close() {
   emit('update:modelValue', false)
   emit('close')
 }
 
-/** 命令式打开（ref.open()）：与 v-model 受控通道同一出口 */
+/**
+ * 命令式打开（ref.open()，本地扩展）：与 v-model 受控通道同一出口。
+ */
 function open() {
   emit('update:modelValue', true)
 }
 
 defineExpose({ open, close })
-
-function handleClickModal() {
-  emit('click-modal')
-  if (props.closeOnClickModal) {
-    close()
-  }
-}
 </script>
 
 <template>
   <view class="wd-action-sheet-wrapper">
-    <wd-popup
+    <WdPopup
       custom-class="wd-action-sheet-wrapper__popup"
-      :custom-style="`${(actions && actions.length) || (panels && panels.length) ? 'background: transparent;' : ''}`"
+      :custom-style="popupStyle"
       v-model="showPopup"
       :duration="duration"
       position="bottom"
@@ -86,6 +149,7 @@ function handleClickModal() {
       :lazy-render="lazyRender"
       :root-portal="rootPortal"
       round
+      @close="close"
       @enter="emit('enter')"
       @after-enter="emit('after-enter')"
       @leave="emit('leave')"
@@ -95,9 +159,9 @@ function handleClickModal() {
     >
       <view :class="`wd-action-sheet ${customClass}`" :style="parseStyle(customStyle)">
         <view v-if="title" :class="`wd-action-sheet__title ${customTitleClass}`">
-          <text class="wd-action-sheet__title-text">{{ title }}</text>
+          <text>{{ title }}</text>
           <slot name="close" :close="close">
-            <wd-icon custom-class="wd-action-sheet__close" name="close" @tap="close" />
+            <WdIcon custom-class="wd-action-sheet__close" name="close" @tap="close" />
           </slot>
         </view>
 
@@ -106,42 +170,33 @@ function handleClickModal() {
             <view
               v-for="(action, rowIndex) in actions"
               :key="rowIndex"
-              :class="[
-                'wd-action-sheet__action',
-                title ? '' : 'is-border',
-                action.disabled ? 'wd-action-sheet__action--disabled' : '',
+              :class="`wd-action-sheet__action ${title ? '' : 'is-border'} ${action.disabled ? 'wd-action-sheet__action--disabled' : ''}  ${
                 action.loading ? 'wd-action-sheet__action--loading' : ''
-              ]"
+              }`"
               :style="action.color ? { color: action.color } : {}"
               @tap="select(rowIndex, 'action')"
             >
-              <wd-loading v-if="action.loading" custom-class="wd-action-sheet__action-loading" />
+              <WdLoading custom-class="wd-action-sheet__action-loading" v-if="action.loading" />
               <text v-else class="wd-action-sheet__name">{{ action.name }}</text>
               <text v-if="!action.loading && action.description" class="wd-action-sheet__description">{{ action.description }}</text>
             </view>
           </view>
-          <view v-if="formatPanels.length" class="wd-action-sheet__panels-wrap">
+          <view v-if="isArray(formatPanels) && formatPanels.length" class="wd-action-sheet__panels-wrap">
             <view v-for="(panel, rowIndex) in formatPanels" :key="rowIndex" class="wd-action-sheet__panels">
               <view class="wd-action-sheet__panels-content">
-                <view
-                  v-for="(col, colIndex) in panel"
-                  :key="colIndex"
-                  class="wd-action-sheet__panel"
-                  @tap="select(rowIndex, 'panels', colIndex)"
-                >
-                  <wd-icon custom-class="wd-action-sheet__panel-img" :name="col.icon" />
+                <view v-for="(col, colIndex) in panel" :key="colIndex" class="wd-action-sheet__panel" @tap="select(rowIndex, 'panels', colIndex)">
+                  <WdIcon custom-class="wd-action-sheet__panel-img" :name="col.icon" />
                   <text class="wd-action-sheet__panel-title">{{ col.title }}</text>
                 </view>
               </view>
             </view>
           </view>
         </slot>
-
-        <view v-if="cancelText" class="wd-action-sheet__gap" />
-        <view v-if="cancelText" class="wd-action-sheet__cancel" @tap="close">
-          <text class="wd-action-sheet__cancel-text">{{ cancelText }}</text>
+        <view v-if="cancelText" class="wd-action-sheet__gap"></view>
+        <view v-if="cancelText" class="wd-action-sheet__cancel" @tap="handleCancel">
+          <text>{{ cancelText }}</text>
         </view>
       </view>
-    </wd-popup>
+    </WdPopup>
   </view>
 </template>

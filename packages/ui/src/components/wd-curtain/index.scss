@@ -1,31 +1,106 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 幕帘内容圆角
+$curtain-content-radius: var(--wot-curtain-content-radius, $radius-large) !default;
+// 幕帘关闭图标颜色
+$curtain-content-close-color: var(--wot-curtain-content-close-color, $text-white) !default;
+// 幕帘关闭图标尺寸
+$curtain-content-close-size: var(--wot-curtain-content-close-size, $n-32) !default;
+// 幕帘关闭图标偏移
+$curtain-content-close-inset: var(--wot-curtain-content-close-inset, $spacing-extra-loose) !default;
+
+// Lynx 适配：wot-ui 用 :deep() 包裹（样式隔离下穿透到 popup 根节点），
+// Lynx 无 shadow DOM，:deep() 直接删除，规则写在全局作用域（PORTING §4.5）
+.wd-popup.wd-curtain {
+  background: transparent;
+  overflow-y: visible;
+}
 
 @include b(curtain) {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  border-radius: $curtain-content-radius;
+  font-size: 0;
 
-  @include e(img) {
-    width: 80%;
-    border-radius: var(--wd-radius-lg);
-  }
-
-  @include e(close) {
-    position: absolute;
+  // Lynx 适配：wot-ui 的 b/e 均包在 :deep() 内，其 e() 因选择器含伪类而生成
+  // 后代选择器（.wd-curtain .wd-curtain__content）；Lynx 无 shadow DOM，用
+  // edeep() 生成等价的后代选择器（裸类名嵌套在 b 下即后代选择器）
+  @include edeep(content) {
+    position: relative;
+    // Lynx 适配：inline-block → flex + row（内容宽度自适应，§15）
     display: flex;
     flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background-color: var(--wd-mask-bg);
+    background: transparent;
+    border-radius: $curtain-content-radius;
   }
 
-  @include e(close-icon) {
-    color: var(--wd-white);
-    font-size: 16px;
+  @include edeep(content-link) {
+    display: block;
+    border-radius: $curtain-content-radius;
+  }
+
+  @include edeep(content-img) {
+    display: block;
+    width: auto;
+    height: auto;
+    border-radius: $curtain-content-radius;
+  }
+
+  @include edeep(content-close) {
+    position: absolute;
+    top: $curtain-content-close-inset;
+    right: $curtain-content-close-inset;
+    color: $curtain-content-close-color;
+    font-size: $curtain-content-close-size;
+    /* -webkit-tap-highlight-color 为 Web 专有属性，Lynx 不支持，已移除 */
+
+    // Lynx 适配：参考源用 `unset` 取消另一侧偏移（CSS 宽关键字），Lynx 对
+    // 其支持不确定，改用语义等价的 `auto`（偏移属性取 auto 即不锚定该侧）
+    &.top {
+      top: calc(-1 * $curtain-content-close-inset);
+      left: 50%;
+      right: auto;
+      bottom: auto;
+      transform: translateY(-100%) translateX(-50%);
+    }
+
+    &.top-left {
+      top: calc(-1 * $curtain-content-close-inset);
+      right: auto;
+      left: 0;
+      bottom: auto;
+      transform: translateY(-100%);
+    }
+
+    &.top-right {
+      top: calc(-1 * $curtain-content-close-inset);
+      right: 0;
+      left: auto;
+      bottom: auto;
+      transform: translateY(-100%);
+    }
+
+    &.bottom {
+      top: auto;
+      right: auto;
+      left: 50%;
+      bottom: calc(-1 * $curtain-content-close-inset);
+      transform: translateY(100%) translateX(-50%);
+    }
+
+    &.bottom-left {
+      top: auto;
+      right: auto;
+      left: 0;
+      bottom: calc(-1 * $curtain-content-close-inset);
+      transform: translateY(100%);
+    }
+
+    &.bottom-right {
+      top: auto;
+      right: 0;
+      left: auto;
+      bottom: calc(-1 * $curtain-content-close-inset);
+      transform: translateY(100%);
+    }
   }
 }

@@ -1,33 +1,42 @@
-import type { ExtractPropTypes, PropType } from 'vue-lynx'
-import { baseProps, makeStringProp } from '../../common/props'
-
-export type SwiperNavType = 'image' | 'icon'
+import type { ExtractPropTypes } from 'vue-lynx'
+import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
+import type { DirectionType, IndicatorPositionType } from '../wd-swiper/types'
 
 /**
- * 注意：本组件与 wot-ui 的 wd-swiper-nav **API 完全不同**。
- *
- * wot-ui 的 swiper-nav 是**轮播指示器**（dots / dots-bar / fraction，配合
- * wd-swiper 使用，props 为 current / total / type / indicatorPosition …）；
- * 本库的 wd-swiper-nav 是**图标 / 图片横向导航**（scroll-view 承载一排
- * 导航项，点击某一项联动外部轮播），props 为 items / type，事件为
- * click（{ index, item }）。二者仅组件名相同，请勿按 wot-ui 的 API 使用。
- *
- * 另：wot-ui swiper-nav 的 navigation / change 等成员在本组件中不存在
- * （本组件为图标横向导航，无轮播指示器语义），已从定义中删除。
+ * 指示器类型，点状(dots)、点条状(dots-bar)、分式(fraction)等
  */
-export const swiperNavProps = {
+export type SwiperIndicatorType = 'dots' | 'dots-bar' | 'fraction'
+
+export const swiperNavprops = {
   ...baseProps,
   /**
-   * 导航项（图片或图标配置）
+   * 当前轮播在哪一项（下标）
    */
-  items: {
-    type: Array as PropType<Record<string, any>[]>,
-    default: () => []
-  },
+  current: makeNumberProp(0),
   /**
-   * 类型
+   * 轮播滑动方向，包括横向滑动和纵向滑动两个方向
    */
-  type: makeStringProp<SwiperNavType>('image')
+  direction: makeStringProp<DirectionType>('horizontal'),
+  /**
+   * 小于这个数字不会显示导航器
+   */
+  minShowNum: makeNumberProp(2),
+  /**
+   * 指示器位置
+   */
+  indicatorPosition: makeStringProp<IndicatorPositionType>('bottom'),
+  /**
+   * 是否显示两侧的控制按钮
+   */
+  showControls: makeBooleanProp(false),
+  /**
+   * 总共的项数
+   */
+  total: makeNumberProp(0),
+  /**
+   * 指示器类型，点状(dots)、点条状(dots-bar)、分式(fraction)等
+   */
+  type: makeStringProp<SwiperIndicatorType>('dots')
 }
 
-export type SwiperNavProps = ExtractPropTypes<typeof swiperNavProps>
+export type SwiperNavProps = ExtractPropTypes<typeof swiperNavprops>

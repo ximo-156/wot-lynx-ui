@@ -1,66 +1,126 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
+
+// 浮动按钮触发器宽度
+$fab-trigger-width: var(--wot-fab-trigger-width, $n-60) !default;
+// 浮动按钮触发器高度
+$fab-trigger-height: var(--wot-fab-trigger-height, $n-60) !default;
+// 动作列表主轴内边距
+$fab-actions-padding: var(--wot-fab-actions-padding, $padding-extra-loose) !default;
+// 浮动按钮层级
+$fab-z-index: var(--wot-fab-z-index, 99) !default;
+// 动作按钮展开/收起动画偏移距离
+$fab-transition-offset: var(--wot-fab-transition-offset, $n-40) !default;
+// 浮动按钮触发器图标大小
+$fab-trigger-icon-size: var(--wot-fab-trigger-icon-size, $n-32) !default;
 
 @include b(fab) {
   position: fixed;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  z-index: 99;
+  z-index: $fab-z-index;
 
-  @include m(left-top) {
-    left: var(--wd-space-4);
-    top: 20%;
-  }
-
-  @include m(right-top) {
-    right: var(--wd-space-4);
-    top: 20%;
-  }
-
-  @include m(left-bottom) {
-    left: var(--wd-space-4);
-    bottom: 15%;
-  }
-
-  @include m(right-bottom) {
-    right: var(--wd-space-4);
-    bottom: 15%;
-  }
-
-  @include e(trigger) {
+  @include edeep(trigger) {
     display: flex;
-    flex-direction: row;
-  }
-
-  @include e(trigger-button) {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-  }
-
-  @include e(menu) {
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    /* 菜单项之间留出间距：此前相邻 wd-button 直接贴在一起（视觉上像一整块） */
-    gap: var(--wd-space-2);
-    margin-bottom: var(--wd-space-2);
+    justify-content: center;
+    width: $fab-trigger-width;
+    height: $fab-trigger-height;
+
+    .wd-button__icon {
+      font-size: $fab-trigger-icon-size;
+    }
   }
 
-  /* 展开方向 */
-  @include m(top) {
-    flex-direction: column-reverse;
+  @include edeep(actions) {
+    position: absolute;
+    z-index: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: $fab-actions-padding 0;
+
+    @include m(left, right) {
+      height: 100%;
+      top: 0;
+      padding: 0 $fab-actions-padding;
+    }
+
+    @include m(left) {
+      flex-direction: row-reverse;
+      right: 100%;
+    }
+
+    @include m(right) {
+      flex-direction: row;
+      left: 100%;
+    }
+
+    @include m(top, bottom) {
+      width: 100%;
+      left: 0;
+    }
+
+    @include m(top) {
+      flex-direction: column-reverse;
+      bottom: 100%;
+    }
+
+    @include m(bottom) {
+      flex-direction: column;
+      top: 100%;
+    }
   }
 
-  @include m(bottom) {
-    flex-direction: column;
+  // Lynx 适配：参考源把以下规则包在 :deep() 里（uni-app 样式隔离穿透），
+  // Lynx 无 shadow DOM，直接写成 .wd-fab 的后代选择器（与参考源编译产物
+  // 去掉 :deep() 后一致）；本地 edeep 对多参数逐条生成（不合并），故这里
+  // 显式写逗号合并的嵌套选择器，对齐参考源单条合并规则的编译结果。
+  // 参考源的 !important 为 Web 专有写法（Lynx 不支持，PORTING §4.5），删除。
+  .wd-fab__transition-enter-active,
+  .wd-fab__transition-leave-active {
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  @include m(left) {
-    flex-direction: row-reverse;
+  @include edeep(transition-enter) {
+    @include m(top) {
+      opacity: 0;
+      transform: translateY($fab-transition-offset);
+    }
+
+    @include m(bottom) {
+      opacity: 0;
+      transform: translateY(calc(-1 * $fab-transition-offset));
+    }
+
+    @include m(left) {
+      opacity: 0;
+      transform: translateX($fab-transition-offset);
+    }
+
+    @include m(right) {
+      opacity: 0;
+      transform: translateX(calc(-1 * $fab-transition-offset));
+    }
   }
 
-  @include m(right) {
-    flex-direction: row;
+  @include edeep(transition-leave-to) {
+    @include m(top) {
+      opacity: 0;
+      transform: translateY($fab-transition-offset);
+    }
+
+    @include m(bottom) {
+      opacity: 0;
+      transform: translateY(calc(-1 * $fab-transition-offset));
+    }
+
+    @include m(left) {
+      opacity: 0;
+      transform: translateX($fab-transition-offset);
+    }
+
+    @include m(right) {
+      opacity: 0;
+      transform: translateX(calc(-1 * $fab-transition-offset));
+    }
   }
 }

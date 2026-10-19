@@ -1,47 +1,51 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 激活态颜色（文字和图标）
+$tabbar-item-color-active: var(--wot-tabbar-item-color-active, $primary-6) !default;
+// 非激活态颜色（文字和图标）
+$tabbar-item-color-inactive: var(--wot-tabbar-item-color-inactive, $text-main) !default;
+// 标题文字大小
+$tabbar-item-title-font-size: var(--wot-tabbar-item-title-font-size, $typography-label-size-extra-small) !default;
+// 标题文字行高
+$tabbar-item-title-line-height: var(--wot-tabbar-item-title-line-height, $typography-label-line-height-size-extra-small) !default;
+// 图标大小
+$tabbar-item-icon-size: var(--wot-tabbar-item-icon-size, $n-24) !default;
 
 @include b(tabbar-item) {
-  position: relative;
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+  height: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  flex-grow: 1;
-  flex-basis: 0;
-  padding: var(--wd-space-1) 0;
+  align-items: center;
 
-  @include e(icon) {
+  @include e(body) {
     display: flex;
-    flex-direction: row;
+    align-items: center;
+    flex-direction: column;
+    line-height: 1;
+    padding: 0;
+    position: relative;
+
+    // Lynx 适配：参考源的 :deep() 包裹在 Lynx 无 shadow DOM，直接写成
+    // 后代选择器（is-active / is-inactive 由模板下发到图标与文字上）
+    .is-active {
+      color: $tabbar-item-color-active;
+    }
+
+    .is-inactive {
+      color: $tabbar-item-color-inactive;
+    }
   }
 
-  @include e(icon-img) {
-    font-size: 24px;
+  @include e(body-title) {
+    font-size: $tabbar-item-title-font-size;
+    line-height: $tabbar-item-title-line-height;
   }
 
-  @include e(badge) {
-    display: flex;
-    flex-direction: row;
-  }
-
-  @include e(title) {
-    margin-top: 2px;
-    font-size: var(--wd-font-xs);
-  }
-
-  /* 激活态底部指示条（tabbar 的 activeLine 开启时渲染） */
-  @include e(active-line) {
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: 24px;
-    height: 3px;
-    border-radius: var(--wd-radius-full);
-    background-color: var(--wd-color-primary);
-  }
-
-  &:active {
-    opacity: 0.7;
+  @include edeep(body-icon) {
+    font-size: $tabbar-item-icon-size;
   }
 }

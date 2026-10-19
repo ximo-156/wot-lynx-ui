@@ -1,33 +1,58 @@
 /*
  * wd-watermark — 水印
  *
- * Lynx 实现说明：
- * - 平铺层由重复的水印单元组成（position: absolute 网格布局），
- *   文字/图片两种模式；pointer-events 不拦截交互；
- * - gutterX/gutterY 纳入单元宽高计算（单元占位 = 内容 + 间距）；
- * - 平铺行列数按容器尺寸动态计算：挂载后经 getRect 一次性度量容器
- *   （CONVENTIONS §16：不在热路径度量），度量不可用时回退常见屏幕
- *   尺寸（375×667）；props 变化时随 computed 重算。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点，核心为 canvas 平台降级）：
+ * - 参考源以 Canvas 2D（离屏 / 在屏 / H5 document.createElement 三条路径）
+ *   绘制单元水印后 canvasToTempFilePath 生成 dataURL，再由根节点
+ *   background-image + background-repeat 平铺；Lynx 引擎不提供 Canvas 2D
+ *   API（common/canvasHelper 为占位降级），故平铺改由图层内重复的真实
+ *   元素承担：文本模式渲染 text 元素、图片模式渲染原生 image 元素
+ *   （CONVENTIONS §8：图片用原生 image 元素，不用背景图/内嵌 SVG）；
+ * - 单元占位 = 内容 + gutter（width+gutterX / height+gutterY），与参考源
+ *   canvas 尺寸一致；layout=staggered 时奇数行右移半个单元宽度，等效于
+ *   参考源 2×2 离屏画布错位绘制的砖墙效果；
+ * - 参考源根节点为纯遮罩（absolute/fixed + inset 0 + pointer-events none），
+ *   无插槽；本地根节点同时承载插槽内容（存量结构，demo 依赖），故保持
+ *   position: relative 容器：全屏语义（参考源根 position: fixed）改由水印
+ *   图层在 is-fullscreen 下 position: fixed 承担（Lynx 的 fixed 节点会被
+ *   提升到页面根节点，天然覆盖整个视口，CONVENTIONS §9）；
+ * - 参考源 rootStyle 的 backgroundImage 依赖 canvas dataURL（Lynx 无），
+ *   opacity 若下发到根节点会同时淡化插槽内容（参考源根无插槽无此问题），
+ *   故 opacity 移至水印图层（图层 SCSS 以 --wot-watermark-opacity 兜底，
+ *   props.opacity 经内联覆盖，与参考源「SCSS 默认值 + prop 内联覆盖」
+ *   的两级结构一致）；backgroundSize / zIndex 仍按参考源下发到根节点；
+ * - 参考源的 pixelRatio 放大绘制为 canvas 位图清晰度服务，Lynx 文本/图片
+ *   由引擎按设备像素比渲染，无需该乘数；
+ * - 平铺行列数按图层尺寸一次性度量后缓存（getRect 经实例唯一 id 选择器，
+ *   避免同页多实例串台；度量失败回退常见屏幕尺寸 375×667），props 变化时
+ *   经 computed 重算网格，不走参考源的 doReset 重绘流程；
+ * - 平铺节点数钳制在 MAX_TILES 上限内（小单元 + 大容器时防止铺出数千
+ *   节点冻结渲染，见 test/perf-guards.test.ts）。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, onMounted, ref } from 'vue-lynx'
+import { computed, onMounted, ref } from 'vue-lynx'
 import { watermarkProps } from './types'
-import { getRect, parseStyle, filterStyle } from '../../common/util'
+import { addUnit, getRect, isDef, parseStyle, filterStyle, uuid } from '../../common/util'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(watermarkProps)
 const isAlive = useAlive()
-const { proxy } = getCurrentInstance() as any
+
+// 实例唯一 id 前缀：getRect 按 id 度量图层，同页多实例避免选择器串台
+const instanceId = `wd-watermark-${uuid()}`
 
 /** 容器尺寸（度量失败 / 未度量时回退常见手机屏幕尺寸） */
 const FALLBACK_WIDTH = 375
 const FALLBACK_HEIGHT = 667
 const containerSize = ref({ width: 0, height: 0 })
 
+/** 平铺节点总数上限：小尺寸水印 + 大容器（整页水印）时防止铺出数千节点 */
+const MAX_TILES = 1000
+
 onMounted(() => {
-  getRect('.wd-watermark', false, proxy).then((rect: any) => {
+  getRect(`#${instanceId}-layer`).then((rect: any) => {
     // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive()) return
     const width = Number(rect && rect.width) || 0
@@ -38,10 +63,33 @@ onMounted(() => {
   })
 })
 
-/** 平铺节点总数上限：小尺寸水印 + 大容器（整页水印）时防止铺出数千节点 */
-const MAX_TILES = 1000
+/**
+ * 水印css类
+ */
+const rootClass = computed(() => {
+  let classess: string = 'wd-watermark'
+  if (props.fullScreen) {
+    classess = `${classess} is-fullscreen`
+  }
+  return `${classess} ${props.customClass}`
+})
 
-/** 平铺网格：单元占位含 gutter，按容器尺寸算行列数铺满整个容器 */
+/**
+ * 水印样式
+ */
+const rootStyle = computed(() => {
+  let width = props.width + props.gutterX
+  if (props.layout === 'staggered') {
+    width *= 2
+  }
+  const style: Record<string, string> = {
+    backgroundSize: addUnit(width),
+    zIndex: `${props.zIndex}`
+  }
+  return { ...style, ...parseStyle(props.customStyle) }
+})
+
+/** 平铺网格：单元占位含 gutter，按图层尺寸算行列数铺满整个图层 */
 const tiles = computed(() => {
   const unitWidth = Math.max(props.width + props.gutterX, 1)
   const unitHeight = Math.max(props.height + props.gutterY, 1)
@@ -57,48 +105,57 @@ const tiles = computed(() => {
     cols = Math.max(1, Math.floor(cols * scale))
     rows = Math.max(1, Math.floor(rows * scale))
   }
-  const result: Array<{ col: number; row: number }> = []
+  const result: Array<{ style: Record<string, string> }> = []
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      result.push({ col: c, row: r })
+      const style: Record<string, string> = {
+        width: `${unitWidth}px`,
+        height: `${unitHeight}px`
+      }
+      // staggered：奇数行右移半个单元宽度（参考源 2×2 离屏画布错位绘制的等效铺贴）
+      if (props.layout === 'staggered' && r % 2 === 1) {
+        style.marginLeft = `${unitWidth / 2}px`
+      }
+      result.push({ style })
     }
   }
   return result
 })
 
-const unitStyle = computed(() => {
-  const style: Record<string, string> = {
-    width: `${props.width + props.gutterX}px`,
-    height: `${props.height + props.gutterY}px`
-  }
-  if (props.image) {
-    style['background-image'] = `url(${props.image})`
-    style['background-size'] = `${props.imageWidth}px ${props.imageHeight}px`
-  }
-  return filterStyle(style)
+/** 水印图层样式：opacity 由 prop 覆盖 SCSS 默认值（参考源的两级结构） */
+const layerStyle = computed(() => {
+  return filterStyle({ opacity: isDef(props.opacity) ? `${props.opacity}` : '' })
 })
 
+/** 图片水印样式（原生 image 元素，尺寸取 imageWidth / imageHeight） */
+const imageStyle = computed(() => {
+  return filterStyle({
+    width: addUnit(props.imageWidth),
+    height: addUnit(props.imageHeight)
+  })
+})
+
+/** 文本水印样式：字号 / 颜色 / 字体 / 旋转角度（参考源 canvas 绘制参数） */
 const textStyle = computed(() => {
-  return {
-    'font-size': `${props.fontSize}px`,
+  return filterStyle({
+    'font-size': addUnit(props.size),
     color: props.color,
-    opacity: String(props.opacity),
+    'font-style': props.fontStyle,
+    'font-weight': `${props.fontWeight}`,
+    'font-family': props.fontFamily,
+    'text-align': 'center',
     transform: `rotate(${props.rotate}deg)`
-  }
+  })
 })
 </script>
 
 <template>
-  <view :class="`wd-watermark ${customClass}`" :style="parseStyle(customStyle)">
+  <view :class="rootClass" :style="rootStyle">
     <slot />
-    <view class="wd-watermark__layer">
-      <view
-        v-for="(tile, index) in tiles"
-        :key="index"
-        class="wd-watermark__unit"
-        :style="unitStyle"
-      >
-        <text v-if="content && !image" class="wd-watermark__text" :style="textStyle">{{ content }}</text>
+    <view :id="`${instanceId}-layer`" class="wd-watermark__layer" :style="layerStyle">
+      <view v-for="(tile, index) in tiles" :key="index" class="wd-watermark__unit" :style="tile.style">
+        <image v-if="image" class="wd-watermark__image" :src="image" :style="imageStyle" />
+        <text v-else-if="content" class="wd-watermark__text" :style="textStyle">{{ content }}</text>
       </view>
     </view>
   </view>

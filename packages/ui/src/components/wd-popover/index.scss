@@ -1,71 +1,134 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 浮层背景色
+$popover-bg: var(--wot-popover-bg, $filled-oppo) !default;
+// 浮层文字颜色
+$popover-color: var(--wot-popover-color, $text-secondary) !default;
+// 浮层阴影
+$popover-box-shadow: var(--wot-popover-box-shadow, 0 12px 48px 16px rgba(39, 43, 59, 0.03), 0 9px 28px 8px rgba(39, 43, 59, 0.05), 0 5px 12px 4px rgba(39, 43, 59, 0.06)) !default;
+// 箭头阴影
+$popover-arrow-box-shadow: var(--wot-popover-arrow-box-shadow, 0 12px 48px 16px rgba(39, 43, 59, 0.03), 0 9px 28px 8px rgba(39, 43, 59, 0.05), 0 5px 12px 4px rgba(39, 43, 59, 0.06)) !default;
+// 浮层边框颜色
+$popover-border-color: var(--wot-popover-border-color, $border-main) !default;
+// 浮层圆角
+$popover-radius: var(--wot-popover-radius, $radius-main) !default;
+// 箭头尺寸
+$popover-arrow-size: var(--wot-popover-arrow-size, $n-8) !default;
+// 浮层字号
+$popover-font-size: var(--wot-popover-font-size, $typography-body-size-main) !default;
+// 浮层行高
+$popover-line-height: var(--wot-popover-line-height, $typography-body-line-height-size-main) !default;
+// 浮层内边距
+$popover-padding: var(--wot-popover-padding, $padding-loose) !default;
+// 浮层层级
+$popover-z-index: var(--wot-popover-z-index, 500) !default;
+// 关闭图标尺寸
+$popover-close-icon-size: var(--wot-popover-close-icon-size, $n-12) !default;
+// 关闭图标颜色
+$popover-close-icon-color: var(--wot-popover-close-icon-color, $icon-secondary) !default;
+// 关闭图标内边距
+$popover-close-icon-padding: var(--wot-popover-close-icon-padding, $padding-super-tight) !default;
+// 菜单图标大小
+$popover-menu-icon-size: var(--wot-popover-menu-icon-size, $n-18) !default;
+// 菜单图标右侧间距
+$popover-menu-icon-margin-right: var(--wot-popover-menu-icon-margin-right, $spacing-super-tight) !default;
 
 @include b(popover) {
   position: relative;
+  // Lynx 适配：wot-ui 为 inline-block（内容宽度自适应），Lynx 不识别
+  // inline-block，改为 display: flex + row（CONVENTIONS §15）
   display: flex;
   flex-direction: row;
 
-  @include e(pos) {
+  @include edeep(menu-icon) {
+    font-size: $popover-menu-icon-size;
+    margin-right: $popover-menu-icon-margin-right;
+  }
+
+  @include e(menu) {
+    position: relative;
+    // Lynx 适配：inline-block → flex + column（菜单项保持纵向排列）
+    display: flex;
+    flex-direction: column;
+    padding: $padding-zero $popover-padding;
+    white-space: nowrap;
+    background: $popover-bg;
+    border-radius: $popover-radius;
+  }
+
+  @include e(menu-inner) {
+    position: relative;
+    padding: $popover-padding $padding-zero;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    @include halfPixelBorder('top', 0, $popover-border-color);
+
+    // Lynx 适配：wot-ui 用 `:first-child::after` / `&.is-first::after` 隐藏首项
+    // 上边线（伪元素 + 伪类，Lynx 均无）；本地 halfPixelBorder 生成的是真实
+    // border，故用模板 v-for 索引下发的 is-first 类名做同等覆盖（PORTING §4.5）
+    @include when(first) {
+      border-top-width: 0;
+    }
+  }
+
+  @include e(text) {
+    // Lynx 适配：inline-block → flex + row
+    display: flex;
+    flex-direction: row;
+    color: $popover-color;
+    font-size: $popover-font-size;
+    line-height: $popover-line-height;
+  }
+
+  @include edeep(pos) {
     position: absolute;
-    z-index: 10;
+    box-sizing: border-box;
+    background-clip: padding-box;
+    text-align: center;
+    z-index: $popover-z-index;
   }
 
   @include e(hidden) {
-    position: absolute;
-    opacity: 0;
+    // Lynx 适配：wot-ui 用 left: -100vw 把度量副本移出视口，Lynx 视口单位
+    // 支持不确定，改用 -100%（相对定位包含块宽度的等价偏移；仅偏移不影响
+    // getRect 对宽高的度量）。visibility: hidden 保留布局盒供度量。
+    left: -100%;
+    visibility: hidden;
     pointer-events: none;
-    z-index: -1;
   }
 
   @include e(container) {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    min-width: 80px;
-    padding: var(--wd-space-3);
-    background-color: var(--wd-gray-9);
-    border-radius: var(--wd-radius-sm);
+    z-index: $popover-z-index;
+    box-shadow: $popover-box-shadow;
+    border-radius: $popover-radius;
+    background: $popover-bg;
   }
 
   @include e(inner) {
-    font-size: var(--wd-font-sm);
-    color: var(--wd-white);
+    position: relative;
+    white-space: nowrap;
+    padding: $popover-padding;
+    font-size: $popover-font-size;
+    line-height: $popover-line-height;
+    color: $popover-color;
   }
 
-  @include e(text) {
-    font-size: var(--wd-font-sm);
-    color: var(--wd-white);
+  @include edeep(close-icon) {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-size: $popover-close-icon-size;
+    padding: $popover-close-icon-padding;
+    color: $popover-close-icon-color;
   }
 
-  @include e(menu) {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-  }
+  @include triangleArrow($popover-arrow-size, $popover-bg);
 
-  @include e(menu-inner) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    padding: var(--wd-space-3) 0;
-
-    @include when(first) {
-      padding-top: 0;
-    }
-  }
-
-  @include e(icon) {
-    margin-right: var(--wd-space-1);
-    color: var(--wd-white);
-  }
-
-  /* 箭头四方向三角形：补全 up/down/left/right（此前只有 __arrow 基类、
-     无方向规则，width/height:0 + 透明边框 → 箭头完全不可见）。
-     triangleArrow  mixin 生成 __arrow / __arrow-up|down|left|right，
-     与 usePopover.init 下发的方向类名一致；颜色跟随气泡容器 --wd-gray-9。 */
-  @include triangleArrow(5px, var(--wd-gray-9));
-
-  /* 点击空白关闭的透明全屏 backdrop（fixed 提升至页面根，z-index 低于气泡与触发元素） */
+  // 点击空白关闭的透明全屏 backdrop（fixed 提升至页面根，z-index 低于气泡与触发元素）
   @include e(backdrop) {
     position: fixed;
     left: 0;
@@ -73,12 +136,5 @@
     top: 0;
     bottom: 0;
     z-index: 1;
-  }
-
-  @include e(target) {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    flex-direction: row;
   }
 }

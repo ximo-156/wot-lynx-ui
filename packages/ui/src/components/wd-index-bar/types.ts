@@ -1,12 +1,14 @@
 import type { ExtractPropTypes, InjectionKey } from 'vue-lynx'
-import { baseProps, makeBooleanProp } from '../../common/props'
+import { makeBooleanProp } from '../../common/props'
 
 export type AnchorIndex = number | string
 
 export type IndexBarProvide = {
   props: { sticky?: boolean }
-  /** 激活索引状态（提供 ref，注入侧自动解包） */
-  anchorState: { value: { activeIndex: AnchorIndex } }
+  /** 当前激活的索引（reactive 对象，注入侧直接读属性） */
+  anchorState: {
+    activeIndex: AnchorIndex | null
+  }
   /**
    * 本 index-bar 实例的唯一 id 前缀。anchor 的 DOM id 由
    * `${id}-anchor-${index}` 派生，与 index-bar 侧 scrollIntoViewById
@@ -19,9 +21,8 @@ export type IndexBarProvide = {
 export const indexBarInjectionKey: InjectionKey<IndexBarProvide> = Symbol('wd-index-bar')
 
 export const indexBarProps = {
-  ...baseProps,
   /**
-   * 是否吸顶
+   * @description 索引是否吸顶
    */
   sticky: makeBooleanProp(false)
 }

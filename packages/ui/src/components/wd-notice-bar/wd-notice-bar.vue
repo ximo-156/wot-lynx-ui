@@ -1,158 +1,127 @@
 /*
  * wd-notice-bar — 通知栏
  *
- * Lynx 实现说明：
- * - 纵向滚动（text 为数组）：定时切换索引 + fade 过渡；
- * - 横向滚动（单行超出、scrollable）：onMounted 用 getRect 一次性度量文本
- *   与容器宽度并缓存（CONVENTIONS §16），文本比容器宽时用定时器步进 +
- *   CSS transition 驱动 transform 位移，首尾往返（ping-pong）；
- * - 不可滚动 / 文本未超出时保持静态裁剪现状；
- * - 关闭经 @tap。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 参考源内容区 / 关闭图标绑 @click，Lynx view 不存在 click 事件（只派发
+ *   tap，CONVENTIONS §14 订正），均改绑 @tap；
+ * - 参考源 rootStyle / animation 以 objToStyle 拼字符串后下发，Lynx 的
+ *   patchProp 对 :style 只认对象（CONVENTIONS §19），改为对象语法：
+ *   根样式 filterStyle + parseStyle(customStyle) 合并；content 的过渡样式
+ *   由 transitionState（reactive，五键全集，Style Funnel §20）经 computed
+ *   快照下发，不存在条件缺键；
+ * - 参考源 stopTransition 以 CSS 宽关键字 unset 取消过渡（Lynx 支持不确定，
+ *   参照 wd-curtain 的处理先例），改为语义等价的中性值：transition-property
+ *   none + 0s 时长（视觉上等同于不设置）；
+ * - 参考源经 getRect(selector, false, proxy) 按组件实例作用域度量 wrap /
+ *   content；本地 getRect 的 scope 参数在 Lynx 下忽略（全局查询），多实例
+ *   会串台，故按实例唯一 id 选择器度量（模板 wrap / content 挂
+ *   ${instanceId}-wrap / ${instanceId}-content），度量仍只在挂载与文本变化
+ *   时进行（CONVENTIONS §16 热路径约束）；
+ * - 参考源的 uni-app onShow / onHide（页面显隐停表）与 APP-PLUS
+ *   getCurrentPages 条件编译块在 Lynx 无等价能力，已移除；异步回调
+ *   （getRect.then / animationEnd 的 setTimeout 续段）统一经 useAlive 守卫，
+ *   防止卸载后晚到 patch（真机 9902 removeNode 家族问题）；
+ * - 参考源纵向滚动以 view 承载裸文本、默认插槽回落亦为裸文本，Lynx 要求
+ *   文本包 text 元素（CONVENTIONS §4），均已包裹；
+ * - 参考源 options 块的 virtualHost / addGlobalClass / styleIsolation 为
+ *   uni-app 小程序专有能力，Lynx 无需声明，已移除。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue-lynx'
+import { ref, watch, nextTick, computed, reactive, onMounted } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
-import { noticeBarProps, type NoticeBarExpose } from './types'
-import { filterStyle, getRect, parseStyle, uuid } from '../../common/util'
+import { getRect, isArray, isDef, parseStyle, filterStyle, uuid, type CSSProperties } from '../../common/util'
+import { type NoticeBarExpose, noticeBarProps } from './types'
 import { useAlive } from '../../composables/useAlive'
 
-const props = defineProps(noticeBarProps)
-const emit = defineEmits(['click', 'close'])
-const isAlive = useAlive()
-
-const show = ref<boolean>(true)
-const currentIndex = ref<number>(0)
-
-// 实例唯一 id 前缀：getRect 按 id 度量，同页多实例避免选择器串台。
+// 实例唯一 id 前缀：getRect 按 id 度量，同页多实例避免选择器串台
 const instanceId = `wd-notice-bar-${uuid()}`
 
+const props = defineProps(noticeBarProps)
+const emit = defineEmits(['close', 'next', 'click'])
+const isAlive = useAlive()
+
+const wrapWidth = ref<number>(0)
+const show = ref<boolean>(true)
+const currentIndex = ref<number>(0)
 const textArray = computed(() => (Array.isArray(props.text) ? props.text : [props.text]))
-const isVertical = computed(() => props.direction === 'vertical' && textArray.value.length > 1)
-// 横向跑马灯仅用于：可滚动、不换行、非纵向 的单行文本。
-const canMarquee = computed(() => props.scrollable && !props.wrapable && !isVertical.value)
+const currentText = computed(() => textArray.value[currentIndex.value])
+const verticalIndex = ref<number>(0)
+const wrapRect = ref<any | null>(null) // 外层容器节点信息
+const contentRect = ref<any | null>(null) // 内容节点信息
+const isHorizontal = computed(() => props.direction === 'horizontal')
+const isVertical = computed(() => props.direction === 'vertical')
 
-// 横向滚动步进周期（ms）：与 contentStyle 的 transition 时长对齐，
-// 使定时器步进 + transition 补间形成连续位移（与纵向滚动同范式）。
-const MARQUEE_STEP_MS = 100
+const transitionState = reactive<CSSProperties>({
+  transitionProperty: 'none',
+  transitionDelay: '0s',
+  transitionDuration: '0s',
+  transform: 'none',
+  transitionTimingFunction: 'linear'
+})
 
-const marqueeOffset = ref<number>(0)
-const marqueeActive = ref<boolean>(false)
-let marqueeMax = 0
-let marqueeDir = 1
-let marqueeTimer: ReturnType<typeof setInterval> | null = null
-let marqueeDelayTimer: ReturnType<typeof setTimeout> | null = null
-
-let verticalTimer: ReturnType<typeof setInterval> | null = null
-
-function stopVerticalScroll() {
-  if (verticalTimer) {
-    clearInterval(verticalTimer)
-    verticalTimer = null
-  }
-}
-
-function startVerticalScroll() {
-  stopVerticalScroll()
-  verticalTimer = setInterval(() => {
-    currentIndex.value = (currentIndex.value + 1) % textArray.value.length
-  }, 2000)
-}
-
-function stopMarquee() {
-  if (marqueeTimer) {
-    clearInterval(marqueeTimer)
-    marqueeTimer = null
-  }
-  if (marqueeDelayTimer) {
-    clearTimeout(marqueeDelayTimer)
-    marqueeDelayTimer = null
-  }
-  marqueeActive.value = false
-  marqueeOffset.value = 0
-  marqueeDir = 1
-}
-
-function startMarquee() {
-  stopMarquee()
-  // delay（s）延迟后启动，避免文本一切换就立即滚动。
-  marqueeDelayTimer = setTimeout(() => {
-    marqueeDelayTimer = null
-    if (!isAlive()) return
-    marqueeActive.value = true
-    marqueeTimer = setInterval(() => {
-      const step = (props.speed * MARQUEE_STEP_MS) / 1000
-      let next = marqueeOffset.value + marqueeDir * step
-      if (next >= marqueeMax) {
-        next = marqueeMax
-        marqueeDir = -1
-      } else if (next <= 0) {
-        next = 0
-        marqueeDir = 1
-      }
-      marqueeOffset.value = next
-    }, MARQUEE_STEP_MS)
-  }, Math.max(0, props.delay) * 1000)
-}
-
-/** 一次性度量文本与容器宽度，文本超出时才启动跑马灯（CONVENTIONS §16） */
-function initMarquee() {
-  stopMarquee()
-  // 纵向定时器必须一并停止：watch 在 direction 由 vertical 切到 horizontal 时
-  // 走本函数，旧实现只 stopMarquee → 2s 间隔的纵向定时器继续改 currentIndex
-  // （污染 handleClick 上报的 index，且定时器常驻到组件卸载）。
-  stopVerticalScroll()
-  if (!canMarquee.value) return
-  Promise.all([getRect(`#${instanceId}-wrap`), getRect(`#${instanceId}-text`)]).then((rects) => {
-    if (!isAlive()) return
-    const wrapW = (rects[0] && rects[0].width) || 0
-    const textW = (rects[1] && rects[1].width) || 0
-    if (wrapW > 0 && textW > wrapW) {
-      marqueeMax = textW - wrapW
-      startMarquee()
-    }
-  })
-}
-
-const noticeBarClass = computed(() => {
-  const classes: string[] = []
-  if (isVertical.value) classes.push('wd-notice-bar--vertical')
-  if (props.wrapable) classes.push('is-wrapable')
-  // type 映射到 is-<type> 状态类（warning 为基类默认配色，仅 danger/info 需覆盖）
-  if (props.type && props.type !== 'warning') classes.push(`is-${props.type}`)
-  return classes.join(' ')
+const animation = computed(() => {
+  return { ...transitionState }
 })
 
 const rootStyle = computed(() => {
-  const style: Record<string, string> = {}
-  if (props.color) style.color = props.color
-  if (props.backgroundColor) style['background-color'] = props.backgroundColor
+  const style: CSSProperties = {}
+  if (isDef(props.color)) {
+    style.color = props.color
+  }
+
+  if (isDef(props.backgroundColor)) {
+    style.background = props.backgroundColor
+  }
+
   return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
+const noticeBarClass = computed(() => {
+  const { type, wrapable, scrollable } = props
 
-const contentClass = computed(() => {
-  return ['wd-notice-bar__content', canMarquee.value ? 'is-marquee' : ''].join(' ').trim()
+  let noticeBarClasses: string[] = []
+  type && noticeBarClasses.push(`is-${type}`)
+
+  if (isHorizontal.value) {
+    !wrapable && !scrollable && noticeBarClasses.push('wd-notice-bar--ellipse')
+  } else {
+    noticeBarClasses.push('wd-notice-bar--ellipse')
+  }
+
+  wrapable && !scrollable && noticeBarClasses.push('wd-notice-bar--wrap')
+  return noticeBarClasses.join(' ')
 })
 
-const contentStyle = computed<Record<string, string>>(() => {
-  if (isVertical.value) {
-    return {
-      transform: `translateY(-${currentIndex.value * 20}px)`,
-      transition: 'transform 0.3s ease'
-    } as Record<string, string>
-  }
-  if (marqueeActive.value) {
-    return {
-      transform: `translateX(-${marqueeOffset.value}px)`,
-      transition: `transform ${MARQUEE_STEP_MS}ms linear`
-    } as Record<string, string>
-  }
-  return {} as Record<string, string>
+watch(
+  () => props.text,
+  () => {
+    reset()
+  },
+  { deep: true }
+)
+
+onMounted(() => {
+  startTransition()
 })
 
-function handleClick() {
-  emit('click', { index: currentIndex.value })
+function reset() {
+  stopTransition()
+  startTransition()
+}
+
+function startTransition() {
+  nextTick(() => scroll())
+}
+
+function stopTransition() {
+  transitionState.transitionProperty = 'none'
+  transitionState.transitionDelay = '0s'
+  transitionState.transitionDuration = '0s'
+  transitionState.transform = 'none'
+  transitionState.transitionTimingFunction = 'linear'
+  currentIndex.value = 0
+  verticalIndex.value = 0
 }
 
 function handleClose() {
@@ -160,56 +129,142 @@ function handleClose() {
   emit('close')
 }
 
-function reset() {
-  currentIndex.value = 0
-  if (isVertical.value) startVerticalScroll()
-  else initMarquee()
+function setTransition({ duration, delay, translate }: { duration: number; delay: number; translate: number }) {
+  transitionState.transitionProperty = 'all'
+  transitionState.transitionDelay = `${delay}s`
+  transitionState.transitionDuration = `${duration}s`
+  transitionState.transform = `${props.direction === 'vertical' ? 'translateY' : 'translateX'}(${translate}px)`
+  transitionState.transitionTimingFunction = 'linear'
 }
 
-onMounted(() => {
-  if (isVertical.value) {
-    startVerticalScroll()
-  } else {
-    initMarquee()
-  }
-})
+function queryRect() {
+  return Promise.all([getRect(`#${instanceId}-wrap`), getRect(`#${instanceId}-content`)])
+}
 
-// 文本 / 滚动开关 / 方向变化时重新度量（非 touchmove 热路径，允许 getRect）。
-watch(
-  () => [props.text, props.scrollable, props.wrapable, props.direction],
-  () => {
-    if (isVertical.value) {
-      currentIndex.value = 0
-      startVerticalScroll()
-    } else {
-      initMarquee()
+async function verticalAnimate(height: number) {
+  const translate = -(height / (textArray.value.length + 1)) * (currentIndex.value + 1)
+  setTransition({
+    duration: height / (textArray.value.length + 1) / props.speed,
+    delay: props.delay,
+    translate
+  })
+}
+
+async function scroll() {
+  const [wRect, cRect] = await queryRect()
+  if (!isAlive()) return
+  if (!wRect.width || !cRect.width || !cRect.height) return
+  wrapRect.value = wRect
+  contentRect.value = cRect
+  wrapWidth.value = wRect.width
+
+  if (isHorizontal.value) {
+    if (props.scrollable) {
+      setTransition({
+        duration: cRect.width / props.speed,
+        delay: props.delay,
+        translate: -cRect.width
+      })
+    }
+  } else {
+    if (textArray.value.length > 1) {
+      verticalAnimate(cRect.height)
     }
   }
-)
+}
 
-onUnmounted(() => {
-  stopVerticalScroll()
-  stopMarquee()
-})
+function next() {
+  if (currentIndex.value >= textArray.value.length - 1) {
+    currentIndex.value = 0
+  } else {
+    currentIndex.value++
+  }
+  emit('next', currentIndex.value)
+}
+
+function animationEnd() {
+  if (isHorizontal.value) {
+    setTransition({
+      duration: 0,
+      delay: 0,
+      translate: wrapWidth.value + 1
+    })
+  } else {
+    if (++verticalIndex.value >= textArray.value.length) {
+      verticalIndex.value = 0
+      setTransition({
+        duration: 0,
+        delay: 0,
+        translate: 0
+      })
+    }
+  }
+
+  const timer = setTimeout(() => {
+    // Lynx 适配：卸载后不再写响应式状态 / 重新挂动画（晚到 patch 防护）
+    if (!isAlive()) return
+    next() // 更换下一条文本
+
+    nextTick(async () => {
+      try {
+        const [wRect, cRect] = await queryRect()
+        if (!isAlive()) return
+        wrapRect.value = wRect
+        contentRect.value = cRect
+        wrapWidth.value = wRect.width || 0
+      } catch (error) {
+        // console.error(error)
+      }
+
+      if (!isAlive()) return
+      if (!contentRect.value || !contentRect.value.width || !contentRect.value.height) return
+
+      if (isHorizontal.value) {
+        setTransition({
+          duration: (wrapWidth.value + contentRect.value.width) / props.speed,
+          delay: props.delay,
+          translate: -contentRect.value.width
+        })
+      } else {
+        verticalAnimate(contentRect.value.height)
+      }
+    })
+
+    clearTimeout(timer)
+  }, 20)
+}
+
+function handleClick() {
+  const result = isArray(props.text)
+    ? {
+        index: currentIndex.value,
+        text: props.text[currentIndex.value]
+      }
+    : {
+        index: 0,
+        text: props.text
+      }
+  emit('click', result)
+}
 
 defineExpose<NoticeBarExpose>({ reset })
 </script>
 
 <template>
   <view v-if="show" :class="`wd-notice-bar ${customClass} ${noticeBarClass}`" :style="rootStyle">
-    <wd-icon v-if="prefix" custom-class="wd-notice-bar__prefix" :name="prefix" />
-    <slot v-else name="prefix" />
+    <wd-icon v-if="prefix" custom-class="wd-notice-bar__prefix" :name="prefix"></wd-icon>
+    <slot v-else name="prefix"></slot>
     <view class="wd-notice-bar__wrap" :id="`${instanceId}-wrap`">
-      <view :class="contentClass" :style="contentStyle" @tap="handleClick">
+      <view class="wd-notice-bar__content" :id="`${instanceId}-content`" :style="animation" @transitionend="animationEnd" @tap="handleClick">
         <template v-if="isVertical">
-          <view v-for="(item, index) in textArray" :key="index" class="wd-notice-bar__line">
-            <text class="wd-notice-bar__text">{{ item }}</text>
-          </view>
+          <view v-for="item in textArray" :key="item"><text>{{ item }}</text></view>
+          <view v-if="textArray.length > 1"><text>{{ textArray[0] }}</text></view>
         </template>
-        <text v-else-if="wrapable" class="wd-notice-bar__text">{{ text }}</text>
-        <text v-else class="wd-notice-bar__text" :id="`${instanceId}-text`">{{ text }}</text>
+        <slot v-else><text>{{ currentText }}</text></slot>
       </view>
     </view>
-    <wd-icon v-if="closable" custom-class="wd-notice-bar__close" name="close" @tap="handleClose" />
+    <slot name="suffix">
+      <wd-icon v-if="closable" custom-class="wd-notice-bar__suffix" name="close" @tap="handleClose"></wd-icon>
+    </slot>
   </view>
 </template>

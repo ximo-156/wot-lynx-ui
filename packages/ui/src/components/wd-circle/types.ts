@@ -1,36 +1,36 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
-import { PURPLE } from '../../common/theme'
 
-export type CircleColor = string | Record<string, string | number>
+// 进度条端点的形状，可选值为 "butt" | "round" | "square"
+export type StrokeLinecapType = 'butt' | 'round' | 'square'
 
 export const circleProps = {
   ...baseProps,
   /**
-   * 当前值（百分比）
+   * 当前进度
    */
   modelValue: makeNumberProp(0),
   /**
-   * 尺寸（px）
+   * 圆环直径，默认单位为 px
    */
   size: makeNumberProp(120),
   /**
-   * 进度颜色（对象时为 { 0: color, 100: color } 渐变配置）
+   * 进度条颜色，传入对象格式可以定义渐变色
    */
   color: {
-    type: [String, Object] as PropType<CircleColor>,
-    default: PURPLE[6]
+    type: [String, Object] as PropType<string | Record<string, string>>,
+    default: '#1C64FD'
   },
   /**
    * 轨道颜色
    */
-  layerColor: makeStringProp('#E4E7ED'),
+  layerColor: makeStringProp('#F2F3F5'),
   /**
-   * 填充色
+   * 填充颜色
    */
   fill: String,
   /**
-   * 动画速度（越大越慢）
+   * 动画速度（单位为 rate/s）
    */
   speed: makeNumberProp(50),
   /**
@@ -38,13 +38,17 @@ export const circleProps = {
    */
   text: String,
   /**
-   * 笔画宽度
+   * 进度条宽度 单位px
    */
   strokeWidth: makeNumberProp(18),
   /**
-   * 是否为逆时针
+   * 进度条端点的形状，可选值为 "butt" | "round" | "square"
    */
-  counterClockwise: makeBooleanProp(false)
+  strokeLinecap: makeStringProp<StrokeLinecapType>('round'),
+  /**
+   * 是否顺时针增加
+   */
+  clockwise: makeBooleanProp(true)
 }
 
 export type CircleProps = ExtractPropTypes<typeof circleProps>

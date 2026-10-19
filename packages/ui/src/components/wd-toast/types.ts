@@ -1,10 +1,13 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
-import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
+import { baseProps, makeStringProp } from '../../common/props'
 import type { LoadingType } from '../wd-loading/types'
 
 export type ToastIconType = 'success' | 'error' | 'warning' | 'loading' | 'info' // 图标类型
+
 export type ToastPositionType = 'top' | 'middle-top' | 'middle' | 'bottom' // 提示信息框的位置类型
+
 export type ToastDirection = 'vertical' | 'horizontal' // 提示信息框的排列方向
+
 export type ToastLoadingType = LoadingType // 提示信息加载状态类型
 
 export type ToastOptions = {
@@ -66,74 +69,121 @@ export interface Toast {
 export const toastProps = {
   ...baseProps,
   /**
-   * 选择器，用于区分多个 toast 实例
+   * 选择器
+   * @type {string}
+   * @default ''
    */
   selector: makeStringProp(''),
   /**
-   * 消息内容
+   * 提示信息
+   * @type {string}
+   * @default ''
    */
-  msg: makeStringProp(''),
+  msg: {
+    type: String,
+    default: ''
+  },
   /**
    * 排列方向
+   * @type {'vertical' | 'horizontal'}
+   * @default 'horizontal'
    */
   direction: makeStringProp<ToastDirection>('horizontal'),
   /**
-   * 图标类型
+   * 图标名称
+   * @type {'success' | 'error' | 'warning' | 'loading' | 'info'}
+   * @default ''
    */
-  iconName: makeStringProp<ToastIconType | ''>(''),
+  iconName: {
+    type: String as PropType<ToastIconType>,
+    default: ''
+  },
   /**
    * 图标大小
+   * @type {number}
    */
   iconSize: Number,
   /**
    * 加载类型
+   * @type {'circular' | 'spinner' | 'dots'}
+   * @default 'circular'
    */
   loadingType: makeStringProp<ToastLoadingType>('circular'),
   /**
    * 加载颜色
+   * @type {string}
+   * @default '#ffffff'
    */
-  loadingColor: makeStringProp('#ffffff'),
+  loadingColor: {
+    type: String,
+    default: '#ffffff'
+  },
   /**
    * 加载大小
+   * @type {number}
    */
   loadingSize: Number,
   /**
    * 图标颜色
+   * @type {string}
    */
   iconColor: String,
   /**
    * 位置
+   * @type {'top' | 'middle-top' | 'middle' | 'bottom'}
+   * @default 'middle'
    */
   position: makeStringProp<ToastPositionType>('middle'),
   /**
    * 层级
+   * @type {number}
+   * @default 100
    */
-  zIndex: makeNumberProp(100),
+  zIndex: {
+    type: Number,
+    default: 100
+  },
   /**
    * 是否存在遮罩层
+   * @type {boolean}
+   * @default false
    */
-  cover: makeBooleanProp(false),
+  cover: {
+    type: Boolean,
+    default: false
+  },
   /**
    * 图标类名
+   * @type {string}
+   * @default ''
    */
-  iconClass: makeStringProp(''),
+  iconClass: {
+    type: String,
+    default: ''
+  },
   /**
-   * 图标类名前缀
+   * 类名前缀，用于使用自定义图标，用法参考 Icon 组件
+   * @type {string}
+   * @default 'wd-icon'
    */
   classPrefix: makeStringProp('wd-icon'),
   /**
-   * CSS 图标
+   * CSS 图标，用法参考 Icon 组件
+   * @type {boolean | string}
+   * @default false
    */
   cssIcon: {
     type: [Boolean, String],
     default: false
   },
   /**
-   * 完全展示后的回调
+   * 完全展示后的回调函数
+   * @type {Function}
    */
   opened: Function as PropType<() => void>,
   /**
-   * 完全关闭时的回调
+   * 完全关闭时的回调函数
+   * @type {Function}
    */
   closed: Function as PropType<() => void>
 }

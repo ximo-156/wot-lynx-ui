@@ -1,48 +1,84 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
-import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
+import { baseProps, makeBooleanProp, makeNumberProp } from '../../common/props'
 
+/**
+ * 进度条状态
+ * 可选值: 'success' | 'danger' | 'warning'
+ */
 export type ProgressStatus = 'success' | 'danger' | 'warning'
 
-export type ProgressPercentPosition = {
-  type?: 'inner' | 'outer'
+/**
+ * 进度条颜色对象
+ */
+export type ProgressColor = {
+  /**
+   * 颜色
+   * 类型: string
+   */
+  color: string
+  /**
+   * 百分比
+   * 类型: number
+   */
+  percentage: number
+}
+
+/**
+ * 百分比显示位置和对齐方式配置
+ */
+export type PercentPosition = {
+  /**
+   * 文本对齐方式
+   * 可选值: 'left' | 'center' | 'right'
+   */
   align?: 'left' | 'center' | 'right'
+  /**
+   * 文本在进度条内部还是外部
+   * 可选值: 'inner' | 'outer'
+   */
+  type?: 'inner' | 'outer'
 }
 
 export const progressProps = {
   ...baseProps,
   /**
-   * 百分比（0-100）
+   * 进度条颜色，如果为 string 类型，那么整个进度条都为该颜色；如果为 array 类型，那么进度条随进度变化而改变状态色。
+   * 类型: string | string[] | ProgressColor[]
+   */
+  color: {
+    type: [String, Array] as PropType<string | string[] | ProgressColor[]>
+  },
+  /**
+   * 进度增加1%所需毫秒数
+   * 类型: number
+   * 默认值: 30
+   */
+  duration: makeNumberProp(30),
+  /**
+   * 进度数值，最大值100
+   * 类型: number
+   * 默认值: 0
    */
   percentage: makeNumberProp(0),
   /**
-   * 进度条颜色（对象时为 { left, right } 渐变）
-   */
-  color: {
-    type: [String, Object] as PropType<string | { left: string; right: string }>,
-    default: ''
-  },
-  /**
-   * 轨道颜色
-   */
-  trackColor: makeStringProp(''),
-  /**
-   * 进度条宽度
-   */
-  strokeWidth: makeNumberProp(6),
-  /**
-   * 是否显示文字
+   * 是否隐藏进度条上的文字
+   * 类型: boolean
+   * 默认值: false
    */
   hideText: makeBooleanProp(false),
   /**
-   * 状态
+   * 进度条状态。
+   * 可选值: 'danger' | 'success' | 'warning'
    */
   status: String as PropType<ProgressStatus>,
   /**
-   * 文字位置
+   * 百分比位置配置信息。
+   * 类型: PercentPosition
+   * 默认值: { align: 'right', type: 'outer' }
    */
   percentPosition: {
-    type: Object as PropType<ProgressPercentPosition>,
-    default: () => ({})
+    type: Object as PropType<PercentPosition>,
+    default: () => ({ align: 'right', type: 'outer' })
   }
 }
 

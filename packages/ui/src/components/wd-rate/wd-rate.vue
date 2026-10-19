@@ -2,8 +2,9 @@
  * wd-rate — 评分
  *
  * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
- * - 星星经 wd-icon 渲染；wot-ui 默认图标为 star-fill，内置 iconfont 集无该
- *   字形，改用同语义的 favorite-filling（实心星）；
+ * - 星星经 wd-icon 渲染；wot-ui 默认图标 star-fill 在本地 iconfont 集中无
+ *   对应字形，解析不到时回退到同语义的 favorite-filling（实心星），
+ *   props 默认值仍保持 'star-fill' 与参考源一致；
  * - wot-ui 用 `-webkit-background-clip: text` + `background`（渐变）给字体
  *   图标上色，Lynx 不支持该属性且不支持 conic/linear 渐变文字，改为普通
  *   `color`（activeColor 传渐变串时由浏览器/引擎忽略，取纯色场景）；
@@ -24,6 +25,7 @@ import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { rateProps } from './types'
 import { addUnit, getRect, isDef, parseStyle } from '../../common/util'
+import { resolveIcon } from '../../icons/registry'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useAlive } from '../../composables/useAlive'
 
@@ -32,6 +34,18 @@ const emit = defineEmits(['update:modelValue', 'change', 'touchmove'])
 const isDisabled = useFormDisabled(props)
 const isAlive = useAlive()
 const { proxy } = getCurrentInstance() as any
+
+/**
+ * wot-ui 默认图标 star-fill 在本地 iconfont 集中无对应字形，
+ * 解析不到时回退到同语义的 favorite-filling（实心星）。
+ * css-icon 模式下 name 是 CSS 类名而非注册表名字，不做回退。
+ */
+const ICON_FALLBACK = 'favorite-filling'
+
+function resolveIconName(name: string): string {
+  if (!name || props.cssIcon) return name
+  return resolveIcon(name) ? name : ICON_FALLBACK
+}
 
 const rateList = ref<Array<string>>([])
 
@@ -203,7 +217,7 @@ async function onTouchMove(event: any) {
     <view v-for="(rate, index) in rateList" :key="index" class="wd-rate__item" :style="itemStyle(index)">
       <wd-icon
         :custom-class="`wd-rate__item-star ${rate === '100%' ? 'wd-rate__item-star--active' : ''}`"
-        :name="isActive(rate) ? activeIcon : icon"
+        :name="resolveIconName(isActive(rate) ? activeIcon : icon)"
         :class-prefix="iconPrefix"
         :css-icon="cssIcon"
         :custom-style="`${rate === '100%' ? iconActiveStyle : iconStyle} ${iconSize}`"
@@ -212,7 +226,7 @@ async function onTouchMove(event: any) {
       <view v-if="allowHalf" class="wd-rate__item-half" @tap.stop="handleClick(index, true)">
         <wd-icon
           :custom-class="`wd-rate__item-star ${rate !== '0' ? 'wd-rate__item-star--active' : ''}`"
-          :name="isActive(rate) ? activeIcon : icon"
+          :name="resolveIconName(isActive(rate) ? activeIcon : icon)"
           :class-prefix="iconPrefix"
           :css-icon="cssIcon"
           :custom-style="`${rate !== '0' ? iconActiveStyle : iconStyle} ${iconSize}`"

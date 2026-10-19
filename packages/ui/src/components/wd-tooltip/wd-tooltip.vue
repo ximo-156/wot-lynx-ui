@@ -1,132 +1,172 @@
 /*
  * wd-tooltip — 文字提示
  *
- * Lynx 实现说明：经 usePopover 计算定位；与 popover 的区别是
- * 内容为纯文本且不可交互（pointer-events 控制）。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 事件映射：@click → @tap（CONVENTIONS §6，Lynx view 不派发 click）；
+ *   根 view 绑 @tap.stop 阻止冒泡，故 emits 声明 'tap' 并在 toggle 中转发
+ *   （CONVENTIONS §14：消费方在组件上绑 @tap 不会与根元素监听合并崩溃）。
+ * - 文本一律包在 text 元素中；customStyle 经 parseStyle 归一为对象语法
+ *   （CONVENTIONS §19：字符串 :style 会被 vue-lynx 静默丢弃）。
+ * - 定位样式：usePopover 返回的 popStyle / arrowStyle 为对象语法。
+ * - 节点 id：wot-ui 用静态 id（tooltip/pos/content/target），同页多实例会撞
+ *   Lynx 引擎 id 注册表；这里改用 usePopover.ids 的实例唯一 id。
+ * - 点击空白关闭：wot-ui 依赖页面根元素的 closeOutside（useQueue 模式），
+ *   Lynx 无对应全局点击链路，降级为自包含的全屏透明 backdrop 捕获气泡外
+ *   tap；useQueue / clickoutside 队列逻辑保留（打开时关闭其它气泡）。
+ * - showStyle 为 wot-ui 遗留状态（模板未消费），此处按对象语法同步赋值以
+ *   保持脚本逐段对齐。
  */
 <script lang="ts" setup>
 import './index.css'
-import { parseStyle } from '../../common/util'
 
-import { computed, onMounted, ref, useSlots, watch } from 'vue-lynx'
+import { getCurrentInstance, inject, onBeforeMount, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import { tooltipProps, type TooltipExpose } from './types'
 import { usePopover } from '../../composables/usePopover'
+import { closeOther, pushToQueue, removeFromQueue } from '../../common/clickoutside'
+import { type Queue, queueKey } from '../../composables/useQueue'
+import { parseStyle } from '../../common/util'
 
 const props = defineProps(tooltipProps)
-const emit = defineEmits(['change', 'update:modelValue', 'tap'])
+const emit = defineEmits(['update:modelValue', 'menuclick', 'change', 'open', 'close', 'tap'])
 
 const slots = useSlots()
-const showTooltip = ref<boolean>(false)
-
 const popover = usePopover(props.visibleArrow)
+const queue = inject<Queue | null>(queueKey, null)
+const selector: string = 'tooltip'
+const { proxy } = getCurrentInstance() as any
+const showTooltip = ref<boolean>(false) // 控制tooltip显隐
 
-/** wot-ui 位置名 → floating-ui 位置名（usePopover 约定） */
-function toFloatingPlacement(placement: string): any {
-  const map: Record<string, string> = {
-    top: 'top',
-    'top-left': 'top-start',
-    'top-right': 'top-end',
-    bottom: 'bottom',
-    'bottom-left': 'bottom-start',
-    'bottom-right': 'bottom-end',
-    left: 'left',
-    'left-top': 'left-start',
-    'left-bottom': 'left-end',
-    right: 'right',
-    'right-top': 'right-start',
-    'right-bottom': 'right-end'
-  }
-  return map[placement] || placement
-}
-
-
-// 按 placement/offset 初始化与更新定位。
-// 第三个参数为 BEM 类名前缀（tooltip），节点度量走 usePopover 生成的实例唯一 id
-// （静态 id 在同页多实例下会撞引擎 id 注册表，见 usePopover.ids 注释）。
-//
-// ① 初始化定位移到 onMounted：setup 同步执行时目标节点尚未渲染，getRect 取不到
-//    尺寸（width/height=0），此前在 setup 里同步算一次导致定位恒为 0 且之后无重算。
-const placement = computed(() => toFloatingPlacement(props.placement))
-
-function controlPosition() {
-  popover.control(placement.value, props.offset as any)
-}
-
-/** 重新度量目标/气泡尺寸并重算定位 */
-function refreshPosition() {
-  popover.init(placement.value, props.visibleArrow, 'tooltip')
-  controlPosition()
-}
-
-onMounted(() => {
-  refreshPosition()
-})
-
-// ② / ⑥ 打开时重新定位：normal 模式下隐藏副本与真实内容同尺寸，updatePosition
-//    的尺寸比对不会触发重算，故打开时显式 control 一次强制重算。
-watch(showTooltip, (val) => {
-  if (val) {
-    refreshPosition()
-  }
-})
-
-// ③ placement 变化时重新定位。
 watch(
-  () => props.placement,
-  () => {
-    controlPosition()
+  () => props.content,
+  (newVal) => {
+    if (newVal === null || newVal === undefined) {
+      console.error('[wot-design] warning(wd-tooltip): content can\'t be null or undefined')
+    }
   }
 )
 
+watch(
+  () => props.placement,
+  () => {
+    popover.init(props.placement, props.visibleArrow, selector)
+  }
+)
+
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    showTooltip.value = newValue
+  }
+)
+
+watch(
+  () => showTooltip.value,
+  (newValue) => {
+    if (newValue) {
+      popover.control(props.placement, props.offset)
+      if (queue && queue.closeOther) {
+        queue.closeOther(proxy)
+      } else {
+        closeOther(proxy)
+      }
+    }
+    // wot-ui 此处为字符串（display: inline-block;），本地 showStyle 为对象语法
+    popover.showStyle.value = newValue ? { display: 'inline-block' } : { display: 'none' }
+    emit('change', { show: newValue })
+    emit(`${newValue ? 'open' : 'close'}`)
+  }
+)
+
+onMounted(() => {
+  popover.init(props.placement, props.visibleArrow, selector)
+})
+
+onBeforeMount(() => {
+  if (queue && queue.pushToQueue) {
+    queue.pushToQueue(proxy)
+  } else {
+    pushToQueue(proxy)
+  }
+  popover.showStyle.value = props.modelValue ? { display: 'inline-block' } : { display: 'none' }
+})
+
+onBeforeUnmount(() => {
+  if (queue && queue.removeFromQueue) {
+    queue.removeFromQueue(proxy)
+  } else {
+    removeFromQueue(proxy)
+  }
+})
+
+/**
+ * 切换 tooltip 的显示状态
+ */
 function toggle() {
   if (props.disabled) return
-  showTooltip.value = !showTooltip.value
-  emit('update:modelValue', showTooltip.value)
-  emit('change', { show: showTooltip.value })
+  updateModelValue(!showTooltip.value)
+  // CONVENTIONS §14：根 view 原生事件名声明为 emit 并转发
   emit('tap')
 }
 
+/**
+ * 打开 tooltip
+ */
 function open() {
-  showTooltip.value = true
-  emit('update:modelValue', true)
+  updateModelValue(true)
 }
 
+/**
+ * 关闭 tooltip
+ */
 function close() {
-  showTooltip.value = false
-  emit('update:modelValue', false)
+  updateModelValue(false)
 }
 
-function updatePosition() {
-  popover.updatePosition(toFloatingPlacement(props.placement), props.offset as any)
+/**
+ * 过渡动画完成后重新测量弹出层尺寸并更新定位
+ */
+function handleAfterEnter() {
+  popover.updatePosition(props.placement, props.offset)
 }
+
+/**
+ * 更新 tooltip 显示状态
+ * @param {boolean} value 显示状态
+ */
+function updateModelValue(value: boolean) {
+  showTooltip.value = value
+  emit('update:modelValue', value)
+}
+
+/** 根 view 的 @tap.stop 占位（仅阻止冒泡，行为对齐 wot-ui 的 @click.stop） */
+function noop() {}
 
 defineExpose<TooltipExpose>({
   open,
   close,
-  updatePosition
+  updatePosition: () => popover.updatePosition(props.placement, props.offset)
 })
 </script>
 
 <template>
-  <view :class="`wd-tooltip ${customClass}`" :style="parseStyle(customStyle)" :id="popover.ids.root" @tap.stop="toggle">
+  <view :class="`wd-tooltip ${customClass}`" :style="parseStyle(customStyle)" :id="popover.ids.root" @tap.stop="noop">
     <view class="wd-tooltip__pos wd-tooltip__hidden" :id="popover.ids.pos">
       <view :class="`wd-tooltip__container ${customPop}`">
-        <view v-if="!slots.content" class="wd-tooltip__inner">
-          <text>{{ content }}</text>
-        </view>
+        <view v-if="!slots.content" class="wd-tooltip__inner"><text>{{ content }}</text></view>
       </view>
     </view>
-    <!-- ⑤ 点击空白关闭：透明全屏 backdrop 捕获气泡外 tap -->
+    <!-- 点击空白关闭：透明全屏 backdrop 捕获气泡外 tap（Lynx 无全局 click，
+         module 级 clickoutside/useQueue 队列未接全局监听，故用自包含 backdrop） -->
     <view v-if="showTooltip" class="wd-tooltip__backdrop" @tap.stop="close" />
-    <wd-transition
+    <WdTransition
       custom-class="wd-tooltip__pos"
       :custom-style="popover.popStyle.value"
       :show="showTooltip"
       name="fade"
       :duration="200"
-      @after-enter="updatePosition()"
+      @after-enter="handleAfterEnter"
     >
       <view :class="`wd-tooltip__container ${customPop}`" :id="popover.ids.content">
         <view
@@ -135,14 +175,12 @@ defineExpose<TooltipExpose>({
           :style="popover.arrowStyle.value"
         />
         <slot name="content">
-          <view class="wd-tooltip__inner">
-            <text>{{ content }}</text>
-          </view>
+          <view class="wd-tooltip__inner"><text>{{ content }}</text></view>
         </slot>
-        <wd-icon v-if="showClose" name="close" custom-class="wd-tooltip__close-icon" @tap.stop="close" />
+        <WdIcon v-if="showClose" name="close" custom-class="wd-tooltip__close-icon" @tap="toggle" />
       </view>
-    </wd-transition>
-    <view class="wd-tooltip__target" :id="popover.ids.target">
+    </WdTransition>
+    <view class="wd-tooltip__target" :id="popover.ids.target" @tap="toggle">
       <slot />
     </view>
   </view>

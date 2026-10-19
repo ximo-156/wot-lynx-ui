@@ -1,22 +1,30 @@
-import type { ExtractPropTypes } from 'vue-lynx'
-import { baseProps, makeBooleanProp, makeNumberProp, makeRequiredProp, makeStringProp } from '../../common/props'
+import type { ComponentPublicInstance, ExtractPropTypes } from 'vue-lynx'
+import { baseProps, makeBooleanProp, makeRequiredProp, makeStringProp } from '../../common/props'
 
 export const countDownProps = {
   ...baseProps,
   /**
-   * 倒计时时长（ms）
+   * 倒计时时长
+   * 类型: number
+   * 默认值: 0
    */
   time: makeRequiredProp(Number),
   /**
-   * 是否显示毫秒
+   * 是否开启毫秒
+   * 类型: boolean
+   * 默认值: false
    */
   millisecond: makeBooleanProp(false),
   /**
-   * 时间格式
+   * 格式化时间
+   * 类型: string
+   * 默认值: HH:mm:ss
    */
   format: makeStringProp('HH:mm:ss'),
   /**
    * 是否自动开始
+   * 类型: boolean
+   * 默认值: true
    */
   autoStart: makeBooleanProp(true)
 }
@@ -24,7 +32,18 @@ export const countDownProps = {
 export type CountDownProps = ExtractPropTypes<typeof countDownProps>
 
 export type CountDownExpose = {
+  /**
+   * 开始倒计时
+   */
   start: () => void
+  /**
+   * 暂停倒计时
+   */
   pause: () => void
+  /**
+   * 重设倒计时，若 auto-start 为 true，重设后会自动开始倒计时
+   */
   reset: () => void
 }
+
+export type CountDownInstance = ComponentPublicInstance<CountDownProps, CountDownExpose>

@@ -1,57 +1,111 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 层级
+$tour-z-index: var(--wot-tour-z-index, 999) !default;
+// 动画时长
+$tour-animation-duration: var(--wot-tour-animation-duration, 0.3s) !default;
+// 高亮动画时间函数
+$tour-highlight-animation-timing: var(--wot-tour-highlight-animation-timing, ease-in-out) !default;
+// 高亮区域阴影颜色
+$tour-highlight-shadow-color: var(--wot-tour-highlight-shadow-color, $opac-7_55) !default;
+// 弹层层级
+$tour-popover-z-index: var(--wot-tour-popover-z-index, 1000) !default;
+// 弹层最大宽度
+$tour-popover-max-width: var(--wot-tour-popover-max-width, calc($n-1 * 340)) !default;
+// 弹层最小宽度
+$tour-popover-min-width: var(--wot-tour-popover-min-width, calc($n-1 * 200)) !default;
+// 弹层背景色
+$tour-popover-bg: var(--wot-tour-popover-bg, $filled-oppo) !default;
+// 弹层内边距
+$tour-popover-padding: var(--wot-tour-popover-padding, $padding-loose) !default;
+// 弹层圆角
+$tour-popover-radius: var(--wot-tour-popover-radius, $radius-main) !default;
+// 信息框字号
+$tour-info-font-size: var(--wot-tour-info-font-size, $typography-body-size-main) !default;
+// 信息框行高
+$tour-info-line-height: var(--wot-tour-info-line-height, $typography-body-line-height-size-main) !default;
+// 信息框文字颜色
+$tour-info-color: var(--wot-tour-info-color, $text-main) !default;
+// 操作区域上边距
+$tour-buttons-margin-top: var(--wot-tour-buttons-margin-top, $spacing-tight) !default;
 
 @include b(tour) {
   position: fixed;
-  left: 0;
-  right: 0;
   top: 0;
   bottom: 0;
-  z-index: 1000;
+  left: 0;
+  right: 0;
+  z-index: $tour-z-index;
 
-  /* 高亮框：position / 宽高 / 圆角由内联样式（度量目标元素）驱动；
-     遮罩经 box-shadow spread 形成（见 wd-tour.vue），此处仅描边。 */
+  @include e(mask) {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
   @include e(highlight) {
-    position: absolute;
-    box-sizing: border-box;
-    border-width: 2px;
-    border-style: solid;
-    border-color: var(--wd-color-primary);
+    position: fixed;
+    background: transparent;
+    box-sizing: content-box;
+    animation: tour-show $tour-animation-duration $tour-highlight-animation-timing;
+    top: 0;
+    left: 0;
+    // Lynx 适配：参考源 width: 100vw 为度量前的初始宽度；Lynx 对视口单位
+    // 支持不确定，但该值随后即被内联度量样式覆盖，保留参考源声明
+    width: 100vw;
+    height: 0;
+    border-radius: 0;
+    padding: 0;
+
+    // 蒙版：高亮框透明 + 超大 spread 的 box-shadow 在四周形成遮罩
+    // （Lynx 3.x CSS 引擎属性表含 box-shadow，可渲染）
+    @include m(mask) {
+      box-shadow: 0 0 0 100vh $tour-highlight-shadow-color;
+    }
   }
 
-  /* 提示气泡：left / top / width 由内联样式驱动，不再写死 */
-  @include e(bubble) {
-    position: absolute;
-    padding: var(--wd-space-3);
-    background-color: var(--wd-bg-elevated);
-    border-radius: var(--wd-radius-lg);
+  @include e(popover) {
+    z-index: $tour-popover-z-index;
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: $tour-popover-max-width;
+    text-align: center;
+    transition: $tour-animation-duration all;
+    background-color: $tour-popover-bg;
+    padding: $tour-popover-padding;
+    border-radius: $tour-popover-radius;
+    width: fit-content;
+    min-width: $tour-popover-min-width;
   }
 
-  @include e(title) {
-    margin-bottom: var(--wd-space-2);
+  @include e(info) {
+    font-size: $tour-info-font-size;
+    line-height: $tour-info-line-height;
+    color: $tour-info-color;
+    width: fit-content;
+    text-align: left;
+    word-break: break-all;
   }
 
-  @include e(content) {
-    font-size: var(--wd-font-md);
-    color: var(--wd-text-2);
-    line-height: 22px;
-  }
-
-  @include e(footer) {
+  @include e(buttons) {
     display: flex;
     flex-direction: row;
+    justify-content: flex-end;
     align-items: center;
-    justify-content: space-between;
-    margin-top: var(--wd-space-2);
+    margin-top: $tour-buttons-margin-top;
+  }
+}
+
+@keyframes tour-show {
+  0% {
+    opacity: 0;
   }
 
-  @include e(skip) {
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-4);
-  }
-
-  @include e(actions) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
+  100% {
+    opacity: 1;
   }
 }

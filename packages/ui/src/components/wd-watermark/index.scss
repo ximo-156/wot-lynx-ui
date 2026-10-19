@@ -1,8 +1,35 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
 
+// 水印透明度
+$watermark-opacity: var(--wot-watermark-opacity, $opacity-dimmer) !default;
+
+/* Lynx 适配：参考源根节点为纯遮罩（position: absolute / is-fullscreen 时
+   fixed + inset 0 + pointer-events: none + background-repeat: repeat），
+   由 canvas 生成的 dataURL 背景平铺；Lynx 无 Canvas 2D（平台降级），且本地
+   根节点同时承载插槽内容，故根保持 relative 容器，平铺由水印图层内的真实
+   元素重复渲染承担（见 wd-watermark.vue 文件头）。全屏语义（参考源根的
+   position: fixed）改由图层在 is-fullscreen 下承担。
+   根节点保留与容器结构兼容的参考源声明（z-index / inset / background-repeat，
+   relative 定位下均无视觉副作用）；opacity 移至图层（根节点淡化会波及插槽
+   内容，参考源根无插槽无此问题）；position: absolute → relative 即平台降级点。 */
 @include b(watermark) {
   position: relative;
+  z-index: 1100;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background-repeat: repeat;
   width: 100%;
+
+  @include when(fullscreen) {
+    // Lynx 适配：参考源为根节点 position: fixed；此处 fixed 落在水印图层上
+    //（Lynx 的 fixed 节点会被提升到页面根节点，天然覆盖整个视口）
+    @include edeep(layer) {
+      position: fixed;
+    }
+  }
 
   @include e(layer) {
     position: absolute;
@@ -10,14 +37,16 @@
     right: 0;
     top: 0;
     bottom: 0;
+    z-index: 1100;
+    opacity: $watermark-opacity;
+    pointer-events: none;
+    overflow: hidden;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-around;
-    pointer-events: none;
-    z-index: 1;
-    overflow: hidden;
+    // 自左上角起精确平铺（对齐 background-repeat 的起点语义）
+    align-content: flex-start;
+    justify-content: flex-start;
   }
 
   @include e(unit) {
@@ -29,7 +58,13 @@
     background-position: center;
   }
 
+  @include e(image) {
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
   @include e(text) {
-    white-space: nowrap;
+    // 参考源 canvas 绘制时按单元宽度自动换行，此处由文本自然换行承载
+    width: 100%;
   }
 }

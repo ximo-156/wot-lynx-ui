@@ -1,80 +1,106 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 导航栏高度
+$navbar-height: var(--wot-navbar-height, $n-44) !default;
+// 导航栏背景色
+$navbar-bg: var(--wot-navbar-bg, $filled-oppo) !default;
+// 标题文字颜色
+$navbar-color: var(--wot-navbar-color, $text-main) !default;
+// 标题字重
+$navbar-title-font-weight: var(--wot-navbar-title-font-weight, $font-weight-medium) !default;
+// 标题字号
+$navbar-title-font-size: var(--wot-navbar-title-font-size, $typography-title-size-main) !default;
+// 描述区域字号
+$navbar-desc-font-size: var(--wot-navbar-desc-font-size, $typography-body-size-extra-large) !default;
+// 描述区域文字颜色
+$navbar-desc-color: var(--wot-navbar-desc-color, $text-main) !default;
+// 箭头图标大小
+$navbar-arrow-size: var(--wot-navbar-arrow-size, $n-24) !default;
+// 禁用态透明度
+$navbar-opacity-disabled: var(--wot-navbar-opacity-disabled, $opacity-disabled) !default;
+// 左侧内边距
+$navbar-left-padding: var(--wot-navbar-left-padding, $padding-zero $padding-loose) !default;
+// 固定定位层级
+$navbar-z-index: var(--wot-navbar-z-index, 10) !default;
+
 @include b(navbar) {
-  width: 100%;
-  background-color: var(--wd-bg-container);
-
-  @include when(fixed) {
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
-  }
-
-  @include when(border) {
-    border-bottom-width: 1ppx;
-    border-bottom-style: solid;
-    border-bottom-color: var(--wd-border-1);
-  }
-
-  @include when(safe-top) {
-    padding-top: env(safe-area-inset-top);
-  }
+  position: relative;
+  text-align: center;
+  height: $navbar-height;
+  line-height: $navbar-height;
+  background-color: $navbar-bg;
+  box-sizing: content-box;
 
   @include e(content) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    height: 44px;
-    padding: 0 var(--wd-space-3);
-  }
-
-  @include e(capsule) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-  }
-
-  @include e(left) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    min-width: 40px;
-  }
-
-  @include e(arrow) {
-    color: var(--wd-text-1);
-    font-size: 20px;
-  }
-
-  @include e(text) {
-    font-size: var(--wd-font-md);
-    color: var(--wd-text-1);
+    position: relative;
+    height: 100%;
+    width: 100%;
   }
 
   @include e(title) {
-    flex-grow: 1;
+    max-width: 60%;
+    height: 100%;
+    margin: 0 auto;
+    color: $navbar-color;
+    font-weight: $navbar-title-font-weight;
+    font-size: $navbar-title-font-size;
+    @include lineEllipsis();
+  }
+
+  @include e(text) {
+    // Lynx 适配：inline-block 不被识别（引擎只认 flex/none/linear），
+    // 改为 display: flex + flex-direction: row；vertical-align 为 Web 专有属性，删除。
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: center;
+    color: $navbar-desc-color;
   }
 
-  @include e(title-text) {
-    font-size: var(--wd-font-lg);
-    font-weight: var(--wd-font-weight-semibold);
-    color: var(--wd-text-1);
+  @include e(left, right, capsule) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    font-size: $navbar-desc-font-size;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: $navbar-left-padding;
+
+    @include when(disabled) {
+      opacity: $navbar-opacity-disabled;
+    }
+  }
+
+  @include e(left, capsule) {
+    left: 0;
   }
 
   @include e(right) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: 40px;
+    right: 0;
   }
 
-  @include when(disabled) {
-    opacity: 0.5;
+  @include edeep(arrow) {
+    font-size: $navbar-arrow-size;
+    color: $navbar-color;
+  }
+
+  @include when(border) {
+    /* Lynx 适配：参考源 halfPixelBorder mixin 以 ::after 伪元素绘制下边框
+       （绝对定位，不参与布局），mixin 前置的 position: relative 显式保留；
+       伪元素边框改为主元素真实 border-bottom（1ppx）后，为保持总高仍为
+       $navbar-height，此处把盒模型改回 border-box（参考源根节点为
+       content-box，真实 border 会额外撑出 1px）。 */
+    position: relative;
+    box-sizing: border-box;
+    @include halfPixelBorder('bottom');
+  }
+
+  @include when(fixed) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: $navbar-z-index;
   }
 }

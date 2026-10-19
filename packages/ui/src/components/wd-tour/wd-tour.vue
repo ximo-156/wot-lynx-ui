@@ -1,207 +1,543 @@
 /*
  * wd-tour — 新手引导
  *
- * Lynx 实现说明：
- * - 遮罩 + 高亮框 + 提示气泡三段式；目标元素位置经 getRect 度量（切换步骤 /
- *   显示时一次性度量，CONVENTIONS §16）；
- * - Lynx 无 canvas 遮罩：高亮框用一个带超大 spread box-shadow 的 view 在目标处
- *   「挖洞」——spread 覆盖整屏形成遮罩，view 自身透明区透出目标元素；
- * - 高亮框 / 气泡定位全部由内联样式（对象语法，CONVENTIONS §19）驱动，
- *   SCSS 不再写死 left/top；
- * - 气泡默认置于目标下方，下方空间不足且上方放得下时移到上方；
- * - 步骤切换经内部 current 状态驱动，派发 skip / prev / next 事件。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 事件映射：@click → @tap（CONVENTIONS §6，Lynx view 不派发 click）；
+ *   根 view 绑 @touchmove.stop.prevent 锁滚，emits 声明 'touchmove' 并在
+ *   noop 中转发（CONVENTIONS §14：消费方绑 @touchmove 不会与根元素监听合并崩溃）。
+ * - 富文本节点：参考源用 uni-app 专有的 rich-text 元素渲染 content，Lynx 无该
+ *   元素（原生元素白名单外），降级为 text 元素（PORTING §4/§5 平台降级）。
+ * - 定位样式：rootStyle / highlightStyle / popoverStyle 由参考源的 objToStyle
+ *   字符串拼接改为对象语法（CONVENTIONS §19）；popoverStyle 的 top/bottom
+ *   二选一切换经 defineStyleKeys + resolveStyle 输出完整键集（Style Funnel，
+ *   §20，避免切步时旧偏移残留）。
+ * - 条件编译：参考源用 #ifdef MP / #ifndef MP 区分微信小程序菜单按钮获取，
+ *   Lynx 无对应能力，统一走 uni.getMenuButtonBoundingClientRect 适配层
+ *   （返回零矩形，topOffset 降级为 0）；条件编译残留已清除（PORTING §3.6）。
+ * - uni.pageScrollTo 在 Lynx 无页面滚动 API，经 common/uni 适配层降级告警，
+ *   success 回调不触发（lastScrollTop 不更新），高亮/气泡定位不受影响。
+ * - getRect 契约为「永不 reject」（未命中节点解析为零尺寸矩形），参考源依赖
+ *   reject 进入 catch 派发 error 事件并执行 missingStrategy；这里对零尺寸结果
+ *   显式抛出，保持错误分支行为一致。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, nextTick, onMounted, ref, watch } from 'vue-lynx'
+import { computed, nextTick, ref, watch } from 'vue-lynx'
+import type { CSSProperties } from '../../common/util'
 import WdButton from '../wd-button/wd-button.vue'
-import { tourProps, type TourStep } from './types'
+import { tourProps, type TourEmits, type TourExpose, type TourStep } from './types'
+import { addUnit, filterStyle, getRect, getSystemInfo, isDef, parseStyle } from '../../common/util'
+import { useRaf } from '../../composables/useRaf'
 import { useTranslate } from '../../composables/useTranslate'
-import { getRect, getSystemInfo, uuid } from '../../common/util'
-import { useAlive } from '../../composables/useAlive'
+import { uni } from '../../common/uni'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(tourProps)
-const emit = defineEmits(['change', 'finish', 'skip', 'prev', 'next', 'update:modelValue', 'update:current'])
-
+const emit = defineEmits<TourEmits>()
 const { translate } = useTranslate('tour')
-const isAlive = useAlive()
 
-const bubbleId = `wd-tour-bubble-${uuid()}`
-
-const current = ref(props.current)
-
-watch(
-  () => props.current,
-  (val) => {
-    current.value = val
-  }
-)
-
-const step = computed<TourStep | undefined>(() => props.steps[current.value])
-
-const isLast = computed(() => current.value >= props.steps.length - 1)
-const isFirst = computed(() => current.value <= 0)
-
-// 目标元素度量结果（视口坐标）与气泡实测高度
-const targetRect = ref({ left: 0, top: 0, width: 0, height: 0 })
-const measured = ref(false)
-const bubbleHeight = ref(0)
-
-/** 度量气泡高度（用于上方/下方判定），一次性 */
-function measureBubble() {
-  getRect(`#${bubbleId}`)
-    .then((rect) => {
-      if (!isAlive() || !rect) return
-      if (rect.height) bubbleHeight.value = rect.height
-    })
-    .catch(() => {
-      // 度量失败用估算高度兜底
-    })
-}
-
-/** 切换步骤 / 显示时度量目标元素，再度量气泡 */
-function measure() {
-  const el = step.value?.element
-  if (!el || !props.modelValue) {
-    measured.value = false
-    return
-  }
-  getRect(el)
-    .then((rect) => {
-      if (!isAlive()) return
-      if (!rect || !rect.width) {
-        // 目标未命中 / 不可度量：不渲染高亮与气泡，保持页面可用
-        measured.value = false
-        return
-      }
-      targetRect.value = {
-        left: rect.left || 0,
-        top: rect.top || 0,
-        width: rect.width || 0,
-        height: rect.height || 0
-      }
-      measured.value = true
-      // 气泡渲染后度量其高度
-      nextTick(measureBubble)
-    })
-    .catch(() => {
-      measured.value = false
-    })
-}
-
-watch(
-  () => [current.value, props.modelValue],
-  () => {
-    measure()
-  }
-)
-
-onMounted(() => {
-  measure()
+const prevText = computed(() => {
+  return isDef(props.prevText) ? props.prevText : translate('prev')
 })
 
-const highlightOffset = computed(() => step.value?.offset ?? props.offset)
+const nextText = computed(() => {
+  return isDef(props.nextText) ? props.nextText : translate('next')
+})
 
-/** 高亮框样式：position/width/height 由目标度量 + offset 得出，遮罩经 box-shadow */
-const highlightStyle = computed<Record<string, string>>(() => {
-  if (!measured.value || targetRect.value.width === 0) return {} as Record<string, string>
-  const off = highlightOffset.value
-  const style: Record<string, string> = {
-    position: 'absolute',
-    left: `${targetRect.value.left - off}px`,
-    top: `${targetRect.value.top - off}px`,
-    width: `${targetRect.value.width + off * 2}px`,
-    height: `${targetRect.value.height + off * 2}px`,
-    'border-radius': `${props.borderRadius}px`
+const skipText = computed(() => {
+  return isDef(props.skipText) ? props.skipText : translate('skip')
+})
+
+const finishText = computed(() => {
+  return isDef(props.finishText) ? props.finishText : translate('finish')
+})
+
+const currentIndex = ref<number>(0) // 当前步骤索引
+const elementInfo = ref({
+  top: 0,
+  left: 0,
+  width: 0,
+  height: 0,
+  bottom: 0 as number | undefined
+}) // 元素信息
+const windowHeight = ref<number>(0) // 窗口高度
+const windowTop = ref<number>(0) // 窗口顶部位置
+const isElementInTop = ref<boolean>(true) // 判断元素位置，确定提示信息在该元素的上方还是下方，true为上方，false为下方
+const lastScrollTop = ref<number>(0) //记录上一次滚动位置
+const statusBarHeight = ref<number>(0) // 状态栏高度
+const menuButtonInfo = ref<{ top: number } | null>(null)
+const topOffset = ref<number>(0) // 顶部偏移量
+
+// Lynx 适配：参考源返回 objToStyle 字符串，本地改为对象语法（§19）
+// Lynx 适配：参考源返回 objToStyle 字符串（且遗漏了 customStyle 的合并），
+// 本地改为对象语法并补上 customStyle（文档声明该 prop，与库内其它组件一致）
+const rootStyle = computed<Record<string, string>>(() => {
+  const style: Record<string, string> = {}
+  if (isDef(props.zIndex)) {
+    style['z-index'] = String(props.zIndex)
   }
-  if (props.mask) {
-    style['box-shadow'] = `0 0 0 9999px ${props.maskColor || 'rgba(0, 0, 0, 0.6)'}`
+  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
+})
+
+const highlightClass = computed(() => {
+  return `wd-tour__highlight ${props.mask ? 'wd-tour__highlight--mask' : ''}`
+})
+
+// 计算属性
+const currentStep = computed(() => {
+  return props.steps[currentIndex.value] || {}
+})
+// 提取公共的默认样式函数
+/**
+ * 获取默认样式
+ */
+function getDefaultStyle(): Record<string, string> {
+  return {
+    transition: props.duration + 'ms all'
+  }
+}
+
+/**
+ * 计算高亮样式
+ * @param padding 内边距
+ */
+function calculateHighlightStyle(padding: number): Record<string, string> {
+  return {
+    transition: props.duration + 'ms all,boxShadow 0s,height 0s,width 0s',
+    'border-radius': addUnit(props.borderRadius),
+    padding: addUnit(padding)
+  }
+}
+const highlightStyle = computed<Record<string, string>>(() => {
+  // 如果元素信息尚未获取到，返回空样式避免闪烁
+  if (!elementInfo.value.width && !elementInfo.value.height) {
+    return getDefaultStyle()
+  }
+  const stepPadding = Number(isDef(currentStep.value.padding) ? currentStep.value.padding : props.padding)
+  const baseStyle = calculateHighlightStyle(stepPadding)
+  const style: Record<string, string> = {
+    ...baseStyle,
+    top: addUnit((elementInfo.value.top || 0) - stepPadding),
+    left: addUnit((elementInfo.value.left || 0) - stepPadding),
+    height: addUnit(elementInfo.value.height || 0),
+    width: addUnit(elementInfo.value.width || 0)
+  }
+  if (isDef(props.mask) && isDef(props.maskColor)) {
+    style['box-shadow'] = `0 0 0 100vh ${props.maskColor}`
+  }
+  return { ...style, ...(props.highlightStyle as Record<string, string>) }
+})
+
+// Style Funnel（CONVENTIONS §20）：top / bottom 按步骤二选一切换，两键必须
+// 每帧都输出完整键集，否则上一帧的偏移会残留（提示框上下同时存在）
+const POPOVER_STYLE = defineStyleKeys({ top: 'auto', bottom: 'auto' })
+
+const popoverStyle = computed<Record<string, string>>(() => {
+  const style: Record<string, string> = {}
+  if (isDef(props.zIndex)) {
+    const zIndex = Number(props.zIndex)
+    style['z-index'] = String(zIndex + 1)
+    style['transition-duration'] = `${props.duration}ms`
+  }
+  const stepPadding = Number(isDef(currentStep.value.offset) ? currentStep.value.offset : props.offset)
+  const placement = isDef(currentStep.value.placement) ? currentStep.value.placement : 'auto'
+  const down = placement === 'bottom' || (placement === 'auto' && isElementInTop.value)
+  if (down) {
+    // 提示在元素下方
+    style.top = addUnit((elementInfo.value.top || 0) + (elementInfo.value.height || 0) + Number(stepPadding))
+  } else {
+    // 提示在元素上方
+    style.bottom = addUnit(windowHeight.value + windowTop.value - (elementInfo.value.top || 0) + Number(stepPadding))
+  }
+
+  return resolveStyle(POPOVER_STYLE, style)
+})
+
+const highlightElementInfo = computed<CSSProperties>(() => {
+  const stepPadding = Number(isDef(currentStep.value.padding) ? currentStep.value.padding : props.padding)
+  // 如果元素信息尚未获取到，返回空样式避免闪烁
+  if (!elementInfo.value.width && !elementInfo.value.height) {
+    return getDefaultStyle()
+  }
+
+  const baseStyle = calculateHighlightStyle(stepPadding)
+  const style: CSSProperties = {
+    ...baseStyle,
+    top: addUnit((elementInfo.value.top || 0) - stepPadding),
+    left: addUnit((elementInfo.value.left || 0) - stepPadding),
+    width: addUnit((elementInfo.value.width || 0) + stepPadding * 2),
+    height: addUnit((elementInfo.value.height || 0) + stepPadding * 2)
+  }
+  if (isDef(props.mask) && isDef(props.maskColor)) {
+    style.boxShadow = `0 0 0 100vh ${props.maskColor}`
   }
   return style
 })
 
-/** 气泡样式：默认目标下方，空间不足时上方；水平以目标中心对齐并夹紧在屏内 */
-const bubbleStyle = computed<Record<string, string>>(() => {
-  if (!measured.value || targetRect.value.width === 0) return {} as Record<string, string>
-  const { windowWidth, windowHeight } = getSystemInfo()
-  const gap = 12
-  const bubbleW = 280
-  const off = highlightOffset.value
-  const targetLeft = targetRect.value.left - off
-  const targetTop = targetRect.value.top - off
-  const targetW = targetRect.value.width + off * 2
-  const targetH = targetRect.value.height + off * 2
+/**
+ * 根 view 的 @touchmove.stop.prevent 占位（锁滚），同时转发原生事件
+ * （CONVENTIONS §14）
+ */
+function noop(event?: any) {
+  emit('touchmove', event)
+}
 
-  let left = targetLeft + targetW / 2 - bubbleW / 2
-  left = Math.max(8, Math.min(left, windowWidth - bubbleW - 8))
-
-  const belowTop = targetTop + targetH + gap
-  const estimatedH = bubbleHeight.value || 140
-  let top = belowTop
-  if (belowTop + estimatedH > windowHeight - 8 && targetTop - gap - estimatedH > 8) {
-    top = targetTop - gap - estimatedH
+/**
+ * 更新元素信息
+ */
+async function updateElementInfo() {
+  updateSystemInfo()
+  const element = currentStep.value.element
+  if (!element) return
+  try {
+    const res = await getRect(element, false, props.scope)
+    // Lynx 适配：本地 getRect 契约为「永不 reject」——选择器未命中时解析为
+    // 零尺寸矩形；参考源（uni-app）此时会 reject 进入 catch。零尺寸即视为
+    // 「未找到目标元素」，显式抛出以对齐参考源的错误分支（error 事件 +
+    // missingStrategy 处理）。
+    if (!res || (!res.width && !res.height)) {
+      throw new Error(`无法找到指定的引导元素: ${element}`)
+    }
+    initializeElementInfo(res)
+    const effectiveBoundaries = getEffectiveBoundaries()
+    const scrollNeeds = checkScrollNeeds(res, effectiveBoundaries)
+    handleScrolling(res, scrollNeeds, effectiveBoundaries)
+    calculateTipPosition(res)
+  } catch (error) {
+    console.error('updateElementInfo error:', error)
+    emit('error', {
+      message: '无法找到指定的引导元素',
+      element: element
+    })
+    if (props.missingStrategy === 'skip') {
+      handleNext()
+    } else if (props.missingStrategy === 'hide') {
+      emit('update:modelValue', false)
+    }
   }
+}
+
+/**
+ * 更新系统信息
+ */
+function updateSystemInfo() {
+  const sysInfo = getSystemInfo()
+  windowHeight.value = sysInfo.windowHeight
+  windowTop.value = sysInfo.windowTop || 0
+  statusBarHeight.value = sysInfo.statusBarHeight || 0
+}
+
+/**
+ * 初始化元素信息
+ * @param res 元素节点信息
+ */
+function initializeElementInfo(res: any) {
+  elementInfo.value = res
+  // 调整元素位置信息，加上窗口顶部偏移量
+  elementInfo.value.top = (res.top || 0) + windowTop.value
+  elementInfo.value.bottom = ((res.bottom !== undefined ? res.bottom : (res.top || 0) + (res.height || 0)) as number) + windowTop.value
+}
+
+/**
+ * 获取有效的页面边界（顶部和底部安全区域）
+ */
+function getEffectiveBoundaries() {
+  // 有效顶部边界初始化为窗口顶部 + 顶部偏移量
+  let effectiveWindowTop = windowTop.value + Number(topOffset.value)
+  // 有效底部边界为窗口高度
+  let effectiveWindowBottom = windowHeight.value
   return {
-    position: 'absolute',
-    left: `${left}px`,
-    top: `${top}px`,
-    width: `${bubbleW}px`
-  } as Record<string, string>
+    top: effectiveWindowTop,
+    bottom: effectiveWindowBottom
+  }
+}
+
+/**
+ * 检查是否需要滚动
+ * @param res 元素节点信息
+ * @param boundaries 边界信息
+ */
+function checkScrollNeeds(res: any, boundaries: { top: number; bottom: number }) {
+  // 判断元素是否被顶部遮挡（需要向上滚动）
+  const needScrollUp = Number(res.top) < boundaries.top
+  // 判断元素是否被底部遮挡（需要向下滚动）
+  const needScrollDown = (res.bottom !== undefined ? res.bottom : 0) + Number(props.bottomSafetyOffset) > boundaries.bottom
+  return {
+    up: needScrollUp, //提示框往上走
+    down: needScrollDown //提示框往下走
+  }
+}
+
+/**
+ * 处理滚动逻辑
+ * @param res 元素节点信息
+ * @param scrollNeeds 滚动需求
+ * @param boundaries 边界信息
+ */
+function handleScrolling(res: any, scrollNeeds: { up: boolean; down: boolean }, boundaries: { top: number; bottom: number }) {
+  if (scrollNeeds.up) {
+    // 元素被顶部遮挡，需要提示框往上走，页面往下走
+    scrollUp(res, boundaries)
+  } else if (scrollNeeds.down) {
+    // 元素被底部遮挡，需要提示框向下走，页面向上走
+    scrollDown(res)
+  }
+}
+
+/**
+ * 向引导上滚动处理
+ * @param res 元素节点信息
+ * @param boundaries 边界信息
+ */
+function scrollUp(res: any, boundaries: { top: number; bottom: number }) {
+  // 计算需要滚动的距离
+  let scrollDistance = lastScrollTop.value + Number(res.top) - props.padding - boundaries.top
+  // 更新元素位置信息（滚动后）
+  elementInfo.value.top = boundaries.top + props.padding
+  elementInfo.value.bottom = windowHeight.value - (boundaries.top + props.padding)
+  uni.pageScrollTo({
+    scrollTop: scrollDistance,
+    duration: Number(props.duration),
+    success: () => {
+      // 更新已滚动距离
+      lastScrollTop.value = scrollDistance
+    }
+  })
+}
+
+/**
+ * 引导向下滚动处理
+ * @param res 元素节点信息
+ */
+function scrollDown(res: any) {
+  // 计算需要滚动的距离
+  const bottom = res.bottom || 0
+  let scrollDistance = bottom - windowHeight.value + props.padding + Number(props.bottomSafetyOffset)
+
+  // 更新元素位置信息（滚动后）
+  elementInfo.value.top = windowHeight.value - bottom - props.padding - Number(props.bottomSafetyOffset) // 应该是减去安全偏移量
+  elementInfo.value.bottom = windowHeight.value - props.padding - Number(props.bottomSafetyOffset)
+
+  uni.pageScrollTo({
+    scrollTop: scrollDistance + lastScrollTop.value,
+    duration: Number(props.duration),
+    success: () => {
+      // 更新已滚动距离
+      lastScrollTop.value = scrollDistance + lastScrollTop.value
+    }
+  })
+}
+
+/**
+ * 计算提示框显示位置（上方或下方）
+ * @param res 元素节点信息
+ */
+function calculateTipPosition(res: any) {
+  // 计算导航区域总高度
+  let totalNavHeight = statusBarHeight.value
+  // 计算屏幕中心点位置
+  const screenCenter = (windowHeight.value + totalNavHeight) / 2 + windowTop.value
+
+  // 计算元素中心点位置
+  const elementCenter = (res.top || 0) + (res.height || 0) / 2 + windowTop.value
+
+  // 根据元素位置决定提示框显示在上方还是下方
+  if (elementCenter < screenCenter) {
+    isElementInTop.value = true
+  } else {
+    isElementInTop.value = false
+  }
+}
+
+/**
+ * 上一步
+ */
+function handlePrev() {
+  if (currentIndex.value > 0) {
+    const oldIndex = currentIndex.value
+    currentIndex.value--
+    emit('prev', {
+      prevCurrent: oldIndex,
+      current: currentIndex.value,
+      total: props.steps.length,
+      isElementInTop: isElementInTop.value
+    })
+    emit('change', { current: currentIndex.value })
+  }
+}
+
+/**
+ * 下一步
+ */
+function handleNext() {
+  if (currentIndex.value < props.steps.length - 1) {
+    const oldIndex = currentIndex.value
+    currentIndex.value++
+    emit('next', {
+      prevCurrent: oldIndex,
+      current: currentIndex.value,
+      total: props.steps.length,
+      isElementInTop: isElementInTop.value
+    })
+    emit('change', { current: currentIndex.value })
+  } else {
+    handleFinish()
+  }
+}
+
+/**
+ * 完成
+ */
+function handleFinish() {
+  emit('finish', {
+    current: currentIndex.value,
+    total: props.steps.length
+  })
+  currentIndex.value = 0
+  lastScrollTop.value = 0 // 重置滚动位置
+  emit('update:modelValue', false)
+}
+
+/**
+ * 跳过
+ */
+function handleSkip() {
+  emit('skip', {
+    current: currentIndex.value,
+    total: props.steps.length
+  })
+  currentIndex.value = 0
+  lastScrollTop.value = 0 // 重置滚动位置
+  emit('update:modelValue', false)
+}
+/**
+ * 点击遮罩层
+ */
+function handleMask() {
+  if (props.clickMaskNext) {
+    handleNext()
+  }
+}
+
+watch(
+  () => props.current,
+  (newVal) => {
+    currentIndex.value = newVal
+  }
+)
+// 在 setup 作用域中创建 raf 实例，避免在 watch 回调中调用 onUnmounted
+const indexRaf = useRaf(updateElementInfo)
+const modelRaf = useRaf(() => {
+  updateElementInfo()
+  emit('update:current', currentIndex.value)
 })
 
-function next() {
-  emit('next', { current: current.value })
-  if (isLast.value) {
-    finish()
-    return
+// 监听 currentIndex 变化，同步到父组件
+watch(
+  () => currentIndex.value,
+  (newVal) => {
+    indexRaf.cancel()
+    nextTick(() => {
+      indexRaf.start()
+    })
+    emit('update:current', newVal)
   }
-  current.value += 1
-  emit('update:current', current.value)
-  emit('change', { current: current.value })
-}
+)
 
-function prev() {
-  emit('prev', { current: current.value })
-  if (isFirst.value) return
-  current.value -= 1
-  emit('update:current', current.value)
-  emit('change', { current: current.value })
-}
+// 监听 modelValue 变化，当组件显示时更新系统信息
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    if (newVal) {
+      // 组件显示时重置滚动位置并更新系统信息
+      lastScrollTop.value = 0
+      updateSystemInfo()
+      modelRaf.cancel()
+      nextTick(() => {
+        modelRaf.start()
+      })
+    }
+  },
+  {
+    immediate: true
+  }
+)
 
-function finish() {
-  emit('finish')
-  emit('update:modelValue', false)
+// 所有平台统一处理逻辑（Lynx 适配：参考源的 #ifdef MP 分支经 uni 适配层
+// 获取菜单按钮矩形，未注入宿主能力时返回零矩形，topOffset 降级为 0）
+if (props.customNav) {
+  // 开启了自定义导航栏
+  if (props.topSafetyOffset && Number(props.topSafetyOffset) > 0) {
+    // 用户传入了顶部安全偏移量，优先使用用户设置的值
+    topOffset.value = Number(props.topSafetyOffset)
+  } else {
+    // 未传入顶部偏移量
+    menuButtonInfo.value = uni.getMenuButtonBoundingClientRect() || null
+    topOffset.value = menuButtonInfo.value ? menuButtonInfo.value.top : 0
+  }
+} else {
+  // 未开启自定义导航栏，直接使用用户传入的顶部安全偏移量
+  topOffset.value = Number(props.topSafetyOffset) || 0
 }
-
-function skip() {
-  emit('skip')
-  emit('update:modelValue', false)
-}
+defineExpose<TourExpose>({
+  handlePrev,
+  handleNext,
+  handleFinish,
+  handleSkip
+})
 </script>
 
 <template>
-  <!-- 度量失败（目标未命中/不可度量）时整体不渲染：根 view 是 position:fixed
-       全屏容器，空渲染会挡住整个页面的交互（Web 预览等无度量能力的环境下
-       必须保持页面可用，真机度量正常时不受影响） -->
-  <view v-if="modelValue && step && measured" class="wd-tour">
-    <!-- 高亮框（兼遮罩挖洞）：box-shadow spread 形成遮罩，目标区透出 -->
-    <view v-if="step && measured" class="wd-tour__highlight" :style="highlightStyle" />
-    <!-- 提示气泡：定位由内联样式驱动 -->
-    <view v-if="step && measured" class="wd-tour__bubble" :id="bubbleId" :style="bubbleStyle">
-      <view v-if="step.title" class="wd-tour__title">
-        <text>{{ step.title }}</text>
-      </view>
-      <view class="wd-tour__content">
-        <text>{{ step.content }}</text>
-      </view>
-      <view class="wd-tour__footer">
-        <text class="wd-tour__skip" @tap="skip">{{ translate('skip') }}</text>
-        <view class="wd-tour__actions">
-          <wd-button v-if="!isFirst" size="mini" variant="plain" @tap="prev">{{ prevText || translate('prev') }}</wd-button>
-          <wd-button type="primary" size="mini" @tap="next">
-            {{ isLast ? (finishText || translate('finish')) : (nextText || translate('next')) }}
-          </wd-button>
+  <view class="wd-tour" v-if="modelValue" :style="rootStyle" @touchmove.stop.prevent="noop">
+    <view class="wd-tour__mask" @tap.stop="handleMask">
+      <slot name="highlight" :elementInfo="highlightElementInfo">
+        <view :class="highlightClass" :style="highlightStyle"></view>
+      </slot>
+      <view class="wd-tour__popover" :style="popoverStyle">
+        <view class="wd-tour__info">
+          <slot name="content">
+            <!-- Lynx 适配：参考源为 rich-text :nodes，Lynx 无该元素，降级为 text -->
+            <text>{{ currentStep.content }}</text>
+          </slot>
+        </view>
+
+        <view class="wd-tour__buttons" v-if="showTourButtons">
+          <!-- 上一步按钮 -->
+          <view class="wd-tour__prev" v-if="currentIndex > 0" @tap.stop="handlePrev">
+            <slot name="prev">
+              <WdButton class="wd-tour__prev-default" size="mini" variant="text">
+                <text>{{ prevText }}</text>
+              </WdButton>
+            </slot>
+          </view>
+
+          <!-- 跳过按钮 -->
+          <view class="wd-tour__skip" @tap.stop="handleSkip">
+            <slot name="skip">
+              <WdButton class="wd-tour__skip-default" size="mini" variant="text">
+                <text>{{ skipText }}</text>
+              </WdButton>
+            </slot>
+          </view>
+
+          <!-- 下一步按钮 -->
+          <view class="wd-tour__next" v-if="currentIndex !== steps.length - 1" @tap.stop="handleNext">
+            <slot name="next">
+              <WdButton class="wd-tour__next-default" size="mini">
+                <text>{{ `${nextText}(${currentIndex + 1}/${steps.length})` }}</text>
+              </WdButton>
+            </slot>
+          </view>
+
+          <!-- 完成按钮 -->
+          <view class="wd-tour__finish" v-if="currentIndex === steps.length - 1" @tap.stop="handleFinish">
+            <slot name="finish">
+              <WdButton class="wd-tour__finish-default" size="mini" type="primary">
+                <text>{{ finishText }}</text>
+              </WdButton>
+            </slot>
+          </view>
         </view>
       </view>
     </view>

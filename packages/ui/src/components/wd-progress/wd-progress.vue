@@ -1,89 +1,258 @@
 /*
  * wd-progress — 进度条
  *
- * Lynx 实现说明：
- * - 进度经宽度百分比 + CSS transition 过渡（duration 驱动）；
- * - 渐变降级：Lynx 的 linear-gradient 支持有限，color 为对象时取
- *   左侧色（CONVENTIONS §7 渐变降级策略）；
- * - inner 模式下文字渲染在进度条内部。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 进度推进算法与参考源逐段一致：颜色数组（string[] / ProgressColor[]）经
+ *   createPartList 对齐刻度，前进 / 后退分别走 updateProgressForward /
+ *   updateProgressBackward，renderProgressStep 以 50ms 步进 + duration 毫秒
+ *   阶梯推进；无 color 时经 pause() 一帧后直接落位；
+ * - 内联样式：参考源 rootStyle 为 objToStyle 字符串（background / width /
+ *   transition-duration），Lynx 的字符串 style 会被静默丢弃
+ *   （CONVENTIONS §19），改为对象语法；customStyle 经 parseStyle 归一；
+ * - 参考源 view 内的裸文本（{{ percentage }}%）包进 text 元素
+ *   （CONVENTIONS §4）；
+ * - 参考源 inner 态图标 / 文案 / zero 态配色用 !important 覆盖状态色，
+ *   Lynx 默认不支持 !important（PORTING §4.5），改由选择器特异度
+ *   （.wd-progress--inner.is-zero 三类选择器）在源码序上覆盖，行为等价；
+ * - 根 view 无事件绑定，不涉及 CONVENTIONS §14 的 tap 转发；
+ * - display: block 为参考源声明，Lynx 引擎不识别该值（仅认 flex/none/
+ *   linear，CONVENTIONS §15）——声明被忽略后 outer 回落到默认 linear 布局，
+ *   与 Web 的 block 容器语义一致（子节点仅一个绝对定位的 inner），故保留
+ *   声明以对齐参考源样式表。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed } from 'vue-lynx'
+import { computed, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
-import { progressProps } from './types'
-import { isString, parseStyle } from '../../common/util'
-import { WHITE } from '../../common/theme'
+import { isArray, isDef, isObj, isString, filterStyle, parseStyle, pause } from '../../common/util'
+import { progressProps, type ProgressColor } from './types'
 
 const props = defineProps(progressProps)
+// 进度条渲染颜色
+const displayColor = ref<string>('')
 
-// 样式一律输出对象（CONVENTIONS §19：vue-lynx 的 patchProp 对字符串 style
-// 会静默替换为 {}，百分比宽度/高度/渐变因此整体失效）。
+// 进度条渲染进度比例
+const displayPercentage = ref<number>(0)
+
+// 百分比变更差值
+const percentageDiff = ref<number>(0)
+
+// 进度条延迟定时器
+let animationTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 根节点样式，控制进度条底色、宽度及过渡动画
+ */
 const rootStyle = computed<Record<string, string>>(() => {
-  const style: Record<string, string> = {}
-  const color = isString(props.color) ? props.color : props.color?.left
-  if (color) style.background = color
-  style.width = `${Math.min(Math.max(props.percentage, 0), 100)}%`
-  return style
+  return filterStyle({
+    background: displayColor.value,
+    width: `${displayPercentage.value}%`,
+    'transition-duration': `${percentageDiff.value * props.duration * 0.001}s`
+  })
 })
 
-const trackStyle = computed<Record<string, string>>(() => {
-  const style: Record<string, string> = {}
-  if (props.trackColor) style['background-color'] = props.trackColor
-  style.height = `${props.strokeWidth}px`
-  return style
-})
-
-const innerStyle = computed<Record<string, string>>(() => {
-  return { height: `${props.strokeWidth}px` }
-})
-
+/**
+ * 内置或外置图标的名称，根据状态不同返回对应图标
+ */
 const iconName = computed(() => {
+  let icon: string = ''
   switch (props.status) {
-    case 'success':
-      return 'success'
     case 'danger':
-      return 'error'
+      icon = 'close-circle-fill'
+      break
+    case 'success':
+      icon = 'check-circle-fill'
+      break
     case 'warning':
-      return 'warning'
+      icon = 'exclamation-circle-fill'
+      break
     default:
-      return ''
+      break
   }
+  return icon
 })
 
-const percentPositionType = computed(() => props.percentPosition?.type || 'outer')
+watch(
+  () => [props.percentage, props.color, props.duration],
+  () => {
+    validatePercentage(props.percentage)
+    updateProgress()
+  },
+  { immediate: true }
+)
+
+/**
+ * 校验 percentage 是否合法
+ * @param {number} value 百分比值
+ */
+function validatePercentage(value: number) {
+  if (Number.isNaN(value) || value < 0 || value > 100) {
+    console.error('The value of percentage must be between 0 and 100')
+  }
+}
+
+/**
+ * 进度条前进算法
+ * @param {ProgressColor[]} partList 颜色及对应进度断点数组
+ * @param {number} percentage 目标进度值
+ * @returns {boolean}
+ */
+function updateProgressForward(partList: ProgressColor[], percentage: number) {
+  return partList.some((part, index) => {
+    if (displayPercentage.value < part.percentage && part.percentage <= percentage) {
+      renderProgressStep(part.percentage, part.color)
+      return true
+    } else if (index === partList.length - 1) {
+      renderProgressStep(percentage, part.color)
+    }
+  })
+}
+
+/**
+ * 进度条后退算法
+ * @param {ProgressColor[]} partList 颜色及对应进度断点数组
+ * @param {number} percentage 目标进度值
+ * @returns {boolean}
+ */
+function updateProgressBackward(partList: ProgressColor[], percentage: number) {
+  return partList.some((part) => {
+    if (percentage <= part.percentage) {
+      renderProgressStep(percentage, part.color)
+      return true
+    }
+  })
+}
+
+/**
+ * 更新进度条的显示逻辑主入口
+ * @returns {Promise<void>}
+ */
+async function updateProgress() {
+  const { percentage, color } = props
+  if (!isDef(color) || (isArray(color) && color.length === 0)) {
+    percentageDiff.value = Math.abs(percentage - displayPercentage.value)
+    await pause()
+    displayPercentage.value = percentage
+    return
+  }
+  if (displayPercentage.value === percentage) return
+
+  const colorArray = isArray(color) ? color : [color]
+  validateColorArray(colorArray)
+  const partList = createPartList(colorArray)
+  displayPercentage.value > percentage ? updateProgressBackward(partList, percentage) : updateProgressForward(partList, percentage)
+}
+
+/**
+ * 判断是否是复合类型的颜色及进度数组
+ * @param {string[] | ProgressColor[]} array 要判断的数组
+ * @returns {array is ProgressColor[]} 判定依据
+ */
+function isProgressColorArray(array: string[] | ProgressColor[]): array is ProgressColor[] {
+  return array.every(
+    (color) => isObj(color) && Object.prototype.hasOwnProperty.call(color, 'color') && Object.prototype.hasOwnProperty.call(color, 'percentage')
+  )
+}
+
+/**
+ * 判断是否是纯字符串形式的颜色数组
+ * @param {string[] | ProgressColor[]} array 要判断的数组
+ * @returns {array is string[]} 判定依据
+ */
+function isStringArray(array: string[] | ProgressColor[]): array is string[] {
+  return array.every((item) => typeof item === 'string')
+}
+
+/**
+ * 校验颜色数组结构安全性
+ * @param {string[] | ProgressColor[]} colorArray 颜色数组
+ * @throws {Error} 未遵循 ProgressColor | String 的数组格式将引发错误
+ */
+function validateColorArray(colorArray: string[] | ProgressColor[]) {
+  const isStrArray = isStringArray(colorArray)
+  const isObjArray = isProgressColorArray(colorArray)
+  if (!isStrArray && !isObjArray) {
+    throw Error('Color must be String or Object with color and percentage')
+  }
+  if (isObjArray && colorArray.some(({ percentage }) => Number.isNaN(percentage))) {
+    throw Error('All the percentage must can be formatted to Number')
+  }
+}
+
+/**
+ * 创建基于刻度的颜色渲染流
+ * @param {string[] | ProgressColor[]} colorArray 颜色数组
+ * @returns {ProgressColor[]} 对齐进度标识后的颜色数组
+ */
+function createPartList(colorArray: string[] | ProgressColor[]) {
+  const partNum = 100 / colorArray.length
+  return isProgressColorArray(colorArray)
+    ? colorArray.sort((a, b) => a.percentage - b.percentage)
+    : colorArray.map((item, index) => ({
+        color: item,
+        percentage: (index + 1) * partNum
+      }))
+}
+
+/**
+ * 内部驱动方法更新渲染视图及进度
+ * @param {number} targetPercent 阶段目标进度
+ * @param {string} color 颜色描述
+ * @returns {void}
+ */
+function renderProgressStep(targetPercent: number, color: string) {
+  if (animationTimer) return
+  const { duration } = props
+  percentageDiff.value = Math.abs(targetPercent - displayPercentage.value)
+  setTimeout(() => {
+    displayPercentage.value = targetPercent
+    displayColor.value = color
+    animationTimer = setTimeout(() => {
+      animationTimer && clearTimeout(animationTimer)
+      animationTimer = null
+      updateProgress()
+    }, percentageDiff.value * duration)
+  }, 50)
+}
 </script>
 
 <template>
   <view
-    :class="[
-      'wd-progress',
-      percentPositionType === 'inner' ? 'wd-progress--inner' : '',
-      status ? `wd-progress--${status}` : '',
-      percentage === 0 ? 'is-zero' : '',
-      customClass
-    ]"
+    :class="`wd-progress ${percentPosition.type === 'inner' ? 'wd-progress--inner' : ''} ${status ? 'wd-progress--' + status : ''} ${
+      percentage === 0 ? 'is-zero' : ''
+    } ${customClass}`"
     :style="parseStyle(customStyle)"
   >
     <view class="wd-progress__outer">
-      <view class="wd-progress__track" :style="trackStyle">
-        <view class="wd-progress__inner" :style="{ ...rootStyle, ...innerStyle }">
-          <template v-if="percentPositionType === 'inner'">
-            <!-- 文本包 text：Lynx view 内裸文本不渲染（CONVENTIONS §4） -->
-            <text v-if="!hideText" class="wd-progress__label">{{ percentage }}%</text>
-            <wd-icon
-              v-else-if="status"
-              custom-class="wd-progress__label wd-progress__icon"
-              :name="iconName"
-              :color="isString(color) ? color : WHITE"
-            />
-          </template>
-        </view>
+      <view class="wd-progress__inner" :style="rootStyle">
+        <!-- inner 渲染到 progress__inner 内部 -->
+        <template v-if="percentPosition.type === 'inner'">
+          <view v-if="!hideText" :class="['wd-progress__label', percentPosition.align ? `is-align-${percentPosition.align}` : '']">
+            <text>{{ percentage }}%</text>
+          </view>
+          <wd-icon
+            v-else-if="status"
+            :custom-class="`wd-progress__label wd-progress__icon ${hideText ? 'is-hide-text' : ''} ${
+              percentPosition.align ? `is-align-${percentPosition.align}` : ''
+            }`"
+            :name="iconName"
+            :color="isString(color) ? color : ''"
+          ></wd-icon>
+        </template>
       </view>
     </view>
-    <view v-if="percentPositionType === 'outer' && !hideText" class="wd-progress__text">
-      <text>{{ percentage }}%</text>
-    </view>
+    <!-- outer 渲染到外侧 -->
+    <template v-if="percentPosition.type === 'outer'">
+      <view v-if="!hideText" class="wd-progress__label">
+        <text>{{ percentage }}%</text>
+      </view>
+      <wd-icon
+        v-else-if="status"
+        :custom-class="`wd-progress__label wd-progress__icon ${hideText ? 'is-hide-text' : ''}`"
+        :name="iconName"
+        :color="isString(color) ? color : ''"
+      ></wd-icon>
+    </template>
   </view>
 </template>

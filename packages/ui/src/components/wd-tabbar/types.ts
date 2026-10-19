@@ -1,14 +1,30 @@
-import type { ExtractPropTypes, InjectionKey } from 'vue-lynx'
-import { baseProps, makeBooleanProp, makeNumericProp, makeStringProp } from '../../common/props'
+import { type ExtractPropTypes, type InjectionKey, type PropType } from 'vue-lynx'
+import { baseProps, makeBooleanProp, makeNumberProp, makeNumericProp, makeStringProp } from '../../common/props'
+import type { TabbarItem } from '../wd-tabbar-item/types'
 
-export type TabbarShape = 'default' | 'round'
-
-export interface TabbarItem {
-  name: string | number
-}
+type TabbarShape = 'default' | 'round'
 
 export type TabbarProvide = {
-  props: Record<string, any>
+  props: {
+    // 选中标签的索引值或者名称
+    modelValue?: number | string
+    // 是否固定在底部
+    fixed?: boolean
+    // 是否设置底部安全距离（iphone X 类型的机型）
+    safeAreaInsetBottom?: boolean
+    // 是否显示顶部边框
+    bordered?: boolean
+    // 标签栏的形状。可选项：default/round
+    shape?: TabbarShape
+    // 激活标签的颜色
+    activeColor?: string
+    // 未激活标签的颜色
+    inactiveColor?: string
+    // 固定在底部时，是否在标签位置生成一个等高的占位元素
+    placeholder?: boolean
+    // 自定义组件的层级
+    zIndex?: number
+  }
   setChange: (child: TabbarItem) => void
 }
 
@@ -17,37 +33,47 @@ export const TABBAR_KEY: InjectionKey<TabbarProvide> = Symbol('wd-tabbar')
 export const tabbarProps = {
   ...baseProps,
   /**
-   * 当前选中索引
+   * 选中标签的索引值或者名称
    */
   modelValue: makeNumericProp(0),
   /**
-   * 是否固定底部
+   * 是否固定在底部
    */
   fixed: makeBooleanProp(false),
   /**
-   * 是否显示上边框
+   * 是否显示顶部边框
    */
   bordered: makeBooleanProp(false),
   /**
-   * 底部安全区适配
+   * 是否设置底部安全距离（iPhone X 类型的机型）
    */
   safeAreaInsetBottom: makeBooleanProp(false),
   /**
-   * 形状
+   * 标签栏的形状。可选项：default/round
    */
   shape: makeStringProp<TabbarShape>('default'),
   /**
-   * 激活颜色
+   * 激活标签的颜色
    */
   activeColor: String,
   /**
-   * 未激活颜色
+   * 未激活标签的颜色
    */
   inactiveColor: String,
   /**
-   * 是否显示激活态指示条（激活项底部线条，本库扩展，wot-ui 无此 prop）
+   * 固定在底部时，是否在标签位置生成一个等高的占位元素
    */
-  activeLine: makeBooleanProp(false)
+  placeholder: makeBooleanProp(false),
+  /**
+   * 自定义组件的层级
+   */
+  zIndex: makeNumberProp(10),
+  /**
+   * 切换前的回调函数，返回 false 可阻止切换，支持返回 Promise
+   */
+  beforeChange: Function as PropType<TabbarBeforeChange>
 }
+
+export type TabbarBeforeChange = (value: number | string) => boolean | Promise<boolean>
 
 export type TabbarProps = ExtractPropTypes<typeof tabbarProps>

@@ -3,154 +3,327 @@ import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeStringPr
 import type {
   ChooseFile,
   ChooseFileOption,
+  UploadCameraType,
   UploadFileItem,
+  UploadFileType,
   UploadFormData,
   UploadMethod,
+  UploadSizeType,
   UploadSourceType,
-  UploadStatusType,
   UploadSuccessStatus
 } from '../../composables/useUpload'
 import type { LoadingType } from '../wd-loading/types'
+import type { ImageMode } from '../wd-img/types'
 
 // 兼容历史从 wd-upload/types 深度导入的用法
-export type { ChooseFile, ChooseFileOption, UploadFileItem, UploadMethod, UploadStatusType, UploadSuccessStatus }
-
-export type UploadFile = UploadFileItem
-
-export type UploadBeforeUpload = (file: UploadFileItem, formData: UploadFormData) => boolean | Promise<boolean>
-
-export type UploadBeforeChoose = (options: ChooseFileOption) => boolean | Promise<boolean>
-
-export type UploadBeforeRemove = (file: UploadFileItem, fileList: UploadFileItem[]) => boolean | Promise<boolean>
-
-export type UploadBeforePreview = (options: { file: UploadFileItem; index: number }) => boolean | Promise<boolean>
-
-export type UploadOnPreviewFail = (file: UploadFileItem) => void
-
-export type UploadBuildFormData = (options: { file: UploadFileItem; formData: UploadFormData }) => UploadFormData | Promise<UploadFormData>
-
-export type UploadErrorEvent = { file: UploadFileItem; error: any }
-export type UploadChangeEvent = { fileList: UploadFileItem[] }
-export type UploadSuccessEvent = { file: UploadFileItem; response: any; formData: UploadFormData }
-export type UploadProgressEvent = { file: UploadFileItem; progress: number }
-export type UploadOversizeEvent = { file: UploadFileItem; maxSize: number }
-export type UploadRemoveEvent = { file: UploadFileItem; index: number; fileList: UploadFileItem[] }
-
-export type UploadExpose = {
-  submit: () => void
-  abort: () => void
+export type {
+  ChooseFile,
+  ChooseFileOption,
+  UploadCameraType,
+  UploadFileItem,
+  UploadFileType,
+  UploadFormData,
+  UploadMethod,
+  UploadSizeType,
+  UploadSourceType,
+  UploadSuccessStatus
 }
+
+export type UploadStatusType = 'pending' | 'loading' | 'success' | 'fail'
+
+export type UploadBeforePreviewOption = {
+  file: UploadFileItem
+  index: number
+  imgList: string[]
+  fileList: UploadFileItem[]
+}
+export type UploadBeforePreview = (option: UploadBeforePreviewOption) => boolean | Promise<boolean>
+
+export type UploadOnPreviewFailOption = {
+  index: number
+  imgList: string[]
+}
+export type UploadOnPreviewFail = (option: UploadOnPreviewFailOption) => void
+
+export type UploadBeforeRemoveOption = {
+  file: UploadFileItem
+  index: number
+  fileList: UploadFileItem[]
+}
+export type UploadBeforeRemove = (option: UploadBeforeRemoveOption) => boolean | Promise<boolean>
+
+export type UploadBeforeChooseOption = {
+  fileList: UploadFileItem[]
+}
+export type UploadBeforeChoose = (option: UploadBeforeChooseOption) => boolean | Promise<boolean>
+
+export type UploadBeforeUploadOption = {
+  files: Record<string, any>[]
+  fileList: UploadFileItem[]
+}
+export type UploadBeforeUpload = (options: UploadBeforeUploadOption) => boolean | Promise<boolean>
+
+export type UploadBuildFormDataOption = {
+  file: UploadFileItem
+  formData: UploadFormData
+}
+export type UploadBuildFormData = (options: UploadBuildFormDataOption) => Record<string, any> | Promise<Record<string, any>>
+
+export type UploadFile = Partial<UploadFileItem> & { url: string }
 
 export const uploadProps = {
   ...baseProps,
   /**
-   * 文件列表（受控）
+   * 上传的文件列表,例如:[{name:'food.jpg',url:'https://xxx.cdn.com/xxx.jpg'}]
+   * 类型：array
+   * 默认值：[]
    */
   fileList: makeArrayProp<UploadFile>(),
   /**
-   * 上传地址
+   * 必选参数，上传的地址
+   * 类型：string
+   * 默认值：''
    */
   action: makeStringProp(''),
   /**
-   * 请求头
+   * 设置上传的请求头部
+   * 类型：object
+   * 默认值：{}
    */
   header: { type: Object as PropType<Record<string, any>>, default: () => ({}) },
   /**
-   * 是否多选
+   * 是否支持多选文件
+   * 类型：boolean
+   * 默认值：false
    */
   multiple: makeBooleanProp(false),
   /**
    * 是否禁用
+   * 类型：boolean
+   * 默认值：false
    */
   disabled: makeBooleanProp(false),
   /**
-   * 最大上传数量
+   * 最大允许上传个数
+   * 类型：number
+   * 默认值：无
    */
   limit: Number,
   /**
-   * 是否显示数量提示
+   * 限制上传个数的情况下，是否展示当前上传的个数
+   * 类型：boolean
+   * 默认值：true
    */
   showLimitNum: makeBooleanProp(true),
   /**
-   * 单文件最大体积（字节）
+   * 文件大小限制，单位为byte
+   * 类型：number
+   * 默认值：Number.MAX_VALUE
    */
   maxSize: makeNumberProp(Number.MAX_VALUE),
   /**
-   * 选择文件来源
+   * 选择图片的来源，chooseImage接口详细参数，查看官方手册
+   * 类型：array
+   * 默认值：['album','camera']
    */
   sourceType: {
     type: Array as PropType<UploadSourceType[]>,
     default: () => ['album', 'camera']
   },
   /**
-   * 图片尺寸类型
+   * 所选的图片的尺寸，chooseImage接口详细参数，查看官方手册
+   * 类型：array
+   * 默认值：['original','compressed']
    */
   sizeType: {
-    type: Array as PropType<Array<'original' | 'compressed'>>,
+    type: Array as PropType<UploadSizeType[]>,
     default: () => ['original', 'compressed']
   },
   /**
-   * 文件对应的 key
+   * 文件对应的key，开发者在服务端可以通过这个key获取文件的二进制内容，uploadFile接口详细参数，查看官方手册
+   * 类型：string
+   * 默认值：'file'
    */
   name: makeStringProp('file'),
   /**
-   * 其它表单数据
+   * HTTP请求中其他额外的formdata，uploadFile接口详细参数，查看官方手册
+   * 类型：object
+   * 默认值：{}
    */
   formData: { type: Object as PropType<UploadFormData>, default: () => ({}) },
   /**
-   * 预览失败回调
+   * 预览失败执行操作
+   * 类型：function({index,imgList})
+   * 默认值：-
    */
   onPreviewFail: Function as PropType<UploadOnPreviewFail>,
   /**
-   * 上传前拦截
+   * 上传文件之前的钩子，参数为上传的文件和文件列表，若返回false或者返回Promise且被reject，则停止上传。
+   * 类型：function({files,fileList})
+   * 默认值：-
    */
   beforeUpload: Function as PropType<UploadBeforeUpload>,
   /**
-   * 选择前拦截
+   * 选择图片之前的钩子，参数为文件列表，若返回false或者返回Promise且被reject，则停止上传。
+   * 类型：function({fileList})
+   * 默认值：-
    */
   beforeChoose: Function as PropType<UploadBeforeChoose>,
   /**
-   * 删除前拦截
+   * 删除文件之前的钩子，参数为要删除的文件和文件列表，若返回false或者返回Promise且被reject，则停止删除。
+   * 类型：function({file,index,fileList})
+   * 默认值：-
    */
   beforeRemove: Function as PropType<UploadBeforeRemove>,
   /**
-   * 预览前拦截
+   * 图片预览前的钩子，参数为预览的文件和图片列表，若返回false或者返回Promise且被reject，则停止预览。
+   * 类型：function({file,index,imgList,fileList})
+   * 默认值：-
    */
   beforePreview: Function as PropType<UploadBeforePreview>,
   /**
-   * 构造表单数据
+   * 构建上传formData的钩子，参数为上传的文件、待处理的formData，返回值为处理后的formData，若返回Promise且被reject，则停止上传。
+   * 类型：function({file,formData})
+   * 默认值：-
+   * 最低版本：0.1.61
    */
   buildFormData: Function as PropType<UploadBuildFormData>,
   /**
-   * 加载类型
+   * 加载中图标类型
+   * 类型：string
+   * 默认值：'ring'
    */
   loadingType: makeStringProp<LoadingType>('circular'),
   /**
-   * 接受的文件类型
+   * 加载中图标颜色
+   * 类型：string
+   * 默认值：'#ffffff'
    */
-  accept: makeStringProp<'image' | 'video' | 'media' | 'all' | 'file'>('image'),
+  loadingColor: makeStringProp('#ffffff'),
   /**
-   * 成功状态码
+   * 文件类型，可选值：'image' | 'video' | 'media' | 'all' | 'file'
+   * 默认值：image
+   * 描述：'media'表示同时支持'image'和'video'，'file'表示支持除'image'和'video'外的所有文件类型，'all'标识支持全部类型文件
+   * 'media'和'file'仅微信支持，'all'仅微信和H5支持
    */
-  successStatus: makeNumberProp(200),
+  accept: makeStringProp<UploadFileType>('image'),
   /**
-   * 文件状态 key
+   * file 数据结构中，status 对应的 key
+   * 类型：string
+   * 默认值：'status'
    */
   statusKey: makeStringProp('status'),
   /**
-   * 自定义上传方法
+   * 加载中图标尺寸
+   * 类型：string
+   * 默认值：'24px'
+   */
+  loadingSize: makeStringProp('24px'),
+  /**
+   * 是否压缩视频，当 accept 为 video 时生效。
+   * 类型：boolean
+   * 默认值：true
+   */
+  compressed: makeBooleanProp(true),
+  /**
+   * 拍摄视频最长拍摄时间，当 accept 为 video | media 时生效，单位秒。
+   * 类型：number
+   * 默认值：60
+   */
+  maxDuration: makeNumberProp(60),
+  /**
+   * 使用前置或者后置相机，当 accept 为 video | media 时生效，可选值为：back｜front。
+   * 类型：UploadCameraType
+   * 默认值：'back'
+   */
+  camera: makeStringProp<UploadCameraType>('back'),
+  /**
+   * 预览图片的mode属性
+   */
+  imageMode: makeStringProp<ImageMode>('aspectFit'),
+  /**
+   * 接口响应的成功状态（statusCode）值
+   */
+  successStatus: {
+    type: [Number, Array] as PropType<UploadSuccessStatus>,
+    default: 200
+  },
+  /**
+   * 自定义上传按钮样式
+   * 类型：string
+   */
+  customEvokeClass: makeStringProp(''),
+  /**
+   * 自定义预览图片列表样式
+   * 类型：string
+   */
+  customPreviewClass: makeStringProp(''),
+  /**
+   * 是否选择文件后自动上传
+   * 类型：boolean
+   */
+  autoUpload: makeBooleanProp(true),
+  /**
+   * 点击已上传时是否可以重新上传
+   * 类型：boolean
+   * 默认值：false
+   */
+  reupload: makeBooleanProp(false),
+  /**
+   * 自定义上传文件的请求方法
+   * 类型：UploadMethod
+   * 默认值：-
    */
   uploadMethod: Function as PropType<UploadMethod>,
   /**
-   * 图片裁剪模式
+   * 根据文件拓展名过滤,每一项都不能是空字符串。默认不过滤。
+   * H5支持全部类型过滤。
+   * 微信小程序支持all和file时过滤,其余平台不支持。
    */
-  imageMode: makeStringProp('aspectFit'),
-  /**
-   * 预览列表自定义类名
-   */
-  customPreviewClass: makeStringProp('')
+  extension: Array as PropType<string[]>
 }
 
 export type UploadProps = ExtractPropTypes<typeof uploadProps>
+
+export type UploadExpose = {
+  /**
+   * 手动触发上传
+   */
+  submit: () => void
+  /**
+   * 取消上传
+   * @param task 上传任务
+   */
+  abort: (task?: UniApp.UploadTask) => void
+}
+
+export type UploadErrorEvent = {
+  error: any
+  file: UploadFileItem
+  formData: UploadFormData
+}
+
+export type UploadChangeEvent = {
+  fileList: UploadFileItem[]
+}
+
+export type UploadSuccessEvent = {
+  file: UploadFileItem
+  fileList: UploadFileItem[]
+  formData: UploadFormData
+}
+
+export type UploadProgressEvent = {
+  response: UniApp.OnProgressUpdateResult
+  file: UploadFileItem
+}
+
+export type UploadOversizeEvent = {
+  file: ChooseFile
+}
+
+export type UploadRemoveEvent = {
+  file: UploadFileItem
+}
 
 export type UploadInstance = ComponentPublicInstance<UploadProps, UploadExpose>

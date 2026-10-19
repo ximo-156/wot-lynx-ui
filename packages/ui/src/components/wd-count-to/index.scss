@@ -1,15 +1,25 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
-@include b(count-to) {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  font-size: var(--wd-font-md);
-  color: var(--wd-text-1);
-  font-variant-numeric: tabular-nums;
+// 数字主体文本字号
+$count-to-text-font-size: var(--wot-count-to-text-font-size, $typography-body-size-ultra-large) !default;
+// 数字主体文本行高
+$count-to-text-line-height: var(--wot-count-to-text-line-height, $typography-body-line-height-size-ultra-large) !default;
+// 分隔文本字号
+$count-to-separator-text-font-size: var(--wot-count-to-separator-text-font-size, $typography-label-size-main) !default;
+// 分隔文本行高
+$count-to-separator-text-line-height: var(--wot-count-to-separator-text-line-height, $typography-label-line-height-size-main) !default;
 
-  /* 前缀/后缀与主数字的间距（custom-class 经 wd-text 根节点生效） */
+@include b(count-to) {
+  vertical-align: bottom;
+
+  @include edeep(main-text) {
+    font-size: $count-to-text-font-size;
+    line-height: $count-to-text-line-height;
+  }
+
   @include edeep(separator-text) {
-    margin: 0 var(--wd-space-05);
+    font-size: $count-to-separator-text-font-size;
+    line-height: $count-to-separator-text-line-height;
   }
 }

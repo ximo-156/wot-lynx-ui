@@ -1,20 +1,14 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
 @include b(avatar-group) {
+  // Lynx 适配：inline-flex 不被识别（引擎只认 flex/none/linear，CONVENTIONS §15），
+  // 改为 display: flex + flex-direction: row。
   display: flex;
   flex-direction: row;
   align-items: center;
 
-  @include m(left) {
-    flex-direction: row-reverse;
-  }
-
-  @include when(overlap) {
-    .wd-avatar {
-      margin-left: -8px;
-      border-width: 2px;
-      border-style: solid;
-      border-color: var(--wd-bg-container);
-    }
+  @include when(vertical) {
+    flex-direction: column;
   }
 }

@@ -1,8 +1,25 @@
 /*
  * wd-notify — 消息通知
  *
- * Lynx 实现说明：基于 wd-popup（无遮罩）；命令式 API 经
- * useNotify(selector) 驱动（模块级注入单例，与 wd-toast 同范式）。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 结构：wd-popup（无遮罩）> view.wd-notify，与 wot-ui 一致；
+ * - 状态通道：wot-ui 用 inject(getNotifyOptionKey(selector), ref(props)) 单通道
+ *   （命令式 useNotify 写、组件读）。本地保留双通道：注入的 option ref（useNotify
+ *   命令式 / defineExpose 的 showNotify）+ props 声明式同步，两者都汇入 state；
+ * - 图标名：wot-ui 用 check-circle-fill / exclamation-circle-fill /
+ *   close-circle-fill / info-circle-fill，本地内置图标集（iconfont）无同名字形，
+ *   映射为 success / warning / error / prompt（CONVENTIONS §8）；
+ * - 弹层定位：wot-ui 写 top: calc(var(--window-top) + safeHeight) /
+ *   bottom: var(--window-bottom)（uni-app 小程序专有 CSS 变量，Lynx 不存在），
+ *   改用 popup 的 padding-top 承担顶部安全高度；floating 变体的 left/right
+ *   由内联样式给出（同 wot-ui 的 12px），width 保持 auto；
+ *   overflow: unset 为 Web 专有写法，Lynx 不支持，删除；
+ * - 内联样式一律对象语法并经 parseStyle 归一 customStyle（字符串 :style 会被
+ *   vue-lynx 静默丢弃，CONVENTIONS §19）；会随 position / variant 切换的键
+ *   （padding-top / left / right / width）每帧写全，省略键等于保留旧值
+ *   （CONVENTIONS §20）；
+ * - 根 view 的点击 @click → @tap，并在 emits 声明 tap 转发（CONVENTIONS §6/§14）；
+ *   onClick / onClosed / onOpened 回调选项优先于 emit（与 wot-ui 一致）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -10,16 +27,16 @@ import './index.css'
 import { computed, inject, ref, watch } from 'vue-lynx'
 import WdPopup from '../wd-popup/wd-popup.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
-import { notifyProps, type NotifyType } from './types'
+import { notifyProps, type NotifyType, type NotifyProps } from './types'
 import { getNotifyOptionKey } from '.'
-import { filterStyle, isDef, isString, parseStyle } from '../../common/util'
+import { addUnit, filterStyle, isDef, isFunction, isString, parseStyle } from '../../common/util'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(notifyProps)
 const emit = defineEmits(['click', 'closed', 'opened', 'update:visible', 'tap'])
 
 const notifyOptionKey = getNotifyOptionKey(props.selector)
-const state = ref({ ...props })
+const state = ref<NotifyProps>({ ...props })
 const isAlive = useAlive()
 
 // 命令式 API（useNotify(selector) / defineExpose 的 showNotify）与 props
@@ -35,7 +52,7 @@ function applyOptions(options: Record<string, any>) {
   for (const key of Object.keys(options)) {
     if (isDef(options[key])) next[key] = options[key]
   }
-  state.value = next as typeof state.value
+  state.value = next as NotifyProps
 }
 
 watch(
@@ -49,9 +66,8 @@ watch(
   { deep: true }
 )
 
-// 声明式 props 同步：state 初始为 props 快照（ref({ ...props })），此前无 watch，
-// 挂载后 :visible/:message/:type/:duration 等声明式变更全部无效。此处把关键
-// props 的后续变更汇入 state（visible 变化可开/关），与命令式通道并存。
+// 声明式 props 同步：state 初始为 props 快照，此处把关键 props 的后续变更汇入
+// state（visible 变化可开/关），与命令式通道并存。
 watch(
   () => [
     props.visible,
@@ -84,17 +100,40 @@ watch(
   }
 )
 
-const popupStyle = computed(() => {
-  return `background-color: transparent;${state.value.safeHeight ? `padding-top: ${state.value.safeHeight}px;` : ''}`
+const popupStyle = computed<Record<string, string>>(() => {
+  const style: Record<string, string> = {
+    background: 'transparent',
+    'padding-top': '0px',
+    left: '0px',
+    right: '0px',
+    width: 'auto'
+  }
+  if (state.value.position === 'top') {
+    style['padding-top'] = addUnit(state.value.safeHeight || 0)
+  }
+  if (state.value.variant === 'floating') {
+    style.left = '12px'
+    style.right = '12px'
+  }
+  return style
 })
 
+/**
+ * 颜色 / 背景色为可选配置：未传时经 filterStyle 剔除空值（CONVENTIONS §19.3），
+ * 由 .wd-notify--<type> 的类型类承担配色。弹层默认 lazyRender + hideWhenClose，
+ * 通知每次展示都是新挂载的节点，不存在跨帧残留。
+ */
 const rootStyle = computed(() => {
-  const style: Record<string, string> = {}
-  if (state.value.color) style.color = state.value.color
-  if (state.value.background) style['background-color'] = state.value.background
+  const style: Record<string, string> = {
+    color: state.value.color || '',
+    'background-color': state.value.background || ''
+  }
   return { ...filterStyle(style), ...parseStyle(props.customStyle) }
 })
 
+/**
+ * 根据消息类型获取对应的图标
+ */
 const iconName = computed(() => {
   const map: Record<NotifyType, string> = {
     primary: 'prompt',
@@ -102,37 +141,61 @@ const iconName = computed(() => {
     warning: 'warning',
     danger: 'error'
   }
-  return map[state.value.type] || ''
+  return map[state.value.type!] || ''
 })
 
-function onClick() {
-  emit('click')
-  emit('tap')
+/**
+ * 处理点击事件
+ */
+const onClick = (event: any) => {
+  if (isFunction(state.value.onClick)) return state.value.onClick(event)
+  emit('click', event)
+  emit('tap', event)
 }
 
-function handleClose() {
-  state.value.visible = false
-  emit('update:visible', false)
-}
-
-function onClosed() {
+/**
+ * 处理关闭动画结束事件
+ */
+const onClosed = () => {
+  if (isFunction(state.value.onClosed)) return state.value.onClosed()
   emit('closed')
 }
 
-function onOpened() {
+/**
+ * 处理打开动画结束事件
+ */
+const onOpened = () => {
+  if (isFunction(state.value.onOpened)) return state.value.onOpened()
   emit('opened')
 }
+
+/**
+ * 点击关闭按钮处理
+ */
+function handleClose() {
+  state.value.visible = false
+}
+
+watch(
+  () => state.value.visible,
+  (visible) => {
+    emit('update:visible', visible as boolean)
+  },
+  { deep: true }
+)
 
 /**
  * 命令式展示（组件实例方法，demo 的 ref 调用方式；与 useNotify 共享
  * 同一 option ref 的页面会经 watch 同步）。字符串入参视为 message。
  */
 function showNotify(option: Record<string, any> | string) {
+  if (!isAlive()) return
   applyOptions({ ...(isString(option) ? { message: option } : option), visible: true })
 }
 
 /** 命令式关闭 */
 function closeNotify() {
+  if (!isAlive()) return
   state.value.visible = false
 }
 
@@ -140,7 +203,7 @@ defineExpose({ showNotify, closeNotify })
 </script>
 
 <template>
-  <wd-popup
+  <WdPopup
     v-model="state.visible"
     :custom-style="popupStyle"
     :position="state.position"
@@ -162,7 +225,7 @@ defineExpose({ showNotify, closeNotify })
       @tap="onClick"
     >
       <slot name="prefix">
-        <wd-icon v-if="iconName" :name="iconName" custom-class="wd-notify__prefix" />
+        <WdIcon v-if="iconName" :name="iconName" custom-class="wd-notify__prefix" />
       </slot>
       <view class="wd-notify__content">
         <slot>
@@ -170,8 +233,8 @@ defineExpose({ showNotify, closeNotify })
         </slot>
       </view>
       <slot name="close" v-if="state.closable">
-        <wd-icon name="close" custom-class="wd-notify__close" @tap="handleClose" />
+        <WdIcon name="close" custom-class="wd-notify__close" @tap="handleClose" />
       </slot>
     </view>
-  </wd-popup>
+  </WdPopup>
 </template>

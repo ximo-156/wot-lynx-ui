@@ -1,47 +1,34 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
-import { baseProps, makeBooleanProp, makeNumberProp, makeRequiredProp, makeStringProp } from '../../common/props'
+import { baseProps, makeBooleanProp, makeNumberProp, makeRequiredProp } from '../../common/props'
 import type { BadgeProps } from '../wd-badge/types'
 
 export const sidebarItemProps = {
   ...baseProps,
-  /**
-   * 标签
-   */
+  /** 当前选项标题 */
   label: makeRequiredProp(String),
-  /**
-   * 值
-   */
+  /** 当前选项的值，唯一标识 */
   value: makeRequiredProp([Number, String]),
-  /**
-   * 徽标值
-   */
+  /** 徽标显示值 */
   badge: [String, Number] as PropType<string | number>,
-  /**
-   * 徽标配置
-   */
+  /** 徽标属性，透传给 Badge 组件 */
   badgeProps: Object as PropType<Partial<BadgeProps>>,
-  /**
-   * 图标名称
-   */
+  /** 图标 */
   icon: String,
-  /**
-   * 图标类名前缀
-   */
+  /** 图标类名前缀，用法参考 Icon 组件 */
   iconPrefix: String,
-  /**
-   * CSS 图标类名
-   */
+  /** CSS 图标，用法参考 Icon 组件 */
   cssIcon: {
     type: [Boolean, String],
     default: false
   },
-  /**
-   * 徽标是否为圆点
-   */
-  isDot: makeBooleanProp(false),
-  /**
-   * 是否禁用
-   */
+  /** 是否点状徽标 */
+  isDot: {
+    type: Boolean,
+    default: undefined
+  },
+  /** 徽标最大值 */
+  max: Number,
+  /** 是否禁用 */
   disabled: makeBooleanProp(false)
 }
 

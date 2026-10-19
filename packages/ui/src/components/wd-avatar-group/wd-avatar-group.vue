@@ -1,17 +1,19 @@
 /*
  * wd-avatar-group — 头像组
  *
- * Lynx 实现说明：
- * - 层叠展示（overlap）：子头像负外边距叠加；
- * - maxCount 限制展示个数：子头像经 useParent 注册到 group 的 children
- *   （useChildren 的 reactive 数组，link 发生在子组件 setup，首帧后才有值，
- *   故渲染依赖保持响应式）；
- * - slot 渲染时按 maxCount 截断（只渲染前 maxCount 个子节点，经
- *   slots.default() 拿 vnode 后 slice，再用 component :is 渲染——Vue 3
- *   对 vnode 的克隆渲染）；
- * - 总数口径：children 只含**已渲染**（截断后）的实例，恒 ≤ maxCount，
- *   不能反映插槽全量；故子头像总数取 max(children.length, 插槽节点数)，
- *   折叠判定与 "+N" 文案均基于该总数。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 子头像注册 / 层叠顺序与参考源一致：子头像经 useParent 注册到 group 的
+ *   children（useChildren 的 reactive 数组），maxCount 折叠判定、"+N" 文案、
+ *   right-up 的 z-index 均基于 children.length；
+ * - 超出 maxCount 的子头像由各头像自身经 index < maxCount 隐藏（参考源行为），
+ *   group 只负责渲染折叠头像；
+ * - 折叠头像以 _internal 标记创建，跳过父级上下文注册，避免计入 children；
+ * - 根节点 :style 参考源为 customStyle 字符串拼接，Lynx 的字符串 style 会被
+ *   静默丢弃（CONVENTIONS §19），改为 parseStyle(customStyle) 对象语法；
+ * - 折叠头像的 custom-style 参考源为 objToStyle 字符串，改为样式对象下发
+ *   （avatar 的 customStyle 经 parseStyle 归一，对象原样透传）；
+ * - 层叠间距 --wot-avatar-overlap 由头像侧消费（见 wd-avatar 的 is-first
+ *   索引类名适配），group 自身不产生结构伪类 / 兄弟选择器。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -20,87 +22,96 @@ import { computed, useSlots } from 'vue-lynx'
 import WdAvatar from '../wd-avatar/wd-avatar.vue'
 import { avatarGroupProps, AVATAR_GROUP_KEY } from './types'
 import { useChildren } from '../../composables/useChildren'
-import { filterStyle, parseStyle } from '../../common/util'
+import { addUnit, filterStyle, isString, parseStyle } from '../../common/util'
 
 const props = defineProps(avatarGroupProps)
 const slots = useSlots()
 
 const { children, linkChildren } = useChildren(AVATAR_GROUP_KEY)
 
-linkChildren({ props: props as any })
+linkChildren({ props } as any)
 
-/** maxCount 归一化：非正数 / 非法值视为不限制 */
+/**
+ * 根节点类名
+ */
+const rootClass = computed(() => {
+  return `wd-avatar-group wd-avatar-group--${props.cascading} ${props.customClass} ${props.vertical ? 'is-vertical' : ''}`
+})
+
 const maxCountValue = computed(() => {
-  const count = Number(props.maxCount)
-  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
+  if (!props.maxCount) {
+    return 0
+  }
+  const count = typeof props.maxCount === 'number' ? props.maxCount : parseInt(props.maxCount, 10)
+  return isNaN(count) || count <= 0 ? 0 : count
 })
 
 /**
- * 渲染期缓存：本次渲染的插槽全量节点。
- *
- * slots.default() 只能在渲染上下文调用（子组件 setup 依赖当前渲染实例），
- * 故在模板 v-for 中经 renderNodes() 调用并写入缓存，showCollapse /
- * collapseText 同在这一帧内读取（参照 wd-tabs 的 navCache 模式）。
+ * 是否显示折叠头像
  */
-let slotCache: any[] = []
-
-/** 按 maxCount 截断后渲染的节点 */
-function renderNodes(): any[] {
-  slotCache = slots.default ? (slots.default() as any[]) : []
-  const max = maxCountValue.value
-  return max > 0 && slotCache.length > max ? slotCache.slice(0, max) : slotCache
-}
+const showCollapse = computed(() => {
+  return maxCountValue.value > 0 && children.length > maxCountValue.value
+})
 
 /**
- * 子头像总数：children（useChildren 注册，仅已渲染实例）与插槽全量节点数
- * 取较大者。截断后 children.length ≤ maxCount，插槽节点数才是全量口径；
- * children 保留响应式读取——异步注册完成时触发父级重渲染。
+ * 剩余未显示的数量
  */
-function totalCount(): number {
-  return Math.max(children.length, slotCache.length)
-}
+const restCount = computed(() => {
+  if (maxCountValue.value <= 0) {
+    return 0
+  }
+  return Math.max(0, children.length - maxCountValue.value)
+})
 
-/** 是否展示折叠头像 */
-function showCollapse(): boolean {
-  const max = maxCountValue.value
-  return max > 0 && totalCount() > max
-}
+/**
+ * 折叠头像文本
+ */
+const collapseText = computed(() => {
+  return props.collapseAvatar || `+${restCount.value}`
+})
 
-/** 折叠头像文本：优先用户传入，否则自动计算 "+N" */
-function collapseText(): string {
-  const max = maxCountValue.value
-  return props.collapseText || `+${Math.max(0, totalCount() - max)}`
-}
+/**
+ * 是否有默认插槽
+ */
+const hasDefaultSlot = computed(() => !!slots.default)
 
+/**
+ * 折叠头像样式
+ */
 const collapseStyle = computed(() => {
   const style: Record<string, string> = {}
-  if (props.overlap) {
-    style['margin-left'] = '-8px'
+  if (props.cascading === 'left-up') {
+    const count = maxCountValue.value > 0 ? maxCountValue.value : children.length
+    style['z-index'] = String(count + 1)
+  } else {
+    style['z-index'] = '0'
+  }
+  if (hasDefaultSlot.value) {
+    const isBuiltIn = isString(props.size) && ['large', 'medium', 'normal', 'small'].includes(props.size)
+    const margin = isBuiltIn ? 'var(--wot-avatar-overlap)' : `calc(${addUnit(props.size)} * -0.25)`
+    if (props.vertical) {
+      style['margin-top'] = margin
+    } else {
+      style['margin-left'] = margin
+    }
   }
   return filterStyle(style)
-})
-
-const rootClass = computed(() => {
-  const classes = ['wd-avatar-group', `wd-avatar-group--${props.direction}`]
-  if (props.overlap) classes.push('is-overlap')
-  if (props.customClass) classes.push(props.customClass)
-  return classes.join(' ')
 })
 </script>
 
 <template>
   <view :class="rootClass" :style="parseStyle(customStyle)">
-    <template v-for="(node, index) in renderNodes()" :key="index">
-      <component :is="node" />
-    </template>
+    <slot></slot>
+    <!-- 折叠头像 -->
     <wd-avatar
-      v-if="showCollapse()"
+      v-if="showCollapse"
       :custom-style="collapseStyle"
-      :text="collapseText()"
+      _internal
+      :text="collapseText"
       :shape="shape"
       :size="size"
-      bg-color="#D3D7E0"
-      color="#FFFFFF"
+      bg-color="#ebedf0ff"
+      color="#969799ff"
     />
   </view>
 </template>

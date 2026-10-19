@@ -1,143 +1,195 @@
 /*
  * wd-popover — 气泡弹出
  *
- * Lynx 实现说明：经 usePopover 计算气泡定位（placement + offset），
- * 目标元素度量后定位；normal / menu 两种内容模式。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 事件映射：@click → @tap（CONVENTIONS §6，Lynx view 不派发 click）；
+ *   根 view 绑 @tap.stop 阻止冒泡，故 emits 声明 'tap' 并在 toggle 中转发
+ *   （CONVENTIONS §14：消费方在组件上绑 @tap 不会与根元素监听合并崩溃）。
+ * - 文本一律包在 text 元素中；customStyle 经 parseStyle 归一为对象语法
+ *   （CONVENTIONS §19：字符串 :style 会被 vue-lynx 静默丢弃）。
+ * - 定位样式：usePopover 返回的 popStyle / arrowStyle 为对象语法。
+ * - 节点 id：wot-ui 用静态 id（popover/pos/content/target），同页多实例会撞
+ *   Lynx 引擎 id 注册表；这里改用 usePopover.ids 的实例唯一 id。
+ * - 点击空白关闭：wot-ui 依赖页面根元素的 closeOutside（useQueue 模式），
+ *   Lynx 无对应全局点击链路，降级为自包含的全屏透明 backdrop 捕获气泡外
+ *   tap；useQueue / clickoutside 队列逻辑保留（打开时关闭其它气泡）。
+ * - showStyle 为 wot-ui 遗留状态（模板未消费），此处按对象语法同步赋值以
+ *   保持脚本逐段对齐。
  */
 <script lang="ts" setup>
 import './index.css'
-import { parseStyle } from '../../common/util'
 
-import { computed, onMounted, ref, useSlots, watch } from 'vue-lynx'
+import { getCurrentInstance, inject, onBeforeMount, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import { popoverProps, type PopoverExpose, type PopoverMenuItem } from './types'
 import { usePopover } from '../../composables/usePopover'
+import { closeOther, pushToQueue, removeFromQueue } from '../../common/clickoutside'
+import { type Queue, queueKey } from '../../composables/useQueue'
+import { isArray, isObj, parseStyle } from '../../common/util'
 
 const props = defineProps(popoverProps)
-const emit = defineEmits(['change', 'update:modelValue', 'menuclick', 'tap'])
+const emit = defineEmits(['update:modelValue', 'menuclick', 'change', 'open', 'close', 'tap'])
 
 const slots = useSlots()
-const showPopover = ref<boolean>(false)
-
+const queue = inject<Queue | null>(queueKey, null)
+const selector: string = 'popover'
+const { proxy } = getCurrentInstance() as any
 const popover = usePopover(props.visibleArrow)
 
-/** wot-ui 位置名 → floating-ui 位置名（usePopover 约定） */
-function toFloatingPlacement(placement: string): any {
-  const map: Record<string, string> = {
-    top: 'top',
-    'top-left': 'top-start',
-    'top-right': 'top-end',
-    bottom: 'bottom',
-    'bottom-left': 'bottom-start',
-    'bottom-right': 'bottom-end',
-    left: 'left',
-    'left-top': 'left-start',
-    'left-bottom': 'left-end',
-    right: 'right',
-    'right-top': 'right-start',
-    'right-bottom': 'right-end'
-  }
-  return map[placement] || placement
-}
+const showPopover = ref<boolean>(false) // 控制popover显隐
 
-
-// 按 placement/offset 初始化与更新定位。
-// 第三个参数为 BEM 类名前缀（popover），节点度量走 usePopover 生成的实例唯一 id
-// （静态 id 在同页多实例下会撞引擎 id 注册表，见 usePopover.ids 注释）。
-//
-// ① 初始化定位移到 onMounted：setup 同步执行时目标节点尚未渲染，getRect 取不到
-//    尺寸（width/height=0），此前在 setup 里同步算一次导致定位恒为 0 且之后无
-//    重算。onMounted 时 DOM 就绪，度量可拿到真实尺寸。
-const placement = computed(() => toFloatingPlacement(props.placement))
-
-function controlPosition() {
-  popover.control(placement.value, props.offset as any)
-}
-
-/** 重新度量目标/气泡尺寸并重算定位 */
-function refreshPosition() {
-  popover.init(placement.value, props.visibleArrow, 'popover')
-  controlPosition()
-}
-
-onMounted(() => {
-  refreshPosition()
-})
-
-// ② / ⑥ 打开时重新定位：normal 模式下隐藏副本与真实内容同尺寸，updatePosition
-//    的尺寸比对不会触发重算，故打开时显式 control 一次强制重算。
-watch(showPopover, (val) => {
-  if (val) {
-    refreshPosition()
-  }
-})
-
-// ③ placement 变化时重新定位。
 watch(
-  () => props.placement,
-  () => {
-    controlPosition()
+  () => props.content,
+  (newVal) => {
+    const { mode } = props
+    if (mode === 'normal' && typeof newVal !== 'string') {
+      console.error('The value type must be a string type in normal mode')
+    } else if (mode === 'menu' && !isArray(newVal)) {
+      console.error('The value type must be a Array type in menu mode')
+    }
   }
 )
 
-const showStyle = computed(() => popover.showStyle.value)
+watch(
+  () => props.placement,
+  () => {
+    popover.init(props.placement, props.visibleArrow, selector)
+  }
+)
 
-const rootClass = computed(() => {
-  const classes = ['wd-popover']
-  if (props.customClass) classes.push(props.customClass)
-  return classes.join(' ')
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    showPopover.value = newValue
+  }
+)
+
+watch(
+  () => showPopover.value,
+  (newValue) => {
+    if (newValue) {
+      popover.control(props.placement, props.offset)
+      if (queue && queue.closeOther) {
+        queue.closeOther(proxy)
+      } else {
+        closeOther(proxy)
+      }
+    }
+    // wot-ui 此处为字符串（display: inline-block;），本地 showStyle 为对象语法
+    popover.showStyle.value = newValue ? { display: 'inline-block' } : { display: 'none' }
+    emit('change', { show: newValue })
+    emit(`${newValue ? 'open' : 'close'}`)
+  }
+)
+
+onMounted(() => {
+  popover.init(props.placement, props.visibleArrow, selector)
 })
 
+onBeforeMount(() => {
+  if (queue && queue.pushToQueue) {
+    queue.pushToQueue(proxy)
+  } else {
+    pushToQueue(proxy)
+  }
+  popover.showStyle.value = showPopover.value ? { display: 'inline-block' } : { display: 'none' }
+})
+
+onBeforeUnmount(() => {
+  if (queue && queue.removeFromQueue) {
+    queue.removeFromQueue(proxy)
+  } else {
+    removeFromQueue(proxy)
+  }
+})
+
+/**
+ * 处理菜单列表项点击
+ * @param {number} index 点击的项索引
+ */
+function menuClick(index: number) {
+  updateModelValue(false)
+  emit('menuclick', {
+    item: (props.content as PopoverMenuItem[])[index],
+    index
+  })
+}
+
+/**
+ * 切换 popover 的显示状态
+ */
 function toggle() {
   if (props.disabled) return
-  showPopover.value = !showPopover.value
-  emit('update:modelValue', showPopover.value)
-  emit('change', { show: showPopover.value })
+  updateModelValue(!showPopover.value)
+  // CONVENTIONS §14：根 view 原生事件名声明为 emit 并转发
   emit('tap')
 }
 
+/**
+ * 打开 popover
+ */
 function open() {
-  showPopover.value = true
-  emit('update:modelValue', true)
+  updateModelValue(true)
 }
 
+/**
+ * 关闭 popover
+ */
 function close() {
-  showPopover.value = false
-  emit('update:modelValue', false)
+  updateModelValue(false)
 }
 
-function menuClick(index: number) {
-  emit('menuclick', { index, item: (props.content as PopoverMenuItem[])[index] })
-  // 选中菜单项后关闭气泡（同步内部状态与 v-model）
-  close()
+/**
+ * 过渡动画完成后重新测量弹出层尺寸并更新定位
+ */
+function handleAfterEnter() {
+  popover.updatePosition(props.placement, props.offset)
 }
 
-function updatePosition() {
-  popover.updatePosition(toFloatingPlacement(props.placement), props.offset as any)
+/**
+ * 更新 popover 显示状态
+ * @param {boolean} value 显示状态
+ */
+function updateModelValue(value: boolean) {
+  showPopover.value = value
+  emit('update:modelValue', value)
 }
 
-defineExpose<PopoverExpose>({ open, close, updatePosition })
+/** 根 view 的 @tap.stop 占位（仅阻止冒泡，行为对齐 wot-ui 的 @click.stop） */
+function noop() {}
+
+defineExpose<PopoverExpose>({
+  open,
+  close,
+  updatePosition: () => popover.updatePosition(props.placement, props.offset)
+})
 </script>
 
 <template>
-  <view :class="rootClass" :style="parseStyle(customStyle)" :id="popover.ids.root" @tap.stop="toggle">
+  <view :class="`wd-popover ${customClass}`" :style="parseStyle(customStyle)" :id="popover.ids.root" @tap.stop="noop">
     <view class="wd-popover__pos wd-popover__hidden" :id="popover.ids.pos">
       <view :class="`wd-popover__container ${customPop}`">
         <view v-if="!slots.content && mode === 'normal'" class="wd-popover__inner">
           <text>{{ content }}</text>
         </view>
+        <view v-if="!slots.content && mode === 'menu' && typeof content === 'object'" class="wd-popover__menu">
+          <view v-for="(item, index) in content" :key="index" class="wd-popover__menu-inner" @tap="menuClick(index)">
+            <WdIcon v-if="item.iconClass" :name="item.iconClass" custom-class="wd-popover__icon" />
+            <text>{{ item.content }}</text>
+          </view>
+        </view>
       </view>
     </view>
-    <!-- ⑤ 点击空白关闭：透明全屏 backdrop 捕获气泡外 tap（Lynx 无全局 click，
+    <!-- 点击空白关闭：透明全屏 backdrop 捕获气泡外 tap（Lynx 无全局 click，
          module 级 clickoutside/useQueue 队列未接全局监听，故用自包含 backdrop） -->
     <view v-if="showPopover" class="wd-popover__backdrop" @tap.stop="close" />
-    <wd-transition
+    <WdTransition
       custom-class="wd-popover__pos"
       :custom-style="popover.popStyle.value"
       :show="showPopover"
       name="fade"
-      @after-enter="updatePosition()"
+      @after-enter="handleAfterEnter"
     >
       <view :class="`wd-popover__container ${customPop}`" :id="popover.ids.content">
         <view
@@ -146,25 +198,28 @@ defineExpose<PopoverExpose>({ open, close, updatePosition })
           :style="popover.arrowStyle.value"
         />
         <slot name="content">
+          <!-- 普通模式 -->
           <view v-if="mode === 'normal'" class="wd-popover__inner">
             <text>{{ content }}</text>
           </view>
+          <!-- 列表模式 -->
           <view v-if="mode === 'menu'" class="wd-popover__menu">
             <view
-              v-for="(item, index) in (content as PopoverMenuItem[])"
+              v-for="(item, index) in content"
               :key="index"
               :class="['wd-popover__menu-inner', index === 0 ? 'is-first' : '']"
-              @tap.stop="menuClick(index)"
+              @tap="menuClick(index)"
             >
-              <wd-icon v-if="item.iconClass" :name="item.iconClass" custom-class="wd-popover__icon" />
-              <text class="wd-popover__text">{{ item.content }}</text>
+              <WdIcon v-if="isObj(item) && item.iconClass" :name="item.iconClass" custom-class="wd-popover__menu-icon" />
+              <view class="wd-popover__text"><text>{{ isObj(item) && item.content ? item.content : '' }}</text></view>
             </view>
           </view>
         </slot>
-        <wd-icon v-if="showClose" name="close" custom-class="wd-popover__close-icon" @tap.stop="close" />
+
+        <WdIcon v-if="showClose" name="close" custom-class="wd-popover__close-icon" @tap="toggle" />
       </view>
-    </wd-transition>
-    <view class="wd-popover__target" :id="popover.ids.target">
+    </WdTransition>
+    <view class="wd-popover__target" :id="popover.ids.target" @tap="toggle">
       <slot />
     </view>
   </view>

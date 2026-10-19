@@ -11,7 +11,6 @@ const notifyPropsDefaults: NotifyProps = {
   zIndex: 99,
   visible: false,
   message: '',
-  selector: '',
   duration: 3000,
   position: 'top',
   safeHeight: undefined,

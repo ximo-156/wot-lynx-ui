@@ -1,1 +1,1 @@
-.wd-steps{display:flex;flex-direction:row;align-items:flex-start;width:100%}.wd-steps.is-vertical{flex-direction:column}.wd-steps.is-align-center{align-items:center}
+.wd-steps{display:flex;flex-direction:row;align-items:flex-start}.wd-steps.is-vertical{display:flex;flex-direction:column}

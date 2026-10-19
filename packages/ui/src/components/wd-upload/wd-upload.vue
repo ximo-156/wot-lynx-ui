@@ -1,13 +1,30 @@
 /*
  * wd-upload — 上传
  *
- * Lynx 实现说明：
- * - 选文件 / 上传 / 中断经 composables/useUpload + common/uni 兼容层，
- *   宿主可注入媒体选择与上传能力，未注入时统一降级；
- * - 预览列表：图片 / 视频 / 文件三种形态，状态（pending/loading/success/fail）
- *   经 statusKey 字段驱动；
- * - beforeUpload / beforeRemove / beforePreview / beforeChoose 拦截器
- *   经 common/interceptor 下发。
+ * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - 模板结构逐节点对齐参考源：根 view → 预览列表（图片 / 视频 / 文件三种
+ *   形态 + 状态蒙层 + 关闭按钮 + preview-cover 插槽）→ 唤起项（默认插槽或
+ *   相机图标唤起按钮）；
+ * - 参考源的 uni-app 条件编译分支（MP-WEIXIN 的 previewMedia / APP-PLUS 的
+ *   video-camera 图标）全部移除：视频预览统一走本地 wd-video-preview 组件
+ *   （非 MP 分支的等价实现），文件图标按平台能力取舍；
+ * - 事件映射：@click → @tap（CONVENTIONS §6，Lynx view 不派发 click）；
+ * - uni.pageScrollTo / uni.previewImage / uni.openDocument / uni.previewMedia
+ *   等平台调用经 common/uni 适配层下发（宿主可经 configureUniAdapter 注入
+ *   真实能力，未注入时降级并 warning），getImageInfo 同理；
+ * - 文件选择 / 上传 / 中断经 composables/useUpload（宿主媒体能力适配层）；
+ * - customStyle 为字符串，经 parseStyle 归一为对象语法（CONVENTIONS §19：
+ *   字符串 :style 会被 vue-lynx 静默丢弃）；
+ * - 参考源 view 承载的裸文本（file-name / evoke-num）包进 text 元素
+ *   （CONVENTIONS §4）；
+ * - fileList watch 内先浅拷贝再补默认值：不直接改写消费方传入的 prop 对象
+ *   （deep watch 内改写被监听 props 有自触发循环风险）；
+ * - 异步入口（选文件 Promise、拦截器 done、上传回调）加 isAlive 守卫：
+ *   回调晚于组件卸载落地时续写 uploadFiles 会触发 vue-lynx 在已销毁树上
+ *   patch（真机 9902 removeNode 家族）；
+ * - 图标名 camera-fill / play-circle-fill / close-circle / video-camera 在
+ *   本地 iconfont 集中无对应字形，经 resolveIconName 取最近似字形
+ *   （camera / play / close / film），消费者显式传入的其它名字原样下发。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -15,17 +32,22 @@ import './index.css'
 import { computed, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
-import { context, deepClone, isDef, isEqual, isImageUrl, isPromise, isVideoUrl, uuid, parseStyle } from '../../common/util'
+import WdVideoPreview from '../wd-video-preview/wd-video-preview.vue'
+import { context, deepClone, isDef, isEqual, isImageUrl, isPromise, isVideoUrl, parseStyle, uuid } from '../../common/util'
 import { callInterceptor } from '../../common/interceptor'
 import { useTranslate } from '../../composables/useTranslate'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useUpload } from '../../composables/useUpload'
 import { useAlive } from '../../composables/useAlive'
+import { uni } from '../../common/uni'
+import { hasIcon } from '../../icons/registry'
 import {
   uploadProps,
+  type ChooseFile,
   type UploadExpose,
   type UploadFileItem
 } from './types'
+import { useVideoPreview } from '../wd-video-preview'
 
 const props = defineProps(uploadProps)
 const isDisabled = useFormDisabled(props)
@@ -57,6 +79,9 @@ const uploadFiles = ref<UploadFileItem[]>([])
 
 const showUpload = computed(() => !props.limit || uploadFiles.value.length < props.limit)
 
+const videoPreviewId = ref<string>(`videoPreview${uuid()}`)
+const { previewVideo } = useVideoPreview(videoPreviewId.value)
+
 const { startUpload, abort, chooseFile, UPLOAD_STATUS } = useUpload()
 
 watch(
@@ -64,9 +89,8 @@ watch(
   (val) => {
     const { statusKey } = props
     if (isEqual(val, uploadFiles.value)) return
-    // 先浅拷贝再补默认值：不得直接改写消费方传入的 prop 对象
-    // （deep watch 内改写被监听 props 还有自触发循环风险）
     const uploadFileList: UploadFileItem[] = (val as UploadFileItem[]).map((item) => {
+      // 先浅拷贝再补默认值：不得直接改写消费方传入的 prop 对象
       const copy = { ...item, uid: context.id++ } as UploadFileItem
       copy[statusKey] = copy[statusKey] || 'success'
       copy.response = copy.response || ''
@@ -74,249 +98,472 @@ watch(
     })
     uploadFiles.value = uploadFileList
   },
-  { deep: true, immediate: true }
+  {
+    deep: true,
+    immediate: true
+  }
+)
+
+watch(
+  () => props.limit,
+  (val) => {
+    if (val && val < uploadFiles.value.length) {
+      console.error('[wot-design]Error: props limit must less than fileList.length')
+    }
+  },
+  {
+    deep: true,
+    immediate: true
+  }
 )
 
 function emitFileList() {
   emit('update:fileList', uploadFiles.value)
 }
 
-/** 开始上传全部 pending 文件 */
+/**
+ *  开始上传文件
+ */
 function startUploadFiles() {
   const { buildFormData, formData = {}, statusKey } = props
   const { action, name, header = {}, accept, successStatus, uploadMethod } = props
   const statusCode = isDef(successStatus) ? successStatus : 200
 
   for (const uploadFile of uploadFiles.value) {
-    if (uploadFile[statusKey] !== UPLOAD_STATUS.PENDING) continue
-
-    const runUpload = (fd: Record<string, any>) => {
-      // buildFormData 的 Promise 可能晚于卸载 settle
-      if (!isAlive()) return
-      startUpload(uploadFile, {
-        action,
-        header,
-        name,
-        formData: fd,
-        fileType: accept === 'video' ? 'video' : 'image',
-        statusCode,
-        abortPrevious: false,
-        uploadMethod,
-        onSuccess: (res: any, file: UploadFileItem, data: Record<string, any>) => {
-          file[statusKey] = UPLOAD_STATUS.SUCCESS
-          emit('success', { file, response: res, formData: data })
-          emitFileList()
-        },
-        onError: (res: any, file: UploadFileItem, data: Record<string, any>) => {
-          file[statusKey] = UPLOAD_STATUS.FAIL
-          emit('fail', { file, error: res })
-          emitFileList()
-        },
-        onProgress: (res: any, file: UploadFileItem) => {
-          file.percent = res.progress
-          emit('progress', { file, progress: res.progress })
+    // 仅开始未上传的文件
+    if (uploadFile[statusKey] === UPLOAD_STATUS.PENDING) {
+      if (buildFormData) {
+        const res = buildFormData({ file: uploadFile, formData })
+        if (isPromise(res)) {
+          res
+            .then((newFormData) => {
+              if (newFormData) {
+                startUpload(uploadFile, {
+                  action,
+                  header,
+                  name,
+                  formData: newFormData,
+                  fileType: accept as 'image' | 'video' | 'audio',
+                  statusCode,
+                  statusKey,
+                  uploadMethod,
+                  onSuccess: handleSuccess,
+                  onError: handleError,
+                  onProgress: handleProgress
+                })
+              }
+            })
+            .catch(() => {})
+        } else if (res) {
+          startUpload(uploadFile, {
+            action,
+            header,
+            name,
+            formData: res,
+            fileType: accept as 'image' | 'video' | 'audio',
+            statusCode,
+            statusKey,
+            uploadMethod,
+            onSuccess: handleSuccess,
+            onError: handleError,
+            onProgress: handleProgress
+          })
         }
-      })
-    }
-
-    if (buildFormData) {
-      const res = buildFormData({ file: uploadFile, formData })
-      if (isPromise(res)) {
-        res.then((newFormData) => newFormData && runUpload(newFormData))
-      } else if (res) {
-        runUpload(res)
+      } else {
+        startUpload(uploadFile, {
+          action,
+          header,
+          name,
+          formData,
+          fileType: accept as 'image' | 'video' | 'audio',
+          statusCode,
+          statusKey,
+          uploadMethod,
+          onSuccess: handleSuccess,
+          onError: handleError,
+          onProgress: handleProgress
+        })
       }
-    } else {
-      runUpload(formData)
     }
   }
 }
 
-/** 选择文件 */
-async function handleChoose() {
-  if (isDisabled.value) return
-  const chooseOptions = {
-    accept: props.accept,
-    multiple: props.multiple,
-    sizeType: props.sizeType,
-    sourceType: props.sourceType,
-    maxCount: props.limit ? props.limit - uploadFiles.value.length : 9
-  }
+/**
+ * 获取图片信息
+ * @param img
+ */
+function getImageInfo(img: string) {
+  return new Promise<any>((resolve, reject) => {
+    uni.getImageInfo({
+      src: img,
+      success: (res: any) => {
+        resolve(res)
+      },
+      fail: (error: any) => {
+        reject(error)
+      }
+    })
+  })
+}
 
-  callInterceptor(props.beforeChoose, {
-    args: [chooseOptions],
-    done: async () => {
-      try {
-        const files = await chooseFile(chooseOptions)
-        // 相册 UI 停留期间页面可能已卸载
-        if (!isAlive()) return
-        onFilesChosen(files)
-      } catch (error) {
-        emit('chooseerror', error)
+/**
+ * @description 初始化文件数据
+ * @param {Object} file 上传的文件
+ */
+function initFile(file: ChooseFile, currentIndex?: number) {
+  const { statusKey } = props
+  // 状态初始化
+  const initState: UploadFileItem = {
+    uid: context.id++,
+    // 仅h5支持 name
+    name: file.name || '',
+    thumb: file.thumb || '',
+    [statusKey]: 'pending',
+    size: file.size || 0,
+    url: file.path,
+    percent: 0
+  }
+  if (typeof currentIndex === 'number') {
+    uploadFiles.value.splice(currentIndex, 1, initState)
+  } else {
+    uploadFiles.value.push(initState)
+  }
+  if (props.autoUpload) {
+    startUploadFiles()
+  }
+}
+
+/**
+ * @description 上传失败捕获
+ * @param {Object} err 错误返回信息
+ * @param {Object} file 上传的文件
+ */
+function handleError(err: Record<string, any>, file: UploadFileItem, formData: Record<string, any>) {
+  if (!isAlive()) return
+  const { statusKey } = props
+  const index = uploadFiles.value.findIndex((item) => item.uid === file.uid)
+  if (index > -1) {
+    uploadFiles.value[index][statusKey] = 'fail'
+    uploadFiles.value[index].error = err.message
+    uploadFiles.value[index].response = err
+    emit('fail', { error: err, file, formData })
+    emitFileList()
+  }
+}
+
+/**
+ * @description 上传成功捕获
+ * @param {Object} res 接口返回信息
+ * @param {Object} file 上传的文件
+ */
+function handleSuccess(res: Record<string, any>, file: UploadFileItem, formData: Record<string, any>) {
+  if (!isAlive()) return
+  const { statusKey } = props
+  const index = uploadFiles.value.findIndex((item) => item.uid === file.uid)
+  if (index > -1) {
+    uploadFiles.value[index][statusKey] = 'success'
+    uploadFiles.value[index].response = res.data
+    emit('change', { fileList: uploadFiles.value })
+    emit('success', { file, fileList: uploadFiles.value, formData })
+    emitFileList()
+  }
+}
+
+/**
+ * @description 上传中捕获
+ * @param {Object} res 接口返回信息
+ * @param {Object} file 上传的文件
+ */
+function handleProgress(res: any, file: UploadFileItem) {
+  if (!isAlive()) return
+  const index = uploadFiles.value.findIndex((item) => item.uid === file.uid)
+  if (index > -1) {
+    uploadFiles.value[index].percent = res.progress
+    emit('progress', { response: res, file })
+  }
+}
+
+/**
+ * @description 选择文件的实际操作，将chooseFile自己用promise包了一层
+ */
+function onChooseFile(currentIndex?: number) {
+  const { multiple, maxSize, accept, sizeType, limit, sourceType, compressed, maxDuration, camera, beforeUpload, extension } = props
+  chooseFile({
+    multiple: isDef(currentIndex) ? false : multiple,
+    sizeType,
+    sourceType,
+    maxCount: limit ? limit - uploadFiles.value.length : limit,
+    accept,
+    compressed,
+    maxDuration,
+    camera,
+    extension
+  })
+    .then((res) => {
+      // 相册 UI 停留期间页面可能已卸载
+      if (!isAlive()) return
+      // 成功选择初始化file
+      let files = res
+      // 单选只有一个
+      if (!multiple) {
+        files = files.slice(0, 1)
+      }
+      // 遍历列表逐个初始化上传参数
+      const mapFiles = async (files: ChooseFile[]) => {
+        for (let index = 0; index < files.length; index++) {
+          const file = files[index]
+          if (file.type === 'image' && !file.size) {
+            const imageInfo = await getImageInfo(file.path)
+            file.size = imageInfo.width * imageInfo.height
+          }
+          Number(file.size) <= maxSize ? initFile(file, currentIndex) : emit('oversize', { file })
+        }
+      }
+
+      // 上传前的钩子
+      callInterceptor(beforeUpload, {
+        args: [{ files, fileList: uploadFiles.value }],
+        done: () => mapFiles(files)
+      })
+    })
+    .catch((error) => {
+      emit('chooseerror', { error })
+    })
+}
+
+/**
+ * @description 处理唤起选择文件的点击事件
+ */
+function onEvokeClick() {
+  handleChoose()
+}
+
+/**
+ * @description 选择文件，内置拦截选择操作
+ */
+function handleChoose(index?: number) {
+  if (isDisabled.value) return
+  const { beforeChoose } = props
+
+  // 选择图片前的钩子
+  callInterceptor(beforeChoose, {
+    args: [{ fileList: uploadFiles.value }],
+    done: () => onChooseFile(index)
+  })
+}
+
+/**
+ * @description 移除文件
+ * @param {Object} file 上传的文件
+ */
+function handleRemove(file: UploadFileItem) {
+  uploadFiles.value.splice(
+    uploadFiles.value.findIndex((item) => item.uid === file.uid),
+    1
+  )
+  emit('change', {
+    fileList: uploadFiles.value
+  })
+  emit('remove', { file })
+  emitFileList()
+}
+
+function removeFile(index: number) {
+  const { beforeRemove } = props
+  const intIndex: number = index
+  const file = uploadFiles.value[intIndex]
+  callInterceptor(beforeRemove, {
+    args: [{ file, index: intIndex, fileList: uploadFiles.value }],
+    done: () => handleRemove(file)
+  })
+}
+
+/**
+ * 预览文件
+ * @param file
+ */
+function handlePreviewFile(file: UploadFileItem) {
+  uni.openDocument({
+    filePath: file.url,
+    showMenu: true
+  })
+}
+
+/**
+ * 预览图片
+ * @param index
+ * @param lists
+ */
+function handlePreviewImage(index: number, lists: string[]) {
+  const { onPreviewFail } = props
+  uni.previewImage({
+    urls: lists,
+    current: lists[index],
+    fail() {
+      if (onPreviewFail) {
+        onPreviewFail({
+          index,
+          imgList: lists
+        })
+      } else {
+        uni.showToast({ title: '预览图片失败', icon: 'none' })
       }
     }
   })
 }
 
-function onFilesChosen(files: any[]) {
-  // beforeChoose / beforeUpload 的拦截器 done 可能晚于卸载落地
-  if (!isAlive()) return
-  const { statusKey, maxSize } = props
-  const newFiles: UploadFileItem[] = []
+/**
+ * 预览视频
+ * @param index
+ * @param lists
+ */
+function handlePreviewVieo(index: number, lists: UploadFileItem[]) {
+  // Lynx 适配：MP-WEIXIN 的 uni.previewMedia 分支移除，统一走本地
+  // wd-video-preview 组件（参考源非 MP 分支的等价实现）。
+  previewVideo({ url: lists[index].url, poster: lists[index].thumb, title: lists[index].name })
+}
 
-  for (const file of files) {
-    const item: UploadFileItem = {
-      uid: context.id++,
-      url: file.path || file.url || '',
-      name: file.name || '',
-      size: file.size,
-      type: file.type || 'image',
-      thumb: file.thumb || file.path || ''
-    }
-    item[statusKey] = UPLOAD_STATUS.PENDING
-
-    if (item.size && maxSize && item.size > maxSize) {
-      emit('oversize', { file: item, maxSize })
-      continue
-    }
-    newFiles.push(item)
-  }
-
-  if (newFiles.length === 0) return
-
-  const merged = [...uploadFiles.value, ...newFiles]
-  const finalFiles = props.limit ? merged.slice(0, props.limit) : merged
-
-  const pending = finalFiles.filter((f) => f[statusKey] === UPLOAD_STATUS.PENDING)
-
-  // beforeUpload 声明的签名是单文件 (file, formData)：多选文件时逐个
-  // 调用，其余文件不再绕过上传前拦截器；拦截返回 false 只移除该文件
-  // （此前只对 pending[0] 调用，且 false 时把全部 pending 一起移除）。
-  const rejected = new Set<UploadFileItem>()
-  let remaining = pending.length
-  let settled = false
-
-  const settle = () => {
-    if (settled) return
-    settled = true
-    // beforeUpload 可返回未决 Promise：确认期间组件/页面可能已卸载
-    if (!isAlive()) return
-    const accepted = finalFiles.filter((f) => !rejected.has(f))
-    uploadFiles.value = accepted
-    emitFileList()
-    emit('change', { fileList: accepted })
-    // 立即开始上传
-    startUploadFiles()
-  }
-
-  if (pending.length === 0) {
-    // 无待上传文件（如 limit 截断）：仅应用列表变更
-    settle()
-    return
-  }
-
-  for (const file of pending) {
-    callInterceptor(props.beforeUpload, {
-      args: [file, props.formData],
-      done: () => {
-        // beforeUpload 可返回未决 Promise：确认期间组件/页面可能已卸载
-        if (!isAlive()) return
-        remaining--
-        if (remaining <= 0) settle()
-      },
-      canceled: () => {
-        // 拦截：仅移除该文件
-        if (!isAlive()) return
-        rejected.add(file)
-        remaining--
-        if (remaining <= 0) settle()
-      }
+function onPreviewImage(file: UploadFileItem) {
+  const { beforePreview, reupload } = props
+  const fileList = deepClone(uploadFiles.value)
+  const index: number = fileList.findIndex((item) => item.url === file.url)
+  const imgList = fileList.filter((file) => isImage(file)).map((file) => file.url)
+  const imgIndex: number = imgList.findIndex((item) => item === file.url)
+  if (reupload) {
+    handleChoose(index)
+  } else {
+    callInterceptor(beforePreview, {
+      args: [{ file, index, fileList, imgList }],
+      done: () => handlePreviewImage(imgIndex, imgList)
     })
   }
 }
 
-/** 删除文件 */
-function onRemove(file: UploadFileItem, index: number) {
-  if (isDisabled.value) return
+function onPreviewVideo(file: UploadFileItem) {
+  const { beforePreview, reupload } = props
   const fileList = deepClone(uploadFiles.value)
-  fileList.splice(index, 1)
-  callInterceptor(props.beforeRemove, {
-    args: [file, fileList],
-    done: () => {
-      // beforeRemove 可返回未决 Promise：确认期间组件可能已卸载
-      if (!isAlive()) return
-      uploadFiles.value = fileList
-      emitFileList()
-      emit('remove', { file, index, fileList })
-      emit('change', { fileList })
-    }
-  })
+  const index: number = fileList.findIndex((item) => item.url === file.url)
+  const videoList = fileList.filter((file) => isVideo(file))
+  const videoIndex: number = videoList.findIndex((item) => item.url === file.url)
+  if (reupload) {
+    handleChoose(index)
+  } else {
+    callInterceptor(beforePreview, {
+      args: [{ file, index, fileList, imgList: [] }],
+      done: () => handlePreviewVieo(videoIndex, videoList)
+    })
+  }
 }
 
-/** 预览：beforePreview 拦截通过后由原生 image / video 元素承接预览 */
-function onPreview(file: UploadFileItem, index: number) {
-  callInterceptor(props.beforePreview, {
-    args: [{ file, index }],
-    done: () => {}
-  })
+function onPreviewFile(file: UploadFileItem) {
+  const { beforePreview, reupload } = props
+  const fileList = deepClone(uploadFiles.value)
+  const index: number = fileList.findIndex((item) => item.url === file.url)
+  if (reupload) {
+    handleChoose(index)
+  } else {
+    callInterceptor(beforePreview, {
+      args: [{ file, index, fileList, imgList: [] }],
+      done: () => handlePreviewFile(file)
+    })
+  }
 }
 
-const isImage = (file: UploadFileItem) => file.type === 'image' || (!file.type && isImageUrl(file.url || ''))
-const isVideo = (file: UploadFileItem) => file.type === 'video' || (!file.type && isVideoUrl(file.url || ''))
-const isFail = (file: UploadFileItem) => file[props.statusKey] === UPLOAD_STATUS.FAIL
+function isVideo(file: UploadFileItem) {
+  return (file.name && isVideoUrl(file.name)) || isVideoUrl(file.url)
+}
 
-const limitText = computed(() => {
-  if (!props.limit || !props.showLimitNum) return ''
-  return `${uploadFiles.value.length}/${props.limit}`
-})
+function isImage(file: UploadFileItem) {
+  return (file.name && isImageUrl(file.name)) || isImageUrl(file.url)
+}
+
+/** wot-ui 图标名 → 本地 iconfont 集字形名映射（本地集缺少这些字形） */
+const ICON_NAME_ALIAS: Record<string, string> = {
+  'camera-fill': 'camera',
+  'play-circle-fill': 'play',
+  'close-circle': 'close',
+  'video-camera': 'film'
+}
+
+/** 图标名归一：命中本地集（或宿主注册的扩展集）时原样使用，否则取最近似字形 */
+function resolveIconName(name: string) {
+  if (!name || hasIcon(name)) return name
+  return ICON_NAME_ALIAS[name] || name
+}
 </script>
 
 <template>
   <view :class="['wd-upload', customClass]" :style="parseStyle(customStyle)">
-    <!-- 预览列表：key 用 file.uid 而非 index——删除中间项时 index 会错配复用 -->
-    <view
-      v-for="(file, index) in uploadFiles"
-      :key="file.uid"
-      :class="['wd-upload__preview', customPreviewClass]"
-    >
+    <!-- 预览列表 -->
+    <view :class="['wd-upload__preview', customPreviewClass]" v-for="(file, index) in uploadFiles" :key="index">
+      <!-- 成功时展示图片 -->
       <view class="wd-upload__status-content">
-        <image
-          v-if="isImage(file)"
-          :src="file.url"
-          :mode="imageMode"
-          class="wd-upload__picture"
-          @tap="onPreview(file, index)"
-        />
-        <view v-else-if="isVideo(file)" class="wd-upload__video" @tap="onPreview(file, index)">
-          <image v-if="file.thumb" :src="file.thumb" :mode="imageMode" class="wd-upload__picture" />
-          <wd-icon name="play" custom-class="wd-upload__video-play" />
-        </view>
-        <view v-else class="wd-upload__file" @tap="onPreview(file, index)">
-          <wd-icon name="file" custom-class="wd-upload__file-icon" />
-          <text class="wd-upload__file-name">{{ file.name || translate('file') }}</text>
-        </view>
+        <image v-if="isImage(file)" :src="file.url" :mode="imageMode" class="wd-upload__picture" @tap="onPreviewImage(file)" />
+        <template v-else-if="isVideo(file)">
+          <view class="wd-upload__video" v-if="file.thumb" @tap="onPreviewVideo(file)">
+            <image :src="file.thumb" :mode="imageMode" class="wd-upload__picture" />
+            <wd-icon :name="resolveIconName('play-circle-fill')" custom-class="wd-upload__video-play"></wd-icon>
+          </view>
+          <view v-else class="wd-upload__video" @tap="onPreviewVideo(file)">
+            <video
+              :src="file.url"
+              :title="file.name || '视频' + index"
+              object-fit="contain"
+              :controls="false"
+              :poster="file.thumb"
+              :autoplay="false"
+              :show-center-play-btn="false"
+              :show-fullscreen-btn="false"
+              :show-play-btn="false"
+              :show-loading="false"
+              :show-progress="false"
+              :show-mute-btn="false"
+              :enable-progress-gesture="false"
+              :enableNative="true"
+              class="wd-upload__video"
+            ></video>
+            <wd-icon :name="resolveIconName('play-circle-fill')" custom-class="wd-upload__video-play"></wd-icon>
+          </view>
+        </template>
 
-        <!-- 加载中 -->
-        <view v-if="file[statusKey] === 'loading'" class="wd-upload__loading">
-          <wd-loading :type="loadingType" custom-class="wd-upload__loading-icon" />
-        </view>
-
-        <!-- 失败蒙层 -->
-        <view v-if="isFail(file)" class="wd-upload__fail-mask" @tap="onRemove(file, index)">
-          <text class="wd-upload__fail-text">{{ translate('retry') }}</text>
-        </view>
-
-        <!-- 删除按钮 -->
-        <view v-if="!isDisabled && !disabled" class="wd-upload__delete" @tap="onRemove(file, index)">
-          <wd-icon name="close" custom-class="wd-upload__delete-icon" />
+        <view v-else class="wd-upload__file" @tap="onPreviewFile(file)">
+          <wd-icon name="file" custom-class="wd-upload__file-icon"></wd-icon>
+          <text class="wd-upload__file-name">{{ file.name || file.url }}</text>
         </view>
       </view>
+
+      <view v-if="file[props.statusKey] !== 'success'" class="wd-upload__mask">
+        <!-- loading时展示loading图标和进度 -->
+        <view v-if="file[props.statusKey] === 'loading'" class="wd-upload__status-content">
+          <wd-loading :type="loadingType" :size="loadingSize" :color="loadingColor" />
+          <text class="wd-upload__progress-txt">{{ file.percent }}%</text>
+        </view>
+        <!-- 失败时展示失败图标以及失败信息 -->
+        <view v-if="file[props.statusKey] === 'fail'" class="wd-upload__status-content">
+          <wd-icon :name="resolveIconName('close-circle')" custom-class="wd-upload__icon"></wd-icon>
+          <text class="wd-upload__progress-txt">{{ file.error || translate('error') }}</text>
+        </view>
+      </view>
+      <!-- 上传状态为上传中时不展示移除按钮 -->
+      <view class="wd-upload__close" v-if="file[props.statusKey] !== 'loading' && !isDisabled" @tap="removeFile(index)">
+        <wd-icon name="close" custom-class="wd-upload__close-icon"></wd-icon>
+      </view>
+      <!-- 自定义预览样式 -->
+      <slot name="preview-cover" v-if="$slots['preview-cover']" :file="file" :index="index"></slot>
     </view>
 
-    <!-- 上传按钮 -->
-    <view v-if="showUpload && !isDisabled && !disabled" class="wd-upload__upload" @tap="handleChoose">
-      <wd-icon name="add" custom-class="wd-upload__add" />
-      <text v-if="limitText" class="wd-upload__limit">{{ limitText }}</text>
-    </view>
+    <template v-if="showUpload">
+      <view :class="['wd-upload__evoke-slot', customEvokeClass]" v-if="$slots.default" @tap="onEvokeClick">
+        <slot></slot>
+      </view>
+      <!-- 唤起项 -->
+      <view v-else @tap="onEvokeClick" :class="['wd-upload__evoke', isDisabled ? 'is-disabled' : '', customEvokeClass]">
+        <!-- 唤起项图标 -->
+        <wd-icon :name="resolveIconName('camera-fill')" custom-class="wd-upload__evoke-icon"></wd-icon>
+        <!-- 有限制个数时确认是否展示限制个数 -->
+        <text v-if="limit && showLimitNum" class="wd-upload__evoke-num">（{{ uploadFiles.length }}/{{ limit }}）</text>
+      </view>
+    </template>
   </view>
+  <wd-video-preview :selector="videoPreviewId"></wd-video-preview>
 </template>

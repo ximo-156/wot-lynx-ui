@@ -1,65 +1,121 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
+
+// 行间距
+$skeleton-row-margin-bottom: var(--wot-skeleton-row-margin-bottom, $spacing-loose) !default;
+// 占位块背景色
+$skeleton-col-bg: var(--wot-skeleton-col-bg, $filled-strong) !default;
+// 文本占位高度
+$skeleton-text-height: var(--wot-skeleton-text-height, $n-16) !default;
+// 矩形占位高度
+$skeleton-rect-height: var(--wot-skeleton-rect-height, $n-16) !default;
+// 圆形占位尺寸
+$skeleton-circle-height: var(--wot-skeleton-circle-height, $n-48) !default;
+// 文本占位圆角
+$skeleton-text-border-radius: var(--wot-skeleton-text-border-radius, $radius-small) !default;
+// 矩形占位圆角
+$skeleton-rect-border-radius: var(--wot-skeleton-rect-border-radius, $radius-main) !default;
+// 圆形占位圆角
+$skeleton-circle-border-radius: var(--wot-skeleton-circle-border-radius, $radius-full) !default;
+// 渐变动画高亮色
+$skeleton-animation-gradient: var(--wot-skeleton-animation-gradient, $filled-bottom) !default;
+// 闪烁动画高亮色
+$skeleton-animation-flashed: var(--wot-skeleton-animation-flashed, $filled-bottom) !default;
+// 闪烁动画透明度
+$skeleton-animation-flashed-opacity: var(--wot-skeleton-animation-flashed-opacity, $opacity-backdrop) !default;
 
 @include b(skeleton) {
-  width: 100%;
-
-  @include e(content) {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-  }
+  box-sizing: border-box;
 
   @include e(row) {
+    justify-content: space-between;
+    margin-bottom: $skeleton-row-margin-bottom;
     display: flex;
-    flex-direction: row;
     align-items: center;
-    width: 100%;
-    margin-bottom: var(--wd-space-3);
-    /* Lynx 不支持 :last-child，列间距改由容器 gap 统一控制 */
-    column-gap: var(--wd-space-3);
+
+    /* Lynx 适配：参考源为 &:only-child / &:last-child 伪类（Lynx 不支持，
+       PORTING §4.5），末行 margin-bottom 归零改由模板 v-for 索引类名
+       is-last 承担（单行场景同时覆盖 :only-child 语义） */
+    &.is-last {
+      margin-bottom: 0;
+    }
   }
 
   @include e(col) {
-    height: 16px;
-    flex-grow: 1;
-    flex-basis: 0;
-    border-radius: var(--wd-radius-xs);
-    background-color: var(--wd-gray-3);
+    border-radius: $skeleton-text-border-radius;
+    background-color: $skeleton-col-bg;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  @include when(round) {
-    .wd-skeleton__col {
-      border-radius: var(--wd-radius-full);
+  /* Lynx 适配：参考源此处还有 &:first-child:last-child / &:last-child 的
+     margin-right: 0 规则——col 无基础 margin-right 声明且行内样式优先级
+     更高，该规则为无效声明，未移植 */
+
+  @include m(type) {
+    &-text {
+      width: 100%;
+      height: $skeleton-text-height;
+      border-radius: $skeleton-text-border-radius;
+    }
+
+    &-rect {
+      width: 100%;
+      height: $skeleton-rect-height;
+      border-radius: $skeleton-rect-border-radius;
+    }
+
+    &-circle {
+      flex-shrink: 0;
+      width: $skeleton-circle-height;
+      height: $skeleton-circle-height;
+      border-radius: $skeleton-circle-border-radius;
     }
   }
 
-  /* 动画：呼吸（gradient 在 Lynx 下降级为呼吸） */
-  @include m(gradient) {
-    .wd-skeleton__col {
-      animation: wd-skeleton-breath 1.5s ease-in-out infinite;
+  @include m(animation) {
+    &-gradient {
+      position: relative;
+      overflow-x: hidden;
+
+      /* Lynx 适配：参考源为 ::after 伪元素（渐变高亮扫描层），Lynx 无伪元素
+         （PORTING §4.4），改为模板真实元素 wd-skeleton__gradient；
+         inset: 0 展开为四向定位（Lynx 对 inset 简写支持不确定） */
+      @include edeep(gradient) {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        animation: wd-skeleton-gradient 1.5s linear 2s infinite;
+        background: linear-gradient(90deg, transparent, $skeleton-animation-gradient, transparent);
+      }
+    }
+
+    &-flashed {
+      animation: wd-skeleton-flashed 2s linear 2s infinite;
     }
   }
 
-  @include m(flashing) {
-    .wd-skeleton__col {
-      animation: wd-skeleton-breath 1.2s ease-in-out infinite;
+  @keyframes wd-skeleton-gradient {
+    0% {
+      transform: translateX(-100%) skewX(-15deg);
+    }
+    100% {
+      transform: translateX(100%) skewX(-15deg);
     }
   }
-
-  @include m(pulse) {
-    .wd-skeleton__col {
-      animation: wd-skeleton-breath 1s ease-in-out infinite;
+  @keyframes wd-skeleton-flashed {
+    0% {
+      opacity: 1;
     }
-  }
-}
-
-@keyframes wd-skeleton-breath {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-
-  50% {
-    opacity: 1;
+    50% {
+      opacity: $skeleton-animation-flashed-opacity;
+      background: $skeleton-animation-flashed;
+    }
+    100% {
+      opacity: 1;
+    }
   }
 }

@@ -1,28 +1,33 @@
 import type { ExtractPropTypes } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
 
-export type ClosePosition = 'inset' | 'bottom' | 'top'
+export type ClosePosition = 'inset' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
 export const curtainProps = {
   ...baseProps,
   /**
-   * 是否显示
+   * 绑定值，展示/关闭幕帘
+   * @deprecated 请使用 modelValue
+   */
+  value: makeBooleanProp(false),
+  /**
+   * 绑定值，展示/关闭幕帘
    */
   modelValue: makeBooleanProp(false),
   /**
-   * 关闭按钮位置
+   * 关闭按钮位置，可选值：inset / top / bottom / top-left / top-right / bottom-left / bottom-right
    */
   closePosition: makeStringProp<ClosePosition>('inset'),
   /**
-   * 图片地址
+   * 幕帘图片地址，必须使用网络地址
    */
   src: String,
   /**
-   * 跳转地址
+   * 幕帘图片点击链接
    */
   to: String,
   /**
-   * 宽度
+   * 幕帘图片宽度
    */
   width: Number,
   /**
@@ -30,9 +35,42 @@ export const curtainProps = {
    */
   closeOnClickModal: makeBooleanProp(false),
   /**
-   * 关闭时是否销毁
+   * 是否当关闭时将弹出层隐藏（display: none)
    */
-  hideWhenClose: makeBooleanProp(true)
+  hideWhenClose: makeBooleanProp(true),
+  /**
+   * 设置层级
+   * 类型：number
+   * 默认值：10
+   */
+  zIndex: makeNumberProp(10),
+  /**
+   * 自定义关闭按钮的类名
+   * 类型：string
+   * 默认值：''
+   */
+  customCloseClass: makeStringProp(''),
+  /**
+   * 自定义关闭按钮的样式
+   * 类型：string
+   * 默认值：''
+   */
+  customCloseStyle: makeStringProp(''),
+  /**
+   * 是否从页面中脱离出来，用于解决各种 fixed 失效问题 (H5: teleport, APP: renderjs, 小程序: root-portal)
+   */
+  rootPortal: makeBooleanProp(false),
+  /**
+   * 开启长按图片显示识别小程序码菜单，仅在微信小程序平台有效
+   *
+   * uni-app / 小程序专有 props：Lynx 无对应能力，保留声明但不生效
+   * （PORTING §2.3），模板中仍按参考源绑定到 image 元素上。
+   */
+  showMenuByLongpress: makeBooleanProp(false),
+  /**
+   * 点击图片是否关闭幕帘，默认为 true
+   */
+  closeOnClick: makeBooleanProp(true)
 }
 
 export type CurtainProps = ExtractPropTypes<typeof curtainProps>

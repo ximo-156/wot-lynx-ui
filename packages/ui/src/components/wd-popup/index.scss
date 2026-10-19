@@ -1,75 +1,96 @@
 @use '../../styles/mixin/mixin.scss' as *;
+@use '../../styles/variable.scss' as *;
 
-@include b(popup-wrapper) {
-  display: flex;
-  flex-direction: column;
-}
+// 弹窗背景色
+$popup-bg: var(--wot-popup-bg, $filled-oppo) !default;
+// 关闭图标颜色
+$popup-close-color: var(--wot-popup-close-color, $icon-auxiliary) !default;
+// 关闭图标尺寸
+$popup-close-size: var(--wot-popup-close-size, $n-24) !default;
+// 关闭图标外边距
+$popup-close-margin: var(--wot-popup-close-margin, $spacing-loose) !default;
+// 弹窗圆角：根据弹出位置自动适配
+$popup-radius: var(--wot-popup-radius, $radius-large) !default;
 
 @include b(popup) {
   position: fixed;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--wd-bg-elevated);
-  color: var(--wd-text-1);
+  max-height: 100%;
+  overflow-y: auto;
+  background: $popup-bg;
 
-  /* 居中 */
+  @include edeep(close) {
+    position: absolute;
+    top: $popup-close-margin;
+    right: $popup-close-margin;
+    color: $popup-close-color;
+    font-size: $popup-close-size;
+  }
+
+  /* 参考源用 mdeep() 生成根级 `:deep() .wd-popup--<position>`；本地 m() 的
+     @at-root 产物与其归一化结果一致，mdeep() 会多带一层 .wd-popup 祖先、
+     永不命中（CONVENTIONS §5.5 同类名错配） */
   @include m(center) {
     left: 50%;
     top: 50%;
-    transform: translate(-50%, -50%);
-    border-radius: var(--wd-radius-lg);
-    max-width: 80%;
+    transform: translate3d(-50%, -50%, 0);
+    transform-origin: 0% 0%;
+
+    @include when(round) {
+      border-radius: $popup-radius;
+    }
+
+    /* 过渡帧类名按 Vue3 约定生成 -enter-from（参考源为 -enter）；
+       特异性（两类名）已高于 wd-transition 的单类名规则，无需 !important */
+    &.wd-transition--zoom-in-enter-from,
+    &.wd-transition--zoom-in-leave-to {
+      transform: scale(0.8) translate3d(-50%, -50%, 0);
+    }
+
+    @include when(deep) {
+      &.wd-transition--zoom-in-enter-from,
+      &.wd-transition--zoom-in-leave-to {
+        transform: scale(0.1) translate3d(-50%, -50%, 0);
+      }
+    }
   }
 
-  /* 顶部 */
-  @include m(top) {
-    left: 0;
-    right: 0;
-    top: 0;
-    border-bottom-left-radius: var(--wd-radius-lg);
-    border-bottom-right-radius: var(--wd-radius-lg);
-  }
-
-  /* 底部 */
-  @include m(bottom) {
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-top-left-radius: var(--wd-radius-lg);
-    border-top-right-radius: var(--wd-radius-lg);
-  }
-
-  /* 左侧 */
   @include m(left) {
+    top: 0;
+    bottom: 0;
     left: 0;
-    top: 0;
-    bottom: 0;
-    border-top-right-radius: var(--wd-radius-lg);
-    border-bottom-right-radius: var(--wd-radius-lg);
+
+    @include when(round) {
+      border-radius: 0 $popup-radius $popup-radius 0;
+    }
   }
 
-  /* 右侧 */
   @include m(right) {
-    right: 0;
     top: 0;
+    right: 0;
     bottom: 0;
-    border-top-left-radius: var(--wd-radius-lg);
-    border-bottom-left-radius: var(--wd-radius-lg);
+
+    @include when(round) {
+      border-radius: $popup-radius 0 0 $popup-radius;
+    }
   }
 
-  @include e(close) {
-    position: absolute;
-    right: var(--wd-space-3);
-    top: var(--wd-space-3);
-    color: var(--wd-icon-3);
-    z-index: 10;
+  @include m(top) {
+    top: 0;
+    left: 0;
+    right: 0;
+
+    @include when(round) {
+      border-radius: 0 0 $popup-radius $popup-radius;
+    }
   }
 
-  @include when(round) {
-    border-radius: var(--wd-radius-lg);
-  }
+  @include m(bottom) {
+    right: 0;
+    bottom: 0;
+    left: 0;
 
-  @include when(safe-area) {
-    padding-bottom: env(safe-area-inset-bottom);
+    @include when(round) {
+      border-radius: $popup-radius $popup-radius 0 0;
+    }
   }
 }

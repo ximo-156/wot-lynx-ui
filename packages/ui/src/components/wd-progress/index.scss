@@ -1,78 +1,162 @@
+@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 进度条底色
+$progress-bg: var(--wot-progress-bg, $filled-content) !default;
+// danger 进度色
+$progress-danger-color: var(--wot-progress-danger-color, $danger-main) !default;
+// success 进度色
+$progress-success-color: var(--wot-progress-success-color, $success-main) !default;
+// warning 进度色
+$progress-warning-color: var(--wot-progress-warning-color, $warning-main) !default;
+// 默认进度色
+$progress-color: var(--wot-progress-color, $primary-6) !default;
+// 外部文案模式进度条高度
+$progress-bar-height: var(--wot-progress-bar-height, $n-8) !default;
+// 内部文案模式组件高度
+$progress-height: var(--wot-progress-height, $n-18) !default;
+// 外部文案颜色
+$progress-label-color: var(--wot-progress-label-color, $text-main) !default;
+// 外部文案宽度
+$progress-label-width: var(--wot-progress-label-width, $n-34) !default;
+// 外部文案左侧间距
+$progress-label-margin-left: var(--wot-progress-label-margin-left, $spacing-tight) !default;
+// 内部文案颜色
+$progress-inner-label-color: var(--wot-progress-inner-label-color, $text-white) !default;
+// 内部 zero 态背景色
+$progress-inner-zero-bg: var(--wot-progress-inner-zero-bg, $primary-2) !default;
+// 内部 zero 态文字颜色
+$progress-inner-zero-color: var(--wot-progress-inner-zero-color, $text-secondary) !default;
+// 内部文案内边距
+$progress-inner-padding: var(--wot-progress-inner-padding, $padding-zero $padding-tight) !default;
+// 文案字号
+$progress-label-font-size: var(--wot-progress-label-font-size, $typography-label-size-large) !default;
+// 文案行高
+$progress-label-line-height: var(--wot-progress-label-line-height, $typography-label-line-height-size-large) !default;
+// 图标字号
+$progress-icon-size: var(--wot-progress-icon-size, $n-18) !default;
+// 进度条圆角
+$progress-radius: var(--wot-progress-radius, $radius-full) !default;
+
 @include b(progress) {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
   width: 100%;
+  display: flex;
+  align-items: center;
+  height: $progress-height;
 
   @include e(outer) {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-  }
-
-  @include e(track) {
-    width: 100%;
-    border-radius: var(--wd-radius-full);
-    background-color: var(--wd-gray-3);
+    // Lynx 适配：display: block 为参考源声明，引擎不识别该值（仅认
+    // flex/none/linear，CONVENTIONS §15），声明被忽略后回落到默认 linear
+    // 布局，与 Web 的 block 容器语义一致（唯一子节点为绝对定位的 inner），
+    // 故保留声明以对齐参考源样式表。
+    display: block;
+    position: relative;
+    flex: 1;
+    background: $progress-bg;
     overflow: hidden;
+    height: $progress-bar-height;
+    border-radius: $progress-radius;
   }
 
   @include e(inner) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: $progress-color;
+    transition-property: width;
+    transition-timing-function: linear;
+    font-size: $progress-icon-size;
     display: flex;
-    flex-direction: row;
     align-items: center;
-    justify-content: flex-end;
-    border-radius: var(--wd-radius-full);
-    background-color: var(--wd-color-primary);
-    transition: width var(--wd-duration-base) var(--wd-ease-out);
+    min-width: max-content;
   }
 
-  @include e(label) {
-    font-size: var(--wd-font-xs);
-    color: var(--wd-white);
-    padding: 0 var(--wd-space-2);
-    white-space: nowrap;
-  }
+  @include edeep(label) {
+    color: $progress-label-color;
+    font-size: $progress-label-font-size;
+    line-height: $progress-label-line-height;
+    width: $progress-label-width;
+    margin-left: $progress-label-margin-left;
 
-  /* 条内状态图标（wd-icon 经 custom-class 挂载于 label 之后） */
-  @include edeep(icon) {
-    font-size: var(--wd-font-xs);
-    color: var(--wd-white);
-    margin: 0 var(--wd-space-2) 0 0;
-  }
-
-  @include e(text) {
-    margin-left: var(--wd-space-2);
-    font-size: var(--wd-font-sm);
-    color: var(--wd-text-3);
-    white-space: nowrap;
-  }
-
-  /* 状态色 */
-  @include m(success) {
-    .wd-progress__inner {
-      background-color: var(--wd-color-success);
+    @include when(hide-text){
+      width: auto;
     }
   }
 
+  @include edeep(icon) {
+    font-size: $progress-icon-size;
+  }
+
   @include m(danger) {
-    .wd-progress__inner {
-      background-color: var(--wd-color-danger);
+    @include me(inner) {
+      background: $progress-danger-color;
+    }
+    @include me(icon) {
+      color: $progress-danger-color;
+    }
+  }
+
+  @include m(success) {
+    @include me(inner) {
+      background: $progress-success-color;
+    }
+    @include me(icon) {
+      color: $progress-success-color;
     }
   }
 
   @include m(warning) {
-    .wd-progress__inner {
-      background-color: var(--wd-color-warning);
+    @include me(inner) {
+      background: $progress-warning-color;
+    }
+    @include me(icon) {
+      color: $progress-warning-color;
     }
   }
 
-  @include when(zero) {
-    .wd-progress__inner {
-      background-color: transparent;
+  @include m(inner) {
+    @include me(outer) {
+      height: 100%;
+      border-radius: $progress-radius;
+    }
+
+    @include me(label) {
+      width: auto;
+      margin-left: 0;
+      color: $progress-inner-label-color;
+      padding: $progress-inner-padding;
+      white-space: nowrap;
+
+      @include when(align-left) {
+        margin-right: auto;
+      }
+      @include when(align-center) {
+        margin: 0 auto;
+      }
+      @include when(align-right) {
+        margin-left: auto;
+      }
+    }
+
+    // Lynx 适配：参考源此处用 !important 覆盖状态色（Lynx 默认不支持
+    // !important，PORTING §4.5）；本规则位于 m(danger/success/warning)
+    // 之后、特异度相同（两类选择器），按源码序覆盖，行为等价。
+    @include me(icon) {
+      color: $progress-inner-label-color;
+    }
+
+    @include when(zero) {
+      @include me(inner) {
+        background: $progress-inner-zero-bg;
+      }
+      @include me(label) {
+        color: $progress-inner-zero-color;
+      }
+      @include me(icon) {
+        color: $progress-inner-zero-color;
+      }
     }
   }
 }
