@@ -19,14 +19,53 @@ const uiSrc = path.join(root, 'packages/ui/src')
 
 const require = createRequire(path.join(root, 'packages/ui/package.json'))
 const sass = require('sass')
+const postcss = require('postcss')
 
 const only = process.argv.slice(2)
 let failed = 0
 
+/**
+ * Lynx CSS 序列化器（@lynx-js/css-serializer 的 transformDeclaration）会将
+ * 常规属性中 var() 的 fallback 链剥掉，只保留 var(--name) 引用，且不把
+ * fallback 写回产物。若该变量未在主题或组件中定义，属性即为无效值，
+ * 导致 web 预览 / 真机上样式丢失（如按钮无背景色）。
+ *
+ * 修复：将含 fallback 的 var() 提取为同规则内的自定义属性（--csslib-*），
+ * 常规属性改为引用该自定义属性。自定义属性经 transformVariables 处理，
+ * toString 保留完整值（含嵌套 var() fallback），浏览器原生 CSS 引擎
+ * 在插入 CSSStyleSheet 后按标准 var() 解析链求值。
+ */
+function fixNestedVarFallbacks(css) {
+  return postcss([
+    (cssRoot) => {
+      let counter = 0
+      cssRoot.walkRules((rule) => {
+        const toAdd = []
+        rule.walkDecls((decl) => {
+          if (decl.prop.startsWith('--')) return
+          const val = decl.value
+          // 匹配 var(--name, fallback) 且 fallback 中含嵌套 var()
+          const m = val.match(/^var\((--[\w-]+),\s*(.+)\)$/)
+          if (!m) return
+          const [, varName, fallback] = m
+          if (!fallback.includes('var(')) return
+          const localName = `--csslib-${decl.prop}-${counter++}`
+          toAdd.push({ prop: localName, value: `var(${varName}, ${fallback})` })
+          decl.value = `var(${localName})`
+        })
+        for (const d of toAdd) {
+          rule.prepend(postcss.decl({ prop: d.prop, value: d.value }))
+        }
+      })
+    },
+  ]).process(css, { from: undefined }).css
+}
+
 function compile(scssPath, cssPath) {
   try {
     const result = sass.compile(scssPath, { style: 'compressed' })
-    writeFileSync(cssPath, result.css)
+    const fixed = fixNestedVarFallbacks(result.css)
+    writeFileSync(cssPath, fixed)
     console.log(`compiled ${path.relative(root, scssPath)}`)
   } catch (e) {
     failed++
