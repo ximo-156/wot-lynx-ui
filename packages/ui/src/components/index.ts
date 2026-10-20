@@ -6,6 +6,7 @@
  */
 
 import ActionSheet from './wd-action-sheet/wd-action-sheet.vue'
+import AddressEdit from './wd-address-edit/wd-address-edit.vue'
 import Avatar from './wd-avatar/wd-avatar.vue'
 import AvatarGroup from './wd-avatar-group/wd-avatar-group.vue'
 import Backtop from './wd-backtop/wd-backtop.vue'
@@ -27,6 +28,7 @@ import CollapseItem from './wd-collapse-item/wd-collapse-item.vue'
 import ConfigProvider from './wd-config-provider/wd-config-provider.vue'
 import CountDown from './wd-count-down/wd-count-down.vue'
 import CountTo from './wd-count-to/wd-count-to.vue'
+import Coupon from './wd-coupon/wd-coupon.vue'
 import Curtain from './wd-curtain/wd-curtain.vue'
 import DatetimePicker from './wd-datetime-picker/wd-datetime-picker.vue'
 import DatetimePickerView from './wd-datetime-picker-view/wd-datetime-picker-view.vue'
@@ -65,6 +67,7 @@ import PickerView from './wd-picker-view/wd-picker-view.vue'
 import Popover from './wd-popover/wd-popover.vue'
 import Popup from './wd-popup/wd-popup.vue'
 import Progress from './wd-progress/wd-progress.vue'
+import PullRefresh from './wd-pull-refresh/wd-pull-refresh.vue'
 import QrCode from './wd-qr-code/wd-qr-code.vue'
 import Radio from './wd-radio/wd-radio.vue'
 import RadioGroup from './wd-radio-group/wd-radio-group.vue'
@@ -75,6 +78,7 @@ import Row from './wd-row/wd-row.vue'
 import Search from './wd-search/wd-search.vue'
 import Segmented from './wd-segmented/wd-segmented.vue'
 import SelectPicker from './wd-select-picker/wd-select-picker.vue'
+import ShareSheet from './wd-share-sheet/wd-share-sheet.vue'
 import Sidebar from './wd-sidebar/wd-sidebar.vue'
 import SidebarItem from './wd-sidebar-item/wd-sidebar-item.vue'
 import Signature from './wd-signature/wd-signature.vue'
@@ -86,6 +90,7 @@ import Step from './wd-step/wd-step.vue'
 import Steps from './wd-steps/wd-steps.vue'
 import Sticky from './wd-sticky/wd-sticky.vue'
 import StickyBox from './wd-sticky-box/wd-sticky-box.vue'
+import SubmitBar from './wd-submit-bar/wd-submit-bar.vue'
 import SwipeAction from './wd-swipe-action/wd-swipe-action.vue'
 import Swiper from './wd-swiper/wd-swiper.vue'
 import SwiperNav from './wd-swiper-nav/wd-swiper-nav.vue'
@@ -109,6 +114,7 @@ import Watermark from './wd-watermark/wd-watermark.vue'
 
 export {
   ActionSheet,
+  AddressEdit,
   Avatar,
   AvatarGroup,
   Backtop,
@@ -130,6 +136,7 @@ export {
   ConfigProvider,
   CountDown,
   CountTo,
+  Coupon,
   Curtain,
   DatetimePicker,
   DatetimePickerView,
@@ -168,6 +175,7 @@ export {
   Popover,
   Popup,
   Progress,
+  PullRefresh,
   QrCode,
   Radio,
   RadioGroup,
@@ -178,6 +186,7 @@ export {
   Search,
   Segmented,
   SelectPicker,
+  ShareSheet,
   Sidebar,
   SidebarItem,
   Signature,
@@ -189,6 +198,7 @@ export {
   Steps,
   Sticky,
   StickyBox,
+  SubmitBar,
   SwipeAction,
   Swiper,
   SwiperNav,
@@ -212,6 +222,7 @@ export {
 }
 
 export type { ActionSheetProps } from './wd-action-sheet/types'
+export type { AddressEditProps } from './wd-address-edit/types'
 export type { AvatarProps } from './wd-avatar/types'
 export type { AvatarGroupProps } from './wd-avatar-group/types'
 export type { BacktopProps } from './wd-backtop/types'
@@ -233,6 +244,7 @@ export type { CollapseItemProps } from './wd-collapse-item/types'
 export type { ConfigProviderProps } from './wd-config-provider/types'
 export type { CountDownProps } from './wd-count-down/types'
 export type { CountToProps } from './wd-count-to/types'
+export type { CouponProps } from './wd-coupon/types'
 export type { CurtainProps } from './wd-curtain/types'
 export type { DatetimePickerProps } from './wd-datetime-picker/types'
 export type { DatetimePickerViewProps } from './wd-datetime-picker-view/types'
@@ -271,6 +283,7 @@ export type { PickerViewProps } from './wd-picker-view/types'
 export type { PopoverProps } from './wd-popover/types'
 export type { PopupProps } from './wd-popup/types'
 export type { ProgressProps } from './wd-progress/types'
+export type { PullRefreshProps } from './wd-pull-refresh/types'
 export type { QrCodeProps } from './wd-qr-code/types'
 export type { RadioProps } from './wd-radio/types'
 export type { RadioGroupProps } from './wd-radio-group/types'
@@ -281,6 +294,7 @@ export type { RowProps } from './wd-row/types'
 export type { SearchProps } from './wd-search/types'
 export type { SegmentedProps } from './wd-segmented/types'
 export type { SelectPickerProps } from './wd-select-picker/types'
+export type { ShareSheetProps } from './wd-share-sheet/types'
 export type { SidebarProps } from './wd-sidebar/types'
 export type { SidebarItemProps } from './wd-sidebar-item/types'
 export type { SignatureProps } from './wd-signature/types'
@@ -292,6 +306,7 @@ export type { StepProps } from './wd-step/types'
 export type { StepsProps } from './wd-steps/types'
 export type { StickyProps } from './wd-sticky/types'
 export type { StickyBoxProps } from './wd-sticky-box/types'
+export type { SubmitBarProps } from './wd-submit-bar/types'
 export type { SwipeActionProps } from './wd-swipe-action/types'
 export type { SwiperProps } from './wd-swiper/types'
 export type { SwiperNavProps } from './wd-swiper-nav/types'
@@ -316,6 +331,7 @@ export type { WatermarkProps } from './wd-watermark/types'
 /** 全部组件清单（供 createApp().use(wotLynxUI) 全局注册使用） */
 export const allComponents = [
   ActionSheet,
+  AddressEdit,
   Avatar,
   AvatarGroup,
   Backtop,
@@ -337,6 +353,7 @@ export const allComponents = [
   ConfigProvider,
   CountDown,
   CountTo,
+  Coupon,
   Curtain,
   DatetimePicker,
   DatetimePickerView,
@@ -375,6 +392,7 @@ export const allComponents = [
   Popover,
   Popup,
   Progress,
+  PullRefresh,
   QrCode,
   Radio,
   RadioGroup,
@@ -385,6 +403,7 @@ export const allComponents = [
   Search,
   Segmented,
   SelectPicker,
+  ShareSheet,
   Sidebar,
   SidebarItem,
   Signature,
@@ -396,6 +415,7 @@ export const allComponents = [
   Steps,
   Sticky,
   StickyBox,
+  SubmitBar,
   SwipeAction,
   Swiper,
   SwiperNav,

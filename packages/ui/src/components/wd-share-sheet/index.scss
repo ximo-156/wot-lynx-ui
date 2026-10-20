@@ -1,0 +1,78 @@
+@use '../../styles/variable.scss' as *;
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(share-sheet) {
+  display: flex;
+  flex-direction: column;
+  background: var(--wot-bg-color, var(--wot-filled-oppo));
+  border-radius: 16px 16px 0 0;
+  padding: 16px 0 0;
+
+  @include e(title) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px 16px;
+
+    &-text {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--wot-text-main, var(--wot-n-900));
+    }
+  }
+
+  @include e(options) {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0 8px 16px;
+  }
+
+  @include e(option) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 25%;
+    padding: 12px 4px;
+
+    &--disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    &-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--wot-fill-color, var(--wot-n-100));
+      margin-bottom: 8px;
+    }
+
+    &-name {
+      font-size: 12px;
+      color: var(--wot-text-main, var(--wot-n-900));
+      text-align: center;
+    }
+  }
+
+  @include e(icon) {
+    font-size: 24px;
+    color: var(--wot-text-main, var(--wot-n-900));
+  }
+
+  @include e(cancel) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px;
+    border-top: 1px solid var(--wot-border-color, var(--wot-n-200));
+
+    &-text {
+      font-size: 16px;
+      color: var(--wot-text-main, var(--wot-n-900));
+    }
+  }
+}

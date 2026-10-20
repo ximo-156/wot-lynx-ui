@@ -1,0 +1,137 @@
+/*
+ * wd-address-edit — 地址编辑
+ *
+ * Lynx 实现说明：
+ * - 结构：view.wd-address-edit > 表单区域 + 底部操作栏；
+ * - 表单字段：姓名、电话、地区选择、详细地址、默认开关；
+ * - 根节点三件套：display: flex + flex-direction: column；
+ * - Style Funnel：rootStyle 经 defineStyleKeys + resolveStyle 输出完整键集；
+ * - 按钮点击 @click → @tap（CONVENTIONS §6）。
+ */
+<script lang="ts" setup>
+import './index.css'
+
+import { computed, ref, watch } from 'vue-lynx'
+import WdButton from '../wd-button/wd-button.vue'
+import WdCell from '../wd-cell/wd-cell.vue'
+import WdCellGroup from '../wd-cell-group/wd-cell-group.vue'
+import WdInput from '../wd-input/wd-input.vue'
+import WdTextarea from '../wd-textarea/wd-textarea.vue'
+import WdSwitch from '../wd-switch/wd-switch.vue'
+import { addressEditProps, type AddressInfo } from './types'
+import { parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
+
+const props = defineProps(addressEditProps)
+const emit = defineEmits(['save', 'delete', 'change-area'])
+
+const formData = ref<AddressInfo>({ ...props.addressInfo })
+
+watch(
+  () => props.addressInfo,
+  (newVal) => {
+    formData.value = { ...newVal }
+  },
+  { deep: true }
+)
+
+const ADDRESS_STYLE = defineStyleKeys({})
+
+const rootStyle = computed(() => {
+  return {
+    ...resolveStyle(ADDRESS_STYLE, {}),
+    ...parseStyle(props.customStyle)
+  }
+})
+
+function onSave() {
+  emit('save', { ...formData.value })
+}
+
+function onDelete() {
+  emit('delete', { ...formData.value })
+}
+
+function onChangeArea() {
+  emit('change-area', { ...formData.value })
+}
+</script>
+
+<template>
+  <view class="wd-address-edit" :class="customClass" :style="rootStyle">
+    <view class="wd-address-edit__fields">
+      <wd-input
+        v-model="formData.name"
+        label="联系人"
+        placeholder="姓名"
+        :disabled="disabled"
+        custom-class="wd-address-edit__field"
+      />
+      <wd-input
+        v-model="formData.tel"
+        label="电话"
+        type="tel"
+        placeholder="手机号码"
+        :disabled="disabled"
+        custom-class="wd-address-edit__field"
+      />
+      <wd-cell
+        title="地区"
+        :value="formData.province ? `${formData.province} ${formData.city || ''} ${formData.county || ''}`.trim() : '请选择地区'"
+        is-link
+        :disabled="disabled"
+        custom-class="wd-address-edit__field"
+        @tap="onChangeArea"
+      />
+      <wd-textarea
+        v-if="showDetail"
+        v-model="formData.addressDetail"
+        label="详细地址"
+        :placeholder="'请输入详细地址'"
+        :maxlength="detailMaxlength"
+        :disabled="disabled"
+        custom-class="wd-address-edit__field"
+      />
+      <wd-input
+        v-if="showPostalCode"
+        v-model="formData.postalCode"
+        label="邮政编码"
+        type="number"
+        placeholder="邮政编码"
+        :disabled="disabled"
+        custom-class="wd-address-edit__field"
+      />
+      <wd-input
+        v-if="showAreaCode"
+        v-model="formData.areaCode"
+        label="地区编码"
+        placeholder="地区编码"
+        :disabled="disabled"
+        custom-class="wd-address-edit__field"
+      />
+    </view>
+    <view v-if="showSetDefault" class="wd-address-edit__default">
+      <text class="wd-address-edit__default-label">设为默认地址</text>
+      <wd-switch v-model="formData.isDefault" :disabled="disabled" />
+    </view>
+    <view class="wd-address-edit__actions">
+      <wd-button
+        v-if="showDeleteButton"
+        type="danger"
+        plain
+        custom-class="wd-address-edit__delete-btn"
+        @tap="onDelete"
+      >
+        {{ deleteButtonText }}
+      </wd-button>
+      <wd-button
+        v-if="showSaveButton"
+        type="primary"
+        custom-class="wd-address-edit__save-btn"
+        @tap="onSave"
+      >
+        {{ saveButtonText }}
+      </wd-button>
+    </view>
+  </view>
+</template>

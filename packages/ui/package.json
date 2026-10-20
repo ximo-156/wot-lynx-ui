@@ -7,16 +7,25 @@
   "module": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./theme": "./src/styles/theme/index.css",
-    "./components/*": "./src/components/*",
+    ".": {
+      "source": "./src/index.ts",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./theme": {
+      "source": "./src/styles/theme/index.scss",
+      "import": "./dist/theme/index.css"
+    },
+    "./components/*": {
+      "source": "./src/components/*",
+      "import": "./dist/components/*/index.mjs"
+    },
     "./package.json": "./package.json",
-    "./theme/scss": "./src/styles/theme/index.scss",
-    "./styles/*": "./src/styles/*",
     "./plugin": "./plugin/index.js"
   },
   "files": [
     "src",
+    "dist",
     "plugin",
     "README.md"
   ],
@@ -26,7 +35,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:css": "node ../../scripts/build-css.mjs",
-    "build": "node ../../scripts/build-css.mjs",
+    "build": "node ../../scripts/build-css.mjs && node ../../scripts/build-dist.mjs",
     "gen:index": "node ../../scripts/gen-index.mjs"
   },
   "keywords": [

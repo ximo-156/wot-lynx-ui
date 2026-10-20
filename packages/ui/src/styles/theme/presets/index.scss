@@ -1,0 +1,31 @@
+/**
+ * 预设主题索引
+ *
+ * 使用方式：
+ * ```ts
+ * // 方式一：CSS 类名（经 wot-lynx-ui/theme 引入后自动生效）
+ * <view class="wot-theme-brand-a">...</view>
+ *
+ * // 方式二：ConfigProvider
+ * <WdConfigProvider theme="brand-a">...</WdConfigProvider>
+ * ```
+ */
+
+@use './brand-a.scss' as *;
+@use './compact.scss' as *;
+@use './high-contrast.scss' as *;
+
+/* 预设主题类名 mixin（供 theme/index.scss 引入） */
+@mixin preset-theme-classes {
+  .wot-theme-brand-a {
+    @include brand-a-theme-vars;
+  }
+
+  .wot-theme-compact {
+    @include compact-theme-vars;
+  }
+
+  .wot-theme-high-contrast {
+    @include high-contrast-theme-vars;
+  }
+}

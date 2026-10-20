@@ -1,0 +1,66 @@
+@use '../../styles/variable.scss' as *;
+@use '../../styles/mixin/mixin.scss' as *;
+
+@include b(submit-bar) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 16px;
+  background: var(--wot-bg-color, var(--wot-filled-oppo));
+  border-top: 1px solid var(--wot-border-color, var(--wot-n-200));
+
+  @include e(left) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  @include e(label) {
+    margin-bottom: 2px;
+
+    &-text {
+      font-size: 12px;
+      color: var(--wot-text-secondary, var(--wot-n-600));
+    }
+  }
+
+  @include e(price) {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+
+    &-prefix {
+      color: var(--wot-danger, var(--wot-red-6));
+      font-weight: 500;
+    }
+
+    &-integer {
+      color: var(--wot-danger, var(--wot-red-6));
+      font-weight: 600;
+    }
+
+    &-decimal {
+      color: var(--wot-danger, var(--wot-red-6));
+      font-weight: 500;
+    }
+
+    &-suffix {
+      color: var(--wot-text-secondary, var(--wot-n-600));
+    }
+  }
+
+  @include e(right) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+  }
+
+  @include e(button) {
+    min-width: 100px;
+  }
+}

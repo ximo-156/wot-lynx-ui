@@ -1,0 +1,28 @@
+/**
+ * brand-a 预设主题 — 品牌蓝
+ *
+ * 基于 wot-ui 默认蓝色系的品牌变体，主色使用更饱和的蓝色。
+ * 适用于品牌主色调为蓝色的应用。
+ */
+
+@mixin brand-a-theme-vars {
+  /* 主色 — 品牌蓝 */
+  --wot-primary-1: #e8f0ff;
+  --wot-primary-2: #d1e0ff;
+  --wot-primary-3: #a3c1ff;
+  --wot-primary-4: #75a2ff;
+  --wot-primary-5: #4783ff;
+  --wot-primary-6: #1c64fd;
+  --wot-primary-7: #1550ca;
+  --wot-primary-8: #0e3c97;
+  --wot-primary-9: #072864;
+  --wot-primary-10: #041431;
+
+  /* 语义色映射 */
+  --wot-primary-main: var(--wot-primary-6);
+  --wot-primary-hover: var(--wot-primary-5);
+  --wot-primary-clicked: var(--wot-primary-7);
+  --wot-primary-disabled: var(--wot-primary-3);
+  --wot-primary-particular: var(--wot-primary-2);
+  --wot-primary-surface: var(--wot-primary-1);
+}

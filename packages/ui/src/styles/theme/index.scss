@@ -12,6 +12,7 @@
 @use './base/index.scss' as *;
 @use './light.scss' as light;
 @use './dark.scss' as dark;
+@use './presets/index.scss' as presets;
 
 page,
 .wot-theme-dark,
@@ -24,3 +25,6 @@ page,
 .wot-theme-light .wd-root-portal {
   @include light.light-theme-vars;
 }
+
+/* 预设主题（brand-a / compact / high-contrast） */
+@include presets.preset-theme-classes;

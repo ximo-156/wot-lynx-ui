@@ -54,3 +54,6 @@ export function pluginWotLynxTags(options: PluginWotLynxTagsOptions = {}): Rsbui
 }
 
 export default pluginWotLynxTags
+
+export { pluginWotLynxAutoImport } from './auto-import'
+export type { PluginWotLynxAutoImportOptions } from './auto-import'

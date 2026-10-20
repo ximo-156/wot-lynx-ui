@@ -96,3 +96,4 @@ docs/public/_t3.html
 
 # wot-ui reference material (local only)
 .wot-ref/
+.changeset/initial-features.md
