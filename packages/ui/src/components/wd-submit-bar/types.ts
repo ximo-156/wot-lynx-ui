@@ -1,5 +1,5 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
-import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../../common/props'
+import { baseProps, makeBooleanProp, makeNumberProp, makeNumericProp, makeStringProp } from '../../common/props'
 import type { ButtonType } from '../../composables/global-config'
 
 export const submitBarProps = {
@@ -30,7 +30,7 @@ export const submitBarProps = {
    * 类型: string | number
    * 默认值: ''
    */
-  price: makeStringProp(''),
+  price: makeNumericProp(''),
   /**
    * 价格前缀（如 ¥）
    * 类型: string

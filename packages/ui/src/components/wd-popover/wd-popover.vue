@@ -225,7 +225,7 @@ defineExpose<PopoverExpose>({
           </view>
         </slot>
 
-        <WdIcon v-if="showClose" name="close" custom-class="wd-popover__close-icon" @tap="close" />
+        <WdIcon v-if="showClose" name="close" custom-class="wd-popover__close-icon" @tap="toggle" />
       </view>
     </WdTransition>
     <view class="wd-popover__target" :id="popover.ids.target" @tap="toggle">

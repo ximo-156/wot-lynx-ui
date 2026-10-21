@@ -41,7 +41,7 @@ const painted = ref<boolean>(active.value)
 /**
  * tab body 可切换的全部样式键 + 中性值（CONVENTIONS §20）
  */
-const TAB_BODY_STYLE = defineStyleKeys({ display: 'linear' })
+const TAB_BODY_STYLE = defineStyleKeys({ display: 'flex' })
 
 /**
  * tab body 样式

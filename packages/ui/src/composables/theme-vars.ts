@@ -248,6 +248,27 @@ export type baseThemeVars = {
   primary7?: string // 主色色阶 7
   primary8?: string // 主色色阶 8
   primary9?: string // 主色色阶 9
+  primarySecondary?: string // 项目次主题色
+  primaryMain?: string // 主主题色语义别名
+  primaryHover?: string // 主主题色悬浮态
+  primaryClicked?: string // 主主题色点击态
+  primaryDisabled?: string // 主主题色禁用态
+  primaryParticular?: string // 主主题色强调态
+  primarySurface?: string // 主主题色表层
+  brand1?: string
+  brand2?: string
+  brand3?: string
+  brand4?: string
+  brand5?: string
+  brand6?: string
+  brand7?: string
+  brand8?: string
+  brand9?: string
+  brand10?: string
+  brandSecondary?: string
+  brandOpac?: string
+  brandTextMain?: string
+  brandTextSecondary?: string
   purple1?: string // 紫色色阶 1
   purple10?: string // 紫色色阶 10
   purple2?: string // 紫色色阶 2

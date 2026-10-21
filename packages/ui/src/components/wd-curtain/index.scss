@@ -34,12 +34,14 @@ $curtain-content-close-inset: var(--wot-curtain-content-close-inset, $spacing-ex
   }
 
   @include edeep(content-link) {
-    display: block;
+    display: flex;
+    flex-direction: row;
     border-radius: $curtain-content-radius;
   }
 
   @include edeep(content-img) {
-    display: block;
+    display: flex;
+    flex-direction: row;
     width: auto;
     height: auto;
     border-radius: $curtain-content-radius;

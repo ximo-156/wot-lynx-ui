@@ -4,8 +4,27 @@
  * SCSS 主题变量无法在 JS 中读取，少数需要"用 JS 算出颜色"的场景
  * （如 Lynx 的 svg content / 字体字形不继承 CSS currentColor，
  * wd-icon 默认色、button 内嵌 loading 颜色等）使用此处的常量。
- * 修改色板时需同步更新（数值由 wot-ui 2.3.2 设计规范生成）。
+ * 修改色板时需同步更新；原始刻度保留官方值，BRAND 为项目品牌色。
  */
+
+/** 项目品牌紫色色阶（与 --wot-brand-* 对应） */
+export const BRAND = {
+  1: '#F8F6FFFF',
+  2: '#EEEBFFFF',
+  3: '#D8D1FFFF',
+  4: '#BEB3FFFF',
+  5: '#9A89FFFF',
+  6: '#755FFEFF',
+  7: '#5F48D9FF',
+  8: '#4935B5FF',
+  9: '#36268AFF',
+  10: '#251A60FF'
+} as const
+
+export const PRIMARY_COLOR = BRAND[6]
+export const SECONDARY_COLOR = BRAND[5]
+export const TEXT_MAIN_COLOR = '#2D273DFF'
+export const TEXT_SECONDARY_COLOR = '#979797FF'
 
 /** 蓝色色阶（与 --wot-blue-* 对应） */
 export const BLUE = {
@@ -209,11 +228,11 @@ export const WARMGREY = {
  * --wot-icon-main 一致的值。
  */
 export const THEME_ICON_COLOR = {
-  light: '#1D1F29FF',
+  light: TEXT_MAIN_COLOR,
   dark: '#F7F8FAFF'
 } as const
 
 export const THEME_TEXT_COLOR = {
-  light: '#1D1F29FF',
+  light: TEXT_MAIN_COLOR,
   dark: '#F7F8FAFF'
 } as const

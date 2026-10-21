@@ -97,12 +97,15 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
   box-sizing: border-box;
   width: 100%;
 
-  /* Lynx 适配：参考源 when(border) 的 halfPixelBorder mixin 以 ::after 伪元素
-     绘制分割线，此处改为主元素真实 border-top（1ppx）；mixin 前置的
-     position: relative 显式保留，$left 左右缩进丢失（边框全宽） */
-  @include when(border) {
-    position: relative;
-    @include halfPixelBorder('top', $cell-border-margin-horizontal, $cell-border-color);
+  // 真实线段保持官方左右缩进，不占据内容布局高度。
+  @include e(border) {
+    position: absolute;
+    top: 0;
+    left: $cell-border-margin-horizontal;
+    right: $cell-border-margin-horizontal;
+    height: 0;
+    border-top: 1ppx solid $cell-border-color;
+    pointer-events: none;
   }
 
   @include e(wrapper) {

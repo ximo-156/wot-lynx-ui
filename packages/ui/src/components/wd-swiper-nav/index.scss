@@ -80,10 +80,15 @@ $swiper-nav-btn-border-radius: var(--wot-swiper-nav-btn-border-radius, $radius-f
     }
   }
 
-  @include edeep(btn-icon) {
+  @include e(btn-icon) {
     font-size: $swiper-nav-btn-icon-size;
     line-height: $swiper-nav-btn-icon-size;
     color: $swiper-nav-btn-color;
+    .wd-icon__glyph {
+      font-size: $swiper-nav-btn-icon-size;
+      line-height: $swiper-nav-btn-icon-size;
+      color: $swiper-nav-btn-color;
+    }
   }
 
   @include m(dots, dots-bar) {
@@ -92,13 +97,17 @@ $swiper-nav-btn-border-radius: var(--wot-swiper-nav-btn-border-radius, $radius-f
   }
 
   @include m(fraction) {
+    // 定位条带可撑满，但 capsule 只包住 text，避免 top/bottom/left/right 拉长背景。
+    text-align: center;
+  }
+
+  @include e(fraction-text) {
     padding: $swiper-nav-fraction-padding;
-    line-height: $swiper-nav-fraction-line-height;
     border-radius: $swiper-nav-fraction-border-radius;
     background: $swiper-nav-fraction-bg;
+    line-height: $swiper-nav-fraction-line-height;
     color: $swiper-nav-fraction-color;
     font-size: $swiper-nav-fraction-font-size;
-    // 分数文案居中（NATIVE-REWRITE §3.2：容器 flex 居中 + 文本 text-align）
     text-align: center;
   }
 

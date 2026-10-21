@@ -33,10 +33,9 @@
  * - **池容量降级**：池容量 POOL_SIZE 条线段，单笔超过时超出部分不
  *   跟手渲染，落笔后由 SVG 全量重绘补齐（笔迹数据以后台累积为准，
  *   导出不受影响）；
- * - 确认导出为标准 SVG data URI（不经过引擎 SVG 解析器，可安全携带
- *   完整属性），SignatureResult.tempFilePath 即该 data URI；
- *   fileType / quality 为 canvas 导出专有 props，对 SVG 导出不生效
- *   （保留声明仅为 API 对齐）；
+ * - 注册 createCanvasContext / canvasToTempFilePath 宿主能力时导出真实
+ *   fileType / quality 指定位图；缺少能力则返回真实 SVG MIME data URI，
+ *   不能当作 PNG/JPG，该平台差异由返回前缀明确标识；
  * - 触摸坐标为页面坐标（Lynx touches[].clientX/clientY），需减去画布
  *   偏移换算为画布坐标（uni-app canvas 事件坐标即以画布为原点）；
  * - customClass / customStyle 绑定到根节点（参考源根节点未绑定二者，
@@ -46,11 +45,13 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, onMounted, ref, useMainThreadRef, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref, useMainThreadRef, watch } from 'vue-lynx'
 import WdButton from '../wd-button/wd-button.vue'
 import { signatureProps, type SignatureEmits, type SignatureExpose, type SignatureResult, type Point, type Line } from './types'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
+import { hasUniAdapter } from '../../common/uni'
+import { createCanvasContext, canvasToTempFilePath } from '../../common/canvasHelper'
 import { getRect, uuid, isDef, addUnit, sanitizeSvgContent, filterStyle, parseStyle, type CSSProperties } from '../../common/util'
 
 const props = defineProps(signatureProps)
@@ -58,6 +59,12 @@ const emit = defineEmits<SignatureEmits>()
 const { translate } = useTranslate('signature')
 const isAlive = useAlive()
 const { proxy } = getCurrentInstance() as any
+let strokeRequest = 0
+let measureRequest = 0
+let exportRequest = 0
+let exporting = false
+const drawVersion = ref(0)
+onBeforeUnmount(() => { strokeRequest++; measureRequest++; exportRequest++ })
 
 const canvasId = ref<string>(`wd-signature-${uuid()}`) // 画布节点的唯一标识符
 // 画布尺寸：实测值，度量不可用（零矩形）时保留默认兜底
@@ -178,33 +185,27 @@ function getPoint(event: any): { x: number; y: number } {
  * @param event 触摸事件
  */
 const startDrawing = (e: any) => {
+  if (!isAlive() || props.disabled || !e.touches?.length) return
+  const request = ++strokeRequest
   drawing.value = true
+  const { x, y } = getPoint(e)
+  currentLine.value = {
+    points: [{ x, y, t: Date.now() }], color: props.penColor, width: getDefaultLineWidth(),
+    backgroundColor: props.backgroundColor, isPressure: props.pressure
+  }
+  redoLines.value = []
   emit('start', e)
-
-  // 一次性刷新画布偏移（与主线程 worklet 同源几何，保证跟手渲染与
-  // 导出坐标系一致）；刷新后再以首点建线，规避异步窗口
-  getRect(`#${canvasId.value}`, false, proxy).then((rect) => {
-    // 回调晚于卸载落地时丢弃：在已销毁树上写 ref 会触发 vue-lynx 继续
-    // patch，产生晚到的 remove/insert（真机 9902 removeNode 家族）
-    if (!isAlive()) return
-    canvasOffset.value = { left: Number(rect.left) || 0, top: Number(rect.top) || 0 }
-    const { x, y } = getPoint(e)
-    // 创建新线条，同时保存当前的所有绘制参数
-    currentLine.value = {
-      points: [
-        {
-          x,
-          y,
-          t: Date.now() // 使用 t 记录时间戳，用于速度计算
-        }
-      ],
-      color: props.penColor,
-      width: getDefaultLineWidth(),
-      backgroundColor: props.backgroundColor,
-      isPressure: props.pressure // 添加笔锋模式标记
-    }
-    // 清空重做记录
-    redoLines.value = []
+  // Start synchronously: a quick end must not be followed by a late ghost stroke.
+  const previous = { ...canvasOffset.value }
+  getRect('#' + canvasId.value, false, proxy).then((rect) => {
+    if (!isAlive() || props.disabled || !drawing.value || request !== strokeRequest) return
+    const offset = { left: Number(rect.left) || 0, top: Number(rect.top) || 0 }
+    const current = currentLine.value
+    if (current) current.points.forEach((point) => {
+      point.x += previous.left - offset.left
+      point.y += previous.top - offset.top
+    })
+    canvasOffset.value = offset
   })
 }
 
@@ -213,6 +214,8 @@ const startDrawing = (e: any) => {
  * @param {TouchEvent} e 触摸事件
  */
 const stopDrawing = (e: any) => {
+  if (!drawing.value) return
+  strokeRequest++
   drawing.value = false
   if (currentLine.value) {
     // 保存完整的线条信息，包括所有点的参数
@@ -255,10 +258,11 @@ const init = (forceUpdate: boolean = false) => {
  * touchmove 热路径只读缓存，CONVENTIONS §16）
  */
 function measureCanvas() {
+  const request = ++measureRequest
   getRect(`#${canvasId.value}`, false, proxy).then((data) => {
     // 回调晚于卸载落地时丢弃：在已销毁树上写 ref 会触发 vue-lynx 继续
     // patch，产生晚到的 remove/insert（真机 9902 removeNode 家族）
-    if (!isAlive()) return
+    if (!isAlive() || request !== measureRequest) return
     canvasOffset.value = { left: Number(data.left) || 0, top: Number(data.top) || 0 }
     const width = Number(data.width) || 0
     const height = Number(data.height) || 0
@@ -272,6 +276,8 @@ function measureCanvas() {
  * 清除签名内容，清空历史记录
  */
 const clear = () => {
+  strokeRequest++; exportRequest++; exporting = false; drawVersion.value++
+  drawing.value = false; currentLine.value = undefined
   lines.value = []
   redoLines.value = []
   currentStep.value = 0
@@ -283,13 +289,62 @@ const clear = () => {
  * 确认签名并导出图片
  */
 const confirmSignature = () => {
-  const result: SignatureResult = {
-    tempFilePath: `data:image/svg+xml;utf8,${encodeURIComponent(buildSvgMarkup(lines.value, props.exportScale))}`,
-    success: true,
-    width: canvasWidth.value * props.exportScale,
-    height: canvasHeight.value * props.exportScale
+  if (!isAlive() || exporting) return
+  const request = ++exportRequest
+  const width = canvasWidth.value
+  const height = canvasHeight.value
+  const exportScale = props.exportScale
+  const snapshot = lines.value.map((line) => ({ ...line, points: line.points.map((point) => ({ ...point })) }))
+  const base = { width: width * exportScale, height: height * exportScale }
+  if (!hasUniAdapter('createCanvasContext') || !hasUniAdapter('canvasToTempFilePath')) {
+    // A real SVG URI, explicitly not the PNG/JPG requested by fileType.
+    emit('confirm', { ...base, tempFilePath: 'data:image/svg+xml;utf8,' + encodeURIComponent(buildSvgMarkup(snapshot, exportScale)), success: true })
+    return
   }
-  emit('confirm', result)
+  exporting = true
+  const valid = () => isAlive() && request === exportRequest
+  const fail = () => {
+    if (!valid()) return
+    exporting = false
+    emit('confirm', { ...base, tempFilePath: '', success: false })
+  }
+  try {
+    const ctx = createCanvasContext(canvasId.value, proxy)
+    ctx.clearRect(0, 0, width, height)
+    if (!isTransparentColor(props.backgroundColor)) {
+      ctx.setFillStyle(props.backgroundColor)
+      ctx.fillRect(0, 0, width, height)
+    }
+    ctx.setLineJoin('round')
+    ctx.setLineCap('round')
+    snapshot.forEach((line) => {
+      ctx.setStrokeStyle(line.color)
+      line.points.slice(1).forEach((point, index) => {
+        const previous = line.points[index]
+        ctx.setLineWidth(point.lineWidth || line.width)
+        ctx.beginPath()
+        ctx.moveTo(previous.x, previous.y)
+        ctx.lineTo(point.x, point.y)
+        ctx.stroke()
+      })
+    })
+    const exportImage = () => {
+      if (!valid()) return
+      canvasToTempFilePath({
+        canvasId: canvasId.value, width, height, destWidth: base.width, destHeight: base.height,
+        fileType: props.fileType, quality: props.quality,
+        success: (res: any) => {
+          if (!valid()) return
+          const tempFilePath = res.tempFilePath || res.filePath
+          if (!tempFilePath) { fail(); return }
+          exporting = false
+          emit('confirm', { ...base, tempFilePath, success: true })
+        }, fail
+      }, proxy)
+    }
+    if (typeof ctx.draw === 'function') ctx.draw(false, exportImage)
+    else exportImage()
+  } catch { fail() }
 }
 
 /**
@@ -345,6 +400,8 @@ const draw = (e: any) => {
  * 撤销上一笔记录
  */
 const revoke = () => {
+  strokeRequest++; exportRequest++; exporting = false; drawVersion.value++
+  drawing.value = false; currentLine.value = undefined
   if (!lines.value.length) return
   const step = Math.min(props.step, lines.value.length)
   const removedLines = lines.value.splice(lines.value.length - step)
@@ -357,6 +414,8 @@ const revoke = () => {
  * 恢复上一笔记录
  */
 const restore = () => {
+  strokeRequest++; exportRequest++; exporting = false; drawVersion.value++
+  drawing.value = false; currentLine.value = undefined
   if (!redoLines.value.length) return
   const step = Math.min(props.step, redoLines.value.length)
   const restoredLines = redoLines.value.splice(redoLines.value.length - step)
@@ -421,9 +480,16 @@ onMounted(() => {
 })
 
 watch([() => props.width, () => props.height], () => {
+  exportRequest++; exporting = false
   // 画布视图尺寸变化时重新度量，保证 viewBox 与可见区域一致
   measureCanvas()
 })
+
+watch(() => props.disabled, (disabled) => {
+  strokeRequest++; exportRequest++; exporting = false; drawVersion.value++
+  if (disabled) { drawing.value = false; currentLine.value = undefined; resetSegmentPool() }
+}, { flush: 'sync' })
+watch([() => props.fileType, () => props.quality, () => props.exportScale], () => { exportRequest++; exporting = false }, { flush: 'sync' })
 
 defineExpose<SignatureExpose>({
   init,
@@ -473,16 +539,8 @@ const drawRef = useMainThreadRef<{
   prevW: number
   index: number
   ready: boolean
+  version: string | null
 } | null>(null)
-
-/** worklet 捕获的静态配置快照（setup 期求值；props 实例内不变） */
-const cfgPenColor = props.penColor
-const cfgLineWidth = props.lineWidth
-const cfgPressure = props.pressure
-const cfgDisabled = props.disabled
-const cfgMinWidth = props.minWidth
-const cfgMaxWidth = props.maxWidth
-const cfgMinSpeed = props.minSpeed || 1.5
 
 /**
  * 起笔（主线程）：一次性度量画布页面偏移并登记笔迹状态。
@@ -493,7 +551,12 @@ const cfgMinSpeed = props.minSpeed || 1.5
  */
 const onDrawStartMt = (event: any) => {
   'main thread'
-  if (cfgDisabled) return
+  const canvas = canvasRef.current
+  if (!canvas || canvas.getAttribute('gesture-disabled') === 'true') return
+  const pressure = canvas.getAttribute('gesture-pressure') === 'true'
+  const lineWidth = Number(canvas.getAttribute('gesture-line-width')) || 3
+  const maxWidth = Number(canvas.getAttribute('gesture-max-width')) || 6
+  const minWidth = Number(canvas.getAttribute('gesture-min-width')) || 2
   const touch0 = event.touches && event.touches[0]
   if (!touch0) return
   drawRef.current = {
@@ -504,16 +567,17 @@ const onDrawStartMt = (event: any) => {
     lastX: 0,
     lastY: 0,
     lastT: 0,
-    lastW: cfgPressure ? (cfgMaxWidth + cfgMinWidth) / 2 : cfgLineWidth,
+    lastW: pressure ? (maxWidth + minWidth) / 2 : lineWidth,
     prevW: 0,
     index: 0,
-    ready: false
+    ready: false,
+    version: canvas.getAttribute('gesture-version')
   }
-  const canvas = canvasRef.current
-  if (!canvas || typeof canvas.invoke !== 'function') return
+  const state = drawRef.current
+  if (typeof canvas.invoke !== 'function') return
   canvas.invoke('boundingClientRect').then((rect: any) => {
     const d = drawRef.current
-    if (!d || d.ready) return
+    if (!d || d !== state || d.ready) return
     d.offX = Number(rect.left) || 0
     d.offY = Number(rect.top) || 0
     d.lastX = d.rawX - d.offX
@@ -533,7 +597,14 @@ const onDrawStartMt = (event: any) => {
 const onDrawMoveMt = (event: any) => {
   'main thread'
   const d = drawRef.current
-  if (!d || !d.ready || d.index >= POOL_SIZE) return
+  const canvas = canvasRef.current
+  if (!d || !d.ready || d.index >= POOL_SIZE || !canvas || canvas.getAttribute('gesture-disabled') === 'true' || d.version !== canvas.getAttribute('gesture-version')) return
+  const cfgLineWidth = Number(canvas.getAttribute('gesture-line-width')) || 3
+  const cfgPressure = canvas.getAttribute('gesture-pressure') === 'true'
+  const cfgMaxWidth = Number(canvas.getAttribute('gesture-max-width')) || 6
+  const cfgMinWidth = Number(canvas.getAttribute('gesture-min-width')) || 2
+  const cfgMinSpeed = Number(canvas.getAttribute('gesture-min-speed')) || 1.5
+  const cfgPenColor = canvas.getAttribute('gesture-pen-color') || '#000'
   const touch0 = event.touches && event.touches[0]
   if (!touch0) return
 
@@ -610,9 +681,18 @@ const onDrawEndMt = () => {
         class="wd-signature__content-canvas"
         :style="canvasStyle"
         :main-thread-ref="canvasRef"
+        :gesture-disabled="String(disabled)"
+        :gesture-version="String(drawVersion)"
+        :gesture-pressure="String(pressure)"
+        :gesture-pen-color="penColor"
+        :gesture-line-width="String(lineWidth)"
+        :gesture-min-width="String(minWidth)"
+        :gesture-max-width="String(maxWidth)"
+        :gesture-min-speed="String(minSpeed)"
         @touchstart="startDrawing"
         :main-thread-bindtouchmove="onDrawMoveMt"
         @touchend="stopDrawing"
+        @touchcancel="stopDrawing"
       >
         <!-- 已提交笔迹（SVG，仅落笔时重绘） -->
         <svg :content="svgContent" />

@@ -9,9 +9,7 @@
  *   并经 parseStyle 归一 customStyle；
  * - 参考源角标内为裸文本（view 内 {{ content }}），Lynx 要求所有文本包在
  *   text 元素中（CONVENTIONS §4），故内容包一层 text；
- * - 参考源 is-border 的描边经 ::after 伪元素绘制，Lynx 无伪元素
- *   （PORTING §4.4），改为主元素真实 border（本地 pixelBorderSurround
- *   mixin 已适配为原生 border），并保留参考源的 position: relative；
+ * - 描边用绝对定位的真实覆盖层替代官方伪元素，不参与徽标内容排版；
  * - 组件无根 view 事件绑定，不涉及 CONVENTIONS §14 的 tap 转发。
  */
 <script lang="ts" setup>
@@ -77,7 +75,8 @@ const shouldShowBadge = computed(() => !props.hidden && (content.value || (conte
       ]"
       :style="contentStyle"
     >
-      <text>{{ content }}</text>
+      <text class="wd-badge__text" text-maxline="1">{{ content }}</text>
+      <view v-if="border" class="wd-badge__border" />
     </view>
   </view>
 </template>

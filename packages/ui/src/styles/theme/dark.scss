@@ -1,16 +1,23 @@
 @mixin dark-theme-vars {
   /* 深色模式语义变量 */
   /* 主色 */
-  --wot-primary-1: var(--wot-blue-10);
-  --wot-primary-2: var(--wot-blue-9);
-  --wot-primary-3: var(--wot-blue-8);
-  --wot-primary-4: var(--wot-blue-7);
-  --wot-primary-5: var(--wot-blue-6);
-  --wot-primary-6: var(--wot-blue-5);
-  --wot-primary-7: var(--wot-blue-4);
-  --wot-primary-8: var(--wot-blue-3);
-  --wot-primary-9: var(--wot-blue-2);
-  --wot-primary-10: var(--wot-blue-1);
+  --wot-primary-1: var(--wot-brand-10);
+  --wot-primary-2: var(--wot-brand-9);
+  --wot-primary-3: var(--wot-brand-8);
+  --wot-primary-4: var(--wot-brand-7);
+  --wot-primary-5: var(--wot-brand-6);
+  --wot-primary-6: var(--wot-brand-5);
+  --wot-primary-7: var(--wot-brand-4);
+  --wot-primary-8: var(--wot-brand-3);
+  --wot-primary-9: var(--wot-brand-2);
+  --wot-primary-10: var(--wot-brand-1);
+  --wot-primary-secondary: var(--wot-brand-secondary);
+  --wot-primary-main: var(--wot-primary-6);
+  --wot-primary-hover: var(--wot-primary-5);
+  --wot-primary-clicked: var(--wot-primary-7);
+  --wot-primary-disabled: var(--wot-primary-3);
+  --wot-primary-particular: var(--wot-primary-2);
+  --wot-primary-surface: var(--wot-primary-1);
   /* 危险色 */
   --wot-danger-main: var(--wot-red-5);
   --wot-danger-hover: var(--wot-red-6);
@@ -69,7 +76,7 @@
   /* 反馈 */
   --wot-feedback-hover: var(--wot-opacwhite-2_04);
   --wot-feedback-active: var(--wot-opacwhite-3_08);
-  --wot-feedback-accent: var(--wot-blue-opac);
+  --wot-feedback-accent: var(--wot-brand-opac);
   /* 填充色-透明度 */
   --wot-opacfilled-tooltip-toast-cover: var(--wot-opac-9_75);
   --wot-opacfilled-main-cover: var(--wot-opac-7_55);

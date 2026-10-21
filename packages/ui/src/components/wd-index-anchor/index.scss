@@ -16,6 +16,12 @@ $index-anchor-z-index: var(--wot-index-anchor-z-index, 1) !default; // 索引锚
   // （索引标题 + 分组列表）纵向排布。
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+
+  @include e(text) {
+    font-size: $index-anchor-font-size;
+    color: $index-anchor-color;
+  }
 
   @include when(sticky) {
     position: sticky;

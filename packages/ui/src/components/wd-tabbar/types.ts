@@ -25,7 +25,7 @@ export type TabbarProvide = {
     // 自定义组件的层级
     zIndex?: number
   }
-  setChange: (child: TabbarItem) => void
+  setChange: (child: TabbarItem, isCurrent?: () => boolean) => void
 }
 
 export const TABBAR_KEY: InjectionKey<TabbarProvide> = Symbol('wd-tabbar')

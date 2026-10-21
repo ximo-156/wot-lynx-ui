@@ -33,8 +33,8 @@ export const imgCropperProps = {
    * 可选值: 'png' | 'jpg' | 'jpeg'
    * 默认值: 'png'
    *
-   * Lynx 实现说明：无 canvas 导出能力，该 prop 与 quality 仅保留声明
-   * （API 对齐），对 confirm 的裁剪参数不生效。
+   * Lynx 实现说明：需注册 createCanvasContext / canvasToTempFilePath 宿主能力；
+   * 未注册时通过 imgloaderror 报告缺少能力，不伪造 confirm。
    */
   fileType: makeStringProp('png'),
   /**
@@ -42,7 +42,7 @@ export const imgCropperProps = {
    * 类型: number
    * 默认值: 1
    *
-   * Lynx 实现说明：同上，canvas 导出专有 props，保留声明不生效。
+   * Lynx 实现说明：真实宿主位图导出时透传给 canvasToTempFilePath。
    */
   quality: makeNumberProp(1),
   /**
@@ -89,11 +89,9 @@ export type ImgCropperProps = ExtractPropTypes<typeof imgCropperProps>
 /**
  * 裁剪结果
  *
- * Lynx 实现说明：无 canvas 2D 能力（CONVENTIONS §12 降级），confirm 不产出
- * 位图文件：tempFilePath 恒为空串，width / height 为导出像素尺寸
- * （cutWidth / cutHeight × exportScale，与 wot-ui 语义一致），src / x / y /
- * scale / angle 为宿主自行完成最终裁剪所需的几何参数（x / y 为裁剪框左上角
- * 在图片自然像素坐标系中的位置，未含旋转，angle 为当前旋转角度）。
+ * Lynx 实现说明：confirm 仅在真实宿主画布导出返回非空文件路径后触发。
+ * width / height 为 cutWidth / cutHeight × exportScale；src / x / y / scale /
+ * angle 为保留的端口扩展几何信息（x / y 为未旋转图片绘制原点换算值，非自然像素裁剪坐标）。
  */
 export type ImgCropperResult = {
   tempFilePath: string

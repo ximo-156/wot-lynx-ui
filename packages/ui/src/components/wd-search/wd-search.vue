@@ -14,8 +14,7 @@
  * - 原生 input 用 :value 受控绑定 + @input 回写（vue-lynx 运行时对原生
  *   元素不挂 vModel 指令），语义与参考源 v-model 一致；
  * - customStyle 经 parseStyle() 归一为对象后下发；
- * - 内置图标集无 search-line / close-circle-fill 字形，搜索图标取
- *   search、清空取 close-bold（图标注册表差异）；
+ * - 使用官方 search-line / close-circle-fill 图标，保留原始图形与尺寸；
  * - pause() 续写前经 useAlive() 判存活，避免卸载后晚到 patch（真机 9902）；
  * - 平台 options 块（virtualHost / styleIsolation / addGlobalClass）为
  *   小程序专有能力，Lynx 不需要，未声明。
@@ -41,6 +40,17 @@ const showInput = ref<boolean>(false) // 是否显示输入框 用于实现聚�
 const inputValue = ref<string>('') // 输入框的值
 const showPlaceHolder = ref<boolean>(true)
 const clearing = ref<boolean>(false)
+let inputRequest = 0
+let focusRequest = 0
+let blurRequest = 0
+watch(() => props.modelValue, (value) => {
+  // Do not cancel a clear's intended refocus on its own v-model acknowledgement.
+  if (value !== inputValue.value) { inputRequest++; focusRequest++ }
+}, { flush: 'sync' })
+watch(() => props.disabled, () => {
+  inputRequest++; focusRequest++; blurRequest++; clearing.value = false
+  if (props.disabled) isFocused.value = false
+}, { flush: 'sync' })
 
 watch(
   () => props.modelValue,
@@ -86,21 +96,25 @@ const coverStyle = computed<Record<string, string>>(() => {
 })
 
 async function hackFocus(focus: boolean) {
+  const request = ++focusRequest
   showInput.value = focus
   await pause()
-  if (!isAlive() || (focus && props.disabled)) return
+  if (!isAlive() || request !== focusRequest || (focus && props.disabled)) return
   isFocused.value = focus
 }
 
 async function closeCover() {
   if (props.disabled) return
+  const request = ++focusRequest
   await pause(100)
-  if (!isAlive() || props.disabled) return
+  if (!isAlive() || request !== focusRequest || props.disabled) return
   showPlaceHolder.value = false
   hackFocus(true)
 }
 
 function handleInput(event: any) {
+  if (props.disabled) return
+  inputRequest++
   // Lynx 适配：:value 受控绑定下用 detail.value 回写 inputValue
   //（参考源经 v-model 由运行时回写）
   inputValue.value = event.detail.value
@@ -111,15 +125,17 @@ function handleInput(event: any) {
 }
 
 async function handleClear() {
+  if (props.disabled) return
+  const request = ++inputRequest
+  focusRequest++
   inputValue.value = ''
   if (props.focusWhenClear) {
     clearing.value = true
     isFocused.value = false
   }
   await pause()
-  // 暂停窗口内组件可能已卸载：续写在已销毁树上 patch 会产生晚到的
-  // remove/insert（真机 9902 removeNode 家族）
   if (!isAlive()) return
+  if (request !== inputRequest || props.disabled) { clearing.value = false; return }
   if (props.focusWhenClear) {
     showPlaceHolder.value = false
     hackFocus(true)
@@ -127,14 +143,13 @@ async function handleClear() {
     showPlaceHolder.value = true
     hackFocus(false)
   }
-  emit('change', {
-    value: ''
-  })
+  emit('change', { value: '' })
   emit('update:modelValue', '')
   emit('clear')
 }
 
 function handleConfirm({ detail: { value } }: any) {
+  if (props.disabled) return
   // 组件触发search事件
   emit('search', {
     value
@@ -142,6 +157,8 @@ function handleConfirm({ detail: { value } }: any) {
 }
 
 function handleFocus() {
+  if (props.disabled) return
+  blurRequest++
   showPlaceHolder.value = false
   emit('focus', {
     value: inputValue.value
@@ -149,9 +166,11 @@ function handleFocus() {
 }
 
 async function handleBlur() {
+  const request = ++blurRequest
+  focusRequest++
   // 等待150毫秒，clear执行完毕
   await pause(150)
-  if (!isAlive()) return
+  if (!isAlive() || request !== blurRequest) return
   if (clearing.value) {
     clearing.value = false
     return
@@ -166,6 +185,7 @@ async function handleBlur() {
 }
 
 function handleCancel() {
+  focusRequest++
   emit('cancel', {
     value: inputValue.value
   })
@@ -184,10 +204,10 @@ function handleClick() {
       <slot name="prefix"></slot>
       <view class="wd-search__field">
         <view v-if="!placeholderLeft" :style="coverStyle" class="wd-search__cover" @tap="closeCover">
-          <WdIcon name="search" custom-class="wd-search__search-icon"></WdIcon>
+          <WdIcon name="search-line" custom-class="wd-search__search-icon"></WdIcon>
           <text :class="`wd-search__placeholder-txt ${placeholderClass}`">{{ placeholder || translate('search') }}</text>
         </view>
-        <WdIcon v-if="showInput || inputValue || placeholderLeft" name="search" custom-class="wd-search__search-left-icon"></WdIcon>
+        <WdIcon v-if="showInput || inputValue || placeholderLeft" name="search-line" custom-class="wd-search__search-left-icon"></WdIcon>
         <input
           v-if="showInput || inputValue || placeholderLeft"
           :placeholder="placeholder || translate('search')"
@@ -204,7 +224,7 @@ function handleClick() {
           :maxlength="maxlength"
           :focus="isFocused"
         />
-        <WdIcon v-if="inputValue" custom-class="wd-search__clear-icon" name="close-bold" @tap="handleClear" />
+        <WdIcon v-if="inputValue" custom-class="wd-search__clear-icon" name="close-circle-fill" @tap="handleClear" />
         <slot name="input-suffix"></slot>
       </view>
     </view>

@@ -80,13 +80,15 @@ describe('theme.ts 色板镜像与 theme/base/color.scss 一致', () => {
     })
   }
 
-  it('语义色镜像与 coolgrey 文字/图标主色一致', () => {
-    // --wot-text-main / --wot-icon-main（亮色）均指向 coolgrey-10
+  it('语义色镜像与品牌主色、主次文字及暗色可读性一致', () => {
+    expect(normalizeHex(theme.PRIMARY_COLOR)).toBe('#755FFE')
+    expect(normalizeHex(theme.SECONDARY_COLOR)).toBe('#9A89FF')
+    expect(normalizeHex(theme.TEXT_SECONDARY_COLOR)).toBe('#979797')
     expect(normalizeHex(theme.THEME_ICON_COLOR.light)).toBe(
-      normalizeHex(resolveToken('coolgrey-10', tokens))
+      normalizeHex(resolveToken('brand-text-main', tokens))
     )
     expect(normalizeHex(theme.THEME_TEXT_COLOR.light)).toBe(
-      normalizeHex(resolveToken('coolgrey-10', tokens))
+      normalizeHex(resolveToken('brand-text-main', tokens))
     )
     // 暗色主文字/图标为 coolgrey-1
     expect(normalizeHex(theme.THEME_ICON_COLOR.dark)).toBe(

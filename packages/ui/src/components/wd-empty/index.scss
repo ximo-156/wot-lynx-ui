@@ -35,6 +35,15 @@ $empty-padding-bottom: var(--wot-empty-padding-bottom, $spacing-ultra-loose) !de
     color: $empty-icon-color;
   }
 
+  @include e(tip) {
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+    color: inherit;
+    text-align: center;
+    word-break: break-all;
+  }
+
   @include e(text) {
     margin-top: $empty-text-margin-top;
     font-size: $empty-text-font-size;

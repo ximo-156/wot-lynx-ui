@@ -23,6 +23,7 @@ import WdAvatar from '../wd-avatar/wd-avatar.vue'
 import { avatarGroupProps, AVATAR_GROUP_KEY } from './types'
 import { useChildren } from '../../composables/useChildren'
 import { addUnit, isString, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(avatarGroupProps)
 const slots = useSlots()
@@ -78,24 +79,17 @@ const hasDefaultSlot = computed(() => !!slots.default)
 /**
  * 折叠头像样式
  */
+const COLLAPSE_STYLE = defineStyleKeys({ 'margin-top': '', 'margin-left': '', 'z-index': '0' })
 const collapseStyle = computed(() => {
-  const style: Record<string, string> = { 'margin-top': '', 'margin-left': '' }
-  if (props.cascading === 'left-up') {
-    const count = maxCountValue.value > 0 ? maxCountValue.value : children.length
-    style['z-index'] = String(count + 1)
-  } else {
-    style['z-index'] = '0'
-  }
-  if (hasDefaultSlot.value) {
-    const isBuiltIn = isString(props.size) && ['large', 'medium', 'normal', 'small'].includes(props.size)
-    const margin = isBuiltIn ? 'var(--wot-avatar-overlap)' : `calc(${addUnit(props.size)} * -0.25)`
-    if (props.vertical) {
-      style['margin-top'] = margin
-    } else {
-      style['margin-left'] = margin
-    }
-  }
-  return style
+  const isBuiltIn = isString(props.size) && ['large', 'medium', 'normal', 'small'].includes(props.size)
+  const overlap = isBuiltIn ? 'var(--wot-avatar-overlap)' : `calc(${addUnit(props.size)} * -0.25)`
+  const margin = hasDefaultSlot.value ? overlap : ''
+  const count = maxCountValue.value > 0 ? maxCountValue.value : children.length
+  return resolveStyle(COLLAPSE_STYLE, {
+    'z-index': props.cascading === 'left-up' ? String(count + 1) : '0',
+    'margin-top': props.vertical ? margin : '',
+    'margin-left': props.vertical ? '' : margin
+  })
 })
 </script>
 

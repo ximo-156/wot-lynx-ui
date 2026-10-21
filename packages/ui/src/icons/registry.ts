@@ -11,6 +11,7 @@
  *   - name 含 `/` 由 wd-icon 判定为图片，不进入本表。
  */
 import { iconfontSet } from './sets/iconfont'
+import { wotIconsSet } from './sets/wot-icons'
 import type { IconPaths, IconSet, ResolvedIcon } from './types'
 
 /** 注册顺序即回退查找顺序：内置集必须首位，保证存量名字命中内置字形 */
@@ -19,6 +20,7 @@ const iconSets = new Map<string, IconSet>()
 /** 集合键分隔符：`key:name` */
 const SET_KEY_SEPARATOR = ':'
 
+registerIconSet(wotIconsSet)
 registerIconSet(iconfontSet)
 
 /**

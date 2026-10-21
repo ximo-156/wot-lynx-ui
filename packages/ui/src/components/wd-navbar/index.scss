@@ -106,14 +106,17 @@ $navbar-z-index: var(--wot-navbar-z-index, 10) !default;
   }
 
   @include when(border) {
-    /* Lynx 适配：参考源 halfPixelBorder mixin 以 ::after 伪元素绘制下边框
-       （绝对定位，不参与布局），mixin 前置的 position: relative 显式保留；
-       伪元素边框改为主元素真实 border-bottom（1ppx）后，为保持总高仍为
-       $navbar-height，此处把盒模型改回 border-box（参考源根节点为
-       content-box，真实 border 会额外撑出 1px）。 */
     position: relative;
-    box-sizing: border-box;
-    @include halfPixelBorder('bottom');
+  }
+
+  @include e(border) {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: $stroke-main;
+    transform: scaleY(0.5);
+    background: $border-main;
   }
 
   @include when(fixed) {

@@ -105,7 +105,7 @@ const canvasStyle = computed(() => {
 
 // 监听目标数值变化
 watch(
-  () => props.modelValue,
+  [() => props.modelValue, () => props.speed],
   () => {
     reRender()
   },
@@ -208,12 +208,12 @@ const svgContent = computed(() => {
  * 当前进度值变化时重新渲染Circle组件
  */
 function reRender() {
-  // 动画通过定时器渲染
-  if (props.speed <= 0 || props.speed > 1000) {
+  clearTimeInterval()
+  if (!Number.isFinite(props.speed) || props.speed <= 0 || props.speed > 1000) {
+    currentValue.value = props.modelValue
     drawCircle()
     return
   }
-  clearTimeInterval()
   currentValue.value = currentValue.value || 0
   const run = () => {
     interval.value = setTimeout(() => {

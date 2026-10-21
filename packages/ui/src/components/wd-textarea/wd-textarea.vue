@@ -39,6 +39,9 @@ const { translate } = useTranslate('textarea')
 const { parent: formItemValidate } = useParent(FORM_ITEM_VALIDATE_KEY)
 const isDisabled = useFormDisabled(props)
 const isAlive = useAlive()
+let inputRequest = 0
+let blurRequest = 0
+watch([() => props.modelValue, isDisabled, () => props.readonly], () => { inputRequest++ }, { flush: 'sync' })
 
 const hasPrefixIcon = computed(() => Boolean(props.prefixIcon || (isString(props.cssIcon) && props.cssIcon)))
 
@@ -136,6 +139,8 @@ function formatValue(value: string | number) {
 }
 
 async function handleClear() {
+  if (isDisabled.value || props.readonly) return
+  const request = ++inputRequest
   focusing.value = false
   inputValue.value = ''
   if (props.focusWhenClear) {
@@ -143,40 +148,42 @@ async function handleClear() {
     focused.value = false
   }
   await pause()
-  // 暂停窗口内组件可能已卸载：续写在已销毁树上 patch 会产生晚到的
-  // remove/insert（真机 9902 removeNode 家族）
   if (!isAlive()) return
+  if (request !== inputRequest || isDisabled.value || props.readonly) {
+    clearing.value = false
+    return
+  }
   if (props.focusWhenClear) {
     focused.value = true
     focusing.value = true
   }
-  emit('update:modelValue', inputValue.value)
+  emit('update:modelValue', '')
   emit('clear')
 }
 async function handleBlur({ detail }: any) {
-  // 等待150毫秒，clear执行完毕
+  const request = ++blurRequest
   await pause(150)
-  if (!isAlive()) return
-
+  if (!isAlive() || request !== blurRequest) return
   if (clearing.value) {
     clearing.value = false
     return
   }
-
   focusing.value = false
   emit('blur', {
     value: inputValue.value,
-    cursor: detail.cursor ? detail.cursor : null
+    cursor: detail?.cursor ? detail.cursor : null
   })
   await formItemValidate.value?.validateByTrigger('blur')
 }
 function handleFocus({ detail }: any) {
+  if (isDisabled.value || props.readonly) return
+  blurRequest++
   focusing.value = true
   emit('focus', detail)
 }
 function handleInput({ detail }: any) {
-  // Lynx 适配：参考源经 v-model 由运行时回写 inputValue；:value 受控绑定
-  // 下需在此用 detail.value 自行回写，保持与 v-model 一致的双向语义
+  if (isDisabled.value || props.readonly) return
+  inputRequest++
   inputValue.value = formatValue(detail.value)
   emit('update:modelValue', inputValue.value)
   emit('input', detail)

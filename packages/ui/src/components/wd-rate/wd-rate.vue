@@ -14,8 +14,8 @@
  *   + change），提交逻辑（含 readonly / disabled 守卫）留在后台、可单测；
  * - **分工边界**：move 跟手走主线程（item 上的 worklet）、end 落定走后台
  *   （root 上的 @touchend）——同名事件不双绑；根 view 的后台 `@touchmove`
- *   仅转发原生事件（emits 声明，CONVENTIONS §14），不再回传值（值模型与
- *   wd-slider 一致：拖动期间只跟手、落定才提交）；
+ *   转发原生事件并按官方每次 move 提交 update:modelValue + change；
+ *   已有 move 提交时 end 不重复，仅为缺失冒泡的宿主保留落定恢复；
  * - **真机冒泡语义**：手指在星星项上按下后，touchmove / touchend 目标固定
  *   为该星星项并向上冒泡到根 view，故根 view 的后台处理器可收到提交事件
  *   （jsdom 不模拟冒泡，测试中直接派发到根元素验证，同 slider 范本）；
@@ -28,8 +28,8 @@
  *   程序化改值不被 worklet 的直改值残留污染；
  * - worklet 捕获的 itemRefs / starRefs / halfRefs / geomRef 为 setup 期
  *   创建的稳定数组与 MainThreadRef（就地增删件，替换数组引用会脱离 worklet
- *   的 _c 捕获）；min/max 类静态配置（num / allowHalf / readonly / disabled /
- *   颜色快照）为 setup 期常量快照（props 实例内不变，与 slider 范本一致）；
+ *   的 _c 捕获）；num / allowHalf / readonly / disabled / 颜色经
+ *   根元素属性实时读取，运行期变化无需重建实例；
  * - wot-ui 默认图标 star-fill 在本地 iconfont 集中无对应字形，解析不到时
  *   回退到同语义的 favorite-filling（实心星），props 默认值仍保持 'star-fill'
  *   与参考源一致；
@@ -48,13 +48,13 @@ import { computed, getCurrentInstance, onMounted, ref, watch, useMainThreadRef }
 import type { MainThreadRef } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { rateProps } from './types'
-import { addUnit, getRect, isDef, parseStyle } from '../../common/util'
+import { addUnit, getRect, isDef, parseStyle, uuid } from '../../common/util'
 import { resolveIcon } from '../../icons/registry'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(rateProps)
-const emit = defineEmits(['update:modelValue', 'change', 'touchmove', 'touchend', 'touchcancel'])
+const emit = defineEmits(['update:modelValue', 'change', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'tap'])
 const isDisabled = useFormDisabled(props)
 const isAlive = useAlive()
 const { proxy } = getCurrentInstance() as any
@@ -163,21 +163,27 @@ watch(
 )
 
 /** 几何快照 { rects, count, lastValue }（worklet 内 .current 活值） */
-const geomRef = useMainThreadRef<{ rects: any[]; count: number; lastValue: number | null } | null>(null)
+const geomRef = useMainThreadRef<{ rects: any[]; count: number; lastStyle: string | null } | null>(null)
 
-/** worklet 捕获的静态配置快照（setup 期求值；props 实例内不变） */
-const cfgNum = props.num
-const cfgAllowHalf = props.allowHalf
-const cfgReadonly = props.readonly
-const cfgDisabled = props.disabled
-/** 分段激活色的两个候选（无第二色时两者同值，worklet 内按跟手值实时选取） */
-const cfgActiveColorA = pickActiveColor(0)
-const cfgActiveColorB = (() => {
+const rateRef = useMainThreadRef<MtElement | null>(null)
+const activeColorA = computed(() => pickActiveColor(0))
+const activeColorB = computed(() => {
   const { activeColor } = props
-  if (Array.isArray(activeColor) && activeColor.length > 0) return activeColor[1] || activeColor[0]
-  return cfgActiveColorA
-})()
-const cfgInactiveColor = pickInactiveColor()
+  return Array.isArray(activeColor) && activeColor.length ? activeColor[1] || activeColor[0] : activeColorA.value
+})
+const inactiveColor = computed(() => pickInactiveColor())
+let rectRequest = 0
+let interactionRequest = 0
+let gestureMoved = false
+const rateId = `wd-rate-${uuid()}`
+let pendingRects: Promise<void> | undefined
+function onRootTouchStart(event: any) {
+  emit('touchstart', event)
+  interactionRequest++
+  gestureMoved = false
+  refreshRects(true)
+}
+watch([() => props.modelValue, () => props.readonly, isDisabled, () => props.allowHalf, () => props.num], () => { interactionRequest++ }, { flush: 'sync' })
 
 const iconSize = computed(() => {
   if (isDef(props.size)) {
@@ -204,7 +210,7 @@ function halfCustomStyle(rate: string): string {
 }
 
 watch(
-  [() => props.num, () => props.modelValue],
+  [() => props.num, () => props.modelValue, () => props.allowHalf],
   () => {
     computeRateList()
   },
@@ -214,7 +220,7 @@ watch(
   }
 )
 
-watch([() => props.num, () => props.space], () => {
+watch([() => props.num, () => props.space, () => props.size, () => props.block], () => {
   refreshRects(true)
 })
 
@@ -253,7 +259,7 @@ function itemStyle(index: number): Record<string, string> {
 function computeRateList() {
   const { modelValue, num, allowHalf } = props
   // value和num都准备好才能计算
-  if (modelValue === null || !num) return
+  if (modelValue === null || !num) { rateList.value = []; return }
   if (typeof modelValue !== 'number') {
     console.error('[wot ui] error(wd-rate): the value of wd-rate should be a number')
     return
@@ -278,17 +284,20 @@ function computeRateList() {
  *   缺省为非强制——触摸落定路径下每个代次最多尝试一次，
  *   避免度量不可用时每次 touchend 都发起跨线程查询。
  */
-async function refreshRects(force = false) {
-  if (force) rectsRequested.value = false
-  if (rectsRequested.value) return
+function refreshRects(force = false): Promise<void> {
+  if (force) { rectsRequested.value = false; itemRects.value = [] }
+  if (rectsRequested.value) return pendingRects || Promise.resolve()
+  const request = ++rectRequest
   rectsRequested.value = true
-  const rects = await getRect('.wd-rate__item', true, proxy)
-  // 回调晚于卸载落地时丢弃：在已销毁树上写模块级缓存会触发晚到 patch（9902）
-  if (!isAlive()) return
-  itemRects.value = rects
+  pendingRects = getRect(`#${rateId} .wd-rate__item`, true, proxy).then((rects) => {
+    if (!isAlive() || request !== rectRequest) return
+    itemRects.value = Array.isArray(rects) ? rects.slice(0, props.num) : []
+  })
+  return pendingRects
 }
 
 function handleClick(index: number, isHalf: boolean) {
+  interactionRequest++
   const { readonly, clearable, allowHalf, modelValue } = props
   if (readonly || isDisabled.value) return
   let value = isHalf ? index + 0.5 : index + 1
@@ -337,8 +346,10 @@ function valueFromRects(clientX: number, rects: Array<{ left: number; right: num
  * 组件必须把事件名声明为 emit 并转发，避免消费方监听穿透 $attrs 与根
  * 元素同名监听合并击穿事件注册表）。
  */
-function onTouchMove(event: any) {
+async function onTouchMove(event: any) {
   emit('touchmove', event)
+  gestureMoved = true
+  await commitFromEvent(event)
 }
 
 /**
@@ -349,7 +360,8 @@ function onTouchMove(event: any) {
  */
 async function onTouchEnd(event: any) {
   emit('touchend', event)
-  await commitFromEvent(event)
+  if (!gestureMoved) await commitFromEvent(event)
+  gestureMoved = false
 }
 
 /**
@@ -362,16 +374,19 @@ async function onTouchEnd(event: any) {
  */
 async function onTouchCancel(event: any) {
   emit('touchcancel', event)
-  await commitFromEvent(event)
+  if (!gestureMoved) await commitFromEvent(event)
+  gestureMoved = false
 }
 
 /** 触摸落定：同一包含域公式由 changedTouches 坐标重算终值并 commit */
 async function commitFromEvent(event: any) {
   if (props.readonly || isDisabled.value) return
+  const request = ++interactionRequest
   const clientX = Number(event.changedTouches?.[0]?.clientX ?? event.touches?.[0]?.clientX ?? event.detail?.x ?? 0)
   if (!itemRects.value.length) {
     await refreshRects()
   }
+  if (!isAlive() || props.readonly || isDisabled.value || request !== interactionRequest || !Number.isFinite(clientX)) return
   const value = valueFromRects(clientX, itemRects.value)
   if (value !== null) {
     updateValue(value)
@@ -389,7 +404,9 @@ async function commitFromEvent(event: any) {
 const onItemTouchStart = () => {
   'main thread'
   const items = itemRefs
-  const count = cfgNum
+  const root = rateRef.current
+  if (!root || root.getAttribute('gesture-disabled') === 'true' || root.getAttribute('gesture-readonly') === 'true') { geomRef.current = null; return }
+  const count = Number(root.getAttribute('gesture-count')) || 0
   const rects: any[] = []
   for (let i = 0; i < count; i++) {
     const el = items[i] && items[i].current
@@ -399,7 +416,7 @@ const onItemTouchStart = () => {
       })
     }
   }
-  geomRef.current = { rects, count, lastValue: null }
+  geomRef.current = { rects, count, lastStyle: null }
 }
 
 /*
@@ -411,9 +428,15 @@ const onItemTouchStart = () => {
  */
 const onItemTouchMove = (event: any) => {
   'main thread'
-  if (cfgReadonly || cfgDisabled) return
+  const root = rateRef.current
+  if (!root || root.getAttribute('gesture-readonly') === 'true' || root.getAttribute('gesture-disabled') === 'true') return
+  const cfgAllowHalf = root.getAttribute('gesture-half') === 'true'
+  const cfgNum = Number(root.getAttribute('gesture-count')) || 0
+  const cfgActiveColorA = root.getAttribute('gesture-active-a') || ''
+  const cfgActiveColorB = root.getAttribute('gesture-active-b') || cfgActiveColorA
+  const cfgInactiveColor = root.getAttribute('gesture-inactive') || ''
   const geom = geomRef.current
-  if (!geom || !geom.count) return
+  if (!geom || !geom.count || geom.count !== cfgNum) return
   const touch = event.touches && event.touches[0]
   if (!touch) return
   const x = touch.clientX
@@ -432,8 +455,9 @@ const onItemTouchMove = (event: any) => {
   const rect = geom.rects[index]
   const isHalf = cfgAllowHalf && x - rect.left < rect.width / 2
   const value = isHalf ? index + 0.5 : index + 1
-  if (geom.lastValue === value) return
-  geom.lastValue = value
+  const styleKey = [value, cfgAllowHalf, cfgActiveColorA, cfgActiveColorB, cfgInactiveColor].join('|')
+  if (geom.lastStyle === styleKey) return
+  geom.lastStyle = styleKey
 
   // 分段激活色按跟手值实时选取（与后台 iconActiveStyle 同规则）
   const active = value <= cfgNum * 0.6 ? cfgActiveColorA : cfgActiveColorB
@@ -447,7 +471,7 @@ const onItemTouchMove = (event: any) => {
 </script>
 
 <template>
-  <view :class="rootClass" :style="rootStyle" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchCancel">
+  <view :id="rateId" :class="rootClass" :style="rootStyle" :main-thread-ref="rateRef" :gesture-count="String(num)" :gesture-half="String(allowHalf)" :gesture-readonly="String(readonly)" :gesture-disabled="String(isDisabled)" :gesture-active-a="activeColorA" :gesture-active-b="activeColorB" :gesture-inactive="inactiveColor" @tap="emit('tap', $event)" @touchstart="onRootTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchCancel">
     <view
       v-for="(rate, index) in rateList"
       :key="index"

@@ -47,7 +47,8 @@ const { parent: formItemValidate } = useParent(FORM_ITEM_VALIDATE_KEY)
 const isDisabled = useFormDisabled(props)
 const isAlive = useAlive()
 let changeRequest = 0
-watch([() => props.modelValue, isDisabled, () => props.disableInput], () => { changeRequest++ })
+let inputRequest = 0
+watch([() => props.modelValue, isDisabled, () => props.disableInput, () => props.min, () => props.max, () => props.step, () => props.precision, () => props.stepStrictly, () => props.allowNull, () => props.disableMinus, () => props.disablePlus], () => { changeRequest++; inputRequest++ }, { flush: 'sync' })
 
 /**
  * 输入框可切换样式键 + 中性值（CONVENTIONS §20 Style Funnel）。
@@ -406,13 +407,14 @@ function handleClick(type: OperationType) {
  */
 function handleInput(event: any) {
   if (isDisabled.value || props.disableInput) return
-  const rawVal = event.detail.value || ''
+  const request = ++inputRequest
+  const rawVal = String(event.detail?.value ?? '')
 
   // 立即更新显示
   inputValue.value = rawVal
 
   nextTick(() => {
-    if (!isAlive() || isDisabled.value || props.disableInput) return
+    if (!isAlive() || request !== inputRequest || isDisabled.value || props.disableInput) return
     // 空值处理
     if (rawVal === '') {
       inputValue.value = ''

@@ -12,8 +12,15 @@ export function pluginWotLynxWebFonts(options = {}) {
     name: 'wot-lynx-ui:web-fonts',
     setup(api) {
       if (!enabled) return
-      const font = readFileSync(new URL('../src/icons/fonts/iconfont.ttf', import.meta.url))
-      const css = `@font-face{font-family:wd-iconfont;src:url("data:font/ttf;base64,${font.toString('base64')}") format("truetype");font-weight:normal;font-style:normal;font-display:block}`
+      // 注册表优先使用 wot-ui 2.3.2 官方字形；旧 iconfont 集仍支持命名空间导入。
+      // 两套字体都必须注册在 document，shadow root 内的声明不会加载浏览器字体。
+      const css = [
+        ['wd-wot-icons', 'wot-icons.ttf'],
+        ['wd-iconfont', 'iconfont.ttf']
+      ].map(([family, filename]) => {
+        const font = readFileSync(new URL(`../src/icons/fonts/${filename}`, import.meta.url))
+        return `@font-face{font-family:${family};src:url("data:font/ttf;base64,${font.toString('base64')}") format("truetype");font-weight:normal;font-style:normal;font-display:block}`
+      }).join('\n')
       const marker = 'data-wot-lynx-iconfont'
       const style = `<style ${marker}>${css}</style>`
 

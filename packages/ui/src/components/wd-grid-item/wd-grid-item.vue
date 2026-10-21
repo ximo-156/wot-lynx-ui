@@ -144,23 +144,18 @@ const rootStyle = computed<CSSProperties>(() => {
 const GRID_ITEM_CONTENT_STYLE = defineStyleKeys({
   right: '0px',
   bottom: 'auto',
-  height: '100%'
+  height: '100%',
+  '--wot-grid-item-bg': ''
 })
 
 const contentStyle = computed<CSSProperties>(() => {
   const inset = square.value && gutter.value ? addUnit(gutter.value) : ''
-  const style: CSSProperties = resolveStyle(GRID_ITEM_CONTENT_STYLE, {
+  return resolveStyle(GRID_ITEM_CONTENT_STYLE, {
     right: inset,
     bottom: inset,
-    height: inset ? 'auto' : ''
+    height: inset ? 'auto' : '',
+    '--wot-grid-item-bg': bgColor.value
   })
-
-  // 保留参考源 bgColor 的定制点；按压背景仍由 :active 胜出。
-  if (bgColor.value) {
-    style['--wot-grid-item-bg'] = bgColor.value
-  }
-
-  return style
 })
 
 /**
@@ -301,7 +296,7 @@ function click(event: any) {
           </WdBadge>
         </view>
         <slot name="text">
-          <text v-if="text" :class="`wd-grid-item__text ${ellipsis ? 'is-ellipsis' : ''} ${customText}`" :text-maxline="ellipsis ? 1 : undefined">{{ text }}</text>
+          <text v-if="text" :class="['wd-grid-item__text', { 'is-ellipsis': ellipsis, 'is-spaced': hasIcon || $slots.icon }, customText]" :text-maxline="ellipsis ? 1 : undefined">{{ text }}</text>
         </slot>
       </slot>
     </view>

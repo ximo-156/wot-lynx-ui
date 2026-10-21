@@ -12,7 +12,7 @@
  *      列（父）绑主线程 touchstart（记跟手起点，几何经元素属性下发）；
  * 4. **边缘阻尼**：越界拖动阻尼后跟手，落定钳制回最近列项；
  * 5. **多列独立**：只拖一列，另一列位移与选中不变；
- * 6. **immediateChange**：跟手过程中索引变化即派发 change；
+ * 6. **immediateChange**：true 在松手时提交，false 在吸附结束时提交；
  * 7. **级联**：拖动父列落定后子列重建为新 children。
  */
 import { describe, it, expect, afterEach } from 'vitest'
@@ -78,6 +78,7 @@ describe('wd-picker-view MTS 跟手', () => {
         const value = ref<string[]>(['a', 'x'])
         return () =>
           h(PickerView as any, {
+            immediateChange: true,
             modelValue: value.value,
             columns: [
               ['a', 'b', 'c'],
@@ -112,7 +113,7 @@ describe('wd-picker-view MTS 跟手', () => {
       container.querySelectorAll('.wd-picker-view__column')[0].querySelector('.wd-picker-view__column-content')!,
       { touches: [], changedTouches: [{ clientX: 0, clientY: -50 }] }
     )
-    await pause(50)
+    await pause(230)
     expect(updates[updates.length - 1]).toEqual(['b', 'x'])
     expect(changes[changes.length - 1].selectedValues).toEqual(['b', 'x'])
     expect(changes[changes.length - 1].columnIndex).toBe(0)
@@ -130,6 +131,7 @@ describe('wd-picker-view MTS 跟手', () => {
         const value = ref<string[]>(['b'])
         return () =>
           h(PickerView as any, {
+            immediateChange: true,
             modelValue: value.value,
             columns: [['a', 'b', 'c']],
             itemHeight: 44,
@@ -165,6 +167,7 @@ describe('wd-picker-view MTS 跟手', () => {
         const value = ref<string[]>(['a', 'x'])
         return () =>
           h(PickerView as any, {
+            immediateChange: true,
             modelValue: value.value,
             columns: [
               ['a', 'b', 'c'],
@@ -191,17 +194,17 @@ describe('wd-picker-view MTS 跟手', () => {
     cleanup()
   })
 
-  it('immediateChange：跟手过程中索引变化即派发 change', async () => {
+  it('immediateChange：跟手不提交，松手提交并在吸附结束后发 pickend', async () => {
     const updates: any[] = []
     const { container } = render({
       setup() {
         const value = ref<string[]>(['a'])
         return () =>
           h(PickerView as any, {
+            immediateChange: true,
             modelValue: value.value,
             columns: [['a', 'b', 'c']],
             itemHeight: 44,
-            immediateChange: true,
             'onUpdate:modelValue': (v: any) => {
               value.value = v
               updates.push(v)
@@ -216,16 +219,16 @@ describe('wd-picker-view MTS 跟手', () => {
     // 跟手到 60px（超过 1.5 × 44 的一半 → 索引在 1 与 2 之间变化）
     fireEvent.touchstart(content, { touches: [{ clientX: 0, clientY: 0 }] })
     fireEvent.touchstart(column, { touches: [{ clientX: 0, clientY: 0 }] })
-    // 移到 50px：round(50/44) = 1 → 立即派发 change（b）
+    // 移到 50px：即使 immediateChange=true，touchmove 不提交（官方为松手时提交）
     fireEvent.touchmove(content, { touches: [{ clientX: 0, clientY: -50 }] })
     fireEvent.touchmove(column, { touches: [{ clientX: 0, clientY: -50 }] })
     await pause(50)
-    expect(updates[updates.length - 1], '跟手过半即落定值').toEqual(['b'])
-    // 继续移到 100px：round(100/44) = 2 → 再次派发（c）
+    expect(updates, '手指未松开不得提交').toHaveLength(0)
+    // 继续移到 100px：只跟手直改，到松手才提交最终 c
     fireEvent.touchmove(content, { touches: [{ clientX: 0, clientY: -100 }] })
     fireEvent.touchmove(column, { touches: [{ clientX: 0, clientY: -100 }] })
     await pause(50)
-    expect(updates[updates.length - 1]).toEqual(['c'])
+    expect(updates, '第二次 move 仍不提交').toHaveLength(0)
     // 跟手位移同步到 Vue 状态（v-model 回写重渲染不得让列内容跳变）：
     // 100px 超过 maxOffset(2×44=88) → 阻尼 88 + 12×0.3 = 91.6px
     expect(styleOf(content)).toMatch(/translateY\(-91\.6px\)/)
@@ -243,6 +246,7 @@ describe('wd-picker-view MTS 跟手', () => {
         const value = ref<string[]>(['zhejiang', 'hangzhou'])
         return () =>
           h(PickerView as any, {
+            immediateChange: true,
             modelValue: value.value,
             columns: CASCADE_TREE,
             cascade: true,
@@ -278,6 +282,7 @@ describe('wd-picker-view MTS 跟手', () => {
         const value = ref<string[]>(['a'])
         return () =>
           h(PickerView as any, {
+            immediateChange: true,
             modelValue: value.value,
             columns: [['a', 'b', { value: 'c', label: 'c', disabled: true }, 'd']],
             itemHeight: 44,
@@ -307,6 +312,7 @@ describe('wd-picker-view MTS 跟手', () => {
         const value = ref<string[]>(['b'])
         return () =>
           h(PickerView as any, {
+            immediateChange: true,
             modelValue: value.value,
             columns: [['a', 'b', 'c']],
             itemHeight: 44,

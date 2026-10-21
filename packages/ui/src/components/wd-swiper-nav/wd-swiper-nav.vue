@@ -8,10 +8,8 @@
  *   template v-if / v-for 无渲染占位（CONVENTIONS §4 原生元素白名单）；
  * - fraction 的裸文本插值包进 text 元素（Lynx 要求 view 内所有文本必须
  *   包在 text 中）；
- * - 两侧控制按钮图标取内置 180 图标集的 arrow-left-bold / arrow-right-bold：
- *   参考源的 left / right 字形不在内置 iconfont 集中（CONVENTIONS §8）；
- * - customStyle 经 parseStyle 归一为对象语法后绑定：Lynx 的 patchProp 对
- *   字符串 style 会静默丢弃（CONVENTIONS §19）。
+ * - 使用父级已提供的官方 left/right 字体图标；字形样式显式覆盖 text 节点。
+ * - customStyle 经 parseStyle 归一为对象语法后绑定，fraction text 自身消费令牌。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -22,21 +20,22 @@ import { swiperNavprops } from './types'
 
 defineProps(swiperNavprops)
 
-const emit = defineEmits(['change'])
+const emit = defineEmits(['change', 'tap'])
 
-function handleNav(dir: 'prev' | 'next') {
+function handleNav(dir: 'prev' | 'next', event: any) {
   const source: string = 'nav'
   emit('change', { dir, source })
+  emit('tap', event)
 }
 </script>
 
 <template>
   <template v-if="showControls">
-    <view class="wd-swiper-nav__btn wd-swiper-nav__btn--prev" @tap="handleNav('prev')">
-      <WdIcon name="arrow-left-bold" custom-class="wd-swiper-nav__btn-icon" />
+    <view class="wd-swiper-nav__btn wd-swiper-nav__btn--prev" @tap="handleNav('prev', $event)">
+      <WdIcon name="left" custom-class="wd-swiper-nav__btn-icon" />
     </view>
-    <view class="wd-swiper-nav__btn wd-swiper-nav__btn--next" @tap="handleNav('next')">
-      <WdIcon name="arrow-right-bold" custom-class="wd-swiper-nav__btn-icon" />
+    <view class="wd-swiper-nav__btn wd-swiper-nav__btn--next" @tap="handleNav('next', $event)">
+      <WdIcon name="right" custom-class="wd-swiper-nav__btn-icon" />
     </view>
   </template>
   <view
@@ -51,6 +50,6 @@ function handleNav(dir: 'prev' | 'next') {
         :class="`wd-swiper-nav__item--${type} ${current === index ? 'is-active' : ''} is-${direction}`"
       ></view>
     </template>
-    <text v-if="type === 'fraction'">{{ current + 1 }}/{{ total }}</text>
+    <text v-if="type === 'fraction'" class="wd-swiper-nav__fraction-text">{{ current + 1 }}/{{ total }}</text>
   </view>
 </template>

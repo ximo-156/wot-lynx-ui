@@ -110,6 +110,7 @@ describe('样式脏值（SetStyle 合并语义）', () => {
       setup() {
         return () =>
           h(PickerView as any, {
+            immediateChange: true,
             columns: [Array.from({ length: 5 }, (_, i) => ({ label: String(i), value: i }))]
           })
       }

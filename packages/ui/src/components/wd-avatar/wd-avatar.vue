@@ -203,7 +203,7 @@ const handleClick = (event: any) => {
     <!-- 图片 -->
     <WdImg v-else-if="src" :src="src" :mode="mode" custom-class="wd-avatar__img" @error="handleError" />
     <!-- 文本 -->
-    <text v-else-if="text" class="wd-avatar__text">{{ text }}</text>
+    <text v-else-if="text" class="wd-avatar__text" text-maxline="1">{{ text }}</text>
     <!-- 图标 -->
     <WdIcon v-else-if="hasIcon" :name="icon" :class-prefix="iconPrefix" :css-icon="cssIcon" custom-class="wd-avatar__icon" />
   </view>

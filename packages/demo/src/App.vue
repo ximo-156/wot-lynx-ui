@@ -441,7 +441,7 @@ const portalBarVisible = ref(false)
             <wd-loading type="wave" size="24px" />
           </view>
           <view class="demo-row">
-            <wd-loading type="circular" size="20px" color="#1C64FD" text="加载中" />
+            <wd-loading type="circular" size="20px" color="#755FFE" text="加载中" />
             <wd-loading type="dots" size="20px" direction="horizontal" text="横向" />
           </view>
         </view>
@@ -755,8 +755,8 @@ const portalBarVisible = ref(false)
           </view>
           <text class="demo-panel__label">自定义颜色（bg-color / color）</text>
           <view class="demo-row">
-            <wd-navbar-capsule bg-color="#1C64FD" color="#FFFFFF" />
-            <wd-navbar-capsule :show-back="false" bg-color="#E5EDFF" color="#1C64FD" />
+            <wd-navbar-capsule bg-color="#755FFE" color="#FFFFFF" />
+            <wd-navbar-capsule :show-back="false" bg-color="#9A89FF" color="#2D273D" />
           </view>
         </view>
       </view>
@@ -800,7 +800,7 @@ const portalBarVisible = ref(false)
             <wd-tabbar-item title="我的" icon="user" />
           </wd-tabbar>
           <text class="demo-panel__label">圆角形状（shape="round"）+ 自定义激活色</text>
-          <wd-tabbar v-model="tabbarRoundValue" shape="round" active-color="#1C64FD" style="margin-top: 8px">
+          <wd-tabbar v-model="tabbarRoundValue" shape="round" active-color="#755FFE" style="margin-top: 8px">
             <wd-tabbar-item title="首页" icon="home" active-icon="home-filling" />
             <wd-tabbar-item title="消息" icon="comment" />
             <wd-tabbar-item title="我的" icon="user" />
@@ -977,7 +977,7 @@ const portalBarVisible = ref(false)
           </view>
           <text class="demo-panel__label">separator 千分位 / color / autoStart 手动开始</text>
           <view class="demo-row">
-            <wd-count-to :start-val="0" :end-val="1234567" :duration="3000" color="#1C64FD" />
+            <wd-count-to :start-val="0" :end-val="1234567" :duration="3000" color="#755FFE" />
             <wd-count-to :auto-start="false" :start-val="0" :end-val="8888" :duration="1500" separator="," />
           </view>
           <view class="demo-row">
@@ -1012,20 +1012,20 @@ const portalBarVisible = ref(false)
         <view class="demo-panel">
           <text class="demo-panel__label">span 占据数（24 制）</text>
           <wd-row style="margin-bottom: 8px">
-            <wd-col :span="24" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">span 24</text></wd-col>
+            <wd-col :span="24" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">span 24</text></wd-col>
           </wd-row>
           <wd-row style="margin-bottom: 8px">
-            <wd-col :span="12" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">span 12</text></wd-col>
-            <wd-col :span="12" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">span 12</text></wd-col>
+            <wd-col :span="12" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">span 12</text></wd-col>
+            <wd-col :span="12" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">span 12</text></wd-col>
           </wd-row>
           <text class="demo-panel__label">offset 左侧偏移</text>
           <wd-row style="margin-bottom: 8px">
-            <wd-col :span="6" :offset="6" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">offset 6</text></wd-col>
-            <wd-col :span="6" :offset="6" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">offset 6</text></wd-col>
+            <wd-col :span="6" :offset="6" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">offset 6</text></wd-col>
+            <wd-col :span="6" :offset="6" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">offset 6</text></wd-col>
           </wd-row>
           <wd-row>
-            <wd-col :span="4" :offset="4" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">4</text></wd-col>
-            <wd-col :span="4" :offset="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">4</text></wd-col>
+            <wd-col :span="4" :offset="4" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">4</text></wd-col>
+            <wd-col :span="4" :offset="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">4</text></wd-col>
           </wd-row>
         </view>
       </view>
@@ -1035,22 +1035,22 @@ const portalBarVisible = ref(false)
         <view class="demo-panel">
           <text class="demo-panel__label">gutter 列间距</text>
           <wd-row :gutter="12" style="margin-bottom: 8px">
-            <wd-col :span="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
-            <wd-col :span="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
-            <wd-col :span="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
           </wd-row>
           <text class="demo-panel__label">justify 水平排列</text>
           <wd-row justify="space-between" style="margin-bottom: 8px">
-            <wd-col :span="6" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">6</text></wd-col>
-            <wd-col :span="6" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">6</text></wd-col>
+            <wd-col :span="6" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">6</text></wd-col>
+            <wd-col :span="6" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">6</text></wd-col>
           </wd-row>
           <wd-row justify="center" style="margin-bottom: 8px">
-            <wd-col :span="8" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">居中</text></wd-col>
+            <wd-col :span="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">居中</text></wd-col>
           </wd-row>
           <text class="demo-panel__label">align 垂直对齐</text>
           <wd-row align="bottom" style="height: 64px; background: #f7f8fa">
-            <wd-col :span="12" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">底部对齐</text></wd-col>
-            <wd-col :span="12" style="background: #edf1ff; padding: 8px; border-radius: 6px"><text class="demo-tag">align="bottom"</text></wd-col>
+            <wd-col :span="12" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">底部对齐</text></wd-col>
+            <wd-col :span="12" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">align="bottom"</text></wd-col>
           </wd-row>
         </view>
       </view>
@@ -1062,7 +1062,7 @@ const portalBarVisible = ref(false)
           <wd-resize @resize="onResize">
             <!-- 对象语法：字符串 :style 会被 vue-lynx 静默丢弃（CONVENTIONS §19），
                  高度变化必须真实生效才能触发 wd-resize -->
-            <view :style="{ height: `${resizeHeight}px`, background: '#edf1ff', 'border-radius': '8px', padding: '12px' }">
+            <view :style="{ height: `${resizeHeight}px`, background: '#EEEBFF', 'border-radius': '8px', padding: '12px' }">
               <text class="demo-tag">高度 {{ resizeHeight }}px · resize 触发 {{ resizeCount }} 次</text>
             </view>
           </wd-resize>
@@ -1081,7 +1081,7 @@ const portalBarVisible = ref(false)
             <view style="padding: 12px">
               <view style="height: 32px; background: #f7f8fa" />
               <wd-sticky :offset-top="0" :z-index="10">
-                <view style="background: #1c64fd; padding: 10px; border-radius: 8px">
+                <view style="background: #755FFE; padding: 10px; border-radius: 8px">
                   <text style="color: #ffffff; font-size: 13px">吸顶标题 A（offsetTop 0）</text>
                 </view>
               </wd-sticky>
@@ -1104,7 +1104,7 @@ const portalBarVisible = ref(false)
           <wd-sticky-box style="height: 180px">
             <view style="padding: 12px">
               <wd-sticky :offset-top="0" :z-index="10">
-                <view style="background: #1c64fd; padding: 10px; border-radius: 8px">
+                <view style="background: #755FFE; padding: 10px; border-radius: 8px">
                   <text style="color: #ffffff; font-size: 13px">offsetTop 0</text>
                 </view>
               </wd-sticky>
@@ -1230,7 +1230,7 @@ const portalBarVisible = ref(false)
           <text class="demo-panel__label">层叠叠加（maxCount 折叠，direction="right"）</text>
           <view class="demo-row">
             <wd-avatar-group :max-count="3" :size="40" collapse-text="+5">
-              <wd-avatar :size="40" text="A" bg-color="#1C64FD" />
+              <wd-avatar :size="40" text="A" bg-color="#755FFE" />
               <wd-avatar :size="40" text="B" bg-color="#34C759" />
               <wd-avatar :size="40" text="C" bg-color="#FF9500" />
             </wd-avatar-group>
@@ -1368,10 +1368,10 @@ const portalBarVisible = ref(false)
             <wd-button size="small" @tap="tourVisible = true">开始引导</wd-button>
           </view>
           <view class="demo-row">
-            <view id="tour-target-1" style="padding: 8px 12px; background-color: #edf1ff; border-radius: 8px">
+            <view id="tour-target-1" style="padding: 8px 12px; background-color: #EEEBFF; border-radius: 8px">
               <text class="demo-tag">引导目标 1</text>
             </view>
-            <view id="tour-target-2" style="padding: 8px 12px; background-color: #edf1ff; border-radius: 8px">
+            <view id="tour-target-2" style="padding: 8px 12px; background-color: #EEEBFF; border-radius: 8px">
               <text class="demo-tag">引导目标 2</text>
             </view>
           </view>
@@ -1463,7 +1463,7 @@ const portalBarVisible = ref(false)
             <wd-button size="small" @tap="portalBarVisible = !portalBarVisible">{{ portalBarVisible ? '隐藏' : '显示' }}底部固定条</wd-button>
           </view>
           <wd-root-portal v-if="portalBarVisible">
-            <view style="position: fixed; left: 0; right: 0; bottom: 0; padding: 12px; background-color: #1c64fd">
+            <view style="position: fixed; left: 0; right: 0; bottom: 0; padding: 12px; background-color: #755FFE">
               <text style="color: #ffffff; font-size: 13px">经 RootPortal 挂载的底部固定条</text>
             </view>
           </wd-root-portal>
@@ -1539,12 +1539,12 @@ const portalBarVisible = ref(false)
 .page__title {
   font-size: 28px;
   font-weight: 600;
-  color: #171b26;
+  color: #2D273D;
 }
 
 .page__subtitle {
   font-size: 13px;
-  color: #667085;
+  color: #979797;
   margin-top: 4px;
 }
 
@@ -1555,7 +1555,7 @@ const portalBarVisible = ref(false)
 .demo-section__title {
   font-size: 15px;
   font-weight: 600;
-  color: #171b26;
+  color: #2D273D;
   margin-bottom: 8px;
 }
 
@@ -1570,7 +1570,7 @@ const portalBarVisible = ref(false)
 
 .demo-panel__label {
   font-size: 12px;
-  color: #8b93a3;
+  color: #979797;
   margin: 8px 0;
 }
 
@@ -1589,14 +1589,14 @@ const portalBarVisible = ref(false)
 
 .demo-tag {
   font-size: 12px;
-  color: #1c64fd;
-  background: #edf1ff;
+  color: #755FFE;
+  background: #EEEBFF;
   border-radius: 6px;
   padding: 4px 8px;
 }
 
 .demo-transition-box {
-  background: #1c64fd;
+  background: #755FFE;
   border-radius: 12px;
   padding: 16px;
 }

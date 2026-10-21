@@ -1,120 +1,96 @@
 /*
- * wd-loading — 加载指示器
- *
- * Lynx 实现说明（相对 wot-ui 的适配点）：
- * - circular：wot-ui 用 conic-gradient + radial mask 绘制带渐变拖尾的圆环；
- *   Lynx 不支持 conic-gradient / mask，改用 SVG circle + stroke-dasharray
- *   绘制等长圆弧（120°，起始角 330°，与 wot-ui 一致），渐变拖尾降级为硬边
- *   （SVG 渐变元素不在 Lynx 白名单内，见 CONVENTIONS §8）；
- * - spinner：wot-ui 的 12 个 dot 盒子内嵌 ::before 条状图形；Lynx 无伪元素，
- *   改为 dot 盒子内嵌真实元素 wd-loading__spinner-dot-bar；
- * - wave：wot-ui 直接动画 height；Lynx 对布局属性的关键帧动画支持有限，
- *   降级为 scaleY（视觉等效），其余节奏（时长 / 阶梯延迟）保持一致；
- * - :nth-of-type 阶梯（透明度 / 动画延迟）Lynx 不支持，改由 v-for 索引内联下发；
- * - 颜色经根节点 color 下发，图形部件用 currentColor；SVG content 不继承
- *   CSS 变量，circular 的圆弧颜色由 JS 侧按 props 计算后注入。
+ * wd-loading — 官方节奏、尺寸与原生图形。
+ * circular 把官方 90°–330° 淡入、330°–360° 实色环拆成 90 个 3° 扇段，
+ * 不依赖不受支持的 conic-gradient/mask/linearGradient。SVG 版本为分段近似；
+ * inheritColor 使用原生 currentColor 小段，任意父级颜色可真实继承，不猜主题色。
+ * wave 以居中 scaleY 代替 height 动画：高度比例/时序一致，圆角会一起缩放。
  */
 <script lang="ts" setup>
 import './index.css'
-
 import { computed } from 'vue-lynx'
 import { loadingProps } from './types'
-import { addUnit, isDef, filterStyle, parseStyle, sanitizeSvgContent } from '../../common/util'
+import { addUnit, isDef, parseStyle, sanitizeSvgContent } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { useGlobalConfig } from '../../composables/useGlobalConfig'
+import { PRIMARY_COLOR, SECONDARY_COLOR } from '../../common/theme'
 
 const props = defineProps(loadingProps)
-
-// 长度为 12 的数组（spinner 类型 12 个 dot）
+const globalConfig = useGlobalConfig()
 const dots = Array.from({ length: 12 }, (_, i) => i)
-
-const rootStyle = computed(() => {
-  const style: Record<string, string> = {}
-  if (isDef(props.color)) {
-    style.color = props.color
-  }
-  if (props.inheritColor) {
-    style.color = 'inherit'
-  }
-  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
+const ROOT_STYLE = defineStyleKeys({ color: '' })
+const rootStyle = computed(() => resolveStyle(ROOT_STYLE,
+  { color: props.inheritColor ? 'inherit' : props.color }, parseStyle(props.customStyle)))
+const SPINNER_STYLE = defineStyleKeys({ width: '', height: '' })
+const spinnerStyle = computed(() => resolveStyle(SPINNER_STYLE, {
+  height: isDef(props.size) ? addUnit(props.size) : '', width: isDef(props.size) ? addUnit(props.size) : ''
+}))
+const circularColor = computed(() => parseStyle(props.customStyle).color || props.color ||
+  globalConfig.value.themeVars.loadingColorMain || globalConfig.value.themeVars.primary6 ||
+  (globalConfig.value.theme === 'dark' ? SECONDARY_COLOR : PRIMARY_COLOR))
+/** radial closest-side 的 15% 是半径的 15%，不是直径的 15%。 */
+const ringThickness = computed(() => {
+  const token = globalConfig.value.themeVars.loadingSpinnerCircleStrokeWidth || '15%'
+  const value = parseFloat(token)
+  return Math.min(50, Math.max(0, Number.isFinite(value) ? (token.endsWith('%') ? value / 2 : value) : 7.5))
 })
-
-const spinnerStyle = computed(() => {
-  const style: Record<string, string> = {}
-  if (isDef(props.size)) {
-    style.height = addUnit(props.size)
-    style.width = addUnit(props.size)
-  }
-  return filterStyle(style)
-})
-
-/** 圆弧颜色：未指定 color 时取主题主色（--wot-primary-6 的 JS 镜像） */
-const circularColor = computed(() => props.color || '#1C64FDFF')
-
-/**
- * circular 圆弧 SVG：viewBox 100×100，描边宽 15（= wot-ui 的 15% 环宽），
- * 120° 圆弧（dasharray = 周长/3），起始角 -30°（即 wot-ui conic 的 330°）。
- */
+const circularSegments = computed(() => Array.from({ length: 90 }, (_, index) => {
+  const start = 90 + index * 3
+  return { start, end: start + 3, opacity: Math.min(1, (start + 1.5 - 90) / 240) }
+}))
+function polar(radius: number, angle: number) {
+  const radians = (angle - 90) * Math.PI / 180
+  return [50 + radius * Math.cos(radians), 50 + radius * Math.sin(radians)]
+}
 const circularSvg = computed(() => {
-  const r = 42.5
-  const circumference = 2 * Math.PI * r
-  const arc = circumference / 3
-  const markup =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">` +
-    `<circle cx="50" cy="50" r="${r}" fill="none" stroke="${circularColor.value}" stroke-width="15" ` +
-    `stroke-dasharray="${arc.toFixed(2)} ${(circumference - arc).toFixed(2)}" transform="rotate(-30 50 50)"/>` +
-    `</svg>`
-  return sanitizeSvgContent(markup)
+  const inner = 50 - ringThickness.value
+  const paths = circularSegments.value.map(({ start, end, opacity }) => {
+    const a = polar(50, start), b = polar(50, end), c = polar(inner, end), d = polar(inner, start)
+    return `<path d="M${a.join(' ')}A50 50 0 0 1 ${b.join(' ')}L${c.join(' ')}A${inner} ${inner} 0 0 0 ${d.join(' ')}Z" opacity="${opacity.toFixed(4)}"/>`
+  }).join('')
+  return sanitizeSvgContent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g fill="${circularColor.value}">${paths}</g></svg>`)
 })
-
-/** spinner 单个 dot 的环绕旋转（wot-ui: rotate(90deg - i*30deg)、透明度 1 - 0.75/12*(i-1)） */
+const inheritedSegments = computed(() => {
+  const thickness = ringThickness.value
+  const radius = 50 - thickness / 2
+  const length = radius * Math.PI / 60 + 0.15
+  return circularSegments.value.map(({ start, opacity }) => {
+    const [x, y] = polar(radius, start + 1.5)
+    return { left: `${x - thickness / 2}%`, top: `${y - length / 2}%`,
+      width: `${thickness}%`, height: `${length}%`, transform: `rotate(${start + 1.5 - 90}deg)`, opacity: `${opacity}` }
+  })
+})
 function spinnerDotStyle(index: number): Record<string, string> {
-  return {
-    transform: `rotate(${60 - index * 30}deg)`,
-    opacity: (1 - (0.75 / 12) * index).toFixed(4)
-  }
+  return { transform: `rotate(${60 - index * 30}deg)`, opacity: (1 - (0.75 / 12) * index).toFixed(4) }
 }
-
-/** dots 的阶梯延迟：wot-ui 为 calc(duration * (i-1) / 3)，此处按 0.8s 折算 */
 function dotDelayStyle(index: number): Record<string, string> {
-  return { 'animation-delay': `${((index - 1) * (0.8 / 3)).toFixed(4)}s` }
+  const duration = 'var(--wot-loading-spinner-animation-duration, 0.8s)'
+  return { 'animation-delay': `calc(${duration} * ${index - 1} / 3)`, 'animation-duration': duration }
 }
-
-/**
- * wave 单柱的动画名与间距（wot-ui 经 :nth-of-type 绑定动画名、
- * :nth-of-type(n + 2) 加间距；Lynx 不支持结构伪类，按索引内联）
- */
 function waveBarStyle(index: number): Record<string, string> {
-  const style: Record<string, string> = { 'animation-name': `wd-wave-bar-${index}` }
-  if (index > 1) {
-    // --wot-loading-wave-gap 默认 6.25%
-    style['margin-left'] = 'var(--wot-loading-wave-gap, 6.25%)'
-  }
-  return style
+  return { 'margin-left': index > 1 ? 'var(--wot-loading-wave-gap, 6.25%)' : '0px' }
 }
 </script>
-
 <template>
   <view :class="`wd-loading wd-loading--${direction} ${customClass}`" :style="rootStyle">
     <view :class="`wd-loading__spinner wd-loading__spinner--${type} ${customSpinnerClass}`" :style="spinnerStyle">
       <view v-if="type === 'circular'" class="wd-loading__spinner-wraper">
-        <svg class="wd-loading__spinner-circular" :content="circularSvg" />
+        <view v-if="inheritColor" class="wd-loading__spinner-circular">
+          <view v-for="(style, index) in inheritedSegments" :key="index" class="wd-loading__circular-segment" :style="style" />
+        </view>
+        <svg v-else class="wd-loading__spinner-circular" :content="circularSvg" />
       </view>
       <view v-else-if="type === 'spinner'" class="wd-loading__spinner-wraper">
-        <view v-for="i in dots" :key="i" class="wd-loading__spinner-dot" :style="spinnerDotStyle(i)">
-          <view class="wd-loading__spinner-dot-bar" />
-        </view>
+        <view v-for="i in dots" :key="i" class="wd-loading__spinner-dot" :style="spinnerDotStyle(i)"><view class="wd-loading__spinner-dot-bar" /></view>
       </view>
       <view v-else-if="type === 'dots'" class="wd-loading__spinner-wraper">
         <view v-for="i in 3" :key="i" class="wd-loading__spinner-dot" :style="dotDelayStyle(i)" />
       </view>
       <view v-else-if="type === 'wave'" class="wd-loading__spinner-wraper">
         <view v-for="i in 4" :key="i" class="wd-loading__spinner-wave-bar" :style="waveBarStyle(i)">
-          <view class="wd-loading__spinner-wave-bar-inner" />
+          <view class="wd-loading__spinner-wave-bar-inner" :style="{ 'animation-name': `wd-wave-bar-${i}` }" />
         </view>
       </view>
     </view>
-    <!-- 兜底文本包 text：Lynx view 内裸文本不渲染（CONVENTIONS §4） -->
-    <view v-if="$slots.default || text" class="wd-loading__text">
-      <slot><text>{{ text }}</text></slot>
-    </view>
+    <view v-if="$slots.default || text" class="wd-loading__text"><slot><text class="wd-loading__text-content">{{ text }}</text></slot></view>
   </view>
 </template>

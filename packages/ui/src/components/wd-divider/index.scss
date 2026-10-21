@@ -71,7 +71,7 @@ $divider-padding-default: var(--wot-divider-padding-default, $spacing-zero) !def
      此处用 1ppx 物理像素边框直接表达 0.5px 细线（本地细线约定）。 */
   @include when(hairline) {
     @include edeep(line) {
-      border-top-width: 1ppx;
+      transform: scaleY(0.5);
     }
   }
 
@@ -115,7 +115,7 @@ $divider-padding-default: var(--wot-divider-padding-default, $spacing-zero) !def
        避免命中水平态 hairline 的 border-top-width 规则 */
     @include when(hairline) {
       @include edeep(line) {
-        border-width: 0 0 0 1ppx;
+        transform: scaleX(0.5);
       }
     }
   }

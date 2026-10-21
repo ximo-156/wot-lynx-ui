@@ -34,7 +34,7 @@ const emit = defineEmits(['change', 'update:modelValue', 'tap'])
 const isDisabled = useFormDisabled(props)
 const isAlive = useAlive()
 let changeRequest = 0
-watch([() => props.modelValue, isDisabled, () => props.loading], () => { changeRequest++ })
+watch([() => props.modelValue, isDisabled, () => props.loading, () => props.activeValue, () => props.inactiveValue], () => { changeRequest++ }, { flush: 'sync' })
 
 const isActive = computed(() => {
   return props.modelValue === props.activeValue
@@ -69,10 +69,7 @@ const rootStyle = computed(() => {
   return resolveStyle(ROOT_STYLE, { 'font-size': size, '--wot-switch-size': size }, parseStyle(props.customStyle))
 })
 
-const innerStyle = computed(() => {
-  const background = isActive.value ? props.activeColor : props.inactiveColor
-  return background ? { background } : {}
-})
+const innerStyle = computed(() => ({ background: (isActive.value ? props.activeColor : props.inactiveColor) || '' }))
 
 const innerIcon = computed(() => {
   return isActive.value ? props.activeIcon : props.inactiveIcon

@@ -141,6 +141,7 @@ describe('Tier 2b 选择器 / 键盘 / 日历', () => {
             const value = ref<string[]>(['a'])
             return () =>
               h(PickerView, {
+                immediateChange: true,
                 modelValue: value.value,
                 columns: [['a', 'b', 'c']],
                 'onUpdate:modelValue': (v: any) => {

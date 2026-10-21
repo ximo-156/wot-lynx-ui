@@ -11,6 +11,7 @@
 import { inject, provide, ref } from 'vue-lynx'
 import type { ImagePreview, ImagePreviewOptions } from './types'
 import { deepMerge, isArray, isString } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
 
 /**
  * useImagePreview 用到的 key
@@ -49,11 +50,14 @@ export function useImagePreview(selector: string = ''): ImagePreview {
     provide(imagePreviewOptionKey, imagePreviewOption)
   }
 
+  const isAlive = useAlive()
+
   /**
    * 打开图片预览
    * @param options 预览选项或图片数组
    */
   const open = (options: ImagePreviewOptions | string[]) => {
+    if (!isAlive()) return
     let mergedOptions: ImagePreviewOptions
 
     if (isArray(options)) {
@@ -69,6 +73,7 @@ export function useImagePreview(selector: string = ''): ImagePreview {
    * 关闭图片预览
    */
   const close = () => {
+    if (!isAlive()) return
     imagePreviewOption.value = { show: false }
   }
 

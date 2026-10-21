@@ -57,6 +57,8 @@ const calendarViewRef = ref()
 const calendarTabs = ref()
 const isConfirming = ref<boolean>(false)
 let confirmRequest = 0
+let openRequest = 0
+watch([() => props.modelValue, () => props.type, () => props.minDate, () => props.maxDate, () => props.maxRange, () => props.allowSameDay], () => { confirmRequest++ }, { deep: true, flush: 'sync' })
 /** 当前激活的快捷选项索引，-1 表示无激活项 */
 const activeShortcutIndex = ref<number>(-1)
 
@@ -157,6 +159,7 @@ function handleClosed() {
 }
 
 watch(pickerShow, async (val) => {
+  const request = ++openRequest
   confirmRequest++
   emit('update:visible', val)
   if (val) {
@@ -166,7 +169,7 @@ watch(pickerShow, async (val) => {
     lastCurrentType.value = currentType.value
 
     await pause()
-    if (!isAlive() || !pickerShow.value) return
+    if (!isAlive() || request !== openRequest || !pickerShow.value) return
     scrollIntoView()
     emit('open')
   } else {
@@ -192,6 +195,7 @@ function close() {
 }
 
 function handleTypeChange({ index }: { index: number }) {
+  confirmRequest++
   const tabs = ['date', 'week', 'month']
   const rangeTabs = ['daterange', 'weekrange', 'monthrange']
   const type = props.type.indexOf('range') > -1 ? rangeTabs[index] : tabs[index]
@@ -207,6 +211,7 @@ function getConfirmBtnStatus(value: number | number[] | null) {
 }
 
 function handleChange({ value }: { value: number | number[] | null }) {
+  confirmRequest++
   calendarValue.value = deepClone(value)
   confirmBtnDisabled.value = getConfirmBtnStatus(value)
   // 用户手动切换日期时重置快捷选项激活状态
@@ -248,6 +253,7 @@ function onConfirm() {
 }
 
 function handleShortcutClick(index: number) {
+  confirmRequest++
   // 设置激活的快捷选项
   activeShortcutIndex.value = index
 

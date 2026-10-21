@@ -153,6 +153,14 @@ export type TableProvide = {
    * @returns 合并配置 { rowspan, colspan }
    */
   getSpan: (rowIndex: number, columnIndex: number) => SpanMethodResult
+  /** Lynx 内部协定：快照注册防止父渲染追踪子 props，排序 ref 保持官方 expose。 */
+  registerColumn?: (uid: number, column: TableColumnProps, direction: import('vue-lynx').Ref<import('../wd-table-column/types').SortDirection>) => void
+  unregisterColumn?: (uid: number) => void
+  bodyHeight?: ComputedRef<number>
+  getRowTop?: (rowIndex: number) => number
+  getCellHeight?: (rowIndex: number, rowspan: number) => number
+  getSpanWidth?: (columnIndex: number, colspan: number) => string
+  reportCellHeight?: (uid: number, rowIndex: number, rowspan: number, height: number) => void
 }
 
 /** 表格组件的 InjectionKey */

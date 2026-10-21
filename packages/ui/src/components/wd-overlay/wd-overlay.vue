@@ -30,7 +30,7 @@ const emit = defineEmits([
 const transitionStyle = computed(() => ({ 'z-index': String(props.zIndex), ...parseStyle(props.customStyle) }))
 
 function handleClick(event?: any) {
-  emit('click', event)
+  emit('click')
   emit('tap', event)
 }
 </script>

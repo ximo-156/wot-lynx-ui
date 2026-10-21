@@ -186,7 +186,7 @@ defineExpose<TooltipExpose>({
         <slot name="content">
           <view class="wd-tooltip__inner"><text>{{ content }}</text></view>
         </slot>
-        <WdIcon v-if="showClose" name="close" custom-class="wd-tooltip__close-icon" @tap="close" />
+        <WdIcon v-if="showClose" name="close" custom-class="wd-tooltip__close-icon" @tap="toggle" />
       </view>
     </WdTransition>
     <view class="wd-tooltip__target" :id="popover.ids.target" @tap="toggle">

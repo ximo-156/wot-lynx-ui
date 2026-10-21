@@ -29,7 +29,7 @@ import WdPopup from '../wd-popup/wd-popup.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import { actionSheetProps, type Panel } from './types'
-import { isArray, parseStyle } from '../../common/util'
+import { getSystemInfo, isArray, parseStyle } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(actionSheetProps)
@@ -52,6 +52,8 @@ const popupStyle = computed<Record<string, string>>(() => {
 })
 
 const showPopup = ref<boolean>(false)
+const ACTION_STYLE = defineStyleKeys({ color: '' })
+const actionsStyle = computed(() => ({ 'max-height': `${getSystemInfo().windowHeight / 2}px` }))
 
 watch(() => props.panels, computedValue, { deep: true, immediate: true })
 
@@ -172,21 +174,21 @@ defineExpose({ open, close })
         </view>
 
         <slot>
-          <view v-if="actions && actions.length" class="wd-action-sheet__actions">
+          <scroll-view v-if="actions && actions.length" :scroll-y="true" class="wd-action-sheet__actions" :style="actionsStyle">
             <view
               v-for="(action, rowIndex) in actions"
               :key="rowIndex"
               :class="`wd-action-sheet__action ${title ? '' : 'is-border'} ${action.disabled ? 'wd-action-sheet__action--disabled' : ''}  ${
                 action.loading ? 'wd-action-sheet__action--loading' : ''
               }`"
-              :style="action.color ? { color: action.color } : {}"
+              :style="resolveStyle(ACTION_STYLE, { color: action.color })"
               @tap="select(rowIndex, 'action')"
             >
               <WdLoading custom-class="wd-action-sheet__action-loading" v-if="action.loading" />
               <text v-else class="wd-action-sheet__name">{{ action.name }}</text>
               <text v-if="!action.loading && action.description" class="wd-action-sheet__description">{{ action.description }}</text>
             </view>
-          </view>
+          </scroll-view>
           <view v-if="isArray(formatPanels) && formatPanels.length" class="wd-action-sheet__panels-wrap">
             <view v-for="(panel, rowIndex) in formatPanels" :key="rowIndex" class="wd-action-sheet__panels">
               <!-- 横向滚动轨道用原生 scroll-view（NATIVE-REWRITE §3.3） -->

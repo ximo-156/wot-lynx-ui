@@ -96,8 +96,16 @@ $loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-
 
       // Lynx 适配新增元素：承载 SVG 圆弧，撑满 wraper
       .wd-loading__spinner-circular {
+        position: relative;
+        display: flex;
+        flex-direction: row;
         width: 100%;
         height: 100%;
+      }
+      .wd-loading__circular-segment {
+        position: absolute;
+        background-color: currentColor;
+        transform-origin: center center;
       }
     }
 
@@ -158,7 +166,8 @@ $loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-
 
     // Lynx 适配：wot-ui 的 ::before 条状图形改为真实子元素
     .wd-loading__spinner-dot-bar {
-      display: block;
+      display: flex;
+      flex-direction: row;
       width: $loading-spinner-dot-width;
       height: $loading-spinner-dot-height;
       margin: 0 auto;
@@ -188,8 +197,14 @@ $loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-
     animation-timing-function: linear;
     animation-iteration-count: infinite;
     // Lynx 适配：wot-ui 直接动画 height，Lynx 对布局属性关键帧支持有限，降级 scaleY
-    transform-origin: center bottom;
+    transform-origin: center center;
     will-change: transform;
+  }
+
+  @include e(text-content) {
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
   }
 
   @include e(text) {

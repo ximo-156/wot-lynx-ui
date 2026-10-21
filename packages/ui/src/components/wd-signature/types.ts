@@ -210,9 +210,9 @@ export const signatureProps = {
 /**
  * 签名结果
  *
- * Lynx 实现说明：无 canvas 2D 能力，tempFilePath 为签名 SVG 的
- * data URI（宿主可直接作为 image src 使用），success 恒为 true
- * （SVG 标记生成不依赖异步平台能力，无失败分支）。
+ * Lynx 实现说明：注册宿主画布时返回真实 fileType / quality 指定位图，
+ * 失败时 success=false、路径为空。未注册时返回真实 image/svg+xml data URI，
+ * 并非 PNG/JPG；这一降级不受 fileType / quality 控制。
  */
 export type SignatureResult = {
   /** 生成图片的临时路径 */

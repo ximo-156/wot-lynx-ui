@@ -9,23 +9,29 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, inject, reactive, ref, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, inject, nextTick, reactive, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdOverlay from '../wd-overlay/wd-overlay.vue'
 import { videoPreviewProps, type PreviewVideo, type VideoPreviewExpose, type VideoPreviewOptions } from './types'
 import { getVideoPreviewOptionKey } from './index'
-import { isFunction, uuid } from '../../common/util'
+import { isDef, isFunction, uuid } from '../../common/util'
+import { hasUniAdapter, uni } from '../../common/uni'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(videoPreviewProps)
 const emit = defineEmits<{ open: []; close: []; tap: [event: any] }>()
 const isAlive = useAlive()
+const instance = getCurrentInstance()!
+let videoRequest = 0
 const state = reactive({ show: false, visible: false })
 const previewVideo = reactive<PreviewVideo>({ url: '', poster: '', title: '' })
 const requestOptions = ref<Partial<VideoPreviewOptions>>({})
 const videoId = `wd-video-preview-${uuid()}`
 const videoPreviewOption = inject(getVideoPreviewOptionKey(props.selector), ref<Partial<VideoPreviewOptions>>({}))
-const options = computed(() => ({ ...props, ...requestOptions.value }))
+const options = computed(() => {
+  const overrides = Object.fromEntries(Object.entries(requestOptions.value).filter(([, value]) => isDef(value)))
+  return { ...props, ...overrides } as typeof props & Partial<VideoPreviewOptions>
+})
 const videoClass = computed(() => ['wd-video-preview__video', options.value.fullScreen ? 'is-fullscreen' : ''])
 const closeClass = computed(() => ['wd-video-preview__close', `is-${options.value.closePosition}`])
 
@@ -35,25 +41,40 @@ function reset(option: Partial<VideoPreviewOptions>) {
     close()
     return
   }
+  const alreadyOpen = state.show
+  ++videoRequest
   requestOptions.value = { ...option }
   previewVideo.url = option.url || ''
   previewVideo.poster = option.poster || ''
   previewVideo.title = option.title || ''
   state.show = true
+  if (alreadyOpen && state.visible) enterFullScreen()
 }
 
-watch(() => videoPreviewOption.value, reset, { deep: true, immediate: true })
 watch(() => state.show, (show, previous) => {
   if (!isAlive() || show === previous) return
   if (show) emit('open')
   else emit('close')
-  const callback = show ? requestOptions.value.onOpen : requestOptions.value.onClose
-  const listener = show ? props.onOpen : props.onClose
-  if (isFunction(callback) && callback !== listener) callback()
+  const raw = instance.vnode.props || {}
+  const name = show ? 'onOpen' : 'onClose'
+  const callback = requestOptions.value[name] || raw[show ? 'on-open' : 'on-close']
+  if (isFunction(callback) && callback !== raw[name]) callback()
 })
+watch(() => videoPreviewOption.value, reset, { deep: true, immediate: true })
 
 function handleEnter() {
-  if (isAlive() && state.show) state.visible = true
+  if (!isAlive() || !state.show) return
+  state.visible = true
+  enterFullScreen()
+}
+function enterFullScreen() {
+  if (!options.value.fullScreen || !hasUniAdapter('createVideoContext')) return
+  const request = videoRequest
+  nextTick(() => {
+    if (!isAlive() || !state.show || request !== videoRequest) return
+    const context = uni.createVideoContext(videoId, instance.proxy)
+    context?.requestFullScreen?.({ direction: 0 })
+  })
 }
 
 function handleAfterLeave() {
@@ -69,7 +90,9 @@ function handleFullscreenChange(event: any) {
 }
 
 function close() {
-  if (isAlive()) state.show = false
+  if (!isAlive()) return
+  ++videoRequest
+  state.show = false
 }
 
 function open(video: VideoPreviewOptions) {

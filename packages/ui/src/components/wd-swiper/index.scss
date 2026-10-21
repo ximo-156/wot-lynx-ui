@@ -36,9 +36,13 @@ $swiper-item-text-spacing: var(--wot-swiper-item-text-spacing, $spacing-loose) !
     overflow: hidden;
     display: flex;
     flex-direction: row;
+    box-sizing: border-box;
+    flex-shrink: 0;
   }
 
   @include e(item) {
+    position: relative;
+    flex-shrink: 0;
     display: flex;
     flex-direction: row;
     // 成对居中（NATIVE-REWRITE §3.2）：滑块内的图片 / 视频 / 自定义插槽

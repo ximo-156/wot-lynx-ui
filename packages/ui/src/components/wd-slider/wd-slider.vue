@@ -12,14 +12,14 @@
  *   也不依赖后台快照同步；
  * - **落定走后台**：滑块的 touchstart / touchend 为后台绑定（提交类
  *   逻辑），touchend 用同一套绝对公式由触点坐标重算终值并 commit；
- *   dragmove 经轨道（父节点）冒泡的后台 touchmove 发出（isDragging
+ *   update:modelValue 与 dragmove 经轨道后台 touchmove 连续发出（isDragging
  *   守卫，仅拖动滑块时触发，与 wot-ui 语义一致）；
  * - **范围模式边界**：左右滑块当前值经进度条元素属性 left-bound /
  *   right-bound 下发（Vue 属性绑定随重渲染更新），worklet 跟手时经
  *   `getAttribute` 实时读取，避免两滑块交叉；属性缺失时降级为仅
  *   min/max 钳制（后台落定仍按真实值钳制，终态正确）；
- * - worklet 捕获的 min/max/step/vertical/range 为 setup 期常量快照
- *   （props 在实例生命周期内不变，与官方 MTS 示例的常量捕获一致）；
+ * - min/max/step/vertical/range/disabled 经元素属性实时桥接，配置变化
+ *   取消旧手势；拖动采用官方起值 + 位移，越过另一端后规范化排序；
  * - trackSize 为 0（度量失败）时 worklet 与后台同时守值：不写 NaN；
  * - wot-ui 的 `:first-child / :last-child` 与 `a + b` 兄弟选择器无 Lynx
  *   等价物，首尾刻度改用 v-for 索引类名 is-edge-start / is-edge-end；
@@ -73,14 +73,15 @@ const trackRef = useMainThreadRef<MtElement | null>(null)
 /** 右滑块元素：worklet 经 currentTarget 判定拖动对象（范围模式） */
 const dotRRef = useMainThreadRef<MtElement | null>(null)
 /** 轨道几何快照 { size, start }（worklet 内 .current 活值） */
-const geomRef = useMainThreadRef<{ size: number; start: number } | null>(null)
+const geomRef = useMainThreadRef<{ size: number; start: number; pointer: number; left: number; right: number; version: string } | null>(null)
+const gestureVersion = computed(() => JSON.stringify([props.min, props.max, props.step, props.vertical, props.range, isDisabled.value]))
+let startPointer = 0
+let startValue: SliderValue = deepClone(modelValue.value)
+let dragMoved = false
 
-/** worklet 捕获的静态配置快照（setup 期求值；props 实例内不变） */
-const cfgMin = props.min
-const cfgMax = props.max
-const cfgStep = props.step > 0 ? props.step : 1
-const cfgVertical = props.vertical
-const cfgRange = props.range
+let rectRequest = 0
+let interactionRequest = 0
+watch([isDisabled, () => props.min, () => props.max, () => props.step, () => props.range, () => props.vertical], () => { interactionRequest++; isDragging.value = false }, { flush: 'sync' })
 
 /**
  * 计算滑块的取值范围大小
@@ -176,7 +177,7 @@ const barClass = computed(() => {
 /**
  * 轨道样式
  */
-const barStyle = computed(() => filterStyle(props.inactiveColor ? { background: props.inactiveColor } : {}))
+const barStyle = computed(() => ({ background: props.inactiveColor || '' }))
 
 /**
  * 进度条类名
@@ -192,9 +193,9 @@ const lineClass = computed(() => {
  * 进度条样式（落定后由 Vue 接管；跟手期间由 worklet 直改，值一致）
  */
 const lineStyle = computed(() => {
-  const style: Record<string, string> = {}
+  const style: Record<string, string> = { width: props.vertical ? '' : '0%', height: props.vertical ? '0%' : '', left: props.vertical ? '' : '0', top: props.vertical ? '0' : '', background: props.activeColor || '' }
 
-  if (scope.value === 0) return filterStyle(style)
+  if (scope.value === 0) return style
 
   const prop = props.vertical ? 'height' : 'width'
   const startProp = props.vertical ? 'top' : 'left'
@@ -212,7 +213,7 @@ const lineStyle = computed(() => {
     style[prop] = `${size}%`
   }
 
-  return filterStyle(props.activeColor ? { ...style, background: props.activeColor } : style)
+  return style
 })
 
 // ---------- 监听器 -----------
@@ -224,6 +225,8 @@ watch(
   () => props.modelValue,
   (newValue) => {
     if (!isEqual(newValue, modelValue.value)) {
+      interactionRequest++
+      isDragging.value = false
       modelValue.value = getInitValue()
     }
   },
@@ -252,10 +255,12 @@ function clamp(value: number, min: number, max: number): number {
  * 初始化滑块尺寸（后台：点击跳转与落定重算用）
  */
 function initSlider() {
+  const request = ++rectRequest
+  const vertical = props.vertical
   getRect(`#${trackId.value}`, false, proxy).then((data) => {
     // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
-    if (!isAlive()) return
-    if (props.vertical) {
+    if (!isAlive() || request !== rectRequest || vertical !== props.vertical) return
+    if (vertical) {
       trackSize.value = Number(data.height)
       trackStart.value = Number(data.top)
     } else {
@@ -348,18 +353,15 @@ function pointerToValue(event: any, index: number): number {
   const pointer = props.vertical
     ? Number(event.changedTouches?.[0]?.clientY ?? event.touches?.[0]?.clientY ?? 0)
     : Number(event.changedTouches?.[0]?.clientX ?? event.touches?.[0]?.clientX ?? 0)
-  const raw = positionToValue(pointer - trackStart.value)
-  if (!props.range) return calcByStep(raw)
-  // 范围模式：以另一滑块为界钳制，避免两滑块交叉
-  const other = index === 0 ? currentValue.value[1] : currentValue.value[0]
-  return index === 0 ? calcByStep(clamp(raw, props.min, other)) : calcByStep(clamp(raw, other, props.max))
+  const value = props.range && isArray(startValue) ? startValue[index] : startValue as number
+  return value + ((pointer - startPointer) / trackSize.value) * scope.value
 }
 
 /** 范围拖动始终保留另一端；所有 drag 事件与 v-model 使用同一种值形状。 */
 function dragValue(event: any): SliderValue {
   const value = pointerToValue(event, touchIndex.value)
   if (!props.range) return value
-  const values: [number, number] = [...currentValue.value]
+  const values: [number, number] = [...startValue as [number, number]]
   values[touchIndex.value] = value
   return values
 }
@@ -426,6 +428,9 @@ function onTouchStart(event: any, index: number) {
   if (isDisabled.value) return
 
   touchIndex.value = index
+  startValue = deepClone(modelValue.value)
+  startPointer = Number(props.vertical ? event.touches?.[0]?.clientY : event.touches?.[0]?.clientX) || 0
+  dragMoved = false
   isDragging.value = true
   emit('dragstart', { value: modelValue.value })
 }
@@ -438,7 +443,8 @@ function onTouchEnd(event: any) {
   isDragging.value = false
   if (isDisabled.value || trackSize.value <= 0 || !Number.isFinite(trackSize.value)) return
 
-  updateValue(dragValue(event))
+  // Native moves commit continuously; recover only when a host omitted the background move.
+  if (!dragMoved && (event.changedTouches?.length || event.touches?.length)) updateValue(dragValue(event))
   emit('dragend', { value: modelValue.value })
   emit('change', modelValue.value)
 }
@@ -450,8 +456,10 @@ function onTouchEnd(event: any) {
  * isDragging 守卫保证只有「拖动滑块」才派发，与 wot-ui 语义一致。
  */
 function onBarTouchMove(event: any) {
-  if (isDisabled.value || !isDragging.value) return
-  emit('dragmove', { value: dragValue(event) })
+  if (isDisabled.value || !isDragging.value || trackSize.value <= 0 || !Number.isFinite(trackSize.value)) return
+  dragMoved = true
+  updateValue(dragValue(event))
+  emit('dragmove', { value: modelValue.value })
 }
 
 /**
@@ -461,10 +469,12 @@ function onBarTouchMove(event: any) {
 function onBarClick(event: any) {
   if (isDisabled.value) return
 
+  const request = ++interactionRequest
+  const vertical = props.vertical
   // 基于可滑动有效轨道换算点击位置，避免主题内边距造成偏差
   getRect(`#${trackId.value}`, false, proxy).then((data) => {
     // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
-    if (!isAlive()) return
+    if (!isAlive() || isDisabled.value || request !== interactionRequest || vertical !== props.vertical) return
     trackSize.value = Number(props.vertical ? data.height : data.width)
     trackStart.value = Number(props.vertical ? data.top : data.left)
     const start = trackStart.value
@@ -516,14 +526,25 @@ defineExpose<SliderExpose>({
  * 同名事件不能同时挂主线程与后台两个处理器；轨道触摸滑块与轨道自身都会
  * 经过此处，度量的是同一条轨道，语义正确。
  */
-const onBarTouchStart = () => {
+const onBarTouchStart = (event: any) => {
   'main thread'
   const track = trackRef.current
-  if (!track || typeof track.invoke !== 'function') return
+  const line = lineRef.current
+  geomRef.current = null
+  if (!track || !line || line.getAttribute('gesture-disabled') === 'true' || typeof track.invoke !== 'function') return
+  const vertical = line.getAttribute('gesture-vertical') === 'true'
+  const version = line.getAttribute('gesture-version') || ''
+  const touch = event.touches && event.touches[0]
+  if (!touch) return
+  const pointer = vertical ? touch.clientY : touch.clientX
+  const left = Number(line.getAttribute('left-bound'))
+  const right = Number(line.getAttribute('right-bound'))
   track.invoke('boundingClientRect').then((rect: any) => {
+    if (trackRef.current !== track || lineRef.current !== line || line.getAttribute('gesture-version') !== version) return
     geomRef.current = {
-      size: cfgVertical ? rect.height : rect.width,
-      start: cfgVertical ? rect.top : rect.left
+      size: vertical ? rect.height : rect.width,
+      start: vertical ? rect.top : rect.left,
+      pointer, left, right, version
     }
   })
 }
@@ -538,7 +559,12 @@ const onDotTouchMove = (event: any) => {
   'main thread'
   const line = lineRef.current
   const geom = geomRef.current
-  if (!line || !geom || geom.size === 0) return
+  if (!line || !geom || !Number.isFinite(geom.size) || geom.size <= 0 || line.getAttribute('gesture-disabled') === 'true' || geom.version !== line.getAttribute('gesture-version')) return
+  const cfgMin = Number(line.getAttribute('gesture-min'))
+  const cfgMax = Number(line.getAttribute('gesture-max'))
+  const cfgStep = Number(line.getAttribute('gesture-step')) || 1
+  const cfgVertical = line.getAttribute('gesture-vertical') === 'true'
+  const cfgRange = line.getAttribute('gesture-range') === 'true'
   const touch = event.touches && event.touches[0]
   if (!touch) return
 
@@ -546,7 +572,10 @@ const onDotTouchMove = (event: any) => {
   if (scopeV === 0) return
 
   const pointer = cfgVertical ? touch.clientY : touch.clientX
-  let value = cfgMin + ((pointer - geom.start) / geom.size) * scopeV
+  const dotR = dotRRef.current
+  const isRight = !!dotR && !!event.currentTarget && (event.currentTarget as unknown) === dotR
+  const initial = cfgRange && isRight ? geom.right : geom.left
+  let value = initial + ((pointer - geom.pointer) / geom.size) * scopeV
   value = cfgMin + Math.round((value - cfgMin) / cfgStep) * cfgStep
   value = Math.min(Math.max(value, cfgMin), cfgMax)
 
@@ -554,23 +583,19 @@ const onDotTouchMove = (event: any) => {
   const startProp = cfgVertical ? 'top' : 'left'
 
   if (cfgRange) {
-    const leftV = Number(line.getAttribute('left-bound'))
-    const rightV = Number(line.getAttribute('right-bound'))
+    const leftV = geom.left
+    const rightV = geom.right
     const hasLeft = !isNaN(leftV)
     const hasRight = !isNaN(rightV)
     // 拖动对象判定：currentTarget 即右滑块则为右滑块，否则左/单滑块
-    const dotR = dotRRef.current
-    const isRight = !!dotR && !!event.currentTarget && (event.currentTarget as unknown) === dotR
     if (isRight) {
-      if (hasLeft) value = Math.max(value, leftV)
-      const endPct = ((value - cfgMin) / scopeV) * 100
-      const startPct = hasLeft ? ((leftV - cfgMin) / scopeV) * 100 : endPct
+      const endPct = ((Math.max(value, leftV) - cfgMin) / scopeV) * 100
+      const startPct = hasLeft ? ((Math.min(value, leftV) - cfgMin) / scopeV) * 100 : endPct
       line.setStyleProperty(startProp, `${startPct}%`)
       line.setStyleProperty(sizeProp, `${Math.max(0, endPct - startPct)}%`)
     } else {
-      if (hasRight) value = Math.min(value, rightV)
-      const startPct = ((value - cfgMin) / scopeV) * 100
-      const endPct = hasRight ? ((rightV - cfgMin) / scopeV) * 100 : startPct
+      const startPct = ((Math.min(value, rightV) - cfgMin) / scopeV) * 100
+      const endPct = hasRight ? ((Math.max(value, rightV) - cfgMin) / scopeV) * 100 : startPct
       line.setStyleProperty(startProp, `${startPct}%`)
       line.setStyleProperty(sizeProp, `${Math.max(0, endPct - startPct)}%`)
     }
@@ -623,6 +648,13 @@ const onDotTouchMove = (event: any) => {
         :main-thread-ref="lineRef"
         :class="lineClass"
         :style="lineStyle"
+        :gesture-min="String(min)"
+        :gesture-max="String(max)"
+        :gesture-step="String(validStep)"
+        :gesture-vertical="String(vertical)"
+        :gesture-range="String(range)"
+        :gesture-disabled="String(isDisabled)"
+        :gesture-version="gestureVersion"
         :left-bound="String(currentValue[0])"
         :right-bound="String(currentValue[1])"
       >
@@ -639,7 +671,7 @@ const onDotTouchMove = (event: any) => {
             <view class="wd-slider__dot-popover-arrow" />
           </view>
           <view class="wd-slider__dot-slider">
-            <WdIcon name="drag" size="14px" color="#868a9c" />
+            <WdIcon name="multiple-horizontal" size="14px" color="#868a9c" />
           </view>
         </view>
 
@@ -658,7 +690,7 @@ const onDotTouchMove = (event: any) => {
             <view class="wd-slider__dot-popover-arrow" />
           </view>
           <view class="wd-slider__dot-slider">
-            <WdIcon name="drag" size="14px" color="#868a9c" />
+            <WdIcon name="multiple-horizontal" size="14px" color="#868a9c" />
           </view>
         </view>
       </view>

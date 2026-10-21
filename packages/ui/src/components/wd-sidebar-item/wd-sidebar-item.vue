@@ -25,6 +25,7 @@
 import './index.css'
 
 import { computed } from 'vue-lynx'
+import { useAlive } from '../../composables/useAlive'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdBadge from '../wd-badge/wd-badge.vue'
 import { sidebarItemProps } from './types'
@@ -34,6 +35,7 @@ import { deepAssign, isDef, isString, isUndefined, omitBy, parseStyle } from '..
 import type { BadgeProps } from '../wd-badge/types'
 
 const props = defineProps(sidebarItemProps)
+const isAlive = useAlive()
 
 // CONVENTIONS §14：根 view 绑 @tap 的交互组件必须转发原生 tap 事件
 const emit = defineEmits(['tap'])
@@ -108,7 +110,8 @@ function handleClick(event: any) {
   if (props.disabled) {
     return
   }
-  sidebar.value && sidebar.value.setChange(props.value, props.label)
+  const value = props.value
+  sidebar.value && sidebar.value.setChange(value, props.label, () => isAlive() && !props.disabled && props.value === value)
   emit('tap', event)
 }
 </script>

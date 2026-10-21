@@ -90,9 +90,8 @@ $toast-loading-margin-bottom: var(--wot-toast-loading-margin-bottom, $spacing-ex
   }
 
   @include m(with-icon) {
-    // Lynx 适配：wot-ui 为 display: inline-flex，改为 flex + row（CONVENTIONS §15）
+    // 水平布局由根规则承担；不得覆盖 is-vertical 的列布局。
     display: flex;
-    flex-direction: row;
     // 图标 + 文本行成对居中（NATIVE-REWRITE §3.2）：文案触达 max-width 时
     // 图标与文本组仍在行内居中，不贴左
     align-items: center;

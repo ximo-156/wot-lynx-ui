@@ -8,6 +8,7 @@
 import { inject, provide, ref } from 'vue-lynx'
 import type { VideoPreview, VideoPreviewOptions, PreviewVideo } from './types'
 import { deepMerge } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
 
 /**
  * useVideoPreview 用到的 key
@@ -40,11 +41,14 @@ export function useVideoPreview(selector: string = ''): VideoPreview {
     provide(videoPreviewOptionKey, videoPreviewOption)
   }
 
+  const isAlive = useAlive()
+
   /**
    * 打开视频预览
    * @param options 预览选项
    */
   const open = (options: VideoPreviewOptions | PreviewVideo) => {
+    if (!isAlive()) return
     const mergedOptions = deepMerge(defaultOptions, options) as VideoPreviewOptions
     videoPreviewOption.value = deepMerge(mergedOptions, { show: true }) as VideoPreviewOptions
   }
@@ -53,6 +57,7 @@ export function useVideoPreview(selector: string = ''): VideoPreview {
    * 关闭视频预览
    */
   const close = () => {
+    if (!isAlive()) return
     videoPreviewOption.value = { show: false } as VideoPreviewOptions
   }
 

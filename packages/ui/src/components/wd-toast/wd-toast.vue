@@ -9,8 +9,8 @@
  *   水平居中由 align-items 承担，垂直居中由 justify-content 承担。
  *   position 变体的上下偏移由 .wd-toast--top / --middle-top / --bottom 的
  *   transform 在居中基准上施加（沿用 wot-ui 同值：top/middle-top/bottom
- *   相对居中线的 -40vh / -18.8vh / +40vh，视口单位在 Lynx 失效时退化为
- *   不偏移、toast 仍居中可见）；middle 变体不再需要 translateY(-50%)，
+ *   相对居中线的 -40vh / -18.8vh / +40vh 换算为 SystemInfo 窗口 px，
+ *   非 middle 变体补半个内容高度，恢复参考源 top:50% 的顶部基准）；middle 变体
  *   取中性值 none；
  * - wot-ui 靠 text-align: center + display: inline-block 让 toast 水平居中，
  *   Lynx 无行内流式布局（CONVENTIONS §15：inline-block/inline-flex → flex），
@@ -18,9 +18,7 @@
  * - 参考源的 objToStyle 字符串样式改为对象语法（字符串 :style 会被 vue-lynx
  *   静默丢弃，CONVENTIONS §19）；根视图样式经 Style Funnel 输出完整键集，
  *   不随 position 变化、也不出现条件写样式（CONVENTIONS §20）；
- * - 图标名：wot-ui 用 check-circle / exclamation-circle / info-circle /
- *   close-circle，本地内置图标集（iconfont）无同名字形，映射为
- *   success / warning / prompt / error（CONVENTIONS §8）；
+ * - 图标使用官方 wot 字体与原始名称。
  * - 命令式 API 经 useToast(selector) 驱动（模块级注入单例），本地增加
  *   useAlive 守卫与页面卸载时的定时器清理（晚到写入已销毁树会触发真机 9902）。
  */
@@ -34,7 +32,7 @@ import WdOverlay from '../wd-overlay/wd-overlay.vue'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import { defaultOptions, getToastOptionKey, toastIcon } from '.'
 import { toastProps, type ToastDirection, type ToastLoadingType, type ToastOptions, type ToastProps } from './types'
-import { addUnit, isDef, isFunction } from '../../common/util'
+import { addUnit, getSystemInfo, isDef, isFunction } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(toastProps)
@@ -99,6 +97,12 @@ const TOAST_ROOT_STYLE = defineStyleKeys({
 
 const transitionStyle = computed<Record<string, string>>(() => resolveStyle(TOAST_ROOT_STYLE, { 'z-index': String(zIndex.value) }))
 
+const contentStyle = computed(() => {
+  const offsets: Record<string, number> = { top: -0.4, 'middle-top': -0.188, bottom: 0.4 }
+  const ratio = offsets[position.value]
+  return { transform: isDef(ratio) ? `translate3d(0, ${getSystemInfo().windowHeight * ratio}px, 0) translateY(50%)` : 'none' }
+})
+
 const rootClass = computed(() => {
   const classes = [
     'wd-toast',
@@ -156,11 +160,10 @@ function mergeOptionsWithProps(option: ToastOptions, props: ToastProps) {
 </script>
 
 <template>
-  <!-- 遮罩样式为字符串：wd-overlay 内部以 `z-index: ${zIndex}; ${customStyle}` 字符串拼接
-       下发（跨组件契约），传对象会被序列化为 [object Object] 而丢失 -->
+  <!-- WdOverlay 统一解析字符串和对象样式。 -->
   <WdOverlay v-if="cover" :z-index="zIndex" lock-scroll :show="show" custom-style="background-color: transparent;pointer-events: auto;" />
   <WdTransition name="fade" :show="show" :custom-style="transitionStyle" @after-enter="handleAfterEnter" @after-leave="handleAfterLeave">
-    <view :class="rootClass">
+    <view :class="rootClass" :style="contentStyle">
       <!--iconName优先级更高-->
       <WdLoading
         v-if="iconName === 'loading'"

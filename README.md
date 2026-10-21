@@ -1,18 +1,26 @@
 # wot-lynx-ui
 
-> 基于 [Vue Lynx](https://vue.lynxjs.org) 的 [wot-ui](https://wot-ui.cn/) 严格对齐组件库 —— 原生性能、API 兼容，**视觉与设计令牌与 wot-ui 2.3.2 一致**。
+> 基于 [Vue Lynx](https://vue.lynxjs.org) 的 [wot-ui](https://wot-ui.cn/) API 兼容组件库 —— 原生性能、保留官方布局与尺寸规范，采用**紫色品牌主题**。
 
-`wot-lynx-ui` 参照 wot-ui（uni-app 生态最流行的 Vue3 组件库之一）的 **API、交互与视觉**，为 **Vue Lynx** 框架从零重写的组件库：使用 Lynx 的双线程架构与原生渲染管线，在 iOS / Android / HarmonyOS / Web 四端获得接近原生的性能。组件名、props、slots、events、BEM 类名与 wot-ui 对齐；设计令牌直接沿用 wot-ui 2.3.2 的 `--wot-*` 体系（原始刻度 → 亮暗语义 → 组件令牌），迁移成本低。
+`wot-lynx-ui` 参照 wot-ui 2.3.2 的 **API、交互与组件结构**，为 **Vue Lynx** 框架从零重写：使用 Lynx 的双线程架构与原生渲染管线。保留 `--wot-*` 令牌名称、官方原始色阶及字号、间距、圆角等度量；默认主色与文字色通过独立品牌令牌定制，不宣称默认视觉逐像素一致。
 
 ## 特性
 
-- **🎨 wot-ui 同源设计系统** — 与 wot-ui 2.3.2 完全一致的 `--wot-*` 令牌体系（原始色阶/间距/圆角 → 亮暗语义令牌 → 组件令牌）：品牌蓝 `#1C64FD`、coolgrey 中性阶梯、亮/暗双主题开箱即用；换肤只需覆盖 CSS 变量（令牌用法见[主题与设计令牌](./docs/guide/theme.md)）
-- **⚡ 原生性能** — Lynx 双线程架构：Vue 运行在后台线程，渲染在主线程；拖动/滑动等高频交互在后台线程以响应式实现，跟手时段禁用 CSS transition、落位时恢复；细线边框使用 `1ppx` 物理像素；图标使用原生字体渲染
-- **🧩 API 兼容** — 101 个 `wd-*` 组件的名称、props、slots、events 与 wot-ui 对齐，迁移成本低
+- **🎨 同源令牌，独立品牌** — 主色 `#755FFE`、次主题色 `#9A89FF`、亮色主文字 `#2D273D`、次文字 `#979797`；原始 `--wot-blue-*` 色阶保持官方值，成功 / 危险 / 警告语义不改色（见[主题与设计令牌](<docs/guide/theme.md>)）
+- **⚡ 原生性能** — Lynx 双线程架构：Vue 运行在后台线程，渲染在主线程；拖动/滑动等高频交互使用声明式 Main Thread Script，跟手时段禁用 CSS transition、落位时恢复；细线边框使用 `1ppx` 物理像素；图标使用原生字体渲染
+- **🧩 API 兼容** — 主入口公开 106 个组件：100 个有实际功能的官方对应组件 + 6 个本地扩展；官方空占位 `wot-ui` 不作为主入口公开组件计数
 - **📦 开箱即用** — 发布预编译 CSS，消费者无需安装 Sass 工具链；组件以源码分发，由 Rspeedy 直接编译，天然支持 Tree-shaking
-- **🌗 主题系统** — 与 wot-ui 一致的 CSS 变量驱动亮色/暗色主题，`wd-config-provider` 全局配置（`wot-theme-light` / `wot-theme-dark`）
+- **🌗 主题系统** — CSS 变量驱动亮色/暗色主题，`WdConfigProvider` 全局配置（`wot-theme-light` / `wot-theme-dark`）；暗色文字使用适配深色背景的中性色
 - **🧰 命令式 API** — `useToast` / `useDialog` / `useNotify` / `useImagePreview` 等弹层命令式调用；`uni` 兼容层支持宿主经 `configureUniAdapter` 注入路由等能力
-- **🧪 可测试** — 基于 @lynx-js/testing-environment 的 Vue Lynx 双线程测试环境，27 个测试文件覆盖组件渲染、交互回归与构建约束
+- **🧪 可测试** — 纯函数守卫与基于 @lynx-js/testing-environment 的 Vue Lynx 双线程测试，覆盖组件渲染、交互回归与构建约束；全量状态以实际校验结果为准
+
+## API 对照范围
+
+离线 wot-ui 2.3.2 参考含 **101 个顶层组件目录**（包括空占位 `wot-ui`）和 **5 个内部 props 模块**，不能与主入口公开组件数混用。运行时 props 守卫覆盖 98 个类型文件导出 + 3 个 SFC 推导（RootPortal、StickyBox、空占位），共 **1,462 个 prop 契约**；当前对照无未豁免的运行时差异。
+
+仅有两项明确豁免：`customStyle` 从官方 `String` 扩展为 `[String, Object]`，以及 `WdCircle.color` 默认值从 `#1C64FD` 改为品牌色 `#755FFE`。守卫检查 prop 名称、运行时构造器、required、默认值/工厂与 validator；**不证明 TypeScript 泛型、类型别名或联合类型全部一致，也不证明全部交互或真机行为一致**。6 个本地扩展（AddressEdit、BarCode、Coupon、PullRefresh、ShareSheet、SubmitBar）在该官方离线包中没有对应定义，明确不计入官方覆盖。
+
+运行时守卫见 [check-wot-props.mjs](<scripts/check-wot-props.mjs>)、[官方 props fixture](<packages/ui/test/fixtures/wot-ui-2.3.2-props.json>) 与 [props 回归测试](<packages/ui/test/wot-parity-props.test.ts>)。
 
 ## 快速开始
 
@@ -69,10 +77,10 @@ const count = ref(0)
 </script>
 
 <template>
-  <wd-cell-group border>
-    <wd-cell title="按钮点击次数" :value="String(count)" />
-  </wd-cell-group>
-  <wd-button type="primary" @click="count++">点击 +1</wd-button>
+  <WdCellGroup border>
+    <WdCell title="按钮点击次数" :value="String(count)" />
+  </WdCellGroup>
+  <WdButton type="primary" @click="count++">点击 +1</WdButton>
 </template>
 ```
 
@@ -92,7 +100,7 @@ createApp(App).use(wotLynxUI)
 > export default defineConfig({ plugins: [pluginWotLynxTags()] })
 > ```
 >
-> props / events / slots / 样式类名与 wot-ui 完全一致，详见[与 wot-ui 的差异](./docs/guide/differences.md)。
+> props / events / slots / 样式类名以 wot-ui 2.3.2 为兼容参考；已验证范围与适配说明见上文及[与 wot-ui 的差异](<docs/guide/differences.md>)。
 
 > **关于 CSS 压缩告警**：设计令牌采用多级 `var()` 回退链（组件令牌 → 刻度令牌 →
 > 基础令牌 → 默认值），令牌出现在 `calc()` 内时会形成三层嵌套 `var()`
@@ -115,7 +123,7 @@ createApp(App).use(wotLynxUI)
 
 ## 文档
 
-- [组件文档](./docs/components/)（VitePress，101 个组件）
+- [组件文档](<docs/components/>)（VitePress，按组件说明 API 与适配范围）
 - 指南：
   [快速开始](./docs/guide/quick-start.md) ·
   [主题与设计令牌](./docs/guide/theme.md) ·
@@ -124,7 +132,7 @@ createApp(App).use(wotLynxUI)
   [与 wot-ui 的差异](./docs/guide/differences.md) ·
   [真机测试指南](./docs/guide/device-testing.md) ·
   [设计美学研究](./docs/guide/design-research.md)
-- [Demo 应用](./packages/demo/)（`pnpm dev:demo`，覆盖全部 101 个组件）
+- [Demo 应用](<packages/demo/>)（`pnpm dev:demo`，包含组件演示与真机验收入口）
 - [重写规范](./CONVENTIONS.md)（为 Lynx 重写的完整约定）
 
 ## 真机测试
@@ -158,17 +166,17 @@ wot-lynx-ui/
 ├── packages/
 │   ├── ui/                       # wot-lynx-ui 组件库（源码分发）
 │   │   ├── src/
-│   │   │   ├── components/       # 101 个 wd-* 组件（types.ts + .vue + index.scss + index.css）
+│   │   │   ├── components/       # 106 个主入口组件 + 官方空占位 / 内部模块
 │   │   │   ├── composables/      # 组合式函数（useParent/useChildren/useTouch...）
 │   │   │   ├── common/           # 工具函数 / props / 日期格式化（dayjs）/ vue-lynx Transition 兼容层 / uni 兼容层
-│   │   │   ├── icons/            # 180 个内置图标（registry 注册表：iconfont 字体集，含 .ttf）
+│   │   │   ├── icons/            # 官方与兼容字体集 / registry 注册表 / TTF
 │   │   │   ├── locale/           # 16 种语言
-│   │   │   └── styles/           # 主题变量 / mixin / BEM
+│   │   │   └── styles/           # 原始刻度 / 独立品牌 / 亮暗语义 / mixin / BEM
 │   │   ├── plugin/               # Rspeedy 标签兼容插件（wd-* → PascalCase）
-│   │   ├── test/                 # 双线程测试环境与用例（vitest，27 个测试文件）
+│   │   ├── test/                 # 运行时契约守卫 / 纯函数与双线程回归（vitest）
 │   │   └── vitest.config.ts
 │   └── demo/                     # Vue Lynx Demo 应用（Rspeedy，双端构建，含 device-test 真机测试入口）
-├── docs/                         # VitePress 文档站（8 篇指南 + 101 个组件文档）
+├── docs/                         # VitePress 文档站（指南与组件说明）
 ├── scripts/                      # CSS 编译 / 图标生成 / 文档生成
 ├── CONVENTIONS.md                # Lynx 重写规范
 └── README.md
@@ -178,11 +186,11 @@ wot-lynx-ui/
 
 | 交互 | 实现 |
 |---|---|
-| `WdSlider` 拖动 | 后台线程响应式：`useTouch` 计算增量，进度条样式经计算属性输出，跟手时段禁用 CSS transition |
-| `WdSwipeAction` 横滑 | 后台线程响应式：方向判定后更新容器 `transform`，宽度限制与阈值状态机均在后台线程完成 |
+| `WdSlider` 拖动 | 声明式 Main Thread Script 跟手，主线程直接更新轨道 / 滑块；落定值经组件事件回传后台线程 |
+| `WdSwipeAction` 横滑 | 声明式 Main Thread Script 更新容器位移；方向判定、吸附阈值与落定状态由组件协调 |
 | 按压缩态 | CSS `:active`（渲染器原生处理） |
 | 细线边框 | `1ppx` 物理像素 |
-| 图标 | 内置 .ttf 字体（180 个，`<text>` 字形，随包发布无网络请求）；可 `registerIconSet` 注册 SVG path 集 |
+| 图标 | 官方与兼容 TTF 字体集，经 `<text>` 字形渲染，随包发布无网络请求；可 `registerIconSet` 注册扩展集合 |
 | 弹层 | `position: fixed` 自动提升至根节点 |
 
 ## 与 wot-ui 的差异
@@ -191,7 +199,7 @@ Lynx 是原生渲染引擎，与 Web/小程序运行时有本质差异，以下�
 
 | 能力 | wot-ui | wot-lynx-ui |
 | --- | --- | --- |
-| 图标 | iconfont 字体 | 内置 .ttf 字体（180 个，`<text>` 字形，随包发布无网络请求）；可 `registerIconSet` 注册 SVG path 集扩展 |
+| 图标 | iconfont 字体 | 官方与兼容 TTF 字体集，经 `<text>` 字形渲染，随包发布无网络请求；可 `registerIconSet` 注册扩展集合 |
 | 按压缩态 | `hover-class` | CSS `:active` 伪类（渲染器原生处理） |
 | 细线边框 | `::after` + scale(0.5) | 原生 `border` + `1ppx` 物理像素 |
 | 伪元素装饰 | `::before` / `::after` | 模板真实元素（`__bar` / `__hairline` 等类名） |
@@ -202,7 +210,7 @@ Lynx 是原生渲染引擎，与 Web/小程序运行时有本质差异，以下�
 
 ## 致谢
 
-- [wot-ui](https://wot-ui.cn/) — 组件库样式与 API 的来源
+- [wot-ui](https://wot-ui.cn/) — 组件 API、交互与布局度量参考
 - [Vue Lynx](https://vue.lynxjs.org) — Vue 3 的 Lynx 自定义渲染器
 - [Lynx](https://lynxjs.org) — 跨平台原生渲染引擎
 

@@ -20,15 +20,18 @@
 import './index.css'
 
 import { computed } from 'vue-lynx'
+import { useAlive } from '../../composables/useAlive'
 import WdBadge from '../wd-badge/wd-badge.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
-import { deepAssign, filterStyle, isDef, isString, isUndefined, omitBy, parseStyle } from '../../common/util'
+import { deepAssign, isDef, isString, isUndefined, omitBy, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { useParent } from '../../composables/useParent'
 import { TABBAR_KEY } from '../wd-tabbar/types'
 import { tabbarItemProps } from './types'
 import type { BadgeProps } from '../wd-badge/types'
 
 const props = defineProps(tabbarItemProps)
+const isAlive = useAlive()
 
 // CONVENTIONS §14：根 view 绑 @tap 的交互组件必须转发原生 tap 事件
 const emit = defineEmits(['tap'])
@@ -55,14 +58,11 @@ const customBadgeProps = computed(() => {
   return badgeProps
 })
 
-/**
- * 文字/图标颜色：激活取 tabbar 的 activeColor，未激活取 inactiveColor，
- * 均未设置时不产出 color 键（与参考源的 objToStyle 空串等价，
- * filterStyle 剔除空值）。
- */
+/** Empty color clears inline overrides so class/theme colors remain effective. */
+const TEXT_STYLE = defineStyleKeys({ color: '' })
 const textStyle = computed(() => {
   const color = tabbar.value ? (active.value ? tabbar.value.props.activeColor : tabbar.value.props.inactiveColor) : ''
-  return filterStyle({ color })
+  return resolveStyle(TEXT_STYLE, { color })
 })
 
 const active = computed(() => {
@@ -83,7 +83,7 @@ const active = computed(() => {
  */
 function handleClick(event: any) {
   const name: string | number = isDef(props.name) ? props.name : index.value
-  tabbar.value && tabbar.value.setChange({ name })
+  tabbar.value && tabbar.value.setChange({ name }, () => isAlive() && name === (isDef(props.name) ? props.name : index.value))
   emit('tap', event)
 }
 </script>

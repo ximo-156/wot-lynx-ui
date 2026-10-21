@@ -63,7 +63,7 @@ describe('wd-slider MTS 跟手', () => {
     const line = container.querySelector('.wd-slider__line')!
 
     // 手势开始：轨道主线程 touchstart 度量几何
-    fireEvent.touchstart(bar, { touches: [{ clientX: 0, clientY: 0 }] })
+    fireEvent.touchstart(bar, { touches: [{ clientX: 100, clientY: 0 }] })
     await pause(10)
 
     // 滑块后台 touchstart（dragstart）

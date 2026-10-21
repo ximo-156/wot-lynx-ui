@@ -1,83 +1,146 @@
 /*
  * wd-sticky — 粘性布局
  *
- * Lynx 实现说明（相对 wot-ui 的适配点）：
- * - 吸顶机制降级：参考源依赖 uni.createIntersectionObserver（uni-app 小程序
- *   专有 API，本地 common/uni 返回空实现、永不回调）+ getRect 手动补位驱动
- *   fixed/absolute 定位；Lynx 无该能力，整套滚动联动不工作。改用渲染器原生
- *   position: sticky（与 wd-index-anchor / wd-table 同方案）：吸顶元素保持
- *   在文档流内，滚动到阈值位置时由引擎贴住 offsetTop 处，零 JS 开销；
- * - 原生吸顶保留默认零 JS 滚动联动；兼容 expose(setPosition/stickyState/offsetTop)，
- *   显式调用 setPosition 时切换真实定位样式。sticky-box 的 observer 联动
- *   仍不模拟小程序 API，默认由原生包含块约束吸顶范围；
- * - 参考源 innerOffsetTop 的 H5 44px 导航栏补偿为条件编译（#ifdef H5），
- *   Lynx 无该概念，直接取 props.offsetTop；
- * - **根节点三件套 + 居中核查**（NATIVE-REWRITE §3.1）：display: flex +
- *   flex-direction: column 在 index.scss 显式声明（根与 __container 两处），
- *   linear 默认布局下缺一行 flex-direction 即被静默丢弃；
- * - **Style Funnel**（CONVENTIONS §20）：rootStyle 的三个可切换键
- *   （position / top / z-index）经 defineStyleKeys + resolveStyle 每帧输出
- *   完整键集——offsetTop 由具体值变 0 时旧位移不会残留；
- * - rootStyle 由参考源的「objToStyle 拼字符串 + customStyle 拼接」改为对象语法
- *   （parseStyle 归一，CONVENTIONS §19：字符串 :style 会被静默丢弃）；
- * - 无交互事件（按压/点击由插槽内容自行处理）。
+ * 无宿主 observer 时保持直接的 position: sticky（不添加会限制吸顶范围的父包装）。
+ * 有真实 IntersectionObserver 时使用稳定的文档流占位作为探针，按官方状态机切换
+ * absolute/fixed；sticky-box 离开底边时定位到父包含块。setPosition 操作真实样式。
+ * 内容尺寸在挂载/layoutchange 时缓存，offsetTop/容器变化重建监听，不在滚动热路径
+ * 查询节点。默认空 observer 不是有效能力；Lynx 无 H5 的 44px 导航栏补偿。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, reactive, ref, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue-lynx'
 import { stickyProps, type StickyExpose } from './types'
-import { addUnit, parseStyle, uuid, type CSSProperties } from '../../common/util'
+import { STICKY_BOX_KEY } from '../wd-sticky-box/types'
+import { useParent } from '../../composables/useParent'
+import { useAlive } from '../../composables/useAlive'
+import { addUnit, getRect, parseStyle, uuid } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { hasUniAdapter, uni } from '../../common/uni'
 
 const props = defineProps(stickyProps)
-
+const emit = defineEmits(['layoutchange'])
+const instance = getCurrentInstance()!
+const isAlive = useAlive()
+const { parent: stickyBox } = useParent(STICKY_BOX_KEY)
 const stickyId = `wd-sticky-${uuid()}`
-const manualPosition = ref(false)
-const stickyState = reactive({
-  position: 'sticky', boxLeaved: false, top: props.offsetTop,
-  height: 0, width: 0, state: 'normal'
-})
-watch(() => props.offsetTop, (top) => {
-  if (!manualPosition.value) stickyState.top = top
-})
+// 宿主能力应在挂载前配置；默认没有 observer 时不创建假的监听对象。
+const observerSupported = hasUniAdapter('createIntersectionObserver')
+const manualPosition = ref(observerSupported)
+const stickyState = reactive({ position: 'absolute', boxLeaved: false, top: 0, height: 0, width: 0, state: 'normal' })
+let observer: any = null
+let measureVersion = 0
+
+const outOfFlow = computed(() => manualPosition.value && ['fixed', 'absolute'].includes(stickyState.position))
+const STICKY_STYLE = defineStyleKeys({ position: 'sticky', top: '0px', zIndex: '1', width: '', height: '' })
+const rootStyle = computed(() => ({
+  ...resolveStyle(STICKY_STYLE, {
+    position: manualPosition.value ? stickyState.position : 'sticky',
+    top: addUnit(manualPosition.value ? stickyState.top : props.offsetTop),
+    zIndex: String(props.zIndex),
+    width: outOfFlow.value && stickyState.width > 0 ? addUnit(stickyState.width) : '',
+    height: outOfFlow.value && stickyState.height > 0 ? addUnit(stickyState.height) : ''
+  }),
+  ...parseStyle(props.customStyle)
+}))
+const placeholderStyle = computed(() => ({ width: addUnit(stickyState.width), height: addUnit(stickyState.height) }))
+const WRAPPER_STYLE = defineStyleKeys({ position: 'relative', width: '', height: '', zIndex: '1' })
+const wrapperStyle = computed(() => resolveStyle(WRAPPER_STYLE, {
+  position: stickyState.boxLeaved ? 'static' : 'relative',
+  width: stickyState.width > 0 ? addUnit(stickyState.width) : '',
+  height: stickyState.height > 0 ? addUnit(stickyState.height) : '',
+  zIndex: String(props.zIndex)
+}))
+
 function setPosition(boxLeaved: boolean, position: string, top: number) {
-  if (!['static', 'relative', 'absolute', 'sticky', 'fixed'].includes(position)) return
+  if (!isAlive() || !['static', 'relative', 'absolute', 'sticky', 'fixed'].includes(position) || !Number.isFinite(top)) return
   manualPosition.value = position !== 'sticky'
   stickyState.boxLeaved = boxLeaved
   stickyState.position = position
   stickyState.top = top
-  stickyState.state = boxLeaved ? 'leaved' : position === 'fixed' ? 'sticky' : 'normal'
 }
-defineExpose<StickyExpose>({ setPosition, stickyState, offsetTop: computed(() => props.offsetTop) })
-
-/**
- * 可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
- * position 恒为 sticky（渲染器原生吸顶），top / z-index 的中性值取
- * prop 默认值——offsetTop 由具体值变 0 时旧位移不会残留。
- */
-const STICKY_STYLE = defineStyleKeys({
-  position: 'sticky',
-  top: '0px',
-  zIndex: '1'
-})
-
-const rootStyle = computed<CSSProperties>(() => {
-  return {
-    ...resolveStyle(STICKY_STYLE, {
-      position: manualPosition.value ? stickyState.position : 'sticky',
-      top: addUnit(manualPosition.value ? stickyState.top : props.offsetTop),
-      zIndex: String(props.zIndex)
-    }),
-    ...parseStyle(props.customStyle)
+function handleRelativeTo(result: any) {
+  if (!isAlive()) return
+  const rect = result?.boundingClientRect
+  if (!rect || !Number.isFinite(Number(rect.top))) return
+  const box = stickyBox.value?.boxStyle
+  if (box && box.height > 0 && stickyState.height >= box.height) {
+    stickyState.state = 'normal'
+    setPosition(false, 'absolute', 0)
+  } else if (Number(rect.top) <= props.offsetTop) {
+    stickyState.state = 'sticky'
+    setPosition(false, 'fixed', props.offsetTop)
+  } else {
+    stickyState.state = 'normal'
+    setPosition(false, 'absolute', 0)
   }
+  // 父容器缓存的底边状态优先，避免两个 observer 回调顺序将 leaved 覆盖成 fixed。
+  stickyBox.value?.updateChildPosition?.(instance)
+}
+function clearObserver() {
+  observer?.disconnect?.()
+  observer = null
+}
+async function measure() {
+  const version = ++measureVersion
+  const size = await getRect(`#${stickyId}-container`)
+  if (!isAlive() || version !== measureVersion) return
+  stickyState.width = Math.max(0, Number(size?.width) || 0)
+  stickyState.height = Math.max(0, Number(size?.height) || 0)
+  clearObserver()
+  await nextTick()
+  if (!isAlive() || version !== measureVersion) return
+  if (observerSupported && hasUniAdapter('createIntersectionObserver') && stickyState.height > 0) {
+    const nextObserver = uni.createIntersectionObserver(instance.proxy, { thresholds: [0, 0.5] })
+    observer = nextObserver
+    nextObserver?.relativeToViewport?.({ top: -(props.offsetTop + stickyState.height) })
+    nextObserver?.observe?.(`#${stickyId}-probe`, (result: any) => {
+      if (isAlive() && version === measureVersion && observer === nextObserver) handleRelativeTo(result)
+    })
+    const rect = await getRect(`#${stickyId}-probe`)
+    if (isAlive() && version === measureVersion && observer === nextObserver && (Number(rect?.width) > 0 || Number(rect?.height) > 0)) handleRelativeTo({ boundingClientRect: rect })
+  }
+  if (isAlive() && version === measureVersion) stickyBox.value?.observerForChild?.(instance)
+}
+function requestMeasure() {
+  measureVersion++
+  clearObserver()
+  void nextTick(measure)
+}
+function handleLayoutChange(event: any) {
+  emit('layoutchange', event)
+  const width = Number(event?.detail?.width)
+  const height = Number(event?.detail?.height)
+  if (width === stickyState.width && height === stickyState.height) return
+  requestMeasure()
+}
+watch(() => props.offsetTop, () => {
+  if (manualPosition.value && stickyState.position === 'fixed' && !stickyState.boxLeaved) stickyState.top = props.offsetTop
+  requestMeasure()
 })
+onMounted(measure)
+onBeforeUnmount(() => {
+  measureVersion++
+  clearObserver()
+  stickyBox.value?.unobserveChild?.(instance)
+})
+defineExpose<StickyExpose>({ setPosition, stickyState, offsetTop: computed(() => props.offsetTop) })
 </script>
 
 <template>
-  <view :class="`wd-sticky ${customClass}`" :style="rootStyle" :id="stickyId">
-    <view class="wd-sticky__container">
-      <slot />
+  <template v-if="observerSupported">
+    <view :id="`${stickyId}-probe`" class="wd-sticky__wrapper" :style="wrapperStyle">
+      <view class="wd-sticky__placeholder" :style="placeholderStyle" />
+      <view :class="`wd-sticky ${customClass}`" :style="rootStyle" :id="stickyId">
+        <view :id="`${stickyId}-container`" class="wd-sticky__container" @layoutchange="handleLayoutChange"><slot /></view>
+      </view>
     </view>
-  </view>
+  </template>
+  <template v-else>
+    <view v-if="outOfFlow" :id="`${stickyId}-probe`" class="wd-sticky__placeholder" :style="placeholderStyle" />
+    <view :class="`wd-sticky ${customClass}`" :style="rootStyle" :id="stickyId">
+      <view :id="`${stickyId}-container`" class="wd-sticky__container" @layoutchange="handleLayoutChange"><slot /></view>
+    </view>
+  </template>
 </template>

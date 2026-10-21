@@ -7,9 +7,21 @@
      堆叠；吸顶由渲染器原生 position: sticky 承担（见文件头说明） */
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+
+  @include e(wrapper) {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  @include e(placeholder) {
+    flex-shrink: 0;
+  }
 
   @include e(container) {
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
   }
 }

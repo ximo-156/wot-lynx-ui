@@ -82,7 +82,7 @@ $grid-item-text-spacing: var(--wot-grid-item-text-spacing, $spacing-super-tight)
        相邻兄弟选择器控制图标与文字间距（含 horizontal / reverse 变体），
        Lynx 兄弟选择器支持有限，统一改用容器 gap（单子节点时无间隙，
        语义等价；四种排列方向的间距值相同） */
-    gap: $grid-item-text-spacing;
+    gap: 0;
 
     @include when(square) {
       box-sizing: border-box;

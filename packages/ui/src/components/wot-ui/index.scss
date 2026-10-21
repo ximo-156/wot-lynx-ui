@@ -1,6 +1,7 @@
 @use '../../styles/mixin/mixin.scss' as *;
 
-@include b(wot-ui) {
+// 官方 2.3.2 只有空 view；本地 class 为方便定制的扩展，不是 wd-wot-ui。
+.wot-ui {
   display: flex;
   flex-direction: column;
 }

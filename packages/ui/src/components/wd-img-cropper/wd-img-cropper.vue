@@ -50,12 +50,14 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onBeforeUnmount, ref, useMainThreadRef, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, onBeforeUnmount, ref, useMainThreadRef, watch } from 'vue-lynx'
 import WdButton from '../wd-button/wd-button.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { imgCropperProps, type ImgCropperEmits, type ImgCropperExpose } from './types'
 import { useTranslate } from '../../composables/useTranslate'
 import { uni, hasUniAdapter } from '../../common/uni'
+import { createCanvasContext, canvasToTempFilePath } from '../../common/canvasHelper'
+import { useAlive } from '../../composables/useAlive'
 import { addUnit, getSystemInfo, uuid, parseStyle } from '../../common/util'
 
 /** 顶部裁剪框占比 */
@@ -77,6 +79,12 @@ const initImgSize: { width: null | number | string; height: null | number | stri
 
 const props = defineProps(imgCropperProps)
 const emit = defineEmits<ImgCropperEmits>()
+const isAlive = useAlive()
+const { proxy } = getCurrentInstance() as any
+let loadRequest = 0
+let exportRequest = 0
+const exporting = ref(false)
+const imageVersion = ref(0)
 
 const { translate } = useTranslate('imgCropper')
 
@@ -139,50 +147,47 @@ const mtState = {
 }
 
 watch(
-  () => props.modelValue,
-  (newValue) => {
-    if (newValue) {
-      initImgSize.width = props.imgWidth
-      initImgSize.height = props.imgHeight
-      info.value = getSystemInfo()
-
-      // 根据aspectRatio计算裁剪框尺寸
-      const [widthRatio, heightRatio] = props.aspectRatio.split(':').map(Number)
-      const tempCutWidth = info.value.windowWidth - offset.value * 2
-      const tempCutHeight = (tempCutWidth * heightRatio) / widthRatio
-
-      cutWidth.value = tempCutWidth
-      cutHeight.value = tempCutHeight
-      cutTop.value = (info.value.windowHeight * TOP_PERCENT - tempCutHeight) / 2
-      cutLeft.value = offset.value
-
-      canvasScale.value = props.exportScale
-      canvasHeight.value = tempCutHeight
-      canvasWidth.value = tempCutWidth
-      // 根据开发者设置的图片目标尺寸计算实际尺寸
-      initImageSize()
-      // 加载图片
-      props.imgSrc && loadImg()
-    } else {
+  [() => props.modelValue, () => props.imgSrc, () => props.imgWidth, () => props.imgHeight, () => props.aspectRatio, () => props.exportScale],
+  () => {
+    loadRequest++
+    exportRequest++
+    exporting.value = false
+    imageVersion.value++
+    moving.value = false
+    imgInfo.value = null
+    if (!props.modelValue || !props.imgSrc) {
+      picWidth.value = 0
+      picHeight.value = 0
       resetImg()
+      return
     }
+    info.value = getSystemInfo()
+    initImgSize.width = props.imgWidth
+    initImgSize.height = props.imgHeight
+    const ratios = props.aspectRatio.split(':').map(Number)
+    const widthRatio = ratios[0] > 0 ? ratios[0] : 1
+    const heightRatio = ratios[1] > 0 ? ratios[1] : 1
+    const width = Math.max(0, info.value.windowWidth - offset.value * 2)
+    const height = width * heightRatio / widthRatio
+    cutWidth.value = width
+    cutHeight.value = height
+    cutLeft.value = offset.value
+    cutTop.value = (info.value.windowHeight * TOP_PERCENT - height) / 2
+    canvasScale.value = props.exportScale
+    canvasWidth.value = width
+    canvasHeight.value = height
+    initImageSize()
+    resetImg()
+    loadImg()
   },
-  {
-    deep: true,
-    immediate: true
-  }
+  { immediate: true, flush: 'sync' }
 )
-
-watch(
-  () => props.imgSrc,
-  (newValue) => {
-    newValue && loadImg()
-  },
-  {
-    deep: true,
-    immediate: true
-  }
-)
+watch([() => props.maxScale, () => props.disabledRotate], () => {
+  imageVersion.value++
+  exportRequest++
+  exporting.value = false
+  moving.value = false
+}, { flush: 'sync' })
 
 watch(
   () => imgAngle.value,
@@ -257,7 +262,12 @@ function revertIsAnimation(animation: boolean | { value: boolean }) {
  * @param {number} angle 旋转角度（建议使用 90 的倍数）
  */
 function setRotate(angle: number) {
-  if (!angle || props.disabledRotate) return
+  if (!isAlive() || !Number.isFinite(angle) || props.disabledRotate || picWidth.value <= 0 || picHeight.value <= 0) return
+  imageVersion.value++
+  exportRequest++
+  exporting.value = false
+  moving.value = false
+  angle = Math.round(angle / 90) * 90
   revertIsAnimation(true)
   imgAngle.value = angle
 
@@ -286,7 +296,11 @@ function setRotate(angle: number) {
  */
 function resetImg() {
   const { windowHeight, windowWidth } = getSystemInfo()
-  imgScale.value = 1
+  imageVersion.value++
+  exportRequest++
+  exporting.value = false
+  moving.value = false
+  imgScale.value = picWidth.value > 0 && picHeight.value > 0 ? Math.max(1, cutWidth.value / picWidth.value, cutHeight.value / picHeight.value) : 1
   imgAngle.value = 0
   imgLeft.value = windowWidth / 2
   imgTop.value = (windowHeight / 2) * TOP_PERCENT
@@ -296,22 +310,24 @@ function resetImg() {
  * 加载图片资源文件，获取图片基本信息
  */
 function loadImg() {
-  if (!props.imgSrc) return
-
+  if (!props.modelValue || !props.imgSrc) return
+  const request = ++loadRequest
+  const src = props.imgSrc
   uni.getImageInfo({
-    src: props.imgSrc,
+    src,
     success: (res: any) => {
-      imgInfo.value = res
-      computeImgSize()
-      resetImg()
-    },
-    fail: () => {
-      // Lynx 降级：宿主未注入 getImageInfo 时（uni 适配层默认 fail），
-      // 图片尺寸改由 image 元素的 load 事件兜底（handleImgLoaded），
-      // 此处不视为加载失败；宿主注入了实现而真正失败时才上报。
-      if (hasUniAdapter('getImageInfo')) {
-        emit('imgloaderror', { src: props.imgSrc })
+      if (!isAlive() || request !== loadRequest || src !== props.imgSrc || !props.modelValue) return
+      if (!(Number(res.width) > 0 && Number(res.height) > 0)) {
+        emit('imgloaderror', { src, errMsg: 'getImageInfo:fail invalid image dimensions' })
+        return
       }
+      imgInfo.value = res
+      resetImg()
+      computeImgSize()
+    },
+    fail: (error: any) => {
+      if (!isAlive() || request !== loadRequest || src !== props.imgSrc || !props.modelValue) return
+      if (hasUniAdapter('getImageInfo')) emit('imgloaderror', { ...error, src })
     }
   })
 }
@@ -320,6 +336,7 @@ function loadImg() {
  * 计算图片尺寸以填满裁剪框
  */
 function computeImgSize() {
+  if (!imgInfo.value || !(imgInfo.value.width > 0 && imgInfo.value.height > 0 && cutWidth.value > 0 && cutHeight.value > 0)) return
   let tempPicWidth: number = picWidth.value
   let tempPicHeight: number = picHeight.value
 
@@ -510,6 +527,7 @@ function throttle() {
  * 记录拖动态与手势起点（供 touchend 落定与后台累积用）。
  */
 function handleImgTouchStart(event: any) {
+  if (!props.modelValue || !props.imgSrc || picWidth.value <= 0 || picHeight.value <= 0 || !event.touches?.length) return
   // 如果处于在拖动中，背景为淡色展示全部，拖动结束则为 0.85 透明度
   moving.value = true
   if (event.touches.length === 1) {
@@ -536,6 +554,7 @@ function handleImgTouchStart(event: any) {
  * 但不触发重渲染（跟手渲染由主线程 worklet 直改 transform 完成）。
  */
 function handleImgTouchMove(event: any) {
+  if (!moving.value || !props.modelValue || !event.touches?.length) return
   if (event.touches.length === 1) {
     // 单指拖动
     const { x, y } = movingPosRecord.value[0]
@@ -550,13 +569,13 @@ function handleImgTouchMove(event: any) {
     const width = Math.abs(event.touches[1].clientX - event.touches[0].clientX)
     const height = Math.abs(event.touches[1].clientY - event.touches[0].clientY)
     const hypotenuse = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2))
+    if (!(Number(fingerDistance.value) > 0)) return
     const scale = imgScale.value * (hypotenuse / Number(fingerDistance.value))
     const nextScale = clampImgScale(Math.min(scale, props.maxScale), picWidth.value, picHeight.value, imgAngle.value, currentCut())
     const clamped = clampImgPos(imgLeft.value, imgTop.value, nextScale, imgScale.value, picWidth.value, picHeight.value, imgAngle.value, currentCut())
     mtState.left = clamped.left
     mtState.top = clamped.top
     mtState.scale = nextScale
-    fingerDistance.value = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2))
   }
 }
 
@@ -565,6 +584,7 @@ function handleImgTouchMove(event: any) {
  * （一次重渲染，Vue 接管的 imageStyle 与 worklet 直改值一致，无跳变）。
  */
 function handleImgTouchEnd() {
+  if (!moving.value || !props.modelValue) return
   moving.value = false
   imgLeft.value = mtState.left
   imgTop.value = mtState.top
@@ -576,6 +596,8 @@ function handleImgTouchEnd() {
  * @param {any} res 图片加载结果
  */
 function handleImgLoaded(res: any) {
+  const source = res?.detail?.src ?? res?.src
+  if (!isAlive() || !props.modelValue || !props.imgSrc || (source && source !== props.imgSrc)) return
   emit('imgloaded', res)
   // Lynx 降级路径：uni.getImageInfo 不可用（宿主未注入）时，用 image 元素
   // load 事件 detail 的宽高兜底计算图片尺寸
@@ -584,8 +606,8 @@ function handleImgLoaded(res: any) {
     const height = Number(res?.detail?.height ?? res?.height ?? 0)
     if (width > 0 && height > 0) {
       imgInfo.value = { width, height }
-      computeImgSize()
       resetImg()
+      computeImgSize()
     }
   }
 }
@@ -595,6 +617,8 @@ function handleImgLoaded(res: any) {
  * @param {any} err 错误信息
  */
 function handleImgLoadError(err: any) {
+  const source = err?.detail?.src ?? err?.src
+  if (!isAlive() || !props.modelValue || (source && source !== props.imgSrc)) return
   emit('imgloaderror', err)
 }
 
@@ -609,6 +633,11 @@ function handleRotate() {
  * 处理取消按钮点击
  */
 function handleCancel() {
+  exportRequest++
+  loadRequest++
+  exporting.value = false
+  moving.value = false
+  imageVersion.value++
   emit('cancel')
   emit('update:modelValue', false)
 }
@@ -620,33 +649,64 @@ function handleConfirm() {
   draw()
 }
 
-/**
- * 计算裁剪参数并触发 confirm（替代 wot-ui 的 canvas 绘制导出）
- *
- * wot-ui 流程：ctx.translate / rotate / drawImage 将裁剪区域绘入离屏
- * canvas，再 canvasToTempFilePath 产出临时文件。Lynx 无 canvas 2D，
- * 这里按同一几何关系换算裁剪框在图片自然像素坐标系中的位置与尺寸，
- * 连同导出尺寸（裁剪框 × exportScale）一并发给宿主，由宿主完成裁剪。
- */
+/** Raster export uses only real registered host canvas capabilities, never a fake empty path. */
 function draw() {
-  if (!props.imgSrc) return
-
-  // 裁剪框左上角在图片元素坐标系中的位置（缩放以元素中心为原点）：
-  // p_img = (p_cut - imgCenter) / imgScale
-  const x = (imgLeft.value - cutLeft.value - (picWidth.value * imgScale.value) / 2) / imgScale.value
-  const y = (imgTop.value - cutTop.value - (picHeight.value * imgScale.value) / 2) / imgScale.value
-
-  emit('confirm', {
-    tempFilePath: '',
-    width: cutWidth.value * props.exportScale,
-    height: Math.round(cutHeight.value * props.exportScale),
-    src: props.imgSrc,
-    x: Math.round(x),
-    y: Math.round(y),
-    scale: imgScale.value,
-    angle: imgAngle.value
-  })
-  emit('update:modelValue', false)
+  if (!isAlive() || !props.modelValue || !props.imgSrc || exporting.value) return
+  const src = props.imgSrc
+  if (!hasUniAdapter('createCanvasContext') || !hasUniAdapter('canvasToTempFilePath')) {
+    emit('imgloaderror', { src, errMsg: 'img-cropper:fail createCanvasContext and canvasToTempFilePath host adapters are required' })
+    return
+  }
+  if (picWidth.value <= 0 || picHeight.value <= 0 || cutWidth.value <= 0 || cutHeight.value <= 0) {
+    emit('imgloaderror', { src, errMsg: 'img-cropper:fail image geometry is not ready' })
+    return
+  }
+  const request = ++exportRequest
+  exporting.value = true
+  const exportScale = props.exportScale
+  const result = {
+    tempFilePath: '', width: cutWidth.value * exportScale, height: cutHeight.value * exportScale, src,
+    x: Math.round((imgLeft.value - cutLeft.value - picWidth.value * imgScale.value / 2) / imgScale.value),
+    y: Math.round((imgTop.value - cutTop.value - picHeight.value * imgScale.value / 2) / imgScale.value),
+    scale: imgScale.value, angle: imgAngle.value
+  }
+  const valid = () => isAlive() && request === exportRequest && props.modelValue && props.imgSrc === src
+  const fail = (error: any) => {
+    if (!valid()) return
+    exporting.value = false
+    emit('imgloaderror', { ...error, src })
+  }
+  try {
+    const ctx = createCanvasContext(canvasId.value, proxy)
+    ctx.save?.()
+    ctx.clearRect?.(0, 0, result.width, result.height)
+    ctx.translate((imgLeft.value - cutLeft.value) * exportScale, (imgTop.value - cutTop.value) * exportScale)
+    if (!props.disabledRotate) ctx.rotate(imgAngle.value * Math.PI / 180)
+    const width = picWidth.value * imgScale.value * exportScale
+    const height = picHeight.value * imgScale.value * exportScale
+    ctx.drawImage(src, -width / 2, -height / 2, width, height)
+    ctx.restore?.()
+    const exportImage = () => {
+      if (!valid()) return
+      canvasToTempFilePath({
+        canvasId: canvasId.value, width: result.width, height: Math.round(result.height),
+        destWidth: result.width, destHeight: Math.round(result.height), fileType: props.fileType, quality: props.quality,
+        success: (res: any) => {
+          if (!valid()) return
+          const tempFilePath = res.tempFilePath || res.filePath
+          if (!tempFilePath) { fail({ errMsg: 'canvasToTempFilePath:fail empty file path' }); return }
+          exporting.value = false
+          emit('confirm', { ...result, tempFilePath })
+          if (valid()) emit('update:modelValue', false)
+        },
+        fail
+      }, proxy)
+    }
+    if (typeof ctx.draw === 'function') ctx.draw(false, exportImage)
+    else exportImage()
+  } catch (error: any) {
+    fail({ errMsg: error?.message || String(error) })
+  }
 }
 
 /**
@@ -660,6 +720,8 @@ function preventTouchMove(event: any) {
 }
 
 onBeforeUnmount(() => {
+  loadRequest++
+  exportRequest++
   // 清理延时动画与节流定时器，避免回调在卸载后写入已销毁的树
   if (timers.animation !== null) {
     clearTimeout(timers.animation)
@@ -709,10 +771,8 @@ const gestureRef = useMainThreadRef<{
   cutTop: number
   cutW: number
   cutH: number
+  version: string | null
 } | null>(null)
-
-/** worklet 捕获的静态配置快照（setup 期求值；props 实例内不变） */
-const cfgMaxScale = props.maxScale
 
 /**
  * 起笔（主线程）：经图片元素属性一次性读取几何并登记手势起点。
@@ -725,7 +785,7 @@ const cfgMaxScale = props.maxScale
 const onGestureStartMt = (event: any) => {
   'main thread'
   const img = imgRef.current
-  if (!img) return
+  if (!img || img.getAttribute('gesture-active') !== 'true') return
   const touches = event.touches
   if (!touches || !touches.length) return
 
@@ -737,6 +797,7 @@ const onGestureStartMt = (event: any) => {
 
   const picW = num('pic-w', 0)
   const picH = num('pic-h', 0)
+  if (picW <= 0 || picH <= 0) return
   const centerX = num('center-x', 0)
   const centerY = num('center-y', 0)
   const startScale = num('img-scale', 1)
@@ -763,7 +824,8 @@ const onGestureStartMt = (event: any) => {
     cutLeft: num('cut-left', 0),
     cutTop: num('cut-top', 0),
     cutW: num('cut-w', 0),
-    cutH: num('cut-h', 0)
+    cutH: num('cut-h', 0),
+    version: img.getAttribute('gesture-version')
   }
 }
 
@@ -777,7 +839,7 @@ const onGestureMoveMt = (event: any) => {
   'main thread'
   const g = gestureRef.current
   const img = imgRef.current
-  if (!g || !img) return
+  if (!g || !img || img.getAttribute('gesture-active') !== 'true' || g.version !== img.getAttribute('gesture-version')) return
   const touches = event.touches
   if (!touches || !touches.length) return
 
@@ -806,7 +868,8 @@ const onGestureMoveMt = (event: any) => {
     const height = Math.abs(touches[1].clientY - touches[0].clientY)
     const hypotenuse = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2))
     let nextScale = g.startScale * (hypotenuse / (g.startDist || 1))
-    if (nextScale > cfgMaxScale) nextScale = cfgMaxScale
+    const maxScale = Number(img.getAttribute('max-scale')) || 3
+    if (nextScale > maxScale) nextScale = maxScale
     // 缩放下限校正（clampImgScale 等价内联）
     let limW = g.picW
     let limH = g.picH
@@ -839,11 +902,15 @@ const onGestureMoveMt = (event: any) => {
     `translate(${left - g.picW / 2}px, ${top - g.picH / 2}px) scale(${scale}) rotate(${g.angle}deg)`
   )
 }
+const onGestureEndMt = () => {
+  'main thread'
+  gestureRef.current = null
+}
 </script>
 
 <template>
   <view v-if="modelValue" :class="['wd-img-cropper', customClass]" :style="rootStyle" @touchmove.stop="preventTouchMove">
-    <view class="wd-img-cropper__wrapper" @touchstart="handleImgTouchStart" @touchmove="handleImgTouchMove">
+    <view class="wd-img-cropper__wrapper" @touchstart="handleImgTouchStart" @touchmove="handleImgTouchMove" :main-thread-bindtouchend="onGestureEndMt" :main-thread-bindtouchcancel="onGestureEndMt">
       <!-- 展示在用户面前的裁剪框 -->
       <view class="wd-img-cropper__cut">
         <!-- 上方阴影块 -->
@@ -875,7 +942,11 @@ const onGestureMoveMt = (event: any) => {
            累积数据（真机上由图片触摸冒泡触发）。几何经元素属性桥接下发给主线程。 -->
       <image
         class="wd-img-cropper__img"
+        :key="imgSrc"
         :src="imgSrc"
+        :gesture-active="String(modelValue && !!imgSrc)"
+        :gesture-version="String(imageVersion)"
+        :max-scale="String(maxScale)"
         :style="imageStyle"
         :lazy-load="false"
         :main-thread-ref="imgRef"
@@ -892,6 +963,7 @@ const onGestureMoveMt = (event: any) => {
         :main-thread-bindtouchstart="onGestureStartMt"
         :main-thread-bindtouchmove="onGestureMoveMt"
         @touchend="handleImgTouchEnd"
+        @touchcancel="handleImgTouchEnd"
         @error="handleImgLoadError"
         @load="handleImgLoaded"
       />

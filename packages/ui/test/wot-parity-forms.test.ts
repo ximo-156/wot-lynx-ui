@@ -109,7 +109,7 @@ describe('wot parity — slider 与尺寸状态', () => {
     expect(dragend).toHaveBeenLastCalledWith({ value: [20, 90] })
   })
 
-  it('range 右端不可越过左端，且左端提交不丢失右端', async () => {
+  it('range 越过另一端后按官方排序规范化，保留未拖动端', async () => {
     installRects()
     const update = vi.fn()
     const { container } = mount(Slider, { modelValue: [20, 80], range: true, 'onUpdate:modelValue': update })
@@ -118,11 +118,11 @@ describe('wot parity — slider 与尺寸状态', () => {
     fireEvent.touchstart(dots[1], { touches: [{ clientX: 160, clientY: 0 }] })
     fireEvent.touchend(dots[1], { changedTouches: [{ clientX: 10, clientY: 0 }] })
     await nextTick()
-    expect(update).toHaveBeenLastCalledWith([20, 20])
-    fireEvent.touchstart(dots[0], { touches: [{ clientX: 40, clientY: 0 }] })
-    fireEvent.touchend(dots[0], { changedTouches: [{ clientX: 10, clientY: 0 }] })
-    await nextTick()
     expect(update).toHaveBeenLastCalledWith([5, 20])
+    fireEvent.touchstart(dots[0], { touches: [{ clientX: 10, clientY: 0 }] })
+    fireEvent.touchend(dots[0], { changedTouches: [{ clientX: 0, clientY: 0 }] })
+    await nextTick()
+    expect(update).toHaveBeenLastCalledWith([0, 20])
   })
 
   it('非整除 step 的最大值不会在舍入后越界', async () => {
@@ -494,7 +494,7 @@ describe('wot parity — 剩余表单/配置契约', () => {
 
   it('search change保留官方{value}参数', () => {
     const change = vi.fn()
-    const mounted = mount(Search, { modelValue: '', onChange: change })
+    const mounted = mount(Search, { modelValue: '', placeholderLeft: true, onChange: change })
     fireEvent.input(mounted.container.querySelector('input')!, { detail: { value: 'query' } })
     expect(change).toHaveBeenLastCalledWith({ value: 'query' })
   })
@@ -523,8 +523,9 @@ describe('wot parity — 剩余表单/配置契约', () => {
     await nextTick()
     mounted.instance().close()
     mounted.instance().open()
-    requests[0]([{ value: 'old', label: 'old' }])
-    requests.at(-1)!([{ value: 'new', label: 'new' }])
+    expect(requests).toHaveLength(2)
+    requests[0]([{ value: 'old', text: 'old' }])
+    requests[1]([{ value: 'new', text: 'new' }])
     await nextTick()
     expect(mounted.container.textContent).not.toContain('old')
     expect(mounted.container.textContent).toContain('new')

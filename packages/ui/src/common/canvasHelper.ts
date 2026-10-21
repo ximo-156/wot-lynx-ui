@@ -1,35 +1,25 @@
-/**
- * canvas 辅助（Lynx 无 Canvas 2D API 的占位实现）。
- *
- * Lynx 引擎不提供 Canvas 2D 上下文，依赖 canvas 的组件（signature / img-cropper /
- * circle / bar-code / qr-code）需要迁移到 SVG 方案。此处保留接口以兼容类型，
- * 调用时会在控制台给出警告。
- */
-
-/** Lynx 无 Canvas 2D，统一退化为 any */
+/** Canvas 为可选宿主能力；库组件优先使用原生 SVG。 */
+import { getUniAdapter } from './uniAdapter'
 export type CanvasContext = any
+const noopContext = new Proxy({}, { get: () => () => undefined })
 
-/** 空实现：所有方法调用返回 undefined */
-const noopContext = new Proxy(
-  {},
-  {
-    get: () => () => undefined
-  }
-)
-
-export function createCanvasContext(_selector: string, _scope?: any): CanvasContext {
-  console.warn('[wot-lynx-ui] Lynx 不支持 Canvas 2D API，相关组件请使用 SVG 方案替代')
+export function createCanvasContext(selector: string, scope?: any): CanvasContext {
+  const adapter = getUniAdapter('createCanvasContext')
+  if (adapter) return adapter(selector, scope)
+  console.warn('[wot-lynx-ui] Lynx 无 Canvas 2D，未注入 createCanvasContext 宿主能力')
   return noopContext
 }
 
-export function canvasToTempFilePath(_options: any, _scope?: any): Promise<any> {
-  console.warn('[wot-lynx-ui] Lynx 不支持 Canvas 2D API，canvasToTempFilePath 不可用')
-  return Promise.resolve({})
+export function canvasToTempFilePath(options: any, scope?: any): any {
+  const adapter = getUniAdapter('canvasToTempFilePath')
+  if (adapter) return adapter(options, scope)
+  console.warn('[wot-lynx-ui] 未注入 canvasToTempFilePath，不能导出真实临时文件')
+  const failure = { errMsg: 'canvasToTempFilePath:fail not supported in lynx' }
+  options?.fail?.(failure)
+  options?.complete?.(failure)
+  return Promise.resolve(undefined)
 }
 
-/**
- * canvas2dAdapter — uni-app Canvas 2D 接口适配（Lynx 占位，返回空实现）
- */
-export function canvas2dAdapter(_ctx: any): CanvasContext {
-  return noopContext
+export function canvas2dAdapter(ctx: any): CanvasContext {
+  return getUniAdapter('canvas2dAdapter')?.(ctx) ?? ctx ?? noopContext
 }

@@ -38,13 +38,13 @@ const { linkChildren } = useChildren(SIDEBAR_KEY)
  * @param value 目标值
  * @param label 目标值标题
  */
-function setChange(value: number | string, label: string) {
+function setChange(value: number | string, label: string, isCurrent: () => boolean = () => true) {
   const request = ++changeRequest
-  if (!isAlive() || value === props.modelValue) return
+  if (!isAlive()) return
   callInterceptor(props.beforeChange, {
     args: [value],
     done: () => {
-      if (isAlive() && request === changeRequest) updateValue(value, label)
+      if (isAlive() && request === changeRequest && isCurrent()) updateValue(value, label)
     }
   })
 }

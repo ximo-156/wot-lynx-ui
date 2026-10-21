@@ -1,17 +1,11 @@
 /*
  * wd-image-preview — 图片预览
- *
- * Lynx 实现说明：
- * - WdOverlay 负责遮罩过渡、锁滚与 tap 兼容；内容在 enter 后挂载。
- * - 使用 WdSwiper 的 string[]、loop、aspectFit 与 indicator 插槽契约；
- *   不使用宿主需要额外注册的原生 swiper 元素。
- * - 长按转发为 long-press；小程序识码菜单仍依赖宿主能力。
- * - ref.open 与 useImagePreview 都汇入本地单次预览选项，不修改注入默认值。
+ * 单次选项恢复 prop 默认值；命令式回调与组件事件分离，不重复调用同名监听。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, inject, reactive, ref, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, inject, reactive, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdOverlay from '../wd-overlay/wd-overlay.vue'
 import WdSwiper from '../wd-swiper/wd-swiper.vue'
@@ -29,17 +23,19 @@ const emit = defineEmits<{
   change: [{ index: number }]
   'long-press': [{ image: string }]
 }>()
+const instance = getCurrentInstance()!
 const isAlive = useAlive()
 const state = reactive({ show: false, visible: false, currentIndex: 0, images: [] as string[] })
 const requestOptions = ref<ImagePreviewOptions>({})
 const imagePreviewOption = inject(getImagePreviewOptionKey(props.selector), ref<ImagePreviewOptions>({}))
-const options = computed(() => ({ ...props, ...requestOptions.value }))
+const options = computed(() => {
+  const overrides = Object.fromEntries(Object.entries(requestOptions.value).filter(([, value]) => isDef(value)))
+  return { ...props, ...overrides } as typeof props & ImagePreviewOptions
+})
 
 function normalizeIndex(value: number) {
-  const last = Math.max(0, state.images.length - 1)
-  return Math.min(last, Math.max(0, Number.isFinite(value) ? Math.trunc(value) : 0))
+  return Math.min(Math.max(0, state.images.length - 1), Math.max(0, Number.isFinite(value) ? Math.trunc(value) : 0))
 }
-
 function reset(option: ImagePreviewOptions) {
   if (!isAlive()) return
   if (!option.show) {
@@ -51,61 +47,62 @@ function reset(option: ImagePreviewOptions) {
   state.currentIndex = normalizeIndex(isDef(option.startPosition) ? option.startPosition! : props.startPosition)
   state.show = true
 }
-
-watch(() => imagePreviewOption.value, reset, { deep: true, immediate: true })
+function runLifecycleCallback(name: 'onOpen' | 'onClose') {
+  const raw = instance.vnode.props || {}
+  const kebab = name === 'onOpen' ? 'on-open' : 'on-close'
+  const callback = requestOptions.value[name] || raw[kebab]
+  if (isFunction(callback) && callback !== raw[name]) callback()
+}
 watch(() => state.show, (show, previous) => {
   if (!isAlive() || show === previous) return
   if (show) emit('open')
   else emit('close')
-  const callback = show ? requestOptions.value.onOpen : requestOptions.value.onClose
-  const listener = show ? props.onOpen : props.onClose
-  // props.onOpen/onClose 已由组件事件派发；同一个函数不得被重复调用。
-  if (isFunction(callback) && callback !== listener) callback()
+  runLifecycleCallback(show ? 'onOpen' : 'onClose')
 })
-
+watch(() => imagePreviewOption.value, reset, { deep: true, immediate: true })
 function handleEnter() {
   if (isAlive() && state.show) state.visible = true
 }
-
 function handleAfterLeave() {
   if (!isAlive() || state.show) return
   state.visible = false
   state.images = []
   state.currentIndex = 0
 }
-
 function open(input?: ImagePreviewOptions | string[]) {
   reset({ ...(Array.isArray(input) ? { images: input } : input || {}), show: true })
 }
-
 function close() {
   if (isAlive()) state.show = false
 }
-
 function setActive(index: number) {
   if (isAlive() && Number.isInteger(index) && index >= 0 && index < state.images.length) state.currentIndex = index
 }
-
 function handleSwiperChange({ current }: { current: number }) {
   if (!isAlive() || !state.show || !Number.isInteger(current) || current < 0 || current >= state.images.length) return
   state.currentIndex = current
   emit('change', { index: current })
-  if (isFunction(requestOptions.value.onChange)) requestOptions.value.onChange(current)
+  // @change / h({ onChange }) 是事件监听；:on-change 是数字索引回调 prop。
+  const raw = instance.vnode.props || {}
+  const callback = requestOptions.value.onChange || raw['on-change']
+  if (isFunction(callback) && callback !== raw.onChange) callback(current)
 }
-
 function handleImageClick({ index }: { index: number }) {
+  if (!isAlive() || !state.show) return
   emit('click', { index })
   if (options.value.closeOnClick) close()
 }
-
 function handleMaskClick() {
   if (options.value.closeOnClick) close()
 }
-
 function handleLongPress(image: string | Record<string, any>) {
+  if (!isAlive() || !state.show) return
   const url = getImageUrl(image)
   emit('long-press', { image: url })
-  if (isFunction(options.value.onLongPress)) options.value.onLongPress(url)
+  const raw = instance.vnode.props || {}
+  const callback = requestOptions.value.onLongPress || raw['on-long-press']
+  const listener = raw.onLongPress || raw['onLong-press']
+  if (isFunction(callback) && callback !== listener) callback(url)
 }
 
 defineExpose<ImagePreviewExpose>({ open, close, setActive })
@@ -144,9 +141,7 @@ defineExpose<ImagePreviewExpose>({ open, close, setActive })
     >
       <template #indicator="{ total, current }">
         <slot name="indicator" :total="total" :current="current">
-          <view v-if="options.showIndex && total > 1" class="wd-image-preview__index">
-            <text>{{ current + 1 }} / {{ total }}</text>
-          </view>
+          <view v-if="options.showIndex && total > 1" class="wd-image-preview__index"><text>{{ current + 1 }} / {{ total }}</text></view>
         </slot>
       </template>
     </WdSwiper>

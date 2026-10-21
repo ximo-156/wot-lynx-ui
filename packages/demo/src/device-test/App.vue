@@ -298,7 +298,7 @@ const safeAreaText = computed(() => {
         <text class="card__hint">{{ testSections[6].hint }}</text>
         <view class="row">
           <wd-icon name="close" size="20" />
-          <wd-icon name="loading" size="24" color="#1C64FD" />
+          <wd-icon name="loading" size="24" color="#755FFE" />
           <wd-icon name="arrow-left-bold" size="20" />
           <wd-icon name="setting" size="20" color="#FF8800" />
         </view>
@@ -351,7 +351,7 @@ const safeAreaText = computed(() => {
           <text class="tag">当前：{{ themeMode }}</text>
         </view>
         <!-- themeVars 覆盖：嵌套 provider 需显式透传 theme，否则回退默认 light -->
-        <wd-config-provider :theme="themeMode" :theme-vars="{ colorPrimary: '#FF8800' }">
+        <wd-config-provider :theme="themeMode" :theme-vars="{ primary6: '#FF8800' }">
           <view class="row">
             <wd-button type="primary" size="small">themeVars 覆盖主色</wd-button>
             <text class="tag">var(--wot-primary-6) 被覆盖为 #FF8800</text>

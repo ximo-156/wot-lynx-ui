@@ -51,6 +51,9 @@ const { translate } = useTranslate('input')
 const { parent: formItemValidate } = useParent(FORM_ITEM_VALIDATE_KEY)
 const isDisabled = useFormDisabled(props)
 const isAlive = useAlive()
+let inputRequest = 0
+let blurRequest = 0
+watch([() => props.modelValue, isDisabled, () => props.readonly], () => { inputRequest++ }, { flush: 'sync' })
 
 const isPwdVisible = ref<boolean>(false)
 const clearing = ref<boolean>(false) // 是否正在清空操作，避免重复触发失焦
@@ -151,6 +154,8 @@ function togglePwdVisible() {
   isPwdVisible.value = !isPwdVisible.value
 }
 async function handleClear() {
+  if (isDisabled.value || props.readonly) return
+  const request = ++inputRequest
   focusing.value = false
   inputValue.value = ''
   if (props.focusWhenClear) {
@@ -158,20 +163,23 @@ async function handleClear() {
     focused.value = false
   }
   await pause()
-  // 暂停窗口内组件可能已卸载：续写在已销毁树上 patch 会产生晚到的
-  // remove/insert（真机 9902 removeNode 家族）
   if (!isAlive()) return
+  if (request !== inputRequest || isDisabled.value || props.readonly) {
+    clearing.value = false
+    return
+  }
   if (props.focusWhenClear) {
     focused.value = true
     focusing.value = true
   }
-  emit('update:modelValue', inputValue.value)
+  emit('update:modelValue', '')
   emit('clear')
 }
 async function handleBlur() {
-  // 等待150毫秒，clear执行完毕
+  const request = ++blurRequest
+  // 等待150毫秒，clear执行完毕；重新聚焦后不再转发旧失焦。
   await pause(150)
-  if (!isAlive()) return
+  if (!isAlive() || request !== blurRequest) return
   if (clearing.value) {
     clearing.value = false
     return
@@ -183,12 +191,14 @@ async function handleBlur() {
   await formItemValidate.value?.validateByTrigger('blur')
 }
 function handleFocus({ detail }: any) {
+  if (isDisabled.value || props.readonly) return
+  blurRequest++
   focusing.value = true
   emit('focus', detail)
 }
 function handleInput({ detail }: any) {
-  // Lynx 适配：参考源经 v-model 由运行时回写 inputValue；:value 受控绑定
-  // 下需在此用 detail.value 自行回写，保持与 v-model 一致的双向语义
+  if (isDisabled.value || props.readonly) return
+  inputRequest++
   inputValue.value = detail.value
   emit('update:modelValue', inputValue.value)
   emit('input', detail)

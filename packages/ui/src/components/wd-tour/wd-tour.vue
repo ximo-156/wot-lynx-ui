@@ -14,8 +14,7 @@
  * - 条件编译：参考源用 #ifdef MP / #ifndef MP 区分微信小程序菜单按钮获取，
  *   Lynx 无对应能力，统一走 uni.getMenuButtonBoundingClientRect 适配层
  *   （返回零矩形，topOffset 降级为 0）；条件编译残留已清除（PORTING §3.6）。
- * - uni.pageScrollTo 在 Lynx 无页面滚动 API，经 common/uni 适配层降级告警，
- *   success 回调不触发（lastScrollTop 不更新），高亮/气泡定位不受影响。
+ * - uni.pageScrollTo 由宿主注入；缺少或失败时保留实际度量，不预测未发生的滚动。
  * - getRect 契约为「永不 reject」（未命中节点解析为零尺寸矩形），参考源依赖
  *   reject 进入 catch 派发 error 事件并执行 missingStrategy；这里对零尺寸结果
  *   显式抛出，保持错误分支行为一致。
@@ -31,7 +30,7 @@ import { addUnit, filterStyle, getRect, getSystemInfo, isDef, parseStyle } from 
 import { useRaf } from '../../composables/useRaf'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
-import { uni } from '../../common/uni'
+import { hasUniAdapter, uni } from '../../common/uni'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(tourProps)
@@ -96,6 +95,21 @@ const highlightClass = computed(() => {
 const currentStep = computed(() => {
   return props.steps[currentIndex.value] || {}
 })
+// 无 rich-text 元素时以可读文本兜底，不把 HTML 标记直接展示给用户；富样式走 content 插槽。
+const contentText = computed(() => {
+  const text = String(currentStep.value.content || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])\s*>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+  const entities: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' }
+  return text.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (entity, name: string) => {
+    if (name[0] !== '#') return entities[name.toLowerCase()] || entity
+    const code = name[1].toLowerCase() === 'x' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10)
+    return Number.isFinite(code) && code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : entity
+  }).trim()
+})
 // 提取公共的默认样式函数
 /**
  * 获取默认样式
@@ -117,10 +131,11 @@ function calculateHighlightStyle(padding: number): Record<string, string> {
     padding: addUnit(padding)
   }
 }
+const HIGHLIGHT_STYLE = defineStyleKeys({ top: '0px', left: '0px', width: '0px', height: '0px', padding: '0px', 'border-radius': '0px', 'box-shadow': '', opacity: '0' })
 const highlightStyle = computed<Record<string, string>>(() => {
   // 如果元素信息尚未获取到，返回空样式避免闪烁
   if (!elementInfo.value.width && !elementInfo.value.height) {
-    return getDefaultStyle()
+    return resolveStyle(HIGHLIGHT_STYLE, getDefaultStyle())
   }
   const stepPadding = Number(isDef(currentStep.value.padding) ? currentStep.value.padding : props.padding)
   const baseStyle = calculateHighlightStyle(stepPadding)
@@ -132,21 +147,21 @@ const highlightStyle = computed<Record<string, string>>(() => {
     width: addUnit(elementInfo.value.width || 0)
   }
   if (props.mask && isDef(props.maskColor)) {
-    style['box-shadow'] = `0 0 0 100vh ${props.maskColor}`
+    style['box-shadow'] = `0 0 0 ${windowHeight.value}px ${props.maskColor}`
   }
-  return { ...style, ...(props.highlightStyle as Record<string, string>) }
+  return resolveStyle(HIGHLIGHT_STYLE, { opacity: '1' }, style, parseStyle(props.highlightStyle))
 })
 
 // Style Funnel（CONVENTIONS §20）：top / bottom 按步骤二选一切换，两键必须
 // 每帧都输出完整键集，否则上一帧的偏移会残留（提示框上下同时存在）
-const POPOVER_STYLE = defineStyleKeys({ top: 'auto', bottom: 'auto' })
+const POPOVER_STYLE = defineStyleKeys({ top: 'auto', bottom: 'auto', 'z-index': '', 'transition-duration': '' })
 
 const popoverStyle = computed<Record<string, string>>(() => {
   const style: Record<string, string> = {}
+  style['transition-duration'] = `${props.duration}ms`
   if (isDef(props.zIndex)) {
     const zIndex = Number(props.zIndex)
     style['z-index'] = String(zIndex + 1)
-    style['transition-duration'] = `${props.duration}ms`
   }
   const stepPadding = Number(isDef(currentStep.value.offset) ? currentStep.value.offset : props.offset)
   const placement = isDef(currentStep.value.placement) ? currentStep.value.placement : 'auto'
@@ -177,9 +192,7 @@ const highlightElementInfo = computed<CSSProperties>(() => {
     width: addUnit((elementInfo.value.width || 0) + stepPadding * 2),
     height: addUnit((elementInfo.value.height || 0) + stepPadding * 2)
   }
-  if (props.mask && isDef(props.maskColor)) {
-    style.boxShadow = `0 0 0 100vh ${props.maskColor}`
-  }
+  style.boxShadow = props.mask && isDef(props.maskColor) ? `0 0 0 ${windowHeight.value}px ${props.maskColor}` : ''
   return style
 })
 
@@ -200,10 +213,13 @@ async function updateElementInfo() {
   const index = currentIndex.value
   updateSystemInfo()
   const element = currentStep.value.element
-  if (!element) return
+  if (!element) {
+    elementInfo.value = { top: 0, left: 0, width: 0, height: 0, bottom: 0 }
+    return
+  }
   try {
     const res = await getRect(element, false, props.scope)
-    if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value) return
+    if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value || element !== currentStep.value.element) return
     // Lynx 适配：本地 getRect 契约为「永不 reject」——选择器未命中时解析为
     // 零尺寸矩形；参考源（uni-app）此时会 reject 进入 catch。零尺寸即视为
     // 「未找到目标元素」，显式抛出以对齐参考源的错误分支（error 事件 +
@@ -217,7 +233,8 @@ async function updateElementInfo() {
     handleScrolling(res, scrollNeeds, effectiveBoundaries)
     calculateTipPosition(res)
   } catch (error) {
-    if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value) return
+    if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value || element !== currentStep.value.element) return
+    elementInfo.value = { top: 0, left: 0, width: 0, height: 0, bottom: 0 }
     console.error('updateElementInfo error:', error)
     emit('error', {
       message: '无法找到指定的引导元素',
@@ -246,7 +263,7 @@ function updateSystemInfo() {
  * @param res 元素节点信息
  */
 function initializeElementInfo(res: any) {
-  elementInfo.value = res
+  elementInfo.value = { ...res }
   // 调整元素位置信息，加上窗口顶部偏移量
   elementInfo.value.top = (res.top || 0) + windowTop.value
   elementInfo.value.bottom = ((res.bottom !== undefined ? res.bottom : (res.top || 0) + (res.height || 0)) as number) + windowTop.value
@@ -304,19 +321,8 @@ function handleScrolling(res: any, scrollNeeds: { up: boolean; down: boolean }, 
  * @param boundaries 边界信息
  */
 function scrollUp(res: any, boundaries: { top: number; bottom: number }) {
-  // 计算需要滚动的距离
-  let scrollDistance = lastScrollTop.value + Number(res.top) - props.padding - boundaries.top
-  // 更新元素位置信息（滚动后）
-  elementInfo.value.top = boundaries.top + props.padding
-  elementInfo.value.bottom = windowHeight.value - (boundaries.top + props.padding)
-  uni.pageScrollTo({
-    scrollTop: scrollDistance,
-    duration: Number(props.duration),
-    success: () => {
-      // 更新已滚动距离
-      lastScrollTop.value = scrollDistance
-    }
-  })
+  const padding = Number(currentStep.value.padding ?? props.padding)
+  requestScroll(lastScrollTop.value + Number(res.top) - padding - boundaries.top)
 }
 
 /**
@@ -324,20 +330,25 @@ function scrollUp(res: any, boundaries: { top: number; bottom: number }) {
  * @param res 元素节点信息
  */
 function scrollDown(res: any) {
-  // 计算需要滚动的距离
-  const bottom = res.bottom || 0
-  let scrollDistance = bottom - windowHeight.value + props.padding + Number(props.bottomSafetyOffset)
-
-  // 更新元素位置信息（滚动后）
-  elementInfo.value.top = windowHeight.value - bottom - props.padding - Number(props.bottomSafetyOffset) // 应该是减去安全偏移量
-  elementInfo.value.bottom = windowHeight.value - props.padding - Number(props.bottomSafetyOffset)
-
+  const bottom = res.bottom ?? Number(res.top) + Number(res.height)
+  const padding = Number(currentStep.value.padding ?? props.padding)
+  requestScroll(lastScrollTop.value + bottom - windowHeight.value + padding + Number(props.bottomSafetyOffset))
+}
+function requestScroll(scrollTop: number) {
+  if (!hasUniAdapter('pageScrollTo')) return
+  const request = rectRequest
+  const index = currentIndex.value
+  const element = currentStep.value.element
   uni.pageScrollTo({
-    scrollTop: scrollDistance + lastScrollTop.value,
+    scrollTop: Math.max(0, scrollTop),
     duration: Number(props.duration),
-    success: () => {
-      // 更新已滚动距离
-      lastScrollTop.value = scrollDistance + lastScrollTop.value
+    success: async () => {
+      if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value || !element) return
+      lastScrollTop.value = Math.max(0, scrollTop)
+      const rect = await getRect(element, false, props.scope)
+      if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value || element !== currentStep.value.element || (!rect.width && !rect.height)) return
+      initializeElementInfo(rect)
+      calculateTipPosition(rect)
     }
   })
 }
@@ -367,6 +378,7 @@ function calculateTipPosition(res: any) {
  * 上一步
  */
 function handlePrev() {
+  if (!isAlive() || !props.modelValue) return
   if (currentIndex.value > 0) {
     const oldIndex = currentIndex.value
     currentIndex.value--
@@ -384,6 +396,7 @@ function handlePrev() {
  * 下一步
  */
 function handleNext() {
+  if (!isAlive() || !props.modelValue) return
   if (currentIndex.value < props.steps.length - 1) {
     const oldIndex = currentIndex.value
     currentIndex.value++
@@ -403,6 +416,8 @@ function handleNext() {
  * 完成
  */
 function handleFinish() {
+  if (!isAlive() || !props.modelValue) return
+  ++rectRequest
   emit('finish', {
     current: currentIndex.value,
     total: props.steps.length
@@ -416,6 +431,8 @@ function handleFinish() {
  * 跳过
  */
 function handleSkip() {
+  if (!isAlive() || !props.modelValue) return
+  ++rectRequest
   emit('skip', {
     current: currentIndex.value,
     total: props.steps.length
@@ -434,17 +451,23 @@ function handleMask() {
 }
 
 watch(
-  [() => props.current, () => props.steps.length],
-  ([newVal]) => {
-    currentIndex.value = normalizeCurrent(newVal)
-  }
+  () => props.current,
+  (value) => { currentIndex.value = normalizeCurrent(value) }
 )
+watch(() => props.steps.length, () => { currentIndex.value = normalizeCurrent(currentIndex.value) })
 // 在 setup 作用域中创建 raf 实例，避免在 watch 回调中调用 onUnmounted
 const indexRaf = useRaf(updateElementInfo)
 const modelRaf = useRaf(() => {
   if (!isAlive() || !props.modelValue) return
   updateElementInfo()
   emit('update:current', currentIndex.value)
+})
+
+watch([() => currentStep.value.element, () => props.scope], () => {
+  ++rectRequest
+  elementInfo.value = { top: 0, left: 0, width: 0, height: 0, bottom: 0 }
+  indexRaf.cancel()
+  nextTick(() => { if (isAlive() && props.modelValue) indexRaf.start() })
 })
 
 // 监听 currentIndex 变化，同步到父组件
@@ -482,22 +505,10 @@ watch(
   }
 )
 
-// 所有平台统一处理逻辑（Lynx 适配：参考源的 #ifdef MP 分支经 uni 适配层
-// 获取菜单按钮矩形，未注入宿主能力时返回零矩形，topOffset 降级为 0）
-if (props.customNav) {
-  // 开启了自定义导航栏
-  if (props.topSafetyOffset && Number(props.topSafetyOffset) > 0) {
-    // 用户传入了顶部安全偏移量，优先使用用户设置的值
-    topOffset.value = Number(props.topSafetyOffset)
-  } else {
-    // 未传入顶部偏移量
-    menuButtonInfo.value = uni.getMenuButtonBoundingClientRect() || null
-    topOffset.value = menuButtonInfo.value ? menuButtonInfo.value.top : 0
-  }
-} else {
-  // 未开启自定义导航栏，直接使用用户传入的顶部安全偏移量
-  topOffset.value = Number(props.topSafetyOffset) || 0
-}
+watch([() => props.customNav, () => props.topSafetyOffset], () => {
+  menuButtonInfo.value = props.customNav && !props.topSafetyOffset ? uni.getMenuButtonBoundingClientRect() || null : null
+  topOffset.value = Number(props.topSafetyOffset) || menuButtonInfo.value?.top || 0
+}, { immediate: true })
 defineExpose<TourExpose>({
   handlePrev,
   handleNext,
@@ -516,7 +527,7 @@ defineExpose<TourExpose>({
         <view class="wd-tour__info">
           <slot name="content">
             <!-- Lynx 适配：参考源为 rich-text :nodes，Lynx 无该元素，降级为 text -->
-            <text>{{ currentStep.content }}</text>
+            <text>{{ contentText }}</text>
           </slot>
         </view>
 

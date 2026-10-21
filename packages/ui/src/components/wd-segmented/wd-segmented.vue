@@ -20,7 +20,7 @@ import './index.css'
 
 import { computed, getCurrentInstance, onMounted, reactive, watch } from 'vue-lynx'
 import { segmentedProps, type SegmentedExpose, type SegmentedOption } from './types'
-import { addUnit, getRect, isEqual, isObj, pause, parseStyle } from '../../common/util'
+import { addUnit, getRect, isEqual, isObj, pause, parseStyle, uuid } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { uni } from '../../common/uni'
 import { useAlive } from '../../composables/useAlive'
@@ -29,6 +29,7 @@ const props = defineProps(segmentedProps)
 const emit = defineEmits(['update:value', 'change', 'click'])
 const isAlive = useAlive()
 let styleRequest = 0
+const segmentedId = `wd-segmented-${uuid()}`
 
 /**
  * 滑块可切换的全部样式键 + 中性值（CONVENTIONS §20）。
@@ -108,7 +109,7 @@ function updateActiveStyle(animation: boolean = true) {
     return
   }
 
-  getRect('.wd-segmented__item', true, proxy).then((rects: any[]) => {
+  getRect(`#${segmentedId} .wd-segmented__item`, true, proxy).then((rects: any[]) => {
     // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive() || request !== styleRequest) return
     const rect = rects[index]
@@ -187,7 +188,7 @@ defineExpose<SegmentedExpose>({
 </script>
 
 <template>
-  <view :class="rootClass" :style="rootStyle">
+  <view :id="segmentedId" :class="rootClass" :style="rootStyle">
     <view
       v-for="(option, index) in options"
       :key="index"

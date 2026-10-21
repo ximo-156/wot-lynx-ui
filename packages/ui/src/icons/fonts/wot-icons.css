@@ -1,0 +1,7 @@
+/* Generated official wot-ui 2.3.2 font. Glyphs render as native text, not ::before. */
+@font-face {
+  font-family: 'wd-wot-icons';
+  src: url('./wot-icons.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}

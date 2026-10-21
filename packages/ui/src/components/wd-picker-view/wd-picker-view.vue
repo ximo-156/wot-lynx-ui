@@ -34,10 +34,9 @@
  *     非响应式普通数组，仅后台处理器与 offsets watch 守卫读取），避免 Vue
  *     重渲染把 worklet 直改的 transform 覆盖回去（vue-lynx 对带 STYLE
  *     patchFlag 的元素每次重渲染都会重新下发内联样式）；
- * - **immediateChange**：开启时列（父）的后台 `@touchmove` 经冒泡收到事件，
- *   用同一公式算当前索引，变化即更新 selectedIndex 并派发 change（与既有
- *   行为一致），同时把 offsets 同步为跟手位移，使期间不可避免的 v-model
- *   回写重渲染重新下发的样式与 worklet 直改值一致（不跳变）；
+ * - **immediateChange**：按官方原生 picker-view 契约，true 在手指松开时
+ *   提交 change，false 在 200ms 吸附过渡结束时提交；touchmove 不提交。
+ *   pickend 在吸附结束后发出，外部改值、配置改变、卸载取消过时任务；
  * - **几何免度量**：itemHeight / 列项数均为渲染期已知量，经元素属性向主线程
  *   下发，worklet 不调用 invoke / getRect；
  * - 数据逻辑（列格式化 / 选中索引 / 级联构建）在 composables/useSelection，
@@ -49,13 +48,30 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, nextTick, ref, watch, useMainThreadRef } from 'vue-lynx'
+import { computed, nextTick, onBeforeUnmount, ref, watch, useMainThreadRef } from 'vue-lynx'
 import { pickerViewProps, type PickerOption, type PickerViewExpose } from './types'
 import { useSelection } from '../../composables/useSelection'
+import { useAlive } from '../../composables/useAlive'
 import { addUnit, isArray, isDef, isEqual, isObj, parseStyle } from '../../common/util'
 
 const props = defineProps(pickerViewProps)
 const emit = defineEmits(['change', 'pickstart', 'pickend', 'update:modelValue'])
+const isAlive = useAlive()
+const bgDragStart: Array<{ y: number; offset: number } | undefined> = []
+const dragging: boolean[] = []
+const offsets = ref<number[]>([])
+const settleTimers: Array<ReturnType<typeof setTimeout> | undefined> = []
+let changeRequest = 0
+const dataVersion = ref(0)
+function cancelGestures() {
+  changeRequest++
+  dataVersion.value++
+  dragging.fill(false)
+  bgDragStart.fill(undefined)
+  settleTimers.forEach((timer) => { if (timer !== undefined) clearTimeout(timer) })
+  settleTimers.fill(undefined)
+}
+onBeforeUnmount(cancelGestures)
 
 const {
   formatColumns,
@@ -73,10 +89,10 @@ const {
   updateCascadeColumns,
   resetColumns
 } = useSelection({
-  valueKey: props.valueKey,
-  labelKey: props.labelKey,
-  childrenKey: props.childrenKey,
-  cascade: props.cascade
+  get valueKey() { return props.valueKey },
+  get labelKey() { return props.labelKey },
+  get childrenKey() { return props.childrenKey },
+  get cascade() { return props.cascade }
 })
 
 /**
@@ -97,23 +113,28 @@ function safeResetColumns(columns: any) {
 }
 
 watch(
-  [() => props.modelValue, () => props.columns, () => props.cascade],
-  (newValue, oldValue) => {
-    const [newModelValue, newColumns, newCascade] = newValue
-    const [, oldColumns] = oldValue
-
-    if (!isEqual(oldColumns, newColumns)) {
-      safeResetColumns(newColumns)
-      if (newCascade && isDef(newModelValue) && (newModelValue as any[]).length > 0 && (newColumns as any[]).length > 0) {
-        formatColumns.value = buildCascadeColumns(newColumns as PickerOption[], newModelValue as any[])
-      }
+  () => JSON.stringify([props.columns, props.cascade, props.valueKey, props.labelKey, props.childrenKey]),
+  () => {
+    cancelGestures()
+    safeResetColumns(props.columns)
+    if (isCascadeTree() && isDef(props.modelValue)) {
+      const values = isArray(props.modelValue) ? props.modelValue : [props.modelValue]
+      formatColumns.value = buildCascadeColumns(props.columns as PickerOption[], values)
     }
-    if (isDef(newModelValue)) {
-      selectWithValue(newModelValue)
-    }
+    selectWithValue(props.modelValue)
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 )
+watch(() => props.modelValue, (value) => {
+  // A v-model acknowledgement is not a new interaction; an external replacement cancels settling.
+  if (isEqual(value, selectedValues.value)) return
+  cancelGestures()
+  if (isCascadeTree() && isDef(value)) {
+    formatColumns.value = buildCascadeColumns(props.columns as PickerOption[], isArray(value) ? value : [value])
+  }
+  selectWithValue(value)
+}, { deep: true })
+watch(() => props.itemHeight, cancelGestures, { flush: 'sync' })
 
 /** 单列几何 */
 const padHeight = computed(() => ((props.visibleItemCount - 1) / 2) * props.itemHeight)
@@ -126,30 +147,25 @@ const containerHeight = computed(() => props.itemHeight * props.visibleItemCount
  * （重渲染会重新下发内联样式，把 worklet 直改的 transform 覆盖回去），故用
  * 普通数组而非 ref。
  */
-const bgDragStart: Array<{ y: number; offset: number } | undefined> = []
 /**
  * 每列是否正在拖动（非响应式）。
  *
  * 守卫 offsets watch（外部选中索引变化不得在拖动期间抢位移）与后台
  * touchmove / touchend 处理器；普通数组读取即最新值，无需响应式。
  */
-const dragging: boolean[] = []
-
 /**
  * 每列当前位移（px）——Vue 状态，承担落定后的样式下发与外部改值同步。
  *
  * 跟手期间 worklet 直改节点样式、不写此状态（避免拖动期间重渲染把直改值
  * 覆盖回去）；touchend 落定 / 外部 modelValue 变化时由本状态驱动重渲染。
  */
-const offsets = ref<number[]>([])
-
 watch(
   [selectedIndex, () => props.itemHeight],
   ([indexes]) => {
     indexes.forEach((idx, col) => {
-      if (offsets.value[col] === undefined || Math.abs(offsets.value[col] - idx * props.itemHeight) > 0.5) {
+      if (offsets.value[col] === undefined || Math.abs(offsets.value[col] - Math.max(0, idx) * props.itemHeight) > 0.5) {
         if (!dragging[col]) {
-          offsets.value[col] = idx * props.itemHeight
+          offsets.value[col] = Math.max(0, idx) * props.itemHeight
         }
       }
     })
@@ -256,40 +272,12 @@ function rebuildCascadeColumns(columnIndex: number) {
  * pickstart 事件），跟手几何由列元素上的主线程 touchstart worklet 记录。
  */
 function onTouchStart(event: any, colIndex: number) {
+  if (!formatColumns.value[colIndex]?.length || props.itemHeight <= 0) return
+  changeRequest++
+  if (settleTimers[colIndex] !== undefined) clearTimeout(settleTimers[colIndex])
   dragging[colIndex] = true
   bgDragStart[colIndex] = { y: pointerY(event), offset: offsets.value[colIndex] || 0 }
   emit('pickstart')
-}
-
-/**
- * 列触摸移动（后台：仅 immediateChange 开启时经冒泡收到）。
- *
- * 用与 worklet 同一套公式由触点坐标算当前位移，索引变化即更新 selectedIndex
- * 并派发 change（既有 immediateChange 语义）；同时把 offsets 同步为跟手位移，
- * 使 v-model 回写引发的重渲染重新下发的 transform 与 worklet 直改值一致。
- */
-function onColumnTouchMove(event: any, colIndex: number) {
-  if (!dragging[colIndex]) return
-  const start = bgDragStart[colIndex]
-  if (!start) return
-  let offset = start.offset + (start.y - pointerY(event))
-  const max = maxOffset(colIndex)
-  // 边缘阻尼（与 worklet 一致）
-  if (offset < 0) offset = offset * 0.3
-  if (offset > max) offset = max + (offset - max) * 0.3
-  offsets.value[colIndex] = offset
-
-  const index = offsetToIndex(colIndex, Math.min(Math.max(offset, 0), max))
-  if (selectedIndex.value[colIndex] !== index) {
-    const origin = [...selectedIndex.value]
-    const next = [...selectedIndex.value]
-    next[colIndex] = index
-    selectedIndex.value = correctSelected(next)
-    // 级联模式：父列变化后重建后续子列（曾只重置选中索引，子列永远
-    // 显示旧 children——wd-cascader 因此完全不可用）
-    rebuildCascadeColumns(colIndex)
-    emitChange(getChangeColumnIndex(selectedIndex.value, origin))
-  }
 }
 
 /**
@@ -318,24 +306,30 @@ function onTouchEnd(event: any, colIndex: number) {
   next[colIndex] = index
   selectedIndex.value = correctSelected(next)
   // 禁用项迁移后位移跟随
-  offsets.value[colIndex] = selectedIndex.value[colIndex] * props.itemHeight
+  offsets.value[colIndex] = Math.max(0, selectedIndex.value[colIndex]) * props.itemHeight
   // 级联模式：父列变化后重建后续子列
   rebuildCascadeColumns(colIndex)
-  emit('pickend')
-  emitChange(getChangeColumnIndex(selectedIndex.value, origin))
+  const columnIndex = getChangeColumnIndex(selectedIndex.value, origin)
+  const request = changeRequest
+  if (props.immediateChange) emitChange(columnIndex)
+  settleTimers[colIndex] = setTimeout(() => {
+    settleTimers[colIndex] = undefined
+    if (!isAlive() || request !== changeRequest || dragging[colIndex]) return
+    if (!props.immediateChange) emitChange(columnIndex)
+    nextTick(() => { if (isAlive() && request === changeRequest) emit('pickend') })
+  }, 200)
 }
 
 function emitChange(columnIndex: number) {
   if (isEqual(selectedValues.value, props.modelValue)) return
-  emit('update:modelValue', selectedValues.value)
+  const request = changeRequest
+  const payload = {
+    selectedValues: [...selectedValues.value], selectedOptions: [...selectedOptions.value],
+    selectedLabels: [...selectedLabels.value], selectedIndexes: [...selectedIndex.value], columnIndex
+  }
+  emit('update:modelValue', payload.selectedValues)
   nextTick(() => {
-    emit('change', {
-      selectedValues: selectedValues.value,
-      selectedOptions: selectedOptions.value,
-      selectedLabels: selectedLabels.value,
-      selectedIndexes: selectedIndex.value,
-      columnIndex
-    })
+    if (isAlive() && request === changeRequest) emit('change', payload)
   })
 }
 
@@ -373,6 +367,7 @@ interface ColumnDragState {
   startY: number
   startOffset: number
   maxOffset: number
+  version: string | null
 }
 
 /**
@@ -407,7 +402,8 @@ const onColumnDragStart = (event: any) => {
   states[colIndex] = {
     startY: touch.clientY,
     startOffset: Number(column.getAttribute('current-offset')) || 0,
-    maxOffset: Number(column.getAttribute('max-offset')) || 0
+    maxOffset: Number(column.getAttribute('max-offset')) || 0,
+    version: column.getAttribute('gesture-version')
   }
 }
 
@@ -427,7 +423,7 @@ const onColumnDragMove = (event: any) => {
   if (!touch) return
   const colIndex = Number(content.getAttribute('col-index'))
   const drag = states[colIndex]
-  if (!drag) return
+  if (!drag || drag.version !== content.getAttribute('gesture-version')) return
 
   let offset = drag.startOffset + (drag.startY - touch.clientY)
   // 边缘阻尼（与后台落定公式一致）
@@ -455,10 +451,10 @@ const onColumnDragMove = (event: any) => {
         :key="colIndex"
         class="wd-picker-view__column"
         :col-index="String(colIndex)"
+        :gesture-version="String(dataVersion)"
         :current-offset="String(offsets[colIndex] || 0)"
         :max-offset="String(maxOffset(colIndex))"
         :main-thread-bindtouchstart="onColumnDragStart"
-        @touchmove="immediateChange ? onColumnTouchMove($event, colIndex) : undefined"
       >
         <!-- 列内容（子）：后台 touchstart / touchend（提交类）+ 主线程
              touchmove（跟手直改）；col-index 属性供 worklet 取跟手状态槽位 -->
@@ -466,6 +462,7 @@ const onColumnDragMove = (event: any) => {
           class="wd-picker-view__column-content"
           :style="columnStyles[colIndex]"
           :col-index="String(colIndex)"
+          :gesture-version="String(dataVersion)"
           @touchstart="onTouchStart($event, colIndex)"
           :main-thread-bindtouchmove="onColumnDragMove"
           @touchend="onTouchEnd($event, colIndex)"

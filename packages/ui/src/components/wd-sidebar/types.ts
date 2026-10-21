@@ -3,7 +3,7 @@ import { baseProps, makeNumericProp } from '../../common/props'
 
 export type SidebarProvide = {
   props: Partial<SidebarProps>
-  setChange: (value: number | string, label: string) => void
+  setChange: (value: number | string, label: string, isCurrent?: () => boolean) => void
 }
 
 export const SIDEBAR_KEY: InjectionKey<SidebarProvide> = Symbol('wd-sidebar')

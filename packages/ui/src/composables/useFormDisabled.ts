@@ -37,9 +37,10 @@ export function useFormDisabled(props: { disabled?: boolean | null }) {
   const formItem = inject<FormItemDisabledProvide | null>(FORM_ITEM_DISABLED_KEY, null)
 
   return computed(() => {
-    // 显式传 false 也要短路：否则禁用的表单里无法单独启用某个字段
-    if (isDef(props.disabled)) {
-      return props.disabled
+    // 控件默认 disabled=false 不应阻断 Form 的禁用继承。
+    // 与官方一致：控件 true 优先；FormItem 的显式 false 可单独启用字段。
+    if (props.disabled) {
+      return true
     }
     if (formItem && isDef(formItem.disabled.value)) {
       return formItem.disabled.value

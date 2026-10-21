@@ -55,9 +55,19 @@ $card-footer-border-color: var(--wot-card-footer-border-color, $border-main) !de
   overflow: hidden;
   transition: $card-transition;
   margin: 0 $card-margin-horizontal;
-  /* Lynx 适配：参考源为 `&:not(:last-child) { margin-bottom: ... }`，
-     结构性伪类不支持，改为根节点恒定底部间距（见文件头说明） */
   margin-bottom: $card-margin-bottom;
+  @include when(last) { margin-bottom: 0; }
+
+  @include e(border) {
+    position: absolute;
+    left: $padding-loose;
+    right: $padding-loose;
+    top: 0;
+    height: 0;
+    pointer-events: none;
+    @include m(content) { border-top: 1ppx solid $card-content-border-color; }
+    @include m(footer) { border-top: 1ppx solid $card-footer-border-color; }
+  }
 
   @include e(title) {
     width: 100%;
@@ -98,11 +108,7 @@ $card-footer-border-color: var(--wot-card-footer-border-color, $border-main) !de
     align-items: center;
     justify-content: flex-end;
     padding: $card-footer-padding;
-    /* Lynx 适配：参考源 halfPixelBorder('top', $padding-loose, ...) 的
-       ::after 伪元素分割线改为主元素真实 border-top（1ppx）；
-       mixin 前置的 position: relative 显式保留，$left 缩进丢失 */
     position: relative;
-    @include halfPixelBorder('top', $padding-loose, $card-footer-border-color);
   }
 
   @include m(rectangle) {
@@ -112,9 +118,7 @@ $card-footer-border-color: var(--wot-card-footer-border-color, $border-main) !de
     box-shadow: none;
 
     @include me(content) {
-      /* 同上：::after 分割线改真实 border-top，position: relative 保留 */
       position: relative;
-      @include halfPixelBorder('top', $padding-loose, $card-content-border-color);
     }
   }
 }

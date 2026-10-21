@@ -100,3 +100,21 @@ export function resolveStyle(
       .map(([key, value]) => [key, String(value)])
   )
 }
+
+/**
+ * 每个元素单独创建的动态 Style Funnel。主题变量/customStyle 的键由消费方决定，
+ * 静态 neutral 无法预列；记住曾经使用的键并在下一帧输出空值清除覆盖。
+ * 它不触发响应式更新、不访问 DOM，不得跨元素共享一个实例。
+ */
+export function createStyleResolver(neutral: Record<string, string> = {}) {
+  const knownKeys = { ...neutral }
+  return (...sources: Array<StyleObject | null | undefined>): Record<string, string> => {
+    for (const source of sources) {
+      if (!source) continue
+      for (const key of Object.keys(source)) {
+        if (!Object.prototype.hasOwnProperty.call(knownKeys, key)) knownKeys[key] = ''
+      }
+    }
+    return resolveStyle(knownKeys, ...sources)
+  }
+}

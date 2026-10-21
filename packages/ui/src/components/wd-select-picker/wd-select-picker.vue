@@ -48,6 +48,7 @@ const filterVal = ref<string>('')
 const filterColumns = ref<Array<Record<string, any>>>([])
 const scrollTop = ref<number>(0) // 滚动位置
 let confirmRequest = 0
+watch([() => props.modelValue, () => props.columns, () => props.type, () => props.loading, () => props.min, () => props.max, () => props.valueKey, () => props.labelKey], () => { confirmRequest++ }, { deep: true, flush: 'sync' })
 
 const { proxy } = getCurrentInstance() as any
 
@@ -167,6 +168,8 @@ function valueFormat(value: string | number | boolean | (string | number | boole
 }
 
 function handleChange({ value }: { value: string | number | boolean | (string | number | boolean)[] }) {
+  if (!pickerShow.value || props.loading) return
+  confirmRequest++
   selectList.value = value
   emit('change', { value })
   if (props.type === 'radio' && !props.showConfirm) {

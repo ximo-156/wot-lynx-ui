@@ -60,6 +60,10 @@ $backtop-z-index: var(--wot-backtop-z-index, 100) !default;
 
   @include edeep(backicon) {
     font-size: $backtop-icon-size;
+    .wd-icon__glyph {
+      font-size: $backtop-icon-size;
+      color: $backtop-color;
+    }
   }
 
   @include when(circle) {

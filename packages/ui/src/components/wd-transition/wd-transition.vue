@@ -195,7 +195,7 @@ const touchmoveLocked = computed(() =>
 
 <template>
   <LynxTransition
-    :appear="useVif"
+    :appear="true"
     :name="transitionName"
     :duration="durationForFramework"
     :enter-from-class="orUndefined(enterFromClass)"

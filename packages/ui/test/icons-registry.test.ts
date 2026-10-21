@@ -18,15 +18,25 @@ import {
   resolveIcon
 } from '../src/icons/registry'
 import type { FontIconSet, IconSet, SvgIconSet } from '../src/icons/types'
+import { wotIconsSet } from '../src/icons/sets/wot-icons'
+import { iconfontSet } from '../src/icons/sets/iconfont'
 
 /** 码点 hex -> 字形字符 */
 const glyphOf = (hex: string) => String.fromCharCode(parseInt(hex, 16))
 
 describe('icons/registry', () => {
-  it('内置单集合：iconfont（180，.ttf 字体）', () => {
+  it('官方 305 字形优先，原 180 扩展字形仍在独立集合', () => {
     const sets = listIconSets()
-    expect(sets.map((s) => s.key)).toEqual(['iconfont'])
-    expect(sets[0].count).toBe(180)
+    expect(sets.map((s) => s.key)).toEqual(['wot', 'iconfont'])
+    expect(sets.map((s) => s.count)).toEqual([305, 180])
+    for (const [name, unicode] of Object.entries(wotIconsSet.unicodes)) {
+      expect(resolveIcon(name)).toMatchObject({ setKey: 'wot', type: 'font', fontFamily: 'wd-wot-icons', unicode })
+      expect(resolveIcon(`wot:${name}`)).toMatchObject({ setKey: 'wot', unicode })
+    }
+    for (const [name, unicode] of Object.entries(iconfontSet.unicodes)) {
+      expect(resolveIcon(`iconfont:${name}`)).toMatchObject({ setKey: 'iconfont', type: 'font', fontFamily: 'wd-iconfont', unicode })
+      if (!(name in wotIconsSet.unicodes)) expect(resolveIcon(name)).toMatchObject({ setKey: 'iconfont', unicode })
+    }
   })
 
   it('内置图标不带前缀即可解析（字体渲染）', () => {

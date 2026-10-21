@@ -34,6 +34,7 @@ const displayColumns = ref<Array<PickerOption | Array<PickerOption>>>([])
 const isPicking = ref<boolean>(false)
 const hasConfirmed = ref<boolean>(false)
 let confirmRequest = 0
+watch([() => props.modelValue, () => props.columns, () => props.cascade, () => props.valueKey, () => props.labelKey, () => props.childrenKey], () => { confirmRequest++ }, { deep: true, flush: 'sync' })
 
 function resetPendingConfirm() {
   confirmRequest++
@@ -142,11 +143,15 @@ function handleConfirm() {
 }
 
 function pickerViewChange({ selectedValues, selectedOptions }: any) {
+  if (!isAlive() || !popupShow.value) return
+  confirmRequest++
   pickerValue.value = selectedValues
   pickerSelectedOptions.value = selectedOptions
 }
 
 function onPickStart() {
+  if (!popupShow.value) return
+  confirmRequest++
   isPicking.value = true
 }
 

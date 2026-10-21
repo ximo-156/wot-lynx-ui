@@ -1,203 +1,158 @@
 /*
  * wd-index-bar — 索引栏
  *
- * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
- * - 子锚点经 useChildren/useParent 注册（indexBarInjectionKey 提供
- *   props / anchorState / id），右侧索引条 v-for children 渲染——
- *   锚点注册发生在挂载阶段，首帧索引条为空、次帧补齐（与参考源一致）；
- * - 索引去重：两个 anchor 传相同 index 时右侧索引条会出现同 key 兄弟节点，
- *   keyed diff 在锚点挂载/卸载场景下会错配移除错误的平台节点，故
- *   sidebarIndexes 去重后渲染（docs/guide/native-crash-audit.md 的 P1 修复）；
- * - 索引条自身几何（top / height）挂载后一次性度量并缓存，touchmove 热路径
- *   只读缓存（CONVENTIONS §16）；度量不可用（高度为 0）时回落默认几何
- *   { top: 0, height: 300 }，触点映射仍 deterministic；
- * - 触点→索引映射：参考源按「单项实测高度」均分（sidebarInfo.indexHeight），
- *   度量缺失时除数为 0；此处按索引条整体高度等比映射
- *   （floor((pageY - top) / height * count)），对度量缺失更稳健，语义等价；
- * - 触摸跳转：参考源经 scroll-top 属性 + nextTick 强制刷新定位；Lynx 下改用
- *   官方 scrollIntoView（SelectorQuery.invoke，见 common/util）按锚点 id 把
- *   目标滚入可见区——无需度量内容与视口的相对位置，也不依赖 scroll-top
- *   属性被引擎应用（PORTING §3.9：平台能力按 Lynx API 等价实现）。锚点 id
- *   由本实例唯一前缀派生（anchor 侧同规则拼接），避免同页多 index-bar
- *   跨实例命中；
- * - 触点纵坐标取 pageY，缺失时回落 clientY（Lynx 触摸事件两者都可能提供）；
- * - 滚动联动：参考源经 hanleScroll 比较各锚点 top 与滚动位置刷新激活索引，
- *   锚点 top 由各 anchor 挂载后 getRect 实测并经 defineExpose 暴露、
- *   经 anchorTop() 防御式读取（$.exposed 未就绪时取 0）；getRect 不可用
- *   （零矩形）时该联动退化为不更新，不影响触摸跳转；
- * - 文本节点包 text 元素（Lynx view 内裸文本不渲染）。
+ * 原生 scroll-view；侧边栏缓存实测矩形，scrollIntoView 跳转。去重条目保留实际
+ * child，动态 index 显式通知父级（不在父渲染路径追踪子 props）。同值锚点有唯一 id，
+ * 只有真正激活的 child 吸顶。布局变化重新度量所有锚点；触摸/滚动热路径无 getRect。
+ * 无度量时不伪造滚动联动，侧边栏保留确定性的 300px 命中兜底。官方无公开 change
+ * 事件；这里转发 layoutchange 仅为 Lynx 原生监听安全，不添加虚假的官方事件。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue-lynx'
-import { indexBarInjectionKey, indexBarProps } from './types'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, toRaw, watch } from 'vue-lynx'
+import { indexBarInjectionKey, indexBarProps, type AnchorIndex } from './types'
 import { useChildren } from '../../composables/useChildren'
-import { getRect, isDef, pause, scrollIntoViewById, uuid } from '../../common/util'
+import { getRect, scrollIntoViewById, uuid } from '../../common/util'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(indexBarProps)
+const emit = defineEmits(['layoutchange'])
 const isAlive = useAlive()
-
-const indexBarId = ref<string>(`wd-index-bar-${uuid()}`)
-
-const scrollState = reactive({
-  scrollTop: 0, // 即将滚动到的位置
-  prevScrollTop: 0, // 上次记录的位置
-  // 滚动距离
-  touching: false
-})
-
-type AnchorIndex = number | string
-
-const state = reactive({
-  activeIndex: null as AnchorIndex | null
-})
-
+const indexBarId = `wd-index-bar-${uuid()}`
+const scrollState = reactive({ prevScrollTop: 0, touching: false })
+const state = reactive({ activeIndex: null as AnchorIndex | null })
+const activeUid = ref<number | null>(null)
 const { linkChildren, children } = useChildren(indexBarInjectionKey)
-
-linkChildren({ props, anchorState: state, id: indexBarId.value })
-
-watch(
-  () => children,
-  (newValue) => {
-    if (!newValue.length) {
-      state.activeIndex = null // 或者设置为一个默认值，如第一个子项的索引
-      return
-    }
-
-    if (!isDef(state.activeIndex) || !newValue.find((item) => item.index === state.activeIndex)) {
-      state.activeIndex = newValue[0].index
-    }
-  },
-  { deep: true, immediate: true }
-)
-
-// 组件距离页面顶部的高度（滚动联动用，挂载后一次性度量）
-let offsetTop = 0
-
-/**
- * 索引条几何缓存（top / height）：挂载后一次性度量，touchmove 只读缓存。
- */
+const childRevision = ref(0)
+const offsetTop = ref(0)
+let measureVersion = 0
+let endTimer: ReturnType<typeof setTimeout> | undefined
 const sidebarRect = ref<{ top: number; height: number } | null>(null)
-
-/** 索引条默认几何（度量不可用时的兜底，保持历史行为） */
 const DEFAULT_SIDEBAR_RECT = { top: 0, height: 300 }
 
-/** 一次性度量索引条几何并缓存（挂载 / 索引集合变化时；§16 合规） */
-function measureSidebar() {
-  getRect(`#${indexBarId.value}-sidebar`).then((rect) => {
-    // 度量回调晚于组件卸载落地时丢弃（9902 防护）
-    if (!isAlive()) return
-    const height = Number(rect && rect.height) || 0
-    sidebarRect.value = height > 0 ? { top: Number(rect.top) || 0, height } : null
-  })
+function childIndex(child: any): AnchorIndex | undefined {
+  const rawProps = child?.$?.props
+  return rawProps ? toRaw(rawProps).index : undefined
 }
-
-onMounted(() => {
-  measureSidebar()
-  // 索引数量变化时间隔条高度可能变化（如动态增删锚点），次帧再补一次
-  nextTick(measureSidebar)
-  getRect(`#${indexBarId.value}`).then((rect) => {
-    if (!isAlive()) return
-    offsetTop = Number(rect && rect.top) || 0
+function onAnchorChange() { childRevision.value++ }
+function getAnchorId(uid: number, index: AnchorIndex) {
+  void childRevision.value
+  const first = children.find((child) => String(childIndex(child)) === String(index))
+  const suffix = first?.$?.uid === uid ? '' : `-${uid}`
+  return `${indexBarId}-anchor-${encodeURIComponent(String(index))}${suffix}`
+}
+linkChildren({
+  props, anchorState: state, id: indexBarId, onAnchorChange, getAnchorId,
+  getScrollTop: () => scrollState.prevScrollTop, getOffsetTop: () => offsetTop.value, getActiveUid: () => activeUid.value
+})
+const sidebarEntries = computed(() => {
+  void childRevision.value
+  const seen = new Set<AnchorIndex>()
+  return children.flatMap((child) => {
+    const index = childIndex(child)
+    if (index === undefined || seen.has(index)) return []
+    seen.add(index)
+    return [{ index, child, key: `${typeof index}:${index}` }]
   })
 })
+function activate(child: any) {
+  state.activeIndex = childIndex(child) ?? null
+  activeUid.value = child?.$?.uid ?? null
+}
+watch(sidebarEntries, (entries) => {
+  const active = children.find((child) => child.$.uid === activeUid.value)
+  const entry = active && entries.find((entry) => entry.index === childIndex(active)) || entries.find((entry) => entry.index === state.activeIndex) || entries[0]
+  activate(active && entry?.index === childIndex(active) ? active : entry?.child)
+  requestMeasure()
+}, { immediate: true })
 
-// 子组件 props 经 c.$.props 读取（CONVENTIONS §13：运行时 proxy.props 不可靠，
-// 参照 wd-checkbox-group 的 child.$.props 约定）。
-const sidebarIndexes = computed(() => {
-  const indexes = children.map((c: any) => c.$?.props?.index).filter((i: any) => i !== undefined)
-  return indexes.filter((i: any, idx: number) => indexes.indexOf(i) === idx)
+async function measure() {
+  const version = ++measureVersion
+  const [bar, sidebar] = await Promise.all([getRect(`#${indexBarId}`), getRect(`#${indexBarId}-sidebar`)])
+  if (!isAlive() || version !== measureVersion) return
+  offsetTop.value = Number(bar?.top) || 0
+  const height = Number(sidebar?.height) || 0
+  sidebarRect.value = height > 0 ? { top: Number(sidebar.top) || 0, height } : null
+  await Promise.all(children.map((child) => child?.$?.exposed?.refresh?.()))
+  if (isAlive() && version === measureVersion && !scrollState.touching) updateActiveByScroll(scrollState.prevScrollTop)
+}
+function requestMeasure() {
+  measureVersion++
+  void nextTick(measure)
+}
+function handleLayoutChange(event: any) {
+  emit('layoutchange', event)
+  requestMeasure()
+}
+onMounted(measure)
+onBeforeUnmount(() => {
+  measureVersion++
+  clearTimeout(endTimer)
 })
-
-// 索引数量变化时间隔条高度可能变化（如动态增删锚点），重新度量一次
-watch(
-  () => sidebarIndexes.value.length,
-  () => {
-    measureSidebar()
-  }
-)
-
-/** 取锚点暴露的 top（未暴露 / 未挂载时为 0） */
-function anchorTop(child: any): number {
-  const exposed = child && child.$ && child.$.exposed
-  const top = exposed && exposed.top
-  return Number((top && top.value) || 0)
+function anchorTop(child: any): number | null {
+  const exposed = child?.$?.exposed
+  if (!exposed || (exposed.measured?.value ?? exposed.measured) === false) return null
+  const top = Number(exposed.top?.value ?? exposed.top)
+  return Number.isFinite(top) ? top : null
 }
-
-function hanleScroll(scrollEvent: any) {
-  if (scrollState.touching) {
-    return
+function updateActiveByScroll(scrollTop: number) {
+  const entries = children.map((child) => ({ child, top: anchorTop(child) })).filter((entry) => entry.top !== null)
+  if (!entries.length) return
+  let active = entries[0].child
+  for (const entry of entries) {
+    if (entry.top! - offsetTop.value > scrollTop) break
+    active = entry.child
   }
-  const { detail } = scrollEvent
-  const scrolltop = Math.floor(detail.scrollTop)
-  const anchor = children.find((item, index) => {
-    if (!isDef(children[index + 1])) return true
-    if (anchorTop(item) - offsetTop <= scrolltop && anchorTop(children[index + 1]) - offsetTop > scrolltop) return true
-    return false
-  })
-  if (isDef(anchor) && state.activeIndex !== anchor.index) {
-    state.activeIndex = anchor.index
-  }
-  scrollState.prevScrollTop = scrolltop
+  activate(active)
 }
-
+function handleScroll(event: any) {
+  const raw = event?.detail?.scrollTop
+  const scrollTop = Number(raw)
+  if (raw === undefined || !Number.isFinite(scrollTop)) return
+  scrollState.prevScrollTop = Math.max(0, Math.floor(scrollTop))
+  if (!scrollState.touching) updateActiveByScroll(scrollState.prevScrollTop)
+}
 function getAnchorByPageY(pageY: number) {
-  const count = sidebarIndexes.value.length
-  if (count === 0) return undefined
+  if (!Number.isFinite(pageY) || !sidebarEntries.value.length) return undefined
   const rect = sidebarRect.value || DEFAULT_SIDEBAR_RECT
-  const idx = Math.floor(((pageY - rect.top) / rect.height) * count)
-  return children[Math.min(Math.max(idx, 0), count - 1)]
+  const index = Math.floor((pageY - rect.top) / rect.height * sidebarEntries.value.length)
+  return sidebarEntries.value[Math.max(0, Math.min(index, sidebarEntries.value.length - 1))]
 }
-
+function touchY(event: any, ended = false): number {
+  const touch = ended ? event?.changedTouches?.[0] || event?.touches?.[0] : event?.touches?.[0] || event?.changedTouches?.[0]
+  return Number(touch?.pageY ?? touch?.clientY ?? NaN)
+}
+function setScrollTop(entry: { index: AnchorIndex; child: any }) {
+  const exposed = entry.child?.$?.exposed
+  const id = exposed?.id?.value ?? exposed?.id ?? getAnchorId(entry.child.$.uid, entry.index)
+  scrollIntoViewById(`#${id}`, 'start')
+}
 function handleTouchStart() {
-  scrollState.touching = true
+  clearTimeout(endTimer)
+  scrollState.touching = sidebarEntries.value.length > 0
 }
-
-function handleTouchMove(e: TouchEvent) {
-  const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || ({} as any)
-  const pageY = Number(isDef(touch.pageY) ? touch.pageY : touch.clientY)
-  const target = getAnchorByPageY(pageY)
-  if (!target) return
-  if (state.activeIndex === target.index) {
-    return
-  }
-  state.activeIndex = target.index
+function handleTouchMove(event: any) {
+  const target = getAnchorByPageY(touchY(event))
+  if (!target || activeUid.value === target.child.$.uid) return
+  activate(target.child)
   setScrollTop(target)
 }
-
-async function handleTouchEnd(e: TouchEvent) {
-  const touch = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]) || ({} as any)
-  const pageY = Number(isDef(touch.pageY) ? touch.pageY : touch.clientY)
-  const target = getAnchorByPageY(pageY)
+function handleTouchEnd(event: any) {
+  const target = getAnchorByPageY(touchY(event, true))
   if (target) {
-    state.activeIndex = target.index
+    activate(target.child)
     setScrollTop(target)
   }
-  await pause()
-  scrollState.touching = false
-}
-
-/**
- * 把目标锚点滚入可见区。
- *
- * Lynx 适配：参考源经 setScrollTop 写 scroll-top 属性（并靠 nextTick 强制
- * 刷新），此处改用官方 scrollIntoView 按锚点 id 定位。
- */
-function setScrollTop(target: any) {
-  scrollIntoViewById(`#${indexBarId.value}-anchor-${target.index}`, 'start')
+  clearTimeout(endTimer)
+  endTimer = setTimeout(() => { if (isAlive()) scrollState.touching = false }, 30)
 }
 </script>
 
 <template>
-  <view class="wd-index-bar" :id="indexBarId">
-    <scroll-view :scroll-top="scrollState.scrollTop" :scroll-y="true" class="wd-index-bar__content" @scroll="hanleScroll">
-      <slot></slot>
-    </scroll-view>
-    <view v-if="scrollState.touching" class="wd-index-bar__current-index">
-      <text>{{ state.activeIndex }}</text>
-    </view>
+  <view class="wd-index-bar" :id="indexBarId" @layoutchange="handleLayoutChange">
+    <scroll-view :scroll-y="true" class="wd-index-bar__content" @scroll="handleScroll"><slot /></scroll-view>
+    <view v-if="scrollState.touching" class="wd-index-bar__current-index"><text class="wd-index-bar__current-index-text">{{ state.activeIndex }}</text></view>
     <view
       :id="`${indexBarId}-sidebar`"
       class="wd-index-bar__sidebar"
@@ -206,9 +161,7 @@ function setScrollTop(target: any) {
       @touchend.stop.prevent="handleTouchEnd"
       @touchcancel.stop.prevent="handleTouchEnd"
     >
-      <view class="wd-index-bar__index" :class="{ 'is-active': item === state.activeIndex }" v-for="item in sidebarIndexes" :key="item">
-        <text>{{ item }}</text>
-      </view>
+      <view v-for="entry in sidebarEntries" :key="entry.key" class="wd-index-bar__index" :class="{ 'is-active': entry.index === state.activeIndex }"><text class="wd-index-bar__index-text">{{ entry.index }}</text></view>
     </view>
   </view>
 </template>

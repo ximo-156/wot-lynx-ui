@@ -11,7 +11,7 @@ export type DatetimePickerBeforeConfirm = (value: string | number | Array<string
 export type DatetimePickerDisplayFormatTabLabel = (items: Record<string, any>[]) => string
 
 const defaultMinDate = new Date(new Date().getFullYear() - 10, 0, 1).getTime()
-const defaultMaxDate = new Date(new Date().getFullYear() + 10, 11, 31).getTime()
+const defaultMaxDate = new Date(new Date().getFullYear() + 10, 11, 31, 23, 59, 59).getTime()
 
 export const datetimePickerProps = {
   ...baseProps,

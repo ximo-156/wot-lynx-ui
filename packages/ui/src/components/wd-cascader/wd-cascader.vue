@@ -27,7 +27,7 @@ import WdTab from '../wd-tab/wd-tab.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import { callInterceptor } from '../../common/interceptor'
 import { useAlive } from '../../composables/useAlive'
-import { isArray, isDef, parseStyle } from '../../common/util'
+import { deepClone, isArray, isDef, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 import { cascaderProps, type CascaderExpose, type CascaderOption, type CascaderTab } from './types'
 
@@ -45,7 +45,7 @@ const tabs = ref<CascaderTab[]>([]) // 面板状态数据
 const activeTab = ref<number>(0) // 当前停留的列下标
 const inited = ref<boolean>(false)
 const loadingTabs = ref<number[]>([]) // 正在异步加载数据的列下标集合
-const innerOptions = ref<CascaderOption[]>(props.options as CascaderOption[]) // 内部维护的选项数据（静态 + 异步缓存）
+const innerOptions = ref<CascaderOption[]>(deepClone(props.options as CascaderOption[])) // 内部维护的选项数据（静态 + 异步缓存）
 const isRestoring = ref<boolean>(false) // 是否正在执行自动逐级恢复
 let dataRequest = 0
 let confirmRequest = 0
@@ -273,10 +273,9 @@ const confirmButtonText = computed(() => {
 watch(
   () => props.options,
   (newOptions) => {
-    innerOptions.value = newOptions as CascaderOption[]
-    if (!props.lazyLoad) {
-      buildTabs()
-    }
+    confirmRequest++
+    innerOptions.value = deepClone(newOptions as CascaderOption[])
+    buildTabs()
   },
   { deep: true }
 )
@@ -284,15 +283,11 @@ watch(
 // modelValue 变更：静态模式直接重建；异步模式尝试缓存恢复或逐级加载
 watch(
   () => props.modelValue,
-  () => {
-    if (!props.lazyLoad) {
-      buildTabs()
-    } else {
-      buildTabs()
-    }
-  },
-  { immediate: true }
+  () => { confirmRequest++; buildTabs() },
+  { immediate: true, deep: true }
 )
+
+watch([() => props.valueKey, () => props.labelKey, () => props.childrenKey, () => props.isLeafKey, () => props.lazyLoad], () => { confirmRequest++; buildTabs() }, { flush: 'sync' })
 
 watch(
   () => props.visible,
@@ -323,6 +318,7 @@ function close() {
 function open() {
   if (pickerShow.value) return
   confirmRequest++
+  buildTabs()
   pickerShow.value = true
   // 异步模式：弹窗打开时，有缓存直接重建，否则加载根节点
   if (props.lazyLoad && !tabs.value.length) {
@@ -419,6 +415,7 @@ function chooseItem(tabIndex: number, index: number) {
         nextTabs.push({ options: cachedChildren, selectedOption: null })
         tabs.value = nextTabs
         nextTick(() => {
+          if (!isAlive() || request !== dataRequest || !pickerShow.value) return
           activeTab.value = tabIndex + 1
         })
       }
@@ -430,6 +427,7 @@ function chooseItem(tabIndex: number, index: number) {
       tabs.value = nextTabs
       loadingTabs.value = [...loadingTabs.value, nextTabIndex]
       nextTick(() => {
+        if (!isAlive() || request !== dataRequest || !pickerShow.value) return
         activeTab.value = nextTabIndex
       })
       lazyLoad(item, nextTabIndex, (children) => {
@@ -460,6 +458,7 @@ function chooseItem(tabIndex: number, index: number) {
     })
     tabs.value = nextTabs
     nextTick(() => {
+      if (!isAlive() || request !== dataRequest || !pickerShow.value) return
       activeTab.value = tabIndex + 1
     })
   } else {

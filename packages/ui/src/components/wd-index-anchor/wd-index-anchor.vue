@@ -1,73 +1,69 @@
 /*
  * wd-index-anchor — 索引锚点
  *
- * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
- * - 经 useParent 向 wd-index-bar 注册自身（indexBarInjectionKey），并读取
- *   父级 props.sticky 与 anchorState.activeIndex 计算吸顶态——与参考源一致：
- *   仅「索引栏开启 sticky 且自身是当前激活索引」时吸顶；
- * - 挂载后 getRect 实测自身 top 并经 defineExpose({ top }) 暴露，供 index-bar
- *   的滚动联动（hanleScroll）比较锚点位置；度量回调经 useAlive 守卫
- *   （真机 9902 防护）；
- * - DOM id 取父 index-bar 下发的唯一前缀派生（${prefix}-anchor-${index}），
- *   与 index-bar 侧 scrollIntoView 的拼接口径一致；父级缺失（独立使用）时
- *   退化为实例自身 uuid。历史上按裸 index 派生，两个 index-bar 的 anchor id
- *   完全重复，会撞引擎 id→签名注册表（真机 9902 removeNode 家族）；
- * - 参考源的 MP-DINGTALK 专属包裹结构（wd-index-anchor-ding）为条件编译，
- *   Lynx 无对应平台，删除；
- * - customStyle 经 parseStyle 归一为对象后绑定（CONVENTIONS §19）。
+ * index 变化更新唯一 id 与父侧边栏；expose top 是未吸顶的内容位置，加当前 scrollTop
+ * 保持滚动坐标稳定。已吸顶时布局回调保留原始 top，避免将屏幕顶边误当内容锚点。
+ * 真实度量才设置 measured；晚到/卸载回调忽略。重复 index 只有激活的实例吸顶。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, onMounted, ref } from 'vue-lynx'
+import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue-lynx'
 import { indexAnchorProps } from './types'
 import { indexBarInjectionKey } from '../wd-index-bar/types'
-import { getRect, isDef, parseStyle, uuid } from '../../common/util'
+import { getRect, parseStyle, uuid } from '../../common/util'
 import { useParent } from '../../composables/useParent'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(indexAnchorProps)
+const emit = defineEmits(['layoutchange'])
 const isAlive = useAlive()
-
+const instance = getCurrentInstance()!
 const { parent: indexBar } = useParent(indexBarInjectionKey)
-
-// DOM id 前缀：优先取父 index-bar 下发的唯一前缀（同页多个 index-bar 时
-// anchor id 不重复，与 index-bar 侧 scrollIntoView 的拼接口径一致）；
-// 父级缺失（独立使用）时退化为实例自身 uuid。
-const anchorIdPrefix = indexBar.value?.id || `wd-index-anchor-${uuid()}`
-
-const indexAnchorId = ref<string>(`${anchorIdPrefix}-anchor-${props.index}`)
-
-const { proxy } = getCurrentInstance()!
-
-const top = ref<number>(0)
-
+const prefix = indexBar.value?.id || `wd-index-anchor-${uuid()}`
+const indexAnchorId = computed(() => indexBar.value?.getAnchorId?.(instance.uid, props.index) || `${prefix}-anchor-${encodeURIComponent(String(props.index))}`)
+const top = ref(0)
+const measured = ref(false)
+let measureVersion = 0
 const isSticky = computed(() => {
-  return Boolean(indexBar.value && indexBar.value.props.sticky && indexBar.value.anchorState.activeIndex === props.index)
+  const parent = indexBar.value
+  return Boolean(parent?.props.sticky && parent.anchorState.activeIndex === props.index && (!parent.getActiveUid || parent.getActiveUid() === instance.uid))
 })
-
-function getInfo() {
-  getRect(`#${indexAnchorId.value}`, false, proxy).then((res) => {
-    if (!isAlive()) return
-    if (isDef(indexBar.value)) {
-      top.value = Math.floor(res.top!)
-    }
-  })
+async function getInfo() {
+  const version = ++measureVersion
+  const id = indexAnchorId.value
+  const scrollTop = indexBar.value?.getScrollTop?.() || 0
+  const rect = await getRect(`#${id}`)
+  if (!isAlive() || version !== measureVersion || id !== indexAnchorId.value) return
+  if (!(Number(rect?.height) > 0 || Number(rect?.width) > 0) || !Number.isFinite(Number(rect?.top))) return
+  // position:sticky 的 rect 是绘制位置。已有内容坐标且顶边钳制时不能覆盖缓存。
+  const parentTop = indexBar.value?.getOffsetTop?.() || 0
+  if (!(measured.value && isSticky.value && scrollTop > 0 && Number(rect.top) <= parentTop + 0.5)) {
+    top.value = Math.floor(Number(rect.top)) + scrollTop
+  }
+  measured.value = true
 }
-
+function requestMeasure() {
+  measureVersion++
+  void nextTick(getInfo)
+}
+function handleLayoutChange(event: any) {
+  emit('layoutchange', event)
+  requestMeasure()
+}
+watch(() => props.index, () => {
+  indexBar.value?.onAnchorChange?.()
+  requestMeasure()
+})
+watch(indexAnchorId, requestMeasure)
 onMounted(() => {
-  getInfo()
+  indexBar.value?.onAnchorChange?.()
+  void getInfo()
 })
-
-defineExpose({
-  top
-})
+onBeforeUnmount(() => { measureVersion++ })
+defineExpose({ top, id: indexAnchorId, measured, refresh: getInfo })
 </script>
 
 <template>
-  <view :class="`wd-index-anchor ${isSticky ? 'is-sticky' : ''} ${customClass}`" :style="parseStyle(customStyle)" :id="indexAnchorId">
-    <slot>
-      <text>{{ index }}</text>
-    </slot>
-  </view>
+  <view :class="`wd-index-anchor ${isSticky ? 'is-sticky' : ''} ${customClass}`" :style="parseStyle(customStyle)" :id="indexAnchorId" @layoutchange="handleLayoutChange"><slot><text class="wd-index-anchor__text">{{ index }}</text></slot></view>
 </template>

@@ -18,7 +18,7 @@
  *   走原生滚动（duration 生效），否则仅抛 click / tap 事件由消费方自行滚动；
  * - customStyle / iconStyle 为字符串，经 parseStyle 归一为对象语法
  *   （CONVENTIONS §19：字符串 :style 会被 vue-lynx 静默丢弃）；
- * - 图标名 to-top 在本地 iconfont 集中无对应字形，取最近似字形 top；
+ * - 使用官方 to-top 字形；文字与 glyph 的尺寸/颜色在本组件样式直接声明；
  * - 参考源 view 内的裸文本（{{ text }}）包进 text 元素（CONVENTIONS §4）；
  * - 布局居中（NATIVE-REWRITE §3）：承载 position: fixed 的 wd-transition 根
  *   节点（.wd-backtop）显式 display: flex + flex-direction: column +
@@ -60,7 +60,9 @@ const iconStyle = computed(() => parseStyle(props.iconStyle))
 /**
  * 处理点击回到顶部
  */
-function handleBacktop() {
+function handleBacktop(event: any) {
+  emit('tap', event)
+  if (!show.value) return
   // Lynx 页面滚动由宿主 scroll-view 承载：宿主注入了 pageScrollTo 时走原生
   // 滚动（与 wot-ui 的 uni.pageScrollTo 语义一致，duration 生效），否则仅抛
   // 事件由消费方自行滚动（scroll-view 的 scroll-top 绑定）。
@@ -68,7 +70,6 @@ function handleBacktop() {
     uni.pageScrollTo({ scrollTop: 0, duration: props.duration })
   }
   emit('click')
-  emit('tap')
 }
 </script>
 
@@ -76,7 +77,7 @@ function handleBacktop() {
   <WdTransition :show="show" name="fade" :custom-class="rootClass" :custom-style="rootStyle" @tap="handleBacktop">
     <slot>
       <view class="wd-backtop__content">
-        <WdIcon custom-class="wd-backtop__backicon" name="top" :custom-style="iconStyle" />
+        <WdIcon custom-class="wd-backtop__backicon" name="to-top" :custom-style="iconStyle" :size="iconStyle.fontSize || iconStyle['font-size']" :color="iconStyle.color" />
         <text v-if="text" class="wd-backtop__text">{{ text }}</text>
       </view>
     </slot>

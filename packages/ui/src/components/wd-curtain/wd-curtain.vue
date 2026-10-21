@@ -25,8 +25,10 @@ import { curtainProps } from './types'
 import { addUnit } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { uni } from '../../common/uni'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(curtainProps)
+const isAlive = useAlive()
 const emit = defineEmits([
   'beforeenter',
   'enter',
@@ -108,6 +110,7 @@ function afterleave() {
 }
 
 function close() {
+  if (!isAlive()) return
   modelValue.value = false
 }
 
@@ -116,17 +119,21 @@ function clickModal() {
 }
 
 function imgLoad(event: any) {
-  const { height, width } = event.detail
-  imgScale.value = width / height
+  if (!isAlive()) return
+  const width = Number(event?.detail?.width)
+  const height = Number(event?.detail?.height)
+  if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) imgScale.value = width / height
   imgSucc.value = true
   emit('load')
 }
 function imgErr() {
+  if (!isAlive()) return
   imgSucc.value = false
   emit('error')
 }
 
 function clickImage() {
+  if (!isAlive()) return
   if (props.to) {
     uni.navigateTo({
       url: props.to

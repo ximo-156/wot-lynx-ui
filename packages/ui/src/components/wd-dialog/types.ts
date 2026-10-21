@@ -13,24 +13,19 @@ export type DialogSelector = string | { selector: string; rootPortal?: boolean }
 // 内置图标类型
 export type DialogBuiltinIconType = 'success' | 'info' | 'warning' | 'danger'
 
-// 内置图标配置映射
-// Lynx 适配：wot-ui 用 check-circle-fill / info-circle-fill /
-// exclamation-circle-fill / close-circle-fill，本地内置图标集（iconfont）
-// 无同名字形，映射为 success / prompt / warning / error（CONVENTIONS §8）
+// 内置图标配置映射（官方 wot 字体）
 export const DIALOG_BUILTIN_ICON_MAP: Record<DialogBuiltinIconType, string> = {
-  success: 'success',
-  info: 'prompt',
-  warning: 'warning',
-  danger: 'error'
+  success: 'check-circle-fill',
+  info: 'info-circle-fill',
+  warning: 'exclamation-circle-fill',
+  danger: 'close-circle-fill'
 }
 
 /**
  * OpenType 事件回调接口
  * 用于支持按钮开放能力的事件处理
  *
- * Lynx 适配：open-type 系列能力（getUserInfo / contact / getPhoneNumber 等）
- * 为 uni-app / 小程序专有，Lynx 无对应原生事件可转发，故本组件不在 wd-button
- * 上声明这些事件监听；类型保留以兼容配置对象的传入（PORTING §2.3）。
+ * Lynx 通过 WdButton 事件转发宿主 configureUniAdapter({ openType }) 的结果。
  */
 export interface DialogButtonOpenTypeEvents {
   /** 获取用户信息回调 (open-type="getUserInfo") */

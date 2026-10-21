@@ -52,6 +52,7 @@ const showTabLabel = computed(() => {
 const isPicking = ref<boolean>(false) // 判断pickview是否还在滑动中
 const hasConfirmed = ref<boolean>(false) // 判断用户是否点击了确认按钮
 let confirmRequest = 0
+watch([() => props.modelValue, () => props.type, () => props.useSecond, () => props.minDate, () => props.maxDate, () => props.minHour, () => props.maxHour, () => props.minMinute, () => props.maxMinute, () => props.minSecond, () => props.maxSecond, () => props.filter, () => props.formatter, () => props.valueKey, () => props.labelKey], () => { confirmRequest++ }, { deep: true, flush: 'sync' })
 
 function resetPendingConfirm() {
   confirmRequest++
@@ -250,6 +251,8 @@ function onTabChange(tab: 'start' | 'end') {
 
 /** 开始时间 datetimePickerView change 事件 */
 function onChangeStart({ value, columns }: { value: number | string; columns: DatetimePickerViewColumn[] }) {
+  if (!isAlive()) return
+  confirmRequest++
   if (region.value) {
     const currentArray = getPickerValue(value, props.type, props.useSecond)
     const boundaryArray = getPickerValue(endInnerValue.value, props.type, props.useSecond)
@@ -261,6 +264,7 @@ function onChangeStart({ value, columns }: { value: number | string; columns: Da
     innerValue.value = deepClone(needsAdjust ? endInnerValue.value : value)
 
     nextTick(() => {
+      if (!isAlive()) return
       emit('change', {
         value: [innerValue.value, endInnerValue.value]
       })
@@ -276,6 +280,8 @@ function onChangeStart({ value, columns }: { value: number | string; columns: Da
 
 /** 结束时间 datetimePickerView change 事件 */
 function onChangeEnd({ value, columns }: { value: number | string; columns: DatetimePickerViewColumn[] }) {
+  if (!isAlive()) return
+  confirmRequest++
   const currentArray = getPickerValue(value, props.type, props.useSecond)
   const boundaryArray = getPickerValue(innerValue.value, props.type, props.useSecond)
 
@@ -286,6 +292,7 @@ function onChangeEnd({ value, columns }: { value: number | string; columns: Date
   endInnerValue.value = deepClone(needsAdjust ? innerValue.value : value)
 
   nextTick(() => {
+    if (!isAlive()) return
     emit('change', {
       value: [innerValue.value, endInnerValue.value]
     })
@@ -321,6 +328,8 @@ function onConfirm() {
 }
 
 function onPickStart() {
+  if (!popupShow.value) return
+  confirmRequest++
   isPicking.value = true
 }
 

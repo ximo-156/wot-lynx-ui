@@ -1,43 +1,14 @@
 /**
- * uni-app 兼容层 — Lynx 环境不存在 uni 全局对象，本模块提供安全的降级实现。
- *
- * 设计原则（与 CONVENTIONS.md 一致）：
- * 1. **不崩溃**：任何 uni API 在 Lynx 中调用都不会抛 ReferenceError；
- * 2. **可注入**：宿主应用（Demo / 业务方）可通过 `configureUniAdapter()` 注入
- *    真实能力（路由跳转、媒体选择、Toast 等），组件库默认降级并 warning；
- * 3. **Lynx 优先**：Lynx 自身提供的能力（SystemInfo、createSelectorQuery）
- *    直接映射到 Lynx API。
- *
- * 使用方式（组件内）：
- *   import { uni } from '../../common/uni'
- *   uni.navigateTo({ url })   // 与 uni-app 写法一致
- *
- * 宿主注入（业务方 main.ts）：
- *   import { configureUniAdapter } from 'wot-lynx-ui'
- *   configureUniAdapter({ navigateTo: (opts) => router.push(opts.url) })
+ * uni-app 兼容层。Lynx 本地能力优先；宿主可通过 configureUniAdapter 注入
+ * 路由、媒体、系统安全区与观察器。未注入的能力只返回可诊断的降级结果，
+ * 不能把空对象/空路径当作真实成功。
  */
-
 import { getSystemInfo } from './util'
 import { createCanvasContext, canvasToTempFilePath } from './canvasHelper'
+import { getUniAdapter } from './uniAdapter'
+export { configureUniAdapter, hasUniAdapter } from './uniAdapter'
+export type { UniAdapter } from './uniAdapter'
 
-/** 宿主可注入的适配器（键与 uni API 同名） */
-export type UniAdapter = Record<string, any>
-
-const hostAdapter: UniAdapter = {}
-
-/** 宿主注入真实实现，如路由、媒体选择、Toast */
-export function configureUniAdapter(adapter: UniAdapter): void {
-  Object.assign(hostAdapter, adapter)
-}
-
-/** 宿主是否注入了某个 API 的真实实现（用于能力检测后再决定是否走降级路径） */
-export function hasUniAdapter(api: string): boolean {
-  return typeof hostAdapter[api] === 'function'
-}
-
-// ---------------------------------------------------------------------------
-// warning 去重（同一 API 仅提示一次，避免刷屏）
-// ---------------------------------------------------------------------------
 const warned = new Set<string>()
 function warnOnce(api: string, hint?: string): void {
   if (warned.has(api)) return
@@ -45,42 +16,32 @@ function warnOnce(api: string, hint?: string): void {
   console.warn(`[wot-lynx-ui] uni.${api} 在 Lynx 中不可用${hint ? `：${hint}` : ''}。可通过 configureUniAdapter({ ${api} }) 注入宿主实现。`)
 }
 
-/** 通用降级：调用宿主实现或 fail 回调 + warning */
 function degrade(api: string, options?: any, hint?: string): any {
-  if (typeof hostAdapter[api] === 'function') {
-    return hostAdapter[api](options)
-  }
+  const adapter = getUniAdapter(api)
+  if (adapter) return adapter(options)
   warnOnce(api, hint)
-  if (options && typeof options.fail === 'function') {
-    options.fail({ errMsg: `${api}:fail not supported in lynx` })
-  }
-  if (options && typeof options.complete === 'function') {
-    options.complete({ errMsg: `${api}:fail not supported in lynx` })
-  }
+  const failure = { errMsg: `${api}:fail not supported in lynx` }
+  options?.fail?.(failure)
+  options?.complete?.(failure)
 }
 
-// ---------------------------------------------------------------------------
-// 系统信息 — 映射到 Lynx SystemInfo
-// ---------------------------------------------------------------------------
-function systemInfo(): any {
-  return getSystemInfo()
+/** 多参数工厂必须原样转发 scope/id/options，不能像普通 options API 只传第一个参数。 */
+function factory(api: string, args: any[], fallback: () => any): any {
+  const adapter = getUniAdapter(api)
+  if (adapter) return adapter(...args)
+  warnOnce(api, '需要宿主能力；当前返回降级对象')
+  return fallback()
 }
 
-// ---------------------------------------------------------------------------
-// SelectorQuery — 映射到 lynx.createSelectorQuery，缺失时返回零矩形兜底
-// ---------------------------------------------------------------------------
 const zeroRect = { id: '', left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }
-
 function makeFallbackNodesRef(): any {
-  const ref = {
+  return {
     invoke(options: any) {
-      if (options && typeof options.success === 'function') {
-        setTimeout(() => options.success(zeroRect), 0)
-      }
+      if (typeof options?.success === 'function') setTimeout(() => options.success({ ...zeroRect }), 0)
       return { exec: () => {} }
     },
     boundingClientRect(cb: any) {
-      if (typeof cb === 'function') setTimeout(() => cb(zeroRect), 0)
+      if (typeof cb === 'function') setTimeout(() => cb({ ...zeroRect }), 0)
       return { exec: () => {} }
     },
     fields(_: any, cb: any) {
@@ -88,114 +49,81 @@ function makeFallbackNodesRef(): any {
       return { exec: () => {} }
     }
   }
-  return ref
 }
-
 function makeFallbackQuery(): any {
-  const ref = makeFallbackNodesRef()
-  return {
-    select: () => ref,
-    selectAll: () => ref,
-    in: () => makeFallbackQuery(),
+  const query = {
+    select: () => makeFallbackNodesRef(),
+    selectAll: () => makeFallbackNodesRef(),
+    in: (_scope: any) => query,
     exec: () => {}
   }
+  return query
 }
-
-function createSelectorQuery(): any {
+function createSelectorQuery(...args: any[]): any {
+  const adapter = getUniAdapter('createSelectorQuery')
+  if (adapter) return adapter(...args)
   const lynx = (globalThis as any).lynx
-  if (lynx && typeof lynx.createSelectorQuery === 'function') {
-    return lynx.createSelectorQuery()
+  return typeof lynx?.createSelectorQuery === 'function' ? lynx.createSelectorQuery(...args) : makeFallbackQuery()
+}
+function noopObserver(): any {
+  const observer = {
+    observe: () => {},
+    unobserve: () => {},
+    disconnect: () => {},
+    relativeTo: (..._args: any[]) => observer,
+    relativeToViewport: (..._args: any[]) => observer
   }
-  return makeFallbackQuery()
+  return observer
+}
+const noopVideoContext = () => new Proxy({}, { get: () => () => undefined })
+const zeroMenuButtonRect = () => ({ width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0 })
+function systemBucket(api: string): any {
+  const adapter = getUniAdapter(api)
+  return adapter ? adapter() : getSystemInfo()
 }
 
-// ---------------------------------------------------------------------------
-// 其他降级对象
-// ---------------------------------------------------------------------------
-const noopObserver = () => ({
-  observe: () => {},
-  unobserve: () => {},
-  disconnect: () => {},
-  relativeTo: () => {},
-  relativeToViewport: () => {}
-})
-
-const noopVideoContext = () =>
-  new Proxy(
-    {},
-    {
-      get: () => () => undefined
-    }
-  )
-
-const zeroMenuButtonRect = () => ({
-  width: 0,
-  height: 0,
-  top: 0,
-  right: 0,
-  bottom: 0,
-  left: 0
-})
-
-// ---------------------------------------------------------------------------
-// uni 兼容对象
-// ---------------------------------------------------------------------------
 export const uni: Record<string, any> = {
-  // ---- 系统信息 ----
-  getSystemInfoSync: systemInfo,
+  getSystemInfoSync: getSystemInfo,
   getSystemInfo: (options?: any) => {
-    const res = systemInfo()
-    if (options && typeof options.success === 'function') options.success(res)
-    if (options && typeof options.complete === 'function') options.complete(res)
+    const adapter = getUniAdapter('getSystemInfo')
+    if (adapter) return adapter(options)
+    const res = getSystemInfo()
+    options?.success?.(res)
+    options?.complete?.(res)
     return res
   },
-  getWindowInfo: systemInfo,
-  getDeviceInfo: systemInfo,
-  getAppBaseInfo: systemInfo,
-  getMenuButtonBoundingClientRect: zeroMenuButtonRect,
-  canIUse: () => false,
+  getWindowInfo: () => systemBucket('getWindowInfo'),
+  getDeviceInfo: () => systemBucket('getDeviceInfo'),
+  getAppBaseInfo: () => systemBucket('getAppBaseInfo'),
+  getMenuButtonBoundingClientRect: (...args: any[]) => {
+    const adapter = getUniAdapter('getMenuButtonBoundingClientRect')
+    return adapter ? adapter(...args) : zeroMenuButtonRect()
+  },
+  canIUse: (...args: any[]) => getUniAdapter('canIUse')?.(...args) ?? false,
 
-  // ---- 节点查询 ----
   createSelectorQuery,
-  createIntersectionObserver: () => {
-    warnOnce('createIntersectionObserver', 'Lynx 无该 API，返回空实现')
-    return noopObserver()
-  },
+  createIntersectionObserver: (...args: any[]) => factory('createIntersectionObserver', args, noopObserver),
+  createVideoContext: (...args: any[]) => factory('createVideoContext', args, noopVideoContext),
+  createInnerAudioContext: (...args: any[]) => factory('createInnerAudioContext', args, noopVideoContext),
 
-  // ---- 媒体 ----
-  createVideoContext: () => {
-    warnOnce('createVideoContext', 'Lynx 无该 API，返回空实现')
-    return noopVideoContext()
-  },
-  createInnerAudioContext: () => {
-    warnOnce('createInnerAudioContext', 'Lynx 无该 API，返回空实现')
-    return noopVideoContext()
-  },
-
-  // ---- 画布（Lynx 无 Canvas 2D，统一降级，见 canvasHelper） ----
   createCanvasContext: (selector: string, scope?: any) => createCanvasContext(selector, scope),
   canvasToTempFilePath: (options: any, scope?: any) => canvasToTempFilePath(options, scope),
-  createOffscreenCanvas: () => {
-    warnOnce('createOffscreenCanvas', 'Lynx 无该 API')
-    return null
-  },
-  canvasGetImageData: () => {
-    warnOnce('canvasGetImageData', 'Lynx 无该 API')
-    return Promise.resolve(null)
+  createOffscreenCanvas: (...args: any[]) => factory('createOffscreenCanvas', args, () => null),
+  canvasGetImageData: (options: any, scope?: any) => {
+    const adapter = getUniAdapter('canvasGetImageData')
+    if (adapter) return adapter(options, scope)
+    return degrade('canvasGetImageData', options)
   },
 
-  // ---- 路由 / 页面（交由宿主注入） ----
   navigateTo: (options: any) => degrade('navigateTo', options, '页面跳转请交由宿主路由处理'),
   redirectTo: (options: any) => degrade('redirectTo', options, '页面跳转请交由宿主路由处理'),
-  reLaunch: (options: any) => degrade('reLaunch', options, '页面跳转请交由宿主路由处理'),
-  switchTab: (options: any) => degrade('switchTab', options, '页面跳转请交由宿主路由处理'),
-  navigateBack: (options: any) => degrade('navigateBack', options, '页面返回请交由宿主路由处理'),
+  reLaunch: (options: any) => degrade('reLaunch', options),
+  switchTab: (options: any) => degrade('switchTab', options),
+  navigateBack: (options: any) => degrade('navigateBack', options),
   pageScrollTo: (options: any) => degrade('pageScrollTo', options, '页面滚动请交由宿主处理'),
-
-  // ---- 交互反馈 ----
   openType: (options: any) => degrade('openType', options, '按钮开放能力请交由宿主实现'),
   showToast: (options: any) => degrade('showToast', options),
-  makePhoneCall: (options: any) => degrade('makePhoneCall', options, '拨号请交由宿主处理'),
+  makePhoneCall: (options: any) => degrade('makePhoneCall', options),
   showLoading: (options: any) => degrade('showLoading', options),
   hideLoading: () => degrade('hideLoading'),
   showActionSheet: (options: any) => degrade('showActionSheet', options),
@@ -203,7 +131,6 @@ export const uni: Record<string, any> = {
   vibrateShort: (options: any) => degrade('vibrateShort', options),
   vibrateLong: (options: any) => degrade('vibrateLong', options),
 
-  // ---- 媒体选择 / 文件（宿主能力） ----
   chooseImage: (options: any) => degrade('chooseImage', options),
   chooseMedia: (options: any) => degrade('chooseMedia', options),
   chooseVideo: (options: any) => degrade('chooseVideo', options),
@@ -218,10 +145,5 @@ export const uni: Record<string, any> = {
   openDocument: (options: any) => degrade('openDocument', options)
 }
 
-// 兜底：若有遗漏的直接全局 uni 引用（未 import 本模块的文件），
-// 在首次导入时安装到 globalThis，避免 ReferenceError。
-if (typeof globalThis !== 'undefined' && !(globalThis as any).uni) {
-  ;(globalThis as any).uni = uni
-}
-
+if (typeof globalThis !== 'undefined' && !(globalThis as any).uni) (globalThis as any).uni = uni
 export default uni

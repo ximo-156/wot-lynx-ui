@@ -32,17 +32,26 @@ $navbar-capsule-sperator-color: var(--wot-navbar-capsule-sperator-color, $border
   align-items: center;
   justify-content: center;
 
-  /* Lynx 适配：参考源以 ::before（宽高 200% + transform: scale(0.5) +
-     border-radius: calc(radius * 2)）绘制 0.5px 描边圆环；Lynx 无伪元素，
-     改为主元素真实 border（halfPixelBorderSurround 走 1ppx 物理像素），
-     圆角相应取 $navbar-capsule-radius（无需再放大 2 倍）。 */
-  @include halfPixelBorderSurround($navbar-capsule-border-color);
   border-radius: $navbar-capsule-radius;
 
-  /* Lynx 适配：参考源以 ::after（left: 50% + translateY(-50%)）绘制中线；
-     Lynx 无伪元素，改为模板中两个图标之间的真实元素。两个图标各 flex: 1，
-     分割线作为 flex 子项恰好落在容器正中（与参考源的 50% 定位等效）。 */
+  @include e(border) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 200%;
+    transform: scale(0.5);
+    transform-origin: 0 0;
+    box-sizing: border-box;
+    border-radius: calc($navbar-capsule-radius * 2);
+    border: $navbar-capsule-border-width solid $navbar-capsule-border-color;
+  }
+
   @include e(separator) {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateY(-50%);
     width: $navbar-capsule-sperator-width;
     height: $navbar-capsule-sperator-height;
     background: $navbar-capsule-sperator-color;

@@ -248,6 +248,15 @@ describe('wd-img-cropper MTS 跟手', () => {
 
   it('confirm 落定裁剪几何（x / y / scale / angle + 导出尺寸）', async () => {
     const confirms: any[] = []
+    const drawCalls: any[] = []
+    configureUniAdapter({
+      createCanvasContext: () => ({
+        save() {}, restore() {}, clearRect() {}, translate() {}, rotate() {},
+        drawImage(...args: any[]) { drawCalls.push(args) },
+        draw(_reserve: boolean, done: () => void) { done() }
+      }),
+      canvasToTempFilePath: (options: any) => options.success({ tempFilePath: '/crop.png' })
+    })
     const { container, updates } = mountControlled({
       onConfirm: (e: any) => confirms.push(e)
     })
@@ -272,8 +281,10 @@ describe('wd-img-cropper MTS 跟手', () => {
     expect(confirms[0].width).toBe(700)
     expect(confirms[0].height).toBe(700)
     expect(confirms[0].src).toBe('https://example.com/a.png')
-    // Lynx 降级：不产位图，tempFilePath 恒为空串
-    expect(confirms[0].tempFilePath).toBe('')
+    // 真宿主能力返回非空文件路径，原几何与关闭断言全部保留
+    expect(confirms[0].tempFilePath).toBe('/crop.png')
+    expect(drawCalls).toEqual([['https://example.com/a.png', -700, -350, 1400, 700]])
+    configureUniAdapter({ createCanvasContext: undefined, canvasToTempFilePath: undefined })
     // 确认后 modelValue 置 false → 根节点卸载
     expect(updates[updates.length - 1]).toBe(false)
     expect(container.querySelector('.wd-img-cropper')).toBeNull()

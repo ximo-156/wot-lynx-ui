@@ -359,18 +359,31 @@ $stroke-main: var(--wot-stroke-main, $n-1) !default; // 默认边框线宽
 $stroke-bold: var(--wot-stroke-bold, $n-2) !default; // 加粗边框线宽
 
 
+/* 项目品牌系列（原始 blue / coolgrey 刻度不改，便于官方主题定制迁移） */
+$brand-1: var(--wot-brand-1, #F8F6FFFF) !default;
+$brand-2: var(--wot-brand-2, #EEEBFFFF) !default;
+$brand-3: var(--wot-brand-3, #D8D1FFFF) !default;
+$brand-4: var(--wot-brand-4, #BEB3FFFF) !default;
+$brand-5: var(--wot-brand-5, #9A89FFFF) !default;
+$brand-6: var(--wot-brand-6, #755FFEFF) !default;
+$brand-7: var(--wot-brand-7, #5F48D9FF) !default;
+$brand-8: var(--wot-brand-8, #4935B5FF) !default;
+$brand-9: var(--wot-brand-9, #36268AFF) !default;
+$brand-10: var(--wot-brand-10, #251A60FF) !default;
+$brand-opac: var(--wot-brand-opac, #755FFE14) !default;
+
 /* 语义变量(light) */
 /* 主色系列 */
-$primary-1: var(--wot-primary-1, $blue-1) !default; // 主色色阶 1
-$primary-2: var(--wot-primary-2, $blue-2) !default; // 主色色阶 2
-$primary-3: var(--wot-primary-3, $blue-3) !default; // 主色色阶 3
-$primary-4: var(--wot-primary-4, $blue-4) !default; // 主色色阶 4
-$primary-5: var(--wot-primary-5, $blue-5) !default; // 主色色阶 5
-$primary-6: var(--wot-primary-6, $blue-6) !default; // 主色色阶 6
-$primary-7: var(--wot-primary-7, $blue-7) !default; // 主色色阶 7
-$primary-8: var(--wot-primary-8, $blue-8) !default; // 主色色阶 8
-$primary-9: var(--wot-primary-9, $blue-9) !default; // 主色色阶 9
-$primary-10: var(--wot-primary-10, $blue-10) !default; // 主色色阶 10
+$primary-1: var(--wot-primary-1, $brand-1) !default; // 主色色阶 1
+$primary-2: var(--wot-primary-2, $brand-2) !default; // 主色色阶 2
+$primary-3: var(--wot-primary-3, $brand-3) !default; // 主色色阶 3
+$primary-4: var(--wot-primary-4, $brand-4) !default; // 主色色阶 4
+$primary-5: var(--wot-primary-5, $brand-5) !default; // 次主题色
+$primary-6: var(--wot-primary-6, $brand-6) !default; // 主主题色
+$primary-7: var(--wot-primary-7, $brand-7) !default; // 主色色阶 7
+$primary-8: var(--wot-primary-8, $brand-8) !default; // 主色色阶 8
+$primary-9: var(--wot-primary-9, $brand-9) !default; // 主色色阶 9
+$primary-10: var(--wot-primary-10, $brand-10) !default; // 主色色阶 10
 
 /* 危险色系列 */
 $danger-clicked: var(--wot-danger-clicked, $red-7) !default; // 危险色点击态
@@ -397,8 +410,8 @@ $warning-particular: var(--wot-warning-particular, $orange-2) !default; // 警�
 $warning-surface: var(--wot-warning-surface, $orange-1) !default; // 警告色表层
 
 /* 文字色系列 */
-$text-main: var(--wot-text-main, $coolgrey-10) !default; // 主要文字颜色
-$text-secondary: var(--wot-text-secondary, $coolgrey-8) !default; // 次要文字颜色
+$text-main: var(--wot-text-main, var(--wot-brand-text-main, #2D273DFF)) !default; // 主要文字颜色
+$text-secondary: var(--wot-text-secondary, var(--wot-brand-text-secondary, #979797FF)) !default; // 次要文字颜色
 $text-auxiliary: var(--wot-text-auxiliary, $coolgrey-6) !default; // 辅助文字颜色
 $text-disabled: var(--wot-text-disabled, $coolgrey-4) !default; // 禁用文字颜色
 $text-placeholder: var(--wot-text-placeholder, $coolgrey-5) !default; // 占位文字颜色
@@ -406,8 +419,8 @@ $text-white: var(--wot-text-white, $base-white) !default; // 白色文字颜色
 
 /* 图标色系列 */
 /* 图标 */
-$icon-main: var(--wot-icon-main, $coolgrey-10) !default; // 主要图标颜色
-$icon-secondary: var(--wot-icon-secondary, $coolgrey-8) !default; // 次要图标颜色
+$icon-main: var(--wot-icon-main, var(--wot-brand-text-main, #2D273DFF)) !default; // 主要图标颜色
+$icon-secondary: var(--wot-icon-secondary, var(--wot-brand-text-secondary, #979797FF)) !default; // 次要图标颜色
 $icon-auxiliary: var(--wot-icon-auxiliary, $coolgrey-6) !default; // 辅助图标颜色
 $icon-disabled: var(--wot-icon-disabled, $coolgrey-4) !default; // 禁用图标颜色
 $icon-placeholder: var(--wot-icon-placeholder, $coolgrey-5) !default; // 占位图标颜色
@@ -436,7 +449,7 @@ $divider-strong: var(--wot-divider-strong, $opac-4_15) !default; // 强分割线
 $divider-white: var(--wot-divider-white, $base-white) !default; // 白色分割线颜色
 
 /* 反馈色系列 */
-$feedback-accent: var(--wot-feedback-accent, $blue-opac) !default; // 反馈强调颜色
+$feedback-accent: var(--wot-feedback-accent, $brand-opac) !default; // 反馈强调颜色
 $feedback-active: var(--wot-feedback-active, $opac-3_08) !default; // 反馈激活态颜色
 $feedback-hover: var(--wot-feedback-hover, $opac-2_04) !default; // 反馈悬浮态颜色
 

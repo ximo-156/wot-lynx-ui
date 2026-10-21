@@ -20,14 +20,17 @@
 import './index.css'
 
 import WdIcon from '../../wd-icon/wd-icon.vue'
-import { computed, ref, onMounted } from 'vue-lynx'
+import { computed, ref, onMounted, watch } from 'vue-lynx'
 import { compareYear, formatYearTitle, getYears } from '../utils'
 import { isArray, isNumber, pause } from '../../../common/util'
 import Year from '../year/year.vue'
+import { useAlive } from '../../../composables/useAlive'
 import { yearPanelProps, type YearInfo, type YearPanelExpose } from './types'
 
 const props = defineProps(yearPanelProps)
 const emit = defineEmits(['change'])
+const isAlive = useAlive()
+let scrollRequest = 0
 
 const scrollTop = ref<number>(0) // 滚动位置
 const scrollIndex = ref<number>(0) // 当前显示的年份索引
@@ -87,7 +90,8 @@ const controlsTitle = computed(() => {
 
 // 标题（滚动模式下显示的年份）
 const title = computed(() => {
-  return formatYearTitle(years.value[scrollIndex.value].date)
+  const year = years.value[Math.min(scrollIndex.value, years.value.length - 1)]
+  return year ? formatYearTitle(year.date) : ''
 })
 
 /**
@@ -135,15 +139,18 @@ function initCurrentDisplayYear() {
     activeDate = props.value
   }
 
-  if (!activeDate) {
+  if (activeDate === null || !Number.isFinite(activeDate)) {
     activeDate = Date.now()
   }
 
+  activeDate = Math.min(Math.max(activeDate, props.minDate), props.maxDate)
   currentDisplayYear.value = new Date(activeDate).getFullYear()
 }
 
 async function scrollIntoView() {
+  const request = ++scrollRequest
   await pause()
+  if (!isAlive() || request !== scrollRequest) return
   let activeDate: number | null = null
   if (isArray(props.value)) {
     activeDate = props.value![0]
@@ -151,10 +158,11 @@ async function scrollIntoView() {
     activeDate = props.value
   }
 
-  if (!activeDate) {
+  if (activeDate === null || !Number.isFinite(activeDate)) {
     activeDate = Date.now()
   }
 
+  activeDate = Math.min(Math.max(activeDate, props.minDate), props.maxDate)
   let top: number = 0
   for (let index = 0; index < years.value.length; index++) {
     if (compareYear(years.value[index].date, activeDate) === 0) {
@@ -165,6 +173,7 @@ async function scrollIntoView() {
   scrollTop.value = 0
   if (top > 0) {
     await pause()
+    if (!isAlive() || request !== scrollRequest) return
     scrollTop.value = top + 40
   }
 }
@@ -198,6 +207,13 @@ function handleDateChange({ value }: { value: number[] }) {
   })
 }
 
+watch([() => props.minDate, () => props.maxDate, () => props.value, () => props.switchMode], () => {
+  scrollRequest++
+  scrollIndex.value = Math.min(scrollIndex.value, Math.max(0, years.value.length - 1))
+  if (props.switchMode !== 'none') initCurrentDisplayYear()
+  else scrollIntoView()
+}, { deep: true })
+
 defineExpose<YearPanelExpose>({
   scrollIntoView
 })
@@ -209,7 +225,7 @@ defineExpose<YearPanelExpose>({
     <view v-if="switchMode !== 'none'" class="wd-year-panel__controls">
       <view class="wd-year-panel__control">
         <WdIcon
-          name="arrow-left-bold"
+          name="left"
           :custom-class="`wd-year-panel__control-icon ${isPrevYearDisabled ? 'is-disabled' : ''}`"
           @tap="!isPrevYearDisabled && changeYear(-1)"
         />
@@ -217,7 +233,7 @@ defineExpose<YearPanelExpose>({
       <text class="wd-year-panel__controls-title">{{ controlsTitle }}</text>
       <view class="wd-year-panel__control">
         <WdIcon
-          name="arrow-right-bold"
+          name="right"
           :custom-class="`wd-year-panel__control-icon ${isNextYearDisabled ? 'is-disabled' : ''}`"
           @tap="!isNextYearDisabled && changeYear(1)"
         />

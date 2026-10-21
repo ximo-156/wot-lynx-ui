@@ -228,6 +228,32 @@ $tag-sizes: (
   color: $tag-color;
   border-radius: $tag-radius;
 
+  @include e(text) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
+
+    text {
+      color: inherit;
+      font-size: inherit;
+      line-height: inherit;
+    }
+  }
+
+  @include e(border) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
   @include e(input) {
     width: $tag-input-width;
     min-height: 0;
@@ -285,25 +311,23 @@ $tag-sizes: (
         color: $tag-color;
       }
 
-      // Lynx 适配：参考源 plain / dashed 以 ::after 伪元素绘制描边
-      // （Lynx 无伪元素，PORTING §4.4），改为主元素真实 border；
-      // box-sizing: border-box 对应参考源 ::after 的盒模型（伪元素绝对定位
-      // 不参与布局，真实 border 需 border-box 保持尺寸不变）；
-      // position: relative 为参考源同状态类的声明，原样保留。
+      // 覆盖层替代官方伪元素，不为自适应尺寸额外增加 2px 描边。
       @include when(plain) {
         background: transparent;
         color: $color;
         position: relative;
-        box-sizing: border-box;
-        @include pixelBorderSurround($color,solid);
+        .wd-tag__border {
+          @include pixelBorderSurround($color, solid);
+        }
       }
 
       @include when(dashed) {
         background: transparent;
         color: $color;
         position: relative;
-        box-sizing: border-box;
-        @include pixelBorderSurround($color,dashed);
+        .wd-tag__border {
+          @include pixelBorderSurround($color, dashed);
+        }
       }
 
       @include when(text) {

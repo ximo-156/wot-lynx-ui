@@ -72,9 +72,10 @@ const placeholderStyle = computed(() => {
 })
 
 watch(
-  [() => props.fixed, () => props.placeholder],
+  [() => props.fixed, () => props.placeholder, () => props.shape, () => props.safeAreaInsetBottom, () => props.bordered, () => props.customStyle, () => props.customClass],
   () => {
-    setPlaceholderHeight()
+    ++heightRequest
+    nextTick(() => { if (isAlive()) setPlaceholderHeight() })
   },
   { deep: true, immediate: false }
 )
@@ -91,7 +92,7 @@ onMounted(() => {
  * 子项状态变更
  * @param child 子项
  */
-function setChange(child: TabbarItem) {
+function setChange(child: TabbarItem, isCurrent: () => boolean = () => true) {
   const request = ++changeRequest
   if (!isAlive()) return
   const active = child.name
@@ -99,7 +100,7 @@ function setChange(child: TabbarItem) {
     return
   }
   const change = () => {
-    if (!isAlive() || request !== changeRequest) return
+    if (!isAlive() || request !== changeRequest || !isCurrent()) return
     emit('update:modelValue', active)
     emit('change', {
       value: active

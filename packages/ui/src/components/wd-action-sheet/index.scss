@@ -106,10 +106,8 @@ $action-sheet-loading-size: var(--wot-action-sheet-loading-size, $n-20) !default
   flex-shrink: 0;
 
   @include e(actions) {
-    // Lynx 适配：参考源 max-height: 50vh（视口单位 Lynx 不支持，wd-img-cropper
-    // 同因由已降级），此处不设上限，由 wd-popup 的 max-height:100% 兜底；
-    // -webkit-overflow-scrolling 为 Web 专有属性，删除。
-    overflow-y: auto;
+    // 原生 scroll-view 的上限由系统窗口高度换算为 px，保持参考源 50vh。
+    flex-shrink: 0;
   }
 
   @include e(action) {

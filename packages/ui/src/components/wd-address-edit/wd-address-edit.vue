@@ -45,14 +45,17 @@ const rootStyle = computed(() => {
 })
 
 function onSave() {
+  if (props.disabled) return
   emit('save', { ...formData.value })
 }
 
 function onDelete() {
+  if (props.disabled) return
   emit('delete', { ...formData.value })
 }
 
 function onChangeArea() {
+  if (props.disabled) return
   emit('change-area', { ...formData.value })
 }
 </script>
@@ -78,8 +81,7 @@ function onChangeArea() {
       <WdCell
         title="地区"
         :value="formData.province ? `${formData.province} ${formData.city || ''} ${formData.county || ''}`.trim() : '请选择地区'"
-        is-link
-        :disabled="disabled"
+        :is-link="!disabled"
         custom-class="wd-address-edit__field"
         @tap="onChangeArea"
       />
@@ -119,6 +121,7 @@ function onChangeArea() {
         v-if="showDeleteButton"
         type="danger"
         plain
+        :disabled="disabled"
         custom-class="wd-address-edit__delete-btn"
         @tap="onDelete"
       >
@@ -127,6 +130,7 @@ function onChangeArea() {
       <WdButton
         v-if="showSaveButton"
         type="primary"
+        :disabled="disabled"
         custom-class="wd-address-edit__save-btn"
         @tap="onSave"
       >

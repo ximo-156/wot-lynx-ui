@@ -1,4 +1,5 @@
 import { AbortablePromise } from './AbortablePromise'
+import { getUniAdapter } from './uniAdapter'
 
 /**
  * 生成 uuid
@@ -17,6 +18,8 @@ function s4() {
  * 对 num 自动填充 px
  */
 export function addUnit(num: number | string) {
+  const rpx = typeof num === 'string' ? /^(-?(?:\d+(?:\.\d+)?|\.\d+))rpx$/i.exec(num.trim()) : null
+  if (rpx) return `${Number(rpx[1]) * getSystemInfo().windowWidth / 750}px`
   return Number.isNaN(Number(num)) ? `${num}` : `${num}px`
 }
 
@@ -352,15 +355,19 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
     }
 
     const lynx = (globalThis as any).lynx
-    if (!lynx || !lynx.createSelectorQuery) {
-      // 宿主运行时未提供 createSelectorQuery（旧版 Lynx 引擎 / 未注册 SelectorQuery
-      // 模块的宿主 / Web 预览）时，若处于 DOM 环境则退回 DOM 度量——比零矩形兜底
-      // 更能保持交互可用（slider 拖动、swipe-action 操作区宽度、index-bar 定位、
-      // tour 目标定位、popover 定位等在无 SelectorQuery 的宿主上同样工作）。
+    const createQuery = getUniAdapter('createSelectorQuery') || (typeof lynx?.createSelectorQuery === 'function' ? () => lynx.createSelectorQuery() : undefined)
+    if (!createQuery) {
       if (!domMeasure()) resolveUnavailable()
       return
     }
-    const query = lynx.createSelectorQuery()
+    let query: any
+    try {
+      query = createQuery()
+      if (scope && typeof query.in === 'function') query = query.in(scope) || query
+    } catch {
+      if (!domMeasure()) resolveUnavailable()
+      return
+    }
     const handleResult = (rect: RectResult | RectResult[]) => {
       if (all) {
         // all 模式：无匹配节点时返回空数组而非 reject。
@@ -442,43 +449,24 @@ export function filterStyle(styleObj: Record<string, any>): Record<string, strin
  */
 export function scrollViewTo(selector: string, offset: number, smooth: boolean = true): void {
   const lynx = (globalThis as any).lynx
-  if (!lynx || !lynx.createSelectorQuery) return
+  const createQuery = getUniAdapter('createSelectorQuery') || (typeof lynx?.createSelectorQuery === 'function' ? () => lynx.createSelectorQuery() : undefined)
+  if (!createQuery) return
   try {
-    lynx
-      .createSelectorQuery()
-      .select(selector)
-      .invoke({
-        method: 'scrollTo',
-        params: { offset, smooth }
-      })
-      .exec()
+    createQuery().select(selector).invoke({ method: 'scrollTo', params: { offset, smooth } }).exec()
   } catch {
-    // 运行时不支持 invoke（jsdom 测试环境等）时静默跳过：
-    // 调用方均保留 scroll-left / scroll-top 属性作为定位兜底。
+    // 没有 invoke 时保留 scroll-left / scroll-top 的瞬时定位兜底。
   }
 }
 
-/**
- * Lynx scroll-view 子节点滚入可见区（官方 API：SelectorQuery.invoke('scrollIntoView')）。
- * 比测量偏移再 scrollTo 更稳：无需知道滚动内容与视口的相对位置。
- *
- * @param selector 目标子节点选择器
- * @param block 纵向对齐：start 顶对齐 / center 居中 / end 底对齐
- */
+/** 用原生滚入可见区 API 避免自行累计跨容器偏移。 */
 export function scrollIntoViewById(selector: string, block: 'start' | 'center' | 'end' = 'start'): void {
   const lynx = (globalThis as any).lynx
-  if (!lynx || !lynx.createSelectorQuery) return
+  const createQuery = getUniAdapter('createSelectorQuery') || (typeof lynx?.createSelectorQuery === 'function' ? () => lynx.createSelectorQuery() : undefined)
+  if (!createQuery) return
   try {
-    lynx
-      .createSelectorQuery()
-      .select(selector)
-      .invoke({
-        method: 'scrollIntoView',
-        params: { scrollIntoViewOptions: { block, inline: 'start' } }
-      })
-      .exec()
+    createQuery().select(selector).invoke({ method: 'scrollIntoView', params: { scrollIntoViewOptions: { block, inline: 'start' } } }).exec()
   } catch {
-    // 运行时不支持 invoke（jsdom 测试环境等）时静默跳过
+    // 宿主必须提供 scrollIntoView 才能实际滚动，不伪造成功回执。
   }
 }
 
@@ -903,20 +891,23 @@ export interface SystemInfo {
  * 获取系统信息（Lynx SystemInfo 全局对象）
  */
 export function getSystemInfo(): SystemInfo {
-  const info = (globalThis as any).SystemInfo || {}
-  const pixelRatio = info.pixelRatio || 2
-  const screenWidth = info.pixelWidth ? info.pixelWidth / pixelRatio : 375
-  const screenHeight = info.pixelHeight ? info.pixelHeight / pixelRatio : 812
+  const adapter = getUniAdapter('getSystemInfoSync')
+  const info = { ...((globalThis as any).SystemInfo || {}), ...(adapter ? adapter() : {}) }
+  const pixelRatio = Number(info.pixelRatio) > 0 ? Number(info.pixelRatio) : 2
+  const physicalWidth = Number(info.pixelWidth) > 0 ? Number(info.pixelWidth) / pixelRatio : 375
+  const physicalHeight = Number(info.pixelHeight) > 0 ? Number(info.pixelHeight) / pixelRatio : 812
+  const screenWidth = Number(info.screenWidth) > 0 ? Number(info.screenWidth) : physicalWidth
+  const screenHeight = Number(info.screenHeight) > 0 ? Number(info.screenHeight) : physicalHeight
   return {
-    windowWidth: screenWidth,
-    windowHeight: screenHeight,
-    windowTop: 0,
+    ...info,
     pixelRatio,
-    platform: (info.platform || '').toLowerCase(),
+    platform: String(info.platform || '').toLowerCase(),
     screenWidth,
     screenHeight,
-    statusBarHeight: 0,
-    ...info
+    windowWidth: Number(info.windowWidth) > 0 ? Number(info.windowWidth) : screenWidth,
+    windowHeight: Number(info.windowHeight) > 0 ? Number(info.windowHeight) : screenHeight,
+    windowTop: Number(info.windowTop) || 0,
+    statusBarHeight: Math.max(0, Number(info.statusBarHeight) || 0)
   }
 }
 

@@ -16,6 +16,11 @@ export type IndexBarProvide = {
    * （引擎 id→签名注册表错乱，真机 9902 removeNode 家族）。
    */
   id?: string
+  onAnchorChange?: () => void
+  getAnchorId?: (uid: number, index: AnchorIndex) => string
+  getScrollTop?: () => number
+  getOffsetTop?: () => number
+  getActiveUid?: () => number | null
 }
 
 export const indexBarInjectionKey: InjectionKey<IndexBarProvide> = Symbol('wd-index-bar')

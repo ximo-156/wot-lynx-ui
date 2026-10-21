@@ -2,6 +2,7 @@ import { inject, provide, ref } from 'vue-lynx'
 import type { Dialog, DialogOptions, DialogOptionsWithCallBack, DialogResult, DialogType } from './types'
 import { deepMerge, isDef, isObj, isString } from '../../common/util'
 import { type IconProps } from '../wd-icon/types'
+import { useAlive } from '../../composables/useAlive'
 
 const dialogDefaultOptionKey = '__MESSAGE_OPTION__'
 
@@ -38,6 +39,8 @@ export function useDialog(selector: string = ''): Dialog {
     dialogOption.value = defaultOptions
     provide(dialogOptionKey, dialogOption)
   }
+
+  const isAlive = useAlive()
 
   const createMethod = (type: DialogType) => {
     // 优先级：options->DialogOptions->defaultOptions
@@ -122,20 +125,19 @@ export function useDialog(selector: string = ''): Dialog {
    * @param option 弹窗配置项或标题
    */
   const show = (option: DialogOptions | string) => {
+    if (!isAlive()) return Promise.resolve<DialogResult>({ action: 'close' })
     // 返回一个promise
     return new Promise<DialogResult>((resolve, reject) => {
       const options = deepMerge(defaultOptions, isString(option) ? { title: option } : option)
-      dialogOption.value = deepMerge(options, {
-        show: true,
-        success: (res: DialogResult) => {
-          close()
-          resolve(res)
-        },
-        fail: (res: DialogResult) => {
-          close()
-          reject(res)
+      const next = deepMerge(options, { show: true }) as DialogOptionsWithCallBack
+      const closeRequest = () => {
+        if (isAlive() && dialogOption.value !== None && dialogOption.value.success === next.success) {
+          dialogOption.value = { ...dialogOption.value, show: false }
         }
-      })
+      }
+      next.success = (res: DialogResult) => { closeRequest(); resolve(res) }
+      next.fail = (res: DialogResult) => { closeRequest(); reject(res) }
+      dialogOption.value = next
     })
   }
 
@@ -150,8 +152,8 @@ export function useDialog(selector: string = ''): Dialog {
    * 关闭弹窗
    */
   const close = () => {
-    if (dialogOption.value !== None) {
-      dialogOption.value.show = false
+    if (isAlive() && dialogOption.value !== None) {
+      dialogOption.value = { ...dialogOption.value, show: false }
     }
   }
   return {

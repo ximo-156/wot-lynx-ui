@@ -48,9 +48,10 @@ const height = ref<number | ''>('')
 const { statusBarHeight, navBarHeight } = useDeviceInfo()
 
 watch(
-  [() => props.fixed, () => props.placeholder],
+  [() => props.fixed, () => props.placeholder, () => props.safeAreaInsetTop, () => props.bordered, () => props.customStyle, () => props.customClass, statusBarHeight, navBarHeight],
   () => {
-    setPlaceholderHeight()
+    ++heightRequest
+    nextTick(() => { if (isAlive()) setPlaceholderHeight() })
   },
   { deep: true, immediate: false }
 )
@@ -61,8 +62,8 @@ watch(
 const ROOT_STYLE = defineStyleKeys({
   'z-index': 'auto',
   'padding-top': '0px',
-  height: 'auto',
-  'line-height': 'auto'
+  height: '',
+  'line-height': ''
 })
 
 const rootStyle = computed(() =>
@@ -149,7 +150,7 @@ function setPlaceholderHeight() {
         </view>
 
         <view :class="`wd-navbar__left ${leftDisabled ? 'is-disabled' : ''}`" @tap="handleClickLeft" v-else-if="!$slots.left">
-          <WdIcon v-if="leftArrow" name="arrow-left-bold" custom-class="wd-navbar__arrow" />
+          <WdIcon v-if="leftArrow" name="left" custom-class="wd-navbar__arrow" />
           <text v-if="leftText" class="wd-navbar__text">{{ leftText }}</text>
         </view>
 
@@ -167,6 +168,7 @@ function setPlaceholderHeight() {
           <text v-if="!$slots.right && rightText" class="wd-navbar__text">{{ rightText }}</text>
         </view>
       </view>
+      <view v-if="bordered" class="wd-navbar__border" />
     </view>
   </view>
 </template>

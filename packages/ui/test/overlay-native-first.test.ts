@@ -384,7 +384,13 @@ describe('原生优先重写 · 弹层家族布局居中契约（popup / action-
     expect(confirmBtn, '确认按钮应渲染').not.toBeNull()
 
     fireEvent.tap(confirmBtn!)
-    await frames()
+    await frames(2)
+    expect(
+      firstMatch(container, '.wd-popup-wrapper > .wd-transition.wd-popup')!.className,
+      '确认后应立即开始离场，而不是跳过动画'
+    ).toContain('wd-transition--zoom-in-leave-active')
+    // 200ms 时长从双 rAF 的 to 态开始计时；6×33ms 不足以完整离场。
+    await pause(300)
     expect(
       isHidden(firstMatch(container, '.wd-popup-wrapper > .wd-transition.wd-popup')),
       '确认后对话框应关闭'

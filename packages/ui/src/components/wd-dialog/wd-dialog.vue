@@ -9,10 +9,7 @@
  *   ref，组件 watch 后 reset 进 dialogState；wot-ui 的 dialogProps 同样只作为
  *   API 声明（官方文档仅列出 selector / root-portal / custom-class / custom-style），
  *   组件内部只读 customClass 与 rootPortal；
- * - open-type 系列按钮事件（getUserInfo / contact / getPhoneNumber …）为
- *   uni-app / 小程序专有能力，Lynx 无原生事件可转发，故不在 wd-button 上声明
- *   监听（PORTING §2.3）；DialogButtonOpenTypeEvents 类型与 OPEN_TYPE_EVENT_KEYS
- *   保留，后者仍用于从按钮配置里过滤非 prop 键；
+ * - open-type 回调经 WdButton 声明事件转发；实际授权/分享能力由宿主适配器提供。
  * - 参考源模板的 block 元素（uni-app 专有）改为 template v-if / v-for；
  *   view 内的裸文本（标题 / 按钮文案 / 错误提示）包 text 元素；
  * - 相邻兄弟选择器（`.wd-dialog__img + .wd-dialog__title` 等）Lynx 支持有限，
@@ -28,8 +25,7 @@
  * - 根容器 __container 显式 display: flex + flex-direction: column
  *   （NATIVE-REWRITE §3.1 根节点三件套）并 flex-shrink: 0——居中弹层
  *   .wd-popup 为 flex column 容器，内容超高时本容器不被按比例压缩；
- * - 图标名：wot-ui 用 check-circle-fill 等，本地内置图标集无同名字形，
- *   DIALOG_BUILTIN_ICON_MAP 映射为 success / prompt / warning / error；
+ * - 图标使用官方 wot 字体与原始名称。
  * - 点击事件 @click → @tap（CONVENTIONS §6）。
  */
 <script lang="ts" setup>
@@ -192,9 +188,11 @@ const customActions = computed<DialogAction[]>(() => {
 function getActionButtonProps(btn: DialogAction) {
   const result: Record<string, any> = {}
   for (const key in btn) {
-    // 排除 openType 事件回调、click 和 text
-    if (!OPEN_TYPE_EVENT_KEYS.includes(key as keyof DialogButtonOpenTypeEvents) && key !== 'click' && key !== 'text') {
-      result[key] = (btn as any)[key]
+    // WdButton 声明了开放能力事件，on* 配置作为监听消费，不穿透到原生节点。
+    if (key !== 'click' && key !== 'text') {
+      if (!OPEN_TYPE_EVENT_KEYS.includes(key as keyof DialogButtonOpenTypeEvents) || isFunction((btn as any)[key])) {
+        result[key] = (btn as any)[key]
+      }
     }
   }
   return result
@@ -293,6 +291,7 @@ function toggleModal(action: 'confirm' | 'cancel' | 'modal' | 'close') {
     return
   }
   const request = ++actionRequest
+  const option = messageOption.value
   const value = inputVal.value
   switch (action) {
     case 'confirm':
@@ -300,7 +299,7 @@ function toggleModal(action: 'confirm' | 'cancel' | 'modal' | 'close') {
         callInterceptor(dialogState.beforeConfirm as DialogBeforeConfirm, {
           args: [value],
           done: () => {
-            if (isAlive() && dialogState.show && request === actionRequest) handleConfirm({ action, value })
+            if (isAlive() && dialogState.show && request === actionRequest && option === messageOption.value) handleConfirm({ action, value: inputVal.value })
           }
         })
       } else {
@@ -332,9 +331,11 @@ function toggleModal(action: 'confirm' | 'cancel' | 'modal' | 'close') {
 function handleAction(action: DialogAction) {
   if (!isAlive() || !dialogState.show || action.disabled || action.loading) return
 
+  const option = messageOption.value
   if (isFunction(action.click)) {
     action.click()
   }
+  if (option !== messageOption.value) return
 
   handleConfirm({
     action: 'confirm',
@@ -526,6 +527,8 @@ function normalizeIconProps(options: DialogOptions) {
  * 字符串入参视为 title（与 useDialog 一致）。
  */
 function open(type: DialogType, options: DialogOptionsWithCallBack | string) {
+  if (!isAlive()) return Promise.resolve<DialogResult>({ action: 'close' })
+  ++actionRequest
   const dialogOptions = deepMerge({ type }, isString(options) ? { title: options } : options) as DialogOptionsWithCallBack
 
   // 与 useDialog 的 createMethod 同口径：先补 showCancelButton 默认值，再把快捷
@@ -551,18 +554,19 @@ function open(type: DialogType, options: DialogOptionsWithCallBack | string) {
   return new Promise<DialogResult>((resolve, reject) => {
     const next = deepMerge(defaultOptions, dialogOptions)
     next.show = true
-    next.success = (res: DialogResult) => {
-      resolve(res)
+    const closeRequest = () => {
+      if (isAlive() && messageOption.value.success === next.success) messageOption.value = { ...messageOption.value, show: false }
     }
-    next.fail = (res: DialogResult) => {
-      reject(res)
-    }
+    next.success = (res: DialogResult) => { closeRequest(); resolve(res) }
+    next.fail = (res: DialogResult) => { closeRequest(); reject(res) }
     messageOption.value = next
   })
 }
 
 /** 命令式关闭 */
 function close() {
+  if (!isAlive()) return
+  ++actionRequest
   messageOption.value = { ...defaultOptions, show: false }
 }
 

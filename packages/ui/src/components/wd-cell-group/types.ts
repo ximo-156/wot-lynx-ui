@@ -1,11 +1,11 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, numericProp } from '../../common/props'
-import type { CellLayout, CellSize, CellValueAlign } from '../../composables/useCell'
+import type { CellGroupProvide, CellLayout, CellSize, CellValueAlign } from '../../composables/useCell'
 import { CELL_GROUP_KEY } from '../../composables/useCell'
 
 // 兼容历史从 wd-cell-group/types 深度导入的用法
 export { CELL_GROUP_KEY }
-export type { CellLayout, CellSize, CellValueAlign }
+export type { CellGroupProvide, CellLayout, CellSize, CellValueAlign }
 
 export const cellGroupProps = {
   ...baseProps,

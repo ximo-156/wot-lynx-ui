@@ -7,6 +7,8 @@ export type stickyBoxProvide = {
     width: number // 宽度
   }
   observerForChild: (child: ComponentInternalInstance) => void // 监听子组件
+  updateChildPosition?: (child: ComponentInternalInstance) => void // 用缓存底边位置协调两个 observer
+  unobserveChild?: (child: ComponentInternalInstance) => void
 }
 
 export const STICKY_BOX_KEY: InjectionKey<stickyBoxProvide> = Symbol('wd-sticky-box')

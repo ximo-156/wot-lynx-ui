@@ -61,12 +61,13 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, nextTick, onMounted, reactive, useMainThreadRef, useSlots, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, reactive, useMainThreadRef, useSlots, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdBadge from '../wd-badge/wd-badge.vue'
+import WdTab from '../wd-tab/wd-tab.vue'
 import WdSticky from '../wd-sticky/wd-sticky.vue'
 import WdStickyBox from '../wd-sticky-box/wd-sticky-box.vue'
-import { addUnit, checkNumRange, debounce, getRect, isDef, isNumber, isString, parseStyle, type CSSProperties } from '../../common/util'
+import { addUnit, checkNumRange, debounce, getRect, isDef, isNumber, parseStyle, uuid, type CSSProperties } from '../../common/util'
 import { useTouch } from '../../composables/useTouch'
 import { TABS_KEY, tabsProps, type TabsExpose } from './types'
 import { flattenVNodes, useChildren } from '../../composables/useChildren'
@@ -74,9 +75,10 @@ import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 
-const $item = '.wd-tabs__nav-item'
-const $itemText = '.wd-tabs__nav-item-text'
-const $container = '.wd-tabs__nav-container'
+const tabsId = `wd-tabs-${uuid()}`
+const $item = `#${tabsId} .wd-tabs__nav-item`
+const $itemText = `#${tabsId} .wd-tabs__nav-item-text`
+const $container = `#${tabsId} .wd-tabs__nav-container`
 
 const props = defineProps(tabsProps)
 const emit = defineEmits(['change', 'disabled', 'click', 'update:modelValue'])
@@ -86,23 +88,20 @@ const { translate } = useTranslate('tabs')
 /** 组件存活守卫：getRect 回调晚于卸载落地时丢弃（真机 9902 防护） */
 const isAlive = useAlive()
 
-/**
- * 指示线可切换的全部样式键 + 中性值（CONVENTIONS §20）。
- *
- * 中性值取 `.wd-tabs__line` 类声明的默认值（normal 主题、未传 lineHeight），
- * 使「JS 未下发的键」与「类样式生效」视觉一致；display 的中性值为 linear
- * （Lynx view 的默认布局，等同不设置），可见态同样写 linear —— 参考源
- * 只在隐藏时写 display:none，Lynx 的逐属性合并语义下必须显式写回可见值，
- * 否则上一帧的 none 会残留（同类缺陷参见 wd-transition 的 display）。
- */
+/** Class rules own normal/text/underline/dot dimensions; '' clears overrides. */
 const LINE_STYLE = defineStyleKeys({
-  display: 'linear',
-  width: 'var(--wot-tabs-nav-line-width, var(--wot-n-24, 24px))',
-  height: 'var(--wot-tabs-nav-line-height, var(--wot-n-4, 4px))',
-  'border-radius': 'calc(var(--wot-tabs-nav-line-height, var(--wot-n-4, 4px)) / 2)',
+  display: 'flex',
+  width: '',
+  height: '',
+  'border-radius': '',
   transform: 'translateX(0px)',
   transition: 'none'
 })
+let lineRequest = 0
+let scrollRequest = 0
+let mapRequest = 0
+let mapClosing = false
+let mapTimer: ReturnType<typeof setTimeout> | undefined
 
 const state = reactive({
   /** 选中值的索引，默认第一个 */
@@ -162,9 +161,7 @@ interface TabsGesture {
 /** 跟手手势状态（主线程活值） */
 const gestureRef = useMainThreadRef<TabsGesture | null>(null)
 
-/** worklet 捕获的静态配置快照（setup 期求值；props 实例内不变） */
-const cfgSwipeable = props.swipeable
-const cfgAnimated = props.animated
+/** Gesture flags are live element attributes read on the main thread. */
 
 /** 方向锁阈值（px） */
 const AXIS_LOCK_THRESHOLD = 6
@@ -187,8 +184,8 @@ function navItems(): NavItem[] {
   const vnodes = slots.default ? slots.default() : []
   const items: NavItem[] = []
   for (const vnode of flattenVNodes(vnodes as any) as any[]) {
-    const p = vnode && vnode.props
-    if (!p || (vnode.type?.__name !== 'wd-tab' && vnode.type?.name !== 'wd-tab' && !('title' in p))) continue
+    if (vnode.type !== WdTab && vnode.type?.__name !== 'wd-tab' && vnode.type?.name !== 'wd-tab') continue
+    const p = vnode.props || {}
     items.push({
       title: p.title,
       disabled: p.disabled === true || p.disabled === '',
@@ -262,40 +259,15 @@ const getTabName = (tab: any, index: number) => {
  * 获取 tab item 的样式
  * @param index 索引
  */
-const getTabItemStyle = (index: number) => {
-  const { color, inactiveColor } = props
-  const style: CSSProperties = {}
-  if (state.activeIndex === index) {
-    if (color) {
-      style.color = color
-    }
-  } else {
-    if (inactiveColor) {
-      style.color = inactiveColor
-    }
-  }
-  return style
-}
-
-/**
- * 获取 map tab 的样式
- * @param index 索引
- */
-const getMapTabStyle = (index: number) => {
-  const { color, inactiveColor } = props
-  const style: CSSProperties = {}
-  if (state.activeIndex === index) {
-    if (color) {
-      style.color = color
-      style.borderColor = color
-    }
-  } else {
-    if (inactiveColor) {
-      style.color = inactiveColor
-    }
-  }
-  return style
-}
+const TAB_ITEM_STYLE = defineStyleKeys({ color: '' })
+const MAP_TAB_STYLE = defineStyleKeys({ color: '', 'border-color': '' })
+const getTabItemStyle = (index: number) => resolveStyle(TAB_ITEM_STYLE, {
+  color: state.activeIndex === index ? props.color : props.inactiveColor
+})
+const getMapTabStyle = (index: number) => resolveStyle(MAP_TAB_STYLE, {
+  color: state.activeIndex === index ? props.color : props.inactiveColor,
+  'border-color': state.activeIndex === index ? props.color : ''
+})
 
 /**
  * 更新激活项
@@ -324,6 +296,23 @@ const updateActive = (value: number | string = 0, init: boolean = false, setScro
  * @param {boolean} init 是否伴随初始化操作
  */
 const setActive = debounce(updateActive, 100, { leading: true })
+
+watch(() => children.map((child) => child.$.uid), () => {
+  ++lineRequest
+  ++scrollRequest
+  nextTick(() => { if (state.inited && isAlive()) updateActive(props.modelValue) })
+})
+watch(() => [props.lineWidth, props.lineHeight, props.lineTheme], () => {
+  ++lineRequest
+  nextTick(() => { if (isAlive()) void updateLineStyle(false) })
+})
+onBeforeUnmount(() => {
+  ++lineRequest
+  ++scrollRequest
+  ++mapRequest
+  if (mapTimer) clearTimeout(mapTimer)
+  ;(setActive as typeof setActive & { cancel(): void }).cancel()
+})
 
 watch(
   () => props.modelValue,
@@ -363,63 +352,54 @@ onMounted(() => {
  * 切换 map 显示状态
  */
 function toggleMap() {
-  if (state.mapShow) {
+  const request = ++mapRequest
+  if (mapTimer) clearTimeout(mapTimer)
+  if (state.mapShow && !mapClosing) {
+    mapClosing = true
     state.animating = false
-    setTimeout(() => {
-      if (isAlive()) state.mapShow = false
+    mapTimer = setTimeout(() => {
+      if (!isAlive() || request !== mapRequest) return
+      state.mapShow = false
+      mapClosing = false
+      mapTimer = undefined
     }, 300)
   } else {
+    mapClosing = false
     state.mapShow = true
-    setTimeout(() => {
-      if (isAlive()) state.animating = true
+    mapTimer = setTimeout(() => {
+      if (!isAlive() || request !== mapRequest) return
+      state.animating = true
+      mapTimer = undefined
     }, 100)
   }
 }
 
-/**
- * 更新 underline 的偏移量
- * @param {boolean} animation 是否开启动画
- */
+/** Latest-request geometry; class rules retain each line theme's defaults. */
 async function updateLineStyle(animation: boolean = true) {
-  if (!state.inited) return
+  const request = ++lineRequest
+  if (!state.inited || !isAlive()) return
+  const activeIndex = state.activeIndex
   const { lineWidth, lineHeight, lineTheme } = props
+  const current = () => isAlive() && request === lineRequest && activeIndex === state.activeIndex
   try {
-    const lineStyle: CSSProperties = {}
-    if (isDef(lineWidth)) {
-      lineStyle.width = addUnit(lineWidth)
-    } else {
-      if (lineTheme === 'text') {
-        const textRects = await getRect($itemText, true, proxy)
-        if (!isAlive() || !textRects[state.activeIndex]) return
-        const textWidth = Number(textRects[state.activeIndex].width)
-        lineStyle.width = addUnit(textWidth)
-      } else if (lineTheme === 'underline') {
-        const rects = await getRect($item, true, proxy)
-        if (!isAlive() || !rects[state.activeIndex]) return
-        const rectWidth = Number(rects[state.activeIndex].width)
-        lineStyle.width = addUnit(rectWidth)
-      }
-    }
-    if (isDef(lineHeight)) {
-      lineStyle.height = addUnit(lineHeight)
-      lineStyle.borderRadius = `calc(${addUnit(lineHeight)} / 2)`
-    }
-    const rects = await getRect($item, true, proxy)
-    if (!isAlive()) return
-    const rect = rects[state.activeIndex]
+    const [rects, textRects] = await Promise.all([
+      getRect($item, true, proxy),
+      !isDef(lineWidth) && lineTheme === 'text' ? getRect($itemText, true, proxy) : Promise.resolve([])
+    ])
+    if (!current()) return
+    const rect = rects[activeIndex]
     if (!rect) return
-    let left = rects.slice(0, state.activeIndex).reduce((prev: number, curr: any) => prev + Number(curr.width), 0) + Number(rect.width) / 2
-    if (left) {
-      lineStyle.transform = `translateX(${left}px) translateX(-50%)`
-      if (animation) {
-        lineStyle.transition = 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-      }
-      state.useInnerLine = false
-      // 对象语法 + Style Funnel：display 由 none 切换为可见时必须显式写回
-      // linear（Lynx view 的默认布局），否则上一帧的 display:none 会残留
-      // （SET_STYLE 为逐属性合并）
-      state.lineStyle = resolveStyle(LINE_STYLE, { ...lineStyle, display: 'linear' })
-    }
+    const measuredWidth = lineTheme === 'text' ? textRects[activeIndex]?.width : lineTheme === 'underline' ? rect.width : undefined
+    const left = rects.slice(0, activeIndex).reduce((sum: number, item: any) => sum + Number(item.width), 0) + Number(rect.width) / 2
+    state.useInnerLine = false
+    state.lineStyle = resolveStyle(LINE_STYLE, {
+      display: 'flex',
+      width: isDef(lineWidth) ? addUnit(lineWidth) : isDef(measuredWidth) ? addUnit(Number(measuredWidth)) : '',
+      height: isDef(lineHeight) ? addUnit(lineHeight) : '',
+      'border-radius': isDef(lineHeight) ? `calc(${addUnit(lineHeight)} / 2)` : '',
+      transform: `translateX(${left}px) translateX(-50%)`,
+      transition: animation ? 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
+    })
   } catch (error) {
     console.error('[wot ui] error(wd-tabs): update line style failed', error)
   }
@@ -444,21 +424,16 @@ function setActiveTab() {
  * 滚动到视图
  */
 function scrollIntoView() {
-  if (!state.inited) return
+  const request = ++scrollRequest
+  if (!state.inited || !isAlive()) return
+  const activeIndex = state.activeIndex
   Promise.all([getRect($item, true, proxy), getRect($container, false, proxy)]).then(([navItemsRects, navRect]) => {
-    if (!isAlive()) return
-    // 选中元素
-    const selectItem = navItemsRects[state.activeIndex]
+    if (!isAlive() || request !== scrollRequest || activeIndex !== state.activeIndex) return
+    const selectItem = navItemsRects[activeIndex]
     if (!selectItem) return
-    // 选中元素之前的节点的宽度总和
-    const offsetLeft = (navItemsRects as any).slice(0, state.activeIndex).reduce((prev: any, curr: any) => prev + curr.width, 0)
-    // scroll-view滑动到selectItem的偏移量
-    const left = offsetLeft - ((navRect as any).width - Number(selectItem.width)) / 2
-    if (left === state.scrollLeft) {
-      state.scrollLeft = left + Math.random() / 10000
-    } else {
-      state.scrollLeft = left
-    }
+    const offsetLeft = navItemsRects.slice(0, activeIndex).reduce((sum: number, rect: any) => sum + Number(rect.width), 0)
+    const left = offsetLeft - (Number(navRect.width) - Number(selectItem.width)) / 2
+    state.scrollLeft = left === state.scrollLeft ? left + Math.random() / 10000 : left
   })
 }
 
@@ -555,10 +530,9 @@ defineExpose<TabsExpose>({
  */
 const onBodyTouchStart = (event: any) => {
   'main thread'
-  if (!cfgSwipeable || !cfgAnimated) return
   const body = event.currentTarget as MtElement | undefined
   const touch = event.touches && event.touches[0]
-  if (!body || !touch) return
+  if (!body || !touch || body.getAttribute('swipeable') !== 'true' || body.getAttribute('animated') !== 'true') return
   gestureRef.current = { width: 0, startX: touch.clientX, startY: touch.clientY, axis: '' }
   if (typeof body.invoke !== 'function') return
   body.invoke('boundingClientRect').then((rect: any) => {
@@ -579,7 +553,7 @@ const onBodyTouchMove = (event: any) => {
   'main thread'
   const body = event.currentTarget as MtElement | undefined
   const gesture = gestureRef.current
-  if (!body || !gesture || gesture.width === 0) return
+  if (!body || !gesture || gesture.width === 0 || body.getAttribute('swipeable') !== 'true' || body.getAttribute('animated') !== 'true') return
   const touch = event.touches && event.touches[0]
   if (!touch) return
 
@@ -616,6 +590,7 @@ const onBodyTouchMove = (event: any) => {
           !showScrollbar ? 'is-hide-scrollbar' : ''
         }`"
         :style="rootStyle"
+        :id="tabsId"
       >
         <WdSticky :offset-top="offsetTop">
           <view class="wd-tabs__nav wd-tabs__nav--sticky">
@@ -646,7 +621,7 @@ const onBodyTouchMove = (event: any) => {
             <view class="wd-tabs__map" v-if="showMap()">
               <view :class="`wd-tabs__map-btn  ${state.animating ? 'is-open' : ''}`" @tap="toggleMap">
                 <view :class="`wd-tabs__map-arrow  ${state.animating ? 'is-open' : ''}`">
-                  <WdIcon name="arrow-down-bold" custom-class="wd-tabs__map-arrow-icon" />
+                  <WdIcon name="down" custom-class="wd-tabs__map-arrow-icon" />
                 </view>
               </view>
               <view class="wd-tabs__map-header" :style="mapHeaderStyle">
@@ -676,6 +651,8 @@ const onBodyTouchMove = (event: any) => {
             :style="bodyStyle"
             :active-index="String(state.activeIndex)"
             :tab-count="String(navItems().length)"
+            :swipeable="String(swipeable)"
+            :animated="String(animated)"
             :main-thread-bindtouchstart="onBodyTouchStart"
             :main-thread-bindtouchmove="onBodyTouchMove"
           >
@@ -722,7 +699,7 @@ const onBodyTouchMove = (event: any) => {
         <view class="wd-tabs__map" v-if="showMap()">
           <view class="wd-tabs__map-btn" @tap="toggleMap">
             <view :class="`wd-tabs__map-arrow ${state.animating ? 'is-open' : ''}`">
-              <WdIcon name="arrow-down-bold" custom-class="wd-tabs__map-arrow-icon" />
+              <WdIcon name="down" custom-class="wd-tabs__map-arrow-icon" />
             </view>
           </view>
           <view class="wd-tabs__map-header" :style="mapHeaderStyle">

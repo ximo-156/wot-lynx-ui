@@ -24,15 +24,20 @@ import './index.css'
 
 import WdIcon from '../../wd-icon/wd-icon.vue'
 import WdDatetimePickerView from '../../wd-datetime-picker-view/wd-datetime-picker-view.vue'
-import { computed, ref, watch, onMounted } from 'vue-lynx'
-import { debounce, isArray, isEqual, isNumber, pause, padZero, addUnit } from '../../../common/util'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue-lynx'
+import { isArray, isEqual, isNumber, pause, padZero, addUnit } from '../../../common/util'
 import { compareMonth, formatMonthTitle, getMonthEndDay, getMonths, getWeekLabel } from '../utils'
 import Month from '../month/month.vue'
 import { monthPanelProps, type MonthInfo, type MonthPanelTimeType, type MonthPanelExpose } from './types'
 import { useTranslate } from '../../../composables/useTranslate'
 import { type CalendarTimeFormatter } from '../types'
+import { useAlive } from '../../../composables/useAlive'
 const props = defineProps(monthPanelProps)
 const emit = defineEmits(['change', 'pickstart', 'pickend'])
+const isAlive = useAlive()
+let scrollRequest = 0
+let changeTimer: ReturnType<typeof setTimeout> | undefined
+onBeforeUnmount(() => { scrollRequest++; if (changeTimer !== undefined) clearTimeout(changeTimer) })
 
 const { translate } = useTranslate('calendar-view')
 
@@ -52,11 +57,13 @@ const currentDisplayMonth = ref<{ year: number; month: number }>({
 const timeType = ref<MonthPanelTimeType>('') // 当前时间类型，是开始还是结束
 const innerValue = ref<string | number | (number | null)[]>('') // 内部保存一个值，用于判断新老值，避免监听器触发
 
-const handleChange = debounce((value) => {
-  emit('change', {
-    value
-  })
-}, 50)
+const handleChange = (value: number | (number | null)[]) => {
+  if (changeTimer !== undefined) clearTimeout(changeTimer)
+  changeTimer = setTimeout(() => {
+    changeTimer = undefined
+    if (isAlive()) emit('change', { value })
+  }, 50)
+}
 
 /**
  * 当前显示月份的时间戳（仅在 switchMode !== 'none' 时使用）
@@ -74,7 +81,8 @@ const controlsTitle = computed(() => {
 
 // 标题（滚动模式下显示的年月）
 const title = computed(() => {
-  return formatMonthTitle(months.value[scrollIndex.value].date)
+  const month = months.value[Math.min(scrollIndex.value, months.value.length - 1)]
+  return month ? formatMonthTitle(month.date) : ''
 })
 
 /**
@@ -277,7 +285,7 @@ function initCurrentDisplayMonth() {
     activeDate = props.value
   }
 
-  if (!activeDate) {
+  if (activeDate === null || !Number.isFinite(activeDate)) {
     activeDate = Date.now()
   }
 
@@ -299,8 +307,10 @@ function initCurrentDisplayMonth() {
  * 使当前日期或者选中日期滚动到可视区域
  */
 async function scrollIntoView() {
+  const request = ++scrollRequest
   // 等待渲染完毕
   await pause()
+  if (!isAlive() || request !== scrollRequest) return
   let activeDate: number | null = 0
   if (isArray(props.value)) {
     // 对数组按时间排序,取第一个值
@@ -310,10 +320,11 @@ async function scrollIntoView() {
     activeDate = props.value
   }
 
-  if (!activeDate) {
+  if (activeDate === null || !Number.isFinite(activeDate)) {
     activeDate = Date.now()
   }
 
+  activeDate = Math.min(Math.max(activeDate, props.minDate), props.maxDate)
   let top: number = 0
   let activeMonthIndex = -1
   for (let index = 0; index < months.value.length; index++) {
@@ -334,6 +345,7 @@ async function scrollIntoView() {
   scrollTop.value = 0
   if (top > 0) {
     await pause()
+    if (!isAlive() || request !== scrollRequest) return
     // 如果不是第一个月才加45
     scrollTop.value = top + (activeMonthIndex > 0 ? 40 : 0)
   }
@@ -453,6 +465,14 @@ function doSetSubtitle(scrollTop: number) {
   }
 }
 
+watch([() => props.minDate, () => props.maxDate, () => props.value, () => props.switchMode], () => {
+  scrollRequest++
+  if (changeTimer !== undefined) { clearTimeout(changeTimer); changeTimer = undefined }
+  scrollIndex.value = Math.min(scrollIndex.value, Math.max(0, months.value.length - 1))
+  if (props.switchMode !== 'none') initCurrentDisplayMonth()
+  else scrollIntoView()
+}, { deep: true })
+
 defineExpose<MonthPanelExpose>({
   scrollIntoView
 })
@@ -465,12 +485,12 @@ defineExpose<MonthPanelExpose>({
       <view class="wd-month-panel__control">
         <WdIcon
           v-if="switchMode === 'year-month'"
-          name="arrow-double-left"
+          name="double-left"
           :custom-class="`wd-month-panel__control-icon ${isPrevYearDisabled ? 'is-disabled' : ''}`"
           @tap="!isPrevYearDisabled && changeYear(-1)"
         />
         <WdIcon
-          name="arrow-left-bold"
+          name="left"
           :custom-class="`wd-month-panel__control-icon ${isPrevMonthDisabled ? 'is-disabled' : ''}`"
           @tap="!isPrevMonthDisabled && changeMonth(-1)"
         />
@@ -478,13 +498,13 @@ defineExpose<MonthPanelExpose>({
       <text class="wd-month-panel__controls-title">{{ controlsTitle }}</text>
       <view class="wd-month-panel__control">
         <WdIcon
-          name="arrow-right-bold"
+          name="right"
           :custom-class="`wd-month-panel__control-icon ${isNextMonthDisabled ? 'is-disabled' : ''}`"
           @tap="!isNextMonthDisabled && changeMonth(1)"
         />
         <WdIcon
           v-if="switchMode === 'year-month'"
-          name="arrow-double-right"
+          name="double-right"
           :custom-class="`wd-month-panel__control-icon ${isNextYearDisabled ? 'is-disabled' : ''}`"
           @tap="!isNextYearDisabled && changeYear(1)"
         />

@@ -35,12 +35,12 @@ linkChildren({ props })
     <view v-if="title || value || $slots.title || $slots.value" class="wd-cell-group__title">
       <!--左侧标题-->
       <view class="wd-cell-group__left">
-        <text v-if="!$slots.title">{{ title }}</text>
+        <text v-if="!$slots.title" class="wd-cell-group__title-text">{{ title }}</text>
         <slot v-else name="title"></slot>
       </view>
       <!--右侧标题-->
       <view class="wd-cell-group__right">
-        <text v-if="!$slots.value">{{ value }}</text>
+        <text v-if="!$slots.value" class="wd-cell-group__value-text">{{ value }}</text>
         <slot v-else name="value"></slot>
       </view>
     </view>

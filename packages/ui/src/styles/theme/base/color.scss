@@ -5,6 +5,23 @@ page,
   --wot-base-black: #000000FF;
   --wot-base-white: #FFFFFFFF;
   --wot-base-transparent: transparent;
+
+  // 项目品牌色：不覆盖 blue / coolgrey 原始刻度，主题语义单独引用。
+  --wot-brand-1: #F8F6FFFF;
+  --wot-brand-2: #EEEBFFFF;
+  --wot-brand-3: #D8D1FFFF;
+  --wot-brand-4: #BEB3FFFF;
+  --wot-brand-5: #9A89FFFF;
+  --wot-brand-6: #755FFEFF;
+  --wot-brand-7: #5F48D9FF;
+  --wot-brand-8: #4935B5FF;
+  --wot-brand-9: #36268AFF;
+  --wot-brand-10: #251A60FF;
+  --wot-brand-secondary: #9A89FFFF;
+  --wot-brand-opac: #755FFE14;
+  --wot-brand-text-main: #2D273DFF;
+  --wot-brand-text-secondary: #979797FF;
+
   // 蓝色
   --wot-blue-1: #F5F8FFFF;
   --wot-blue-2: #E5EDFFFF;
