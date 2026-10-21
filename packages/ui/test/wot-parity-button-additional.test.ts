@@ -127,7 +127,8 @@ describe('wot 2.3.2 button — additional contracts', () => {
     expect(mounted.container.textContent).toBe('label')
     const slotted = mount({ text: 'fallback', icon: 'star' }, { default: () => h('view', { class: 'native-button-slot' }, [h('text', null, 'slot label')]) })
     expect(slotted.container.querySelector('.wd-button__text > .native-button-slot')).not.toBeNull()
-    expect(slotted.container.textContent).toBe('slot label')
+    // 图标以字体字形 text 渲染，容器 textContent 含私用区码点；只校验文本插槽
+    expect(slotted.container.querySelector('.wd-button__text')!.textContent).toBe('slot label')
     expect(slotted.button().className).not.toContain('is-icon')
   })
 

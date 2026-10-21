@@ -664,10 +664,14 @@ describe('wot 2.3.2 scroll additional parity: backtop and generated geometry', (
     expect(pageScroll).toHaveBeenCalledExactlyOnceWith({ scrollTop: 0, duration: 245 })
     expect(clicks).toHaveBeenCalledOnce()
     expect(taps.mock.calls[0][0].detail).toEqual({ marker: 'backtop' })
+    const iconRoot = container.querySelector('.wd-backtop__backicon') as HTMLElement
     const glyph = container.querySelector('.wd-backtop__backicon .wd-icon__glyph') as HTMLElement
     expect(container.querySelector('.wd-icon-to-top')).not.toBeNull()
-    expect(glyph.style.fontSize).toBe('25px')
-    expect(glyph.style.color).toBe('rgb(10, 20, 30)')
+    // iconStyle 落在图标根节点，字形 text 显式 inherit（与官方字体图标一致）
+    expect(iconRoot.style.fontSize).toBe('25px')
+    expect(iconRoot.style.color).toBe('rgb(10, 20, 30)')
+    expect(glyph.style.fontSize).toBe('inherit')
+    expect(glyph.style.color).toBe('inherit')
     shape.value = 'circle'; bottom.value = 0; right.value = 0; duration.value = 0
     await frames()
     expect(root.classList.contains('is-circle')).toBe(true)

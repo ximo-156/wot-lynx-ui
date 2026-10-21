@@ -38,9 +38,17 @@ describe('document-level Lynx Web icon font', () => {
     expect(hook.order).toBe('pre') // must precede Rspeedy fixed preview middleware
     const out = tags({ headTags: [], bodyTags: [] })
     expect(out.headTags[0].attrs['data-wot-lynx-iconfont']).toBe(true)
-    expect(out.headTags[0].children).toContain('font-family:wd-iconfont;')
-    const base64 = out.headTags[0].children.match(/base64,([^"\)]+)/)[1]
-    expect(Buffer.from(base64, 'base64')).toEqual(readFileSync(fileURLToPath(new URL('../src/icons/fonts/iconfont.ttf', import.meta.url))))
+    // 两套字体都必须注册在 document 级：官方 305 字形 + 旧 iconfont 扩展集
+    const css = out.headTags[0].children
+    expect(css).toContain('font-family:wd-wot-icons;')
+    expect(css).toContain('font-family:wd-iconfont;')
+    const blocks = [...css.matchAll(/font-family:(wd-[a-z-]+);src:url\("data:font\/ttf;base64,([^"]+)"\)/g)]
+    expect(blocks.map((m) => m[1])).toEqual(['wd-wot-icons', 'wd-iconfont'])
+    for (const [, family, base64] of blocks) {
+      const file = family === 'wd-wot-icons' ? 'wot-icons.ttf' : 'iconfont.ttf'
+      // 原样注入 TTF 字节，不做子集化/重编码
+      expect(Buffer.from(base64!, 'base64')).toEqual(readFileSync(fileURLToPath(new URL(`../src/icons/fonts/${file}`, import.meta.url))))
+    }
   })
 
   it('handles fixed preview HTML and recomputes Content-Length after insertion', () => {

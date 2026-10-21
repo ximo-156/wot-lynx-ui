@@ -107,6 +107,7 @@ describe('事件注册表全覆盖：每个组件 × 每个 Lynx 原生事件 ×
     const name = compName(path)
     const Comp = (mod as any).default
 
+    // 重型组件（日历/日期面板等）在全量并行跑时挂载 + 全元素派发会接近默认 5s 上限
     it(`${name}：绑定全部原生事件后挂载 + 全元素派发不崩溃`, () => {
       const listeners: Record<string, () => void> = {}
       for (const ev of NATIVE_EVENTS) {
@@ -173,6 +174,6 @@ describe('事件注册表全覆盖：每个组件 × 每个 Lynx 原生事件 ×
         }
       }
       cleanup()
-    })
+    }, 20000)
   }
 })

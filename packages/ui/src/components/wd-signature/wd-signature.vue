@@ -527,7 +527,7 @@ const geomRef = useMainThreadRef<{ left: number; top: number } | null>(null)
  * lastX / lastY / lastT / lastW / prevW 上一触点状态（压感与去重），
  * index 已用线段数，ready 几何是否已落地。
  */
-const drawRef = useMainThreadRef<{
+interface DrawState {
   rawX: number
   rawY: number
   offX: number
@@ -540,7 +540,12 @@ const drawRef = useMainThreadRef<{
   index: number
   ready: boolean
   version: string | null
-} | null>(null)
+  pendingX: number | null
+  pendingY: number | null
+  /** 写入一段（起笔 worklet 内定义，避免 worklet 交叉引用） */
+  write: (x: number, y: number) => void
+}
+const drawRef = useMainThreadRef<DrawState | null>(null)
 
 /**
  * 起笔（主线程）：一次性度量画布页面偏移并登记笔迹状态。
@@ -571,9 +576,65 @@ const onDrawStartMt = (event: any) => {
     prevW: 0,
     index: 0,
     ready: false,
-    version: canvas.getAttribute('gesture-version')
+    version: canvas.getAttribute('gesture-version'),
+    pendingX: null,
+    pendingY: null,
+    write: () => {}
   }
   const state = drawRef.current
+  // 与 SVG 导出的逐段 path 同构：段宽取终点线宽、圆头线帽，中心定位 + rotate
+  const write = (x: number, y: number) => {
+    if (state.index >= POOL_SIZE) return
+    if (canvas.getAttribute('gesture-disabled') === 'true' || state.version !== canvas.getAttribute('gesture-version')) return
+    const cfgLineWidth = Number(canvas.getAttribute('gesture-line-width')) || 3
+    const cfgPressure = canvas.getAttribute('gesture-pressure') === 'true'
+    const cfgMaxWidth = Number(canvas.getAttribute('gesture-max-width')) || 6
+    const cfgMinWidth = Number(canvas.getAttribute('gesture-min-width')) || 2
+    const cfgMinSpeed = Number(canvas.getAttribute('gesture-min-speed')) || 1.5
+    const cfgPenColor = canvas.getAttribute('gesture-pen-color') || '#000'
+    const t = Date.now()
+
+    // 与后台 draw() 同一去重：同毫秒或同位置不建段
+    if (state.lastT === t || (state.lastX === x && state.lastY === y)) return
+
+    const distance = Math.sqrt(Math.pow(x - state.lastX, 2) + Math.pow(y - state.lastY, 2))
+    const speed = distance / (t - state.lastT || 0.1)
+
+    let width = cfgLineWidth
+    if (cfgPressure) {
+      const limitedSpeed = Math.min(cfgMinSpeed * 10, Math.max(cfgMinSpeed, speed))
+      const addWidth = ((cfgMaxWidth - cfgMinWidth) * (limitedSpeed - cfgMinSpeed)) / cfgMinSpeed
+      width = Math.min(Math.max(cfgMaxWidth - addWidth, cfgMinWidth), cfgMaxWidth)
+      // 线宽变化率限制（与后台 draw() 一致）
+      if (state.prevW && state.lastW) {
+        const rate = (width - state.lastW) / state.lastW
+        const maxRate = 0.2
+        if (Math.abs(rate) > maxRate) {
+          width = state.lastW * (1 + (rate > 0 ? maxRate : -maxRate))
+        }
+      }
+    }
+
+    const seg = segmentRefs[state.index] && segmentRefs[state.index].current
+    if (seg && distance > 0) {
+      const angle = (Math.atan2(y - state.lastY, x - state.lastX) * 180) / Math.PI
+      seg.setStyleProperty('left', `${(state.lastX + x) / 2 - distance / 2}px`)
+      seg.setStyleProperty('top', `${(state.lastY + y) / 2 - width / 2}px`)
+      seg.setStyleProperty('width', `${distance}px`)
+      seg.setStyleProperty('height', `${width}px`)
+      seg.setStyleProperty('background-color', cfgPenColor)
+      seg.setStyleProperty('border-radius', `${width / 2}px`)
+      seg.setStyleProperty('transform', `rotate(${angle}deg)`)
+    }
+
+    state.prevW = state.lastW
+    state.lastW = width
+    state.lastX = x
+    state.lastY = y
+    state.lastT = t
+    state.index = state.index + 1
+  }
+  state.write = write
   if (typeof canvas.invoke !== 'function') return
   canvas.invoke('boundingClientRect').then((rect: any) => {
     const d = drawRef.current
@@ -584,6 +645,14 @@ const onDrawStartMt = (event: any) => {
     d.lastY = d.rawY - d.offY
     d.lastT = Date.now()
     d.ready = true
+    if (d.pendingX !== null && d.pendingY !== null) {
+      // 暂存的是页面坐标，就绪后按真实偏移换算（不能用 0 偏移的近似值）
+      const px = d.pendingX - d.offX
+      const py = d.pendingY - d.offY
+      d.pendingX = null
+      d.pendingY = null
+      d.write(px, py)
+    }
   })
 }
 
@@ -598,59 +667,13 @@ const onDrawMoveMt = (event: any) => {
   'main thread'
   const d = drawRef.current
   const canvas = canvasRef.current
-  if (!d || !d.ready || d.index >= POOL_SIZE || !canvas || canvas.getAttribute('gesture-disabled') === 'true' || d.version !== canvas.getAttribute('gesture-version')) return
-  const cfgLineWidth = Number(canvas.getAttribute('gesture-line-width')) || 3
-  const cfgPressure = canvas.getAttribute('gesture-pressure') === 'true'
-  const cfgMaxWidth = Number(canvas.getAttribute('gesture-max-width')) || 6
-  const cfgMinWidth = Number(canvas.getAttribute('gesture-min-width')) || 2
-  const cfgMinSpeed = Number(canvas.getAttribute('gesture-min-speed')) || 1.5
-  const cfgPenColor = canvas.getAttribute('gesture-pen-color') || '#000'
+  if (!d || d.index >= POOL_SIZE || !canvas || canvas.getAttribute('gesture-disabled') === 'true' || d.version !== canvas.getAttribute('gesture-version')) return
   const touch0 = event.touches && event.touches[0]
   if (!touch0) return
-
-  const x = touch0.clientX - d.offX
-  const y = touch0.clientY - d.offY
-  const t = Date.now()
-
-  // 与后台 draw() 同一去重：同毫秒或同位置不建段
-  if (d.lastT === t || (d.lastX === x && d.lastY === y)) return
-
-  const distance = Math.sqrt(Math.pow(x - d.lastX, 2) + Math.pow(y - d.lastY, 2))
-  const speed = distance / (t - d.lastT || 0.1)
-
-  let width = cfgLineWidth
-  if (cfgPressure) {
-    const limitedSpeed = Math.min(cfgMinSpeed * 10, Math.max(cfgMinSpeed, speed))
-    const addWidth = ((cfgMaxWidth - cfgMinWidth) * (limitedSpeed - cfgMinSpeed)) / cfgMinSpeed
-    width = Math.min(Math.max(cfgMaxWidth - addWidth, cfgMinWidth), cfgMaxWidth)
-    // 线宽变化率限制（与后台 draw() 一致）
-    if (d.prevW && d.lastW) {
-      const rate = (width - d.lastW) / d.lastW
-      const maxRate = 0.2
-      if (Math.abs(rate) > maxRate) {
-        width = d.lastW * (1 + (rate > 0 ? maxRate : -maxRate))
-      }
-    }
-  }
-
-  const seg = segmentRefs[d.index] && segmentRefs[d.index].current
-  if (seg && distance > 0) {
-    const angle = (Math.atan2(y - d.lastY, x - d.lastX) * 180) / Math.PI
-    seg.setStyleProperty('left', `${(d.lastX + x) / 2 - distance / 2}px`)
-    seg.setStyleProperty('top', `${(d.lastY + y) / 2 - width / 2}px`)
-    seg.setStyleProperty('width', `${distance}px`)
-    seg.setStyleProperty('height', `${width}px`)
-    seg.setStyleProperty('background-color', cfgPenColor)
-    seg.setStyleProperty('border-radius', `${width / 2}px`)
-    seg.setStyleProperty('transform', `rotate(${angle}deg)`)
-  }
-
-  d.prevW = d.lastW
-  d.lastW = width
-  d.lastX = x
-  d.lastY = y
-  d.lastT = t
-  d.index = d.index + 1
+  // 首次度量（boundingClientRect）未返回时暂存页面坐标：就绪后补画首段，
+  // 避免真机上快速起笔丢掉第一段（与低端机同款竞态）
+  if (!d.ready) { d.pendingX = touch0.clientX; d.pendingY = touch0.clientY; return }
+  d.write(touch0.clientX - d.offX, touch0.clientY - d.offY)
 }
 
 /**

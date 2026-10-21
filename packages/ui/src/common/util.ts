@@ -70,6 +70,9 @@ export const defaultFunction = <T>(value: T): T => value
 /**
  * 判断值是否不为空
  */
+/** 空操作（事件/回调占位；官方同款 noop） */
+export const noop = () => {}
+
 export const isDef = <T>(value: T): value is NonNullable<T> => value !== undefined && value !== null
 
 /**

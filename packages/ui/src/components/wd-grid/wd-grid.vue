@@ -38,17 +38,13 @@ const GRID_STYLE = defineStyleKeys({
   marginBottom: '0px'
 })
 
-const rootStyle = computed<CSSProperties>(() => {
-  return {
-    ...resolveStyle(GRID_STYLE, {
-      // gutter 由根节点左内边距 + 子项右内边距共同构成（对齐 wot-ui）
-      paddingLeft: isDef(props.gutter) ? addUnit(props.gutter) : '',
-      // square 模式下子项以 padding-top 百分比撑高，容器以负底边距回收
-      marginBottom: isDef(props.gutter) && props.square ? addUnit(-props.gutter) : ''
-    }),
-    ...parseStyle(props.customStyle)
-  }
-})
+const resolveRootStyle = createStyleResolver(GRID_STYLE)
+const rootStyle = computed<CSSProperties>(() => resolveRootStyle({
+  // gutter 由根节点左内边距 + 子项右内边距共同构成（对齐 wot-ui）
+  paddingLeft: isDef(props.gutter) ? addUnit(props.gutter) : '',
+  // square 模式下子项以 padding-top 百分比撑高，容器以负底边距回收
+  marginBottom: isDef(props.gutter) && props.square ? addUnit(-props.gutter) : ''
+}, parseStyle(props.customStyle)))
 </script>
 
 <template>

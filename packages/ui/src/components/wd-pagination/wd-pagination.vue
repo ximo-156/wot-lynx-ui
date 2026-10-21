@@ -4,7 +4,7 @@
  * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
  * - prev / size / next / message 插槽与按钮配置保持参考源契约；
  * - @click → @tap；wd-button 声明 click / tap，避免原生监听合并；
- * - 内置箭头映射为 arrow-left-bold / arrow-right-bold；
+ * - 内置箭头保留官方 left / right 字形；
  * - customStyle 经 parseStyle 归一为对象后绑定（CONVENTIONS §19）；
  * - 页码区显式 flex 行；辅助文案在单个 text 排版边界内连续排版，
  *   避免默认 linear 布局把参考源的行内文本堆叠成三行；
@@ -26,6 +26,8 @@ const { translate } = useTranslate('pagination')
 
 const props = defineProps(paginationProps)
 const emit = defineEmits(['change', 'update:modelValue'])
+const resolveRootStyle = createStyleResolver()
+const rootStyle = computed(() => resolveRootStyle(parseStyle(props.customStyle)))
 
 /** total 优先；未提供条数时使用 totalPage，所有依赖均保持响应式。 */
 const totalPageNum = computed(() => props.total > 0 ? Math.ceil(props.total / props.pageSize) : props.totalPage)
@@ -57,7 +59,7 @@ function sub() {
 </script>
 
 <template>
-  <view :class="`wd-pagination ${customClass}`" :style="parseStyle(customStyle)" v-if="!(hideIfOnePage && totalPageNum === 1)">
+  <view :class="`wd-pagination ${customClass}`" :style="rootStyle" v-if="!(hideIfOnePage && totalPageNum === 1)">
     <view class="wd-pagination__content">
       <slot name="prev" :modelValue="modelValue" :totalPageNum="totalPageNum" :total="total" :pageSize="pageSize">
         <WdButton

@@ -1290,7 +1290,7 @@ const portalBarVisible = ref(false)
         <view class="demo-panel">
           <text class="demo-panel__label">文字水印（content，固定高度容器）</text>
           <view style="height: 180px; border-radius: 12px; overflow: hidden">
-            <wd-watermark content="wot-lynx-ui" :font-size="14" :opacity="0.15" style="height: 100%">
+            <wd-watermark content="wot-lynx-ui" :font-size="14" :opacity="0.15" :full-screen="false" style="height: 100%">
               <view style="padding: 12px">
                 <text class="demo-panel__label">被水印覆盖的内容区域</text>
               </view>

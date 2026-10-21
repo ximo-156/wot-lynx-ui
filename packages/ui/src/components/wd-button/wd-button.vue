@@ -124,57 +124,68 @@ interface HoverPress {
   started: number
   released: number | null
   active: boolean
+  /** 主线程推进（起笔 worklet 内定义，避免 worklet 交叉引用） */
+  step: () => void
 }
 const buttonRef = useMainThreadRef<HoverElement | null>(null)
 const borderRef = useMainThreadRef<HoverElement | null>(null)
 const pressRef = useMainThreadRef<HoverPress | null>(null)
 
-// 声明式 MTS：rAF 仅持有当前按压，迟到回调用元素/请求/props 版本三重守卫。
-const updateHover = (request: HoverPress) => {
-  'main thread'
-  const press = pressRef.current
-  const element = buttonRef.current
-  if (!press || press !== request || !element || element !== press.element) return
-  if (element.getAttribute('hover-version') !== press.version || element.getAttribute('hover-disabled') === 'true') {
-    pressRef.current = null
-    if (element.getAttribute('hover-custom-background') !== 'true') element.setStyleProperty('background-color', '')
-    if (element.getAttribute('hover-custom-color') !== 'true') element.setStyleProperty('color', '')
-    if (borderRef.current) borderRef.current.setStyleProperty('border-color', '')
-    return
-  }
-  const now = Date.now()
-  if (press.released === null) {
-    const delay = Math.max(0, Number(element.getAttribute('hover-start-time')) || 0)
-    if (!press.active && now - press.started >= delay) {
-      press.active = true
-      if (element.getAttribute('hover-custom-background') !== 'true') element.setStyleProperty('background-color', 'var(--wot-button-current-bg-active)')
-      if (element.getAttribute('hover-custom-color') !== 'true') element.setStyleProperty('color', 'var(--wot-button-current-text-active)')
-      if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', 'var(--wot-button-plain-border-active)')
-    }
-    if (!press.active) requestAnimationFrame(() => updateHover(press))
-  } else {
-    const delay = Math.max(0, Number(element.getAttribute('hover-stay-time')) || 0)
-    if (now - press.released < delay) {
-      requestAnimationFrame(() => updateHover(press))
-      return
-    }
-    if (element.getAttribute('hover-custom-background') !== 'true') element.setStyleProperty('background-color', '')
-    if (element.getAttribute('hover-custom-color') !== 'true') element.setStyleProperty('color', '')
-    if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', '')
-    pressRef.current = null
-  }
-}
+/**
+ * 声明式 MTS（主线程）：按压态 step 直接挂在 press 对象上。
+ *
+ * Lynx 的 worklet 编译产物里，worklet 之间互相引用会出现「Cannot access X
+ * before initialization」（注册顺序早于 const 初始化），因此这里不使用
+ * 模块级 worklet 辅助函数，而是把推进逻辑定义在起笔 worklet 内部，
+ * 由 rAF 回调与收笔 worklet 通过 press.step 调用。
+ */
 const handleHoverStart = () => {
   'main thread'
   const element = buttonRef.current
   if (!element || element.getAttribute('hover-disabled') === 'true') return
   const previous = pressRef.current
-  const request = {
+  const press: HoverPress = {
     element, border: borderRef.current, version: element.getAttribute('hover-version') || '',
-    started: Date.now(), released: null, active: !!previous && previous.element === element && previous.version === element.getAttribute('hover-version') && previous.active
+    started: Date.now(), released: null as number | null,
+    active: !!previous && previous.element === element && previous.version === element.getAttribute('hover-version') && previous.active,
+    step: () => {}
   }
-  pressRef.current = request
-  updateHover(request)
+  const step = () => {
+    if (pressRef.current !== press) return
+    const current = buttonRef.current
+    if (!current || current !== press.element) { pressRef.current = null; return }
+    if (current.getAttribute('hover-version') !== press.version || current.getAttribute('hover-disabled') === 'true') {
+      pressRef.current = null
+      if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', '')
+      if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', '')
+      if (borderRef.current) borderRef.current.setStyleProperty('border-color', '')
+      return
+    }
+    const now = Date.now()
+    if (press.released === null) {
+      const delay = Math.max(0, Number(current.getAttribute('hover-start-time')) || 0)
+      if (!press.active && now - press.started >= delay) {
+        press.active = true
+        if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', 'var(--wot-button-current-bg-active)')
+        if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
+        if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', 'var(--wot-button-plain-border-active)')
+      }
+      if (!press.active) requestAnimationFrame(() => step())
+      return
+    }
+    const delay = Math.max(0, Number(current.getAttribute('hover-stay-time')) || 0)
+    if (now - press.released < delay) {
+      requestAnimationFrame(() => step())
+      return
+    }
+    if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', '')
+    if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', '')
+    if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', '')
+    pressRef.current = null
+  }
+  press.step = step
+  pressRef.current = press
+  step()
 }
 const handleHoverEnd = () => {
   'main thread'
@@ -182,7 +193,7 @@ const handleHoverEnd = () => {
   if (!press) return
   if (!press.active) { pressRef.current = null; return }
   press.released = Date.now()
-  updateHover(press)
+  press.step()
 }
 const handleHoverCancel = () => {
   'main thread'

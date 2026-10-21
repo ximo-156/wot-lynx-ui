@@ -153,6 +153,32 @@ describe('WdConfigProvider：主题继承与覆盖', () => {
 })
 
 describe('WdRootPortal：镜像主题变量', () => {
+  it('多个 Provider / Portal 独立下发变量，保留普通样式并清除撤回变量', async () => {
+    const vars = ref<Record<string, string>>({ primary6: '#123456' })
+    const Host = defineComponent({
+      setup: () => () => h('view', {}, [
+        h(ConfigProvider, { themeVars: vars.value, customStyle: { padding: '12px' } }, () => h(RootPortal, { customStyle: { margin: '3px' } })),
+        h(ConfigProvider, { themeVars: { primary6: '#abcdef' }, customStyle: { padding: '8px' } }, () => h(RootPortal))
+      ])
+    })
+    const { container } = render(Host)
+    await pause(0)
+    const providers = [...container.querySelectorAll('.wd-config-provider')] as HTMLElement[]
+    const portals = [...container.querySelectorAll('.wd-root-portal')] as HTMLElement[]
+    expect(providers.map(el => el.style.getPropertyValue('--wot-primary-6'))).toEqual(['#123456', '#abcdef'])
+    expect(portals.map(el => el.style.getPropertyValue('--wot-primary-6'))).toEqual(['#123456', '#abcdef'])
+    expect(providers[0].style.padding).toBe('12px')
+    expect(portals[0].style.margin).toBe('3px')
+    vars.value = {}
+    await pause(0)
+    await pause(0)
+    expect(providers[0].style.getPropertyValue('--wot-primary-6')).toBe('')
+    expect(portals[0].style.getPropertyValue('--wot-primary-6')).toBe('')
+    expect(providers[1].style.getPropertyValue('--wot-primary-6')).toBe('#abcdef')
+    expect(portals[1].style.getPropertyValue('--wot-primary-6')).toBe('#abcdef')
+    expect(providers[0].style.padding).toBe('12px')
+    cleanup()
+  })
   it('嵌套在 ConfigProvider 内时继承主题类与变量', async () => {
     const { container } = render(ConfigProvider, {
       theme: 'dark',

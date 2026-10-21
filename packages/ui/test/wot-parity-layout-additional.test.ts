@@ -79,7 +79,7 @@ describe('wot 2.3.2 layout behavior (real Lynx dual-thread renderer, not native 
     expect(inlineVariable(content, '--wot-grid-item-bg')).toBe('rgb(20, 30, 40)')
     expect(content.classList.contains('is-horizontal')).toBe(true); expect(content.classList.contains('is-reverse')).toBe(true)
     square.value = false; gutter.value = 0; bg.value = ''; reverse.value = false; await frames()
-    expect(item.style.paddingTop).toBe(''); expect(item.style.paddingRight).toBe('')
+    expect(item.style.paddingTop).toBe('0px'); expect(item.style.paddingRight).toBe('0px')
     expect(content.style.right).toBe('0px'); expect(content.style.bottom).toBe('auto')
     expect(inlineVariable(content, '--wot-grid-item-bg')).toBe('')
     expect(content.classList.contains('is-reverse')).toBe(false)

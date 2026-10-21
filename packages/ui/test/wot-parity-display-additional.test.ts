@@ -50,7 +50,8 @@ describe('official display additional: avatar / badge', () => {
     const { container } = render({ setup: () => () => h(Avatar, { size: size.value, color: color.value, bgColor: bgColor.value, text: 'A' }) } as any)
     const root = container.querySelector('.wd-avatar')!
     expect(style(root).width).toBe('80px')
-    expect(style(root).fontSize).toContain('0.45')
+    // 官方：font-size = calc(size * 0.45)；DOM 归一化后为 calc(36px)
+    expect(style(root).fontSize).toBe('calc(36px)')
     size.value = 'small'; color.value = ''; bgColor.value = ''
     await settle()
     expect(root.classList.contains('wd-avatar--small')).toBe(true)
@@ -199,12 +200,14 @@ describe('official display additional: img / empty', () => {
     expect(icon.classList.contains('wd-icon-empty')).toBe(true)
     expect(style(icon).width).toBe('40px')
     expect(style(icon).height).toBe('40px')
-    expect(style(icon.querySelector('.wd-icon__glyph')!).fontSize).toBe('40px')
+    // 字号由图标根节点承担，字形 text 显式 inherit（不重复下发内联值）
+    expect(style(icon).fontSize).toBe('40px')
+    expect(style(icon.querySelector('.wd-icon__glyph')!).fontSize).toBe('inherit')
     size.value = undefined
     await settle()
     expect(style(icon).width).toBe('')
     expect(style(icon).height).toBe('')
-    expect(style(icon.querySelector('.wd-icon__glyph')!).fontSize).toBe('')
+    expect(style(icon.querySelector('.wd-icon__glyph')!).fontSize).toBe('inherit')
     expect(source('wd-empty')).toContain('--wot-empty-icon-size')
   })
 

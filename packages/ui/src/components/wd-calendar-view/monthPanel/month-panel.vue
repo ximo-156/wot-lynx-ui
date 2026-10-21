@@ -442,11 +442,13 @@ function handlePickEnd() {
   emit('pickend')
 }
 
-const monthScroll = (event: { detail: { scrollTop: number } }) => {
+const monthScroll = (event: { detail?: { scrollTop?: number } }) => {
   if (months.value.length <= 1) {
     return
   }
-  const scrollTop = Math.max(0, event.detail.scrollTop)
+  // 原生 scroll 事件必带 detail.scrollTop；合成/异常事件缺字段时按 0 处理，
+  // 不能让缺少详情的滚动事件把日历面板打崩。
+  const scrollTop = Math.max(0, Number(event?.detail?.scrollTop) || 0)
   doSetSubtitle(scrollTop)
 }
 

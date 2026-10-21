@@ -140,9 +140,8 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     cleanup()
   })
 
-  it('WdConfigProvider themeVars 映射为 --wot-* 并写入根节点 style 属性（定制主题曾整体失效）', async () => {
-    // 映射结果以对象返回（组件据此拼接 style 属性字符串：CSSOM 会丢弃
-    // el.style['--x'] 赋值，故不能只依赖对象通道）。
+  it('WdConfigProvider themeVars 经原生对象通道写入根节点（定制主题曾整体失效）', async () => {
+    // 测试宿主补齐 CSSOM 自定义属性写入；产品使用原生 SET_STYLE 对象通道。
     const vars = mapThemeVarsToCSSVars({ colorPrimary: '#ff0000', fontSizeSmall: '12px' })
     expect(vars).toEqual({
       '--wot-color-primary': '#ff0000',
@@ -153,7 +152,7 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     })
     await pause(0)
     const root = container.querySelector('.wot-theme-light')
-    expect(styleOf(root)).toContain('--wot-primary-color:#ff0000')
+    expect((root as HTMLElement).style.getPropertyValue('--wot-primary-color')).toBe('#ff0000')
     cleanup()
   })
 

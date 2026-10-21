@@ -116,24 +116,22 @@ const GRID_ITEM_ROOT_STYLE = defineStyleKeys({
  * 计算当前格子的宽度、flex 属性及额外样式（如正方形、间距）
  * @returns {CSSProperties} 组合后的 CSS 样式对象
  */
+const resolveRootStyle = createStyleResolver(GRID_ITEM_ROOT_STYLE)
 const rootStyle = computed<CSSProperties>(() => {
   const columnNum = column.value || childCount.value || 1
   const percent = `${100 / columnNum}%`
 
-  return {
-    ...resolveStyle(GRID_ITEM_ROOT_STYLE, {
-      flexBasis: percent,
-      width: percent,
-      // 正方形格子：以 padding-top 百分比撑高（配合内容区绝对定位）
-      paddingTop: square.value ? percent : '',
-      paddingBottom: square.value ? '0' : '',
-      // gutter 时 square / 非 square 两种模式都以右内边距承担列间距（对齐参考源）
-      paddingRight: gutter.value ? addUnit(gutter.value) : '',
-      // 非正方形 + 第二行及以后：上边距承担行间距
-      marginTop: !square.value && gutter.value && index.value >= columnNum ? addUnit(gutter.value) : ''
-    }),
-    ...parseStyle(props.customStyle)
-  }
+  return resolveRootStyle({
+    flexBasis: percent,
+    width: percent,
+    // 正方形格子：以 padding-top 百分比撑高（配合内容区绝对定位）
+    paddingTop: square.value ? percent : '',
+    paddingBottom: square.value ? '0' : '',
+    // gutter 时 square / 非 square 两种模式都以右内边距承担列间距（对齐参考源）
+    paddingRight: gutter.value ? addUnit(gutter.value) : '',
+    // 非正方形 + 第二行及以后：上边距承担行间距
+    marginTop: !square.value && gutter.value && index.value >= columnNum ? addUnit(gutter.value) : ''
+  }, parseStyle(props.customStyle))
 })
 
 /**

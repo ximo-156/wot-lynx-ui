@@ -285,7 +285,7 @@ const logoImageStyle = computed(() => {
   }
 })
 
-const logoBorderStyle = computed(() => {
+const logoBorderStyle = computed<Record<string, string>>(() => {
   const border = Math.max(0, props.logoBorderWidth || 0)
   const { logoWidth, logoHeight } = logoSize.value
   return {

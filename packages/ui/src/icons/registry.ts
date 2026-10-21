@@ -9,7 +9,7 @@ import { wotIconsSet } from './sets/wot-icons'
 import type { IconPaths, IconSet, ResolvedIcon } from './types'
 
 /** 注册顺序即回退查找顺序：内置集必须首位，保证存量名字命中内置字形 */
-const iconSets = new Map<string, IconSet>()
+const iconSets = shallowReactive(new Map<string, IconSet>())
 
 /** 集合键分隔符：`key:name` */
 const SET_KEY_SEPARATOR = ':'
@@ -47,10 +47,12 @@ function toPaths(paths: IconPaths): readonly string[] {
 /** 在指定集合内解析单个图标名，未命中返回 null */
 function resolveFromSet(setKey: string, set: IconSet, iconName: string): ResolvedIcon | null {
   if (set.type === 'font') {
+    if (!Object.prototype.hasOwnProperty.call(set.unicodes, iconName)) return null
     const unicode = set.unicodes[iconName]
     if (!unicode) return null
     return { type: 'font', setKey, fontFamily: set.fontFamily, unicode }
   }
+  if (!Object.prototype.hasOwnProperty.call(set.paths, iconName)) return null
   const paths = set.paths[iconName]
   if (!paths) return null
   return { type: 'svg', setKey, viewBox: set.viewBox, paths: toPaths(paths) }

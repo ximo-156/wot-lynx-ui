@@ -37,6 +37,22 @@ const mainThreadFns = {
 const mtGlobal = lynxTestingEnv.mainThread.globalThis as any
 Object.assign(mtGlobal, mainThreadFns)
 
+// 测试宿主 0.1.11 用 Object.assign(e.style, styles)，CSSOM 不序列化 --* 键。
+// 真实 Web 使用 WASM set_inline_styles_in_key_value_vec，原生同样支持自定义变量。
+// 只补齐自定义属性写入/删除；普通样式仍走原测试 API，不模拟 CSS 变量求值。
+const setInlineStyles = mtGlobal.__SetInlineStyles
+mtGlobal.__SetInlineStyles = (element: HTMLElement, styles: unknown) => {
+  setInlineStyles(element, styles)
+  if (styles && typeof styles === 'object') {
+    for (const [key, value] of Object.entries(styles)) {
+      if (!key.startsWith('--')) continue
+      if (value === '' || value == null) element.style.removeProperty(key)
+      else element.style.setProperty(key, String(value))
+    }
+  }
+}
+;(globalThis as any).__SetInlineStyles = mtGlobal.__SetInlineStyles
+
 // Main Thread Script 模拟层：worklet 派发 + 主线程元素桩（见 mts-worklet-shim.ts）
 installWorkletGlobals(mtGlobal)
 

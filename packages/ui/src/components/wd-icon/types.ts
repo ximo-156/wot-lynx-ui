@@ -5,9 +5,9 @@ export const iconProps = {
   ...baseProps,
   /**
    * 图标名称，支持使用图片链接。
-   * 内置图标经图标注册表（icons/registry.ts）解析：内置 iconfont 集 180 个
-   * （.ttf 字体），直接按名使用；带 `集合键:图标名` 前缀（如 `iconfont:menu`）
-   * 精确命中指定集合（注册多套集时消歧）。
+   * 内置图标经图标注册表（icons/registry.ts）解析：裸名优先官方 wot 集
+   * 305 个字体字形，未命中再查原 iconfont 扩展集 180 个；带 `集合键:图标名`
+   * 前缀（如 `iconfont:menu`）精确命中指定集合（注册多套集时消歧）。
    * name 含 '/' 时按图片链接渲染原生 image 元素。
    * 类型: string
    */

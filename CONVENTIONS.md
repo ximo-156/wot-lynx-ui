@@ -575,4 +575,46 @@ const lineStyle = computed(() => {
   这些组件的条件写样式目前多为「prop 由有值变为无值」才触发，风险相对低；
   迁移须先有视觉回归兜底（见 ARCHITECTURE.md Phase 1）。
 
+## 21. 主线程 worklet（`'main thread'`）禁止互相引用
 
+Lynx 的 worklet 编译产物会把带 `'main thread'` 指令的函数逐个注册到主线程，
+注册发生在模块 `const` 初始化之前。**worklet A 的闭包里引用 worklet B 的标识符**
+时，真机（Lynx Web / 原生）会在 `setup` 阶段抛
+`ReferenceError: Cannot access 'B' before initialization`，组件被异常兜底替换成
+无类名的空节点（表现为样式全丢，但单元测试（Vitest 的编译链）通常仍然通过）。
+
+### 规则
+
+1. 每个 `'main thread'` 函数只依赖：**主线程 ref**（`useMainThreadRef`）、
+   **元素属性**、**模块级常量**与自身参数；
+2. 多条 worklet 需要共享推进逻辑时，把逻辑**定义在入口 worklet 内部**，挂到共享
+   状态对象上（如 `press.step` / `state.write`），由后续 worklet 调用该成员：
+
+```ts
+const handleStart = (event: any) => {
+  'main thread'
+  const state = { /* ... */, step: () => {} }
+  const step = () => { /* 推进逻辑 */ }
+  state.step = step
+  stateRef.current = state
+  step()
+}
+const handleEnd = () => {
+  'main thread'
+  const state = stateRef.current
+  if (!state) return
+  state.step()
+}
+```
+
+3. 反例（真机 TDZ / 单测仍绿）：
+
+```ts
+const step = () => { 'main thread' /* ... */ }
+const handleStart = () => { 'main thread'; step() } // ❌ step 尚未完成初始化
+```
+
+4. 该约束由真实 Lynx Web 预览（`#/__web_preview`）中的控制台验证：
+   出现 `[wot-lynx-ui] 组件异常已兜底` + `before initialization` 即命中。
+   现有回归：`test/wot-parity-button-additional.test.ts`（hover）、
+   `test/signature-mts.test.ts`（线段池）。
