@@ -2,20 +2,18 @@
  * wd-overlay — 遮罩层
  *
  * Lynx 实现说明：
- * - 基于 wd-transition 的 fade 过渡，锁滚经 disable-touch-move 链路
- *   下发（CONVENTIONS §14：禁止在包裹层上补绑裸 @touchmove="noop"）；
- * - 定位用 position: fixed 全屏贴边，由引擎提升至页面根节点；
- * - 点击事件双轨 emit：transition 根 view 派发的是引擎原生 tap（Lynx
- *   view 不派发 click，e2931b8 的 @click 方案曾致遮罩点击全端失效，
- *   2026-10-16 真机核实），此处重新 emit 为 click（与 wot-ui API 对齐）
- *   与 tap（Lynx 惯用法，同 wd-button / wd-cell）；两者均在 emits 声明，
- *   消费方绑定不会穿透到根元素与内部 @tap 合并（§14 注册表崩溃）。
+ * - 基于 WdTransition 的 fade 过渡，锁滚经 disable-touch-move 下发；
+ *   不在包裹组件上重复绑定原生 touchmove（CONVENTIONS §14）。
+ * - fixed 全屏定位；customStyle 的字符串和对象均经 parseStyle 归一。
+ * - 引擎 tap 双轨转发为 click / tap，保留官方 API 并防止监听透传合并。
  */
 <script lang="ts" setup>
 import './index.css'
 
+import { computed } from 'vue-lynx'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import { overlayProps } from './types'
+import { parseStyle } from '../../common/util'
 
 const props = defineProps(overlayProps)
 const emit = defineEmits([
@@ -29,19 +27,21 @@ const emit = defineEmits([
   'after-leave'
 ])
 
-function handleClick(e?: any) {
-  emit('click', e)
-  emit('tap', e)
+const transitionStyle = computed(() => ({ 'z-index': String(props.zIndex), ...parseStyle(props.customStyle) }))
+
+function handleClick(event?: any) {
+  emit('click', event)
+  emit('tap', event)
 }
 </script>
 
 <template>
-  <wd-transition
+  <WdTransition
     :show="show"
     name="fade"
     :custom-class="`wd-overlay ${customClass}`"
     :duration="duration"
-    :custom-style="`z-index: ${zIndex}; ${customStyle}`"
+    :custom-style="transitionStyle"
     :disable-touch-move="lockScroll"
     @before-enter="emit('before-enter')"
     @enter="emit('enter')"
@@ -52,5 +52,5 @@ function handleClick(e?: any) {
     @tap="handleClick"
   >
     <slot />
-  </wd-transition>
+  </WdTransition>
 </template>

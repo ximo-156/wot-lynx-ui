@@ -465,17 +465,17 @@ const dragBoundAttrs = computed(() => ({
       :main-thread-bindtouchmove="onTriggerTouchMove"
     >
       <slot name="trigger" :disabled="disabled">
-        <wd-button
+        <WdButton
           @click="handleClick"
           :icon="isActive ? resolveIconName(activeIcon) : resolveIconName(inactiveIcon)"
           custom-class="wd-fab__trigger"
           round
           :type="type"
           :disabled="disabled"
-        ></wd-button>
+        ></WdButton>
       </slot>
     </view>
-    <wd-transition
+    <WdTransition
       v-if="expandable"
       :enter-class="`wd-fab__transition-enter--${fabDirection}`"
       enter-active-class="wd-fab__transition-enter-active"
@@ -486,6 +486,6 @@ const dragBoundAttrs = computed(() => ({
       :duration="300"
     >
       <slot></slot>
-    </wd-transition>
+    </WdTransition>
   </view>
 </template>

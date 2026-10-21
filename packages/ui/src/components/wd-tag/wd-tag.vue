@@ -27,7 +27,8 @@ import './index.css'
 
 import { computed, ref } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
-import { filterStyle, isString, isUndefined, parseStyle } from '../../common/util'
+import { isString, isUndefined, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { tagProps } from './types'
 import { useTranslate } from '../../composables/useTranslate'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
@@ -75,27 +76,22 @@ const rootClass = computed<string>(() => {
 /**
  * 根节点样式
  */
+const TAG_STYLE = defineStyleKeys({ background: '', 'border-color': '' })
 const rootStyle = computed<Record<string, string>>(() => {
-  const rootStyle: Record<string, any> = {}
+  const rootStyle: Record<string, any> = { ...TAG_STYLE }
   if (effectiveVariant.value !== 'plain' && effectiveVariant.value !== 'dashed' && effectiveVariant.value !== 'text' && props.bgColor) {
     rootStyle['background'] = props.bgColor
   }
   if (props.bgColor) {
     rootStyle['border-color'] = props.bgColor
   }
-  return { ...filterStyle(rootStyle), ...parseStyle(props.customStyle) }
+  return resolveStyle(TAG_STYLE, rootStyle, parseStyle(props.customStyle))
 })
 
 /**
  * 文本样式
  */
-const textStyle = computed<Record<string, string>>(() => {
-  const textStyle: Record<string, any> = {}
-  if (props.color) {
-    textStyle['color'] = props.color
-  }
-  return filterStyle(textStyle)
-})
+const textStyle = computed<Record<string, string>>(() => ({ color: props.color || '' }))
 
 /**
  * 处理点击事件
@@ -170,20 +166,20 @@ function setDynamicInput() {
     />
     <view v-else-if="dynamic" class="wd-tag__text" :style="textStyle" @tap.stop="handleAdd">
       <slot name="add">
-        <wd-icon name="plus" custom-class="wd-tag__add" />
+        <WdIcon name="plus" custom-class="wd-tag__add" />
         <text>{{ translate('add') }}</text>
       </slot>
     </view>
 
     <template v-else>
       <slot name="icon" v-if="$slots.icon || hasIcon">
-        <wd-icon :name="icon" :class-prefix="iconPrefix" :css-icon="cssIcon" custom-class="wd-tag__icon" />
+        <WdIcon :name="icon" :class-prefix="iconPrefix" :css-icon="cssIcon" custom-class="wd-tag__icon" />
       </slot>
       <view class="wd-tag__text" :style="textStyle" v-if="$slots.default">
         <slot />
       </view>
       <view class="wd-tag__close" v-if="closable" @tap.stop="handleClose">
-        <wd-icon name="close" custom-class="wd-tag__close-icon"></wd-icon>
+        <WdIcon name="close" custom-class="wd-tag__close-icon"></WdIcon>
       </view>
     </template>
   </view>

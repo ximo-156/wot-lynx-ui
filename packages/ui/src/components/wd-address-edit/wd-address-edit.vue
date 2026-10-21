@@ -60,14 +60,14 @@ function onChangeArea() {
 <template>
   <view class="wd-address-edit" :class="customClass" :style="rootStyle">
     <view class="wd-address-edit__fields">
-      <wd-input
+      <WdInput
         v-model="formData.name"
         label="联系人"
         placeholder="姓名"
         :disabled="disabled"
         custom-class="wd-address-edit__field"
       />
-      <wd-input
+      <WdInput
         v-model="formData.tel"
         label="电话"
         type="tel"
@@ -75,7 +75,7 @@ function onChangeArea() {
         :disabled="disabled"
         custom-class="wd-address-edit__field"
       />
-      <wd-cell
+      <WdCell
         title="地区"
         :value="formData.province ? `${formData.province} ${formData.city || ''} ${formData.county || ''}`.trim() : '请选择地区'"
         is-link
@@ -83,7 +83,7 @@ function onChangeArea() {
         custom-class="wd-address-edit__field"
         @tap="onChangeArea"
       />
-      <wd-textarea
+      <WdTextarea
         v-if="showDetail"
         v-model="formData.addressDetail"
         label="详细地址"
@@ -92,7 +92,7 @@ function onChangeArea() {
         :disabled="disabled"
         custom-class="wd-address-edit__field"
       />
-      <wd-input
+      <WdInput
         v-if="showPostalCode"
         v-model="formData.postalCode"
         label="邮政编码"
@@ -101,7 +101,7 @@ function onChangeArea() {
         :disabled="disabled"
         custom-class="wd-address-edit__field"
       />
-      <wd-input
+      <WdInput
         v-if="showAreaCode"
         v-model="formData.areaCode"
         label="地区编码"
@@ -112,10 +112,10 @@ function onChangeArea() {
     </view>
     <view v-if="showSetDefault" class="wd-address-edit__default">
       <text class="wd-address-edit__default-label">设为默认地址</text>
-      <wd-switch v-model="formData.isDefault" :disabled="disabled" />
+      <WdSwitch v-model="formData.isDefault" :disabled="disabled" />
     </view>
     <view class="wd-address-edit__actions">
-      <wd-button
+      <WdButton
         v-if="showDeleteButton"
         type="danger"
         plain
@@ -123,15 +123,15 @@ function onChangeArea() {
         @tap="onDelete"
       >
         {{ deleteButtonText }}
-      </wd-button>
-      <wd-button
+      </WdButton>
+      <WdButton
         v-if="showSaveButton"
         type="primary"
         custom-class="wd-address-edit__save-btn"
         @tap="onSave"
       >
         {{ saveButtonText }}
-      </wd-button>
+      </WdButton>
     </view>
   </view>
 </template>

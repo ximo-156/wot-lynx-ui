@@ -101,7 +101,7 @@ function onTouchEnd() {
   <view class="wd-pull-refresh" :class="customClass" :style="rootStyle">
     <view class="wd-pull-refresh__head" :style="{ height: `${headHeight}px` }">
       <view v-if="status === 'loading'" class="wd-pull-refresh__loading">
-        <wd-loading size="16px" />
+        <WdLoading size="16px" />
         <text class="wd-pull-refresh__text">{{ statusText }}</text>
       </view>
       <text v-else-if="statusText" class="wd-pull-refresh__text">{{ statusText }}</text>

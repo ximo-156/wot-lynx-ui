@@ -58,9 +58,12 @@ import { defaultOptions, getDialogDefaultOptionKey } from '.'
 import { callInterceptor } from '../../common/interceptor'
 import { deepAssign, deepMerge, isDef, isFunction, isObj, isString, isUndefined, omitBy } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
+import { useAlive } from '../../composables/useAlive'
 import type { ButtonProps, ButtonVariant } from '../wd-button/types'
 
 const props = defineProps(dialogProps)
+const isAlive = useAlive()
+let actionRequest = 0
 
 const { translate } = useTranslate('dialog')
 
@@ -282,22 +285,23 @@ watch(
  * @param action
  */
 function toggleModal(action: 'confirm' | 'cancel' | 'modal' | 'close') {
+  if (!isAlive() || !dialogState.show) return
   if (action === 'modal' && !dialogState.closeOnClickModal) {
     return
   }
   if (dialogState.type === 'prompt' && action === 'confirm' && !validate()) {
     return
   }
+  const request = ++actionRequest
+  const value = inputVal.value
   switch (action) {
     case 'confirm':
       if (dialogState.beforeConfirm) {
         callInterceptor(dialogState.beforeConfirm as DialogBeforeConfirm, {
-          args: [inputVal.value],
-          done: () =>
-            handleConfirm({
-              action: action,
-              value: inputVal.value
-            })
+          args: [value],
+          done: () => {
+            if (isAlive() && dialogState.show && request === actionRequest) handleConfirm({ action, value })
+          }
         })
       } else {
         handleConfirm({
@@ -326,7 +330,7 @@ function toggleModal(action: 'confirm' | 'cancel' | 'modal' | 'close') {
  * @param index 索引
  */
 function handleAction(action: DialogAction) {
-  if (action.disabled || action.loading) return
+  if (!isAlive() || !dialogState.show || action.disabled || action.loading) return
 
   if (isFunction(action.click)) {
     action.click()
@@ -343,6 +347,8 @@ function handleAction(action: DialogAction) {
  * @param result
  */
 function handleConfirm(result: DialogResult) {
+  if (!isAlive() || !dialogState.show) return
+  ++actionRequest
   dialogState.show = false
   if (isFunction(dialogState.success)) {
     dialogState.success(result)
@@ -354,6 +360,8 @@ function handleConfirm(result: DialogResult) {
  * @param result
  */
 function handleCancel(result: DialogResult) {
+  if (!isAlive() || !dialogState.show) return
+  ++actionRequest
   dialogState.show = false
   if (isFunction(dialogState.fail)) {
     dialogState.fail(result)
@@ -403,6 +411,8 @@ watch(
  * @param option message选项值
  */
 function reset(option: DialogOptionsWithCallBack) {
+  if (!isAlive()) return
+  ++actionRequest
   if (option) {
     dialogState.title = isDef(option.title) ? option.title : ''
     dialogState.show = option.show

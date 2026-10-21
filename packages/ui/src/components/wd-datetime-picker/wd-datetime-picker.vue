@@ -51,6 +51,13 @@ const showTabLabel = computed(() => {
 
 const isPicking = ref<boolean>(false) // 判断pickview是否还在滑动中
 const hasConfirmed = ref<boolean>(false) // 判断用户是否点击了确认按钮
+let confirmRequest = 0
+
+function resetPendingConfirm() {
+  confirmRequest++
+  hasConfirmed.value = false
+  isPicking.value = false
+}
 
 watch(
   () => props.modelValue,
@@ -67,6 +74,7 @@ watch(
     if (val) {
       showPopup()
     } else {
+      resetPendingConfirm()
       popupShow.value = false
     }
   }
@@ -83,6 +91,8 @@ function resetInnerValue() {
     innerValue.value = deepClone(getDefaultInnerValue(true))
     endInnerValue.value = deepClone(getDefaultInnerValue(true, true))
   } else {
+    region.value = false
+    showStart.value = true
     // 每次value更新时都需要刷新整个列表
     innerValue.value = deepClone(getDefaultInnerValue())
   }
@@ -223,6 +233,7 @@ function close() {
 /** 显示弹窗 */
 function showPopup() {
   if (popupShow.value) return
+  resetPendingConfirm()
   emit('open')
   resetInnerValue()
   popupShow.value = true
@@ -283,12 +294,14 @@ function onChangeEnd({ value, columns }: { value: number | string; columns: Date
 
 /** 点击取消按钮触发。关闭popup，触发cancel事件。 */
 function onCancel() {
+  resetPendingConfirm()
   popupShow.value = false
   emit('cancel')
 }
 
 /** 点击确定按钮触发 */
 function onConfirm() {
+  if (!popupShow.value) return
   // 如果当前还在滑动且未停止下来，则锁住先不确认，等滑完再自动确认
   if (isPicking.value) {
     hasConfirmed.value = true
@@ -296,11 +309,12 @@ function onConfirm() {
   }
 
   const { beforeConfirm } = props
+  const request = ++confirmRequest
   callInterceptor(beforeConfirm, {
     args: [region.value ? [innerValue.value, endInnerValue.value] : innerValue.value],
     done: () => {
       // beforeConfirm 可返回未决 Promise：done 落地时组件可能已卸载
-      if (!isAlive()) return
+      if (!isAlive() || request !== confirmRequest || !popupShow.value) return
       handleConfirm()
     }
   })
@@ -314,7 +328,9 @@ function onPickEnd() {
   isPicking.value = false
 
   // 延迟一会，因为组件层级嵌套过多，日期的计算时间也较长
+  const request = confirmRequest
   setTimeout(() => {
+    if (!isAlive() || request !== confirmRequest || !popupShow.value) return
     if (hasConfirmed.value) {
       hasConfirmed.value = false
       onConfirm()
@@ -323,6 +339,7 @@ function onPickEnd() {
 }
 
 function handleConfirm() {
+  resetPendingConfirm()
   const value = region.value ? [innerValue.value, endInnerValue.value] : innerValue.value
   popupShow.value = false
   emit('update:modelValue', value)
@@ -341,17 +358,17 @@ function defaultDisplayFormat(items: Record<string, any>[], tabLabel: boolean = 
 
   switch (props.type) {
     case 'year':
-      return items[0].label
+      return items[0][props.labelKey]
     case 'date':
-      return `${items[0].label}-${items[1].label}-${items[2].label}`
+      return `${items[0][props.labelKey]}-${items[1][props.labelKey]}-${items[2][props.labelKey]}`
     case 'year-month':
-      return `${items[0].label}-${items[1].label}`
+      return `${items[0][props.labelKey]}-${items[1][props.labelKey]}`
     case 'time':
-      return props.useSecond ? `${items[0].label}:${items[1].label}:${items[2].label}` : `${items[0].label}:${items[1].label}`
+      return props.useSecond ? `${items[0][props.labelKey]}:${items[1][props.labelKey]}:${items[2][props.labelKey]}` : `${items[0][props.labelKey]}:${items[1][props.labelKey]}`
     case 'datetime':
       return props.useSecond
-        ? `${items[0].label}-${items[1].label}-${items[2].label} ${items[3].label}:${items[4].label}:${items[5].label}`
-        : `${items[0].label}-${items[1].label}-${items[2].label} ${items[3].label}:${items[4].label}`
+        ? `${items[0][props.labelKey]}-${items[1][props.labelKey]}-${items[2][props.labelKey]} ${items[3][props.labelKey]}:${items[4][props.labelKey]}:${items[5][props.labelKey]}`
+        : `${items[0][props.labelKey]}-${items[1][props.labelKey]}-${items[2][props.labelKey]} ${items[3][props.labelKey]}:${items[4][props.labelKey]}`
   }
 }
 
@@ -363,7 +380,7 @@ defineExpose<DatetimePickerExpose>({
 
 <template>
   <view :class="`wd-datetime-picker ${customClass}`" :style="parseStyle(customStyle)">
-    <wd-popup
+    <WdPopup
       v-model="popupShow"
       position="bottom"
       :hide-when-close="false"
@@ -396,7 +413,7 @@ defineExpose<DatetimePickerExpose>({
           </view>
         </view>
         <view :class="showStart ? 'wd-datetime-picker__show' : 'wd-datetime-picker__hidden'">
-          <wd-datetime-picker-view
+          <WdDatetimePickerView
             :custom-class="customViewClass"
             :type="type"
             v-model="innerValue"
@@ -423,7 +440,7 @@ defineExpose<DatetimePickerExpose>({
           />
         </view>
         <view :class="showStart ? 'wd-datetime-picker__hidden' : 'wd-datetime-picker__show'">
-          <wd-datetime-picker-view
+          <WdDatetimePickerView
             :custom-class="customViewClass"
             :type="type"
             v-model="endInnerValue"
@@ -450,6 +467,6 @@ defineExpose<DatetimePickerExpose>({
           />
         </view>
       </view>
-    </wd-popup>
+    </WdPopup>
   </view>
 </template>

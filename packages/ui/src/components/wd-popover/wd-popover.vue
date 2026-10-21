@@ -28,6 +28,7 @@ import { usePopover } from '../../composables/usePopover'
 import { closeOther, pushToQueue, removeFromQueue } from '../../common/clickoutside'
 import { type Queue, queueKey } from '../../composables/useQueue'
 import { isArray, isObj, parseStyle } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(popoverProps)
 const emit = defineEmits(['update:modelValue', 'menuclick', 'change', 'open', 'close', 'tap'])
@@ -38,7 +39,8 @@ const selector: string = 'popover'
 const { proxy } = getCurrentInstance() as any
 const popover = usePopover(props.visibleArrow)
 
-const showPopover = ref<boolean>(false) // 控制popover显隐
+const isAlive = useAlive()
+const showPopover = ref<boolean>(props.modelValue) // 控制popover显隐
 
 watch(
   () => props.content,
@@ -53,10 +55,12 @@ watch(
 )
 
 watch(
-  () => props.placement,
+  [() => props.placement, () => props.visibleArrow, () => props.offset],
   () => {
     popover.init(props.placement, props.visibleArrow, selector)
-  }
+    if (showPopover.value) popover.control(props.placement, props.offset)
+  },
+  { deep: true }
 )
 
 watch(
@@ -87,6 +91,7 @@ watch(
 
 onMounted(() => {
   popover.init(props.placement, props.visibleArrow, selector)
+  if (showPopover.value) popover.control(props.placement, props.offset)
 })
 
 onBeforeMount(() => {
@@ -146,6 +151,7 @@ function close() {
  * 过渡动画完成后重新测量弹出层尺寸并更新定位
  */
 function handleAfterEnter() {
+  if (!isAlive()) return
   popover.updatePosition(props.placement, props.offset)
 }
 
@@ -154,6 +160,7 @@ function handleAfterEnter() {
  * @param {boolean} value 显示状态
  */
 function updateModelValue(value: boolean) {
+  if (!isAlive()) return
   showPopover.value = value
   emit('update:modelValue', value)
 }
@@ -218,7 +225,7 @@ defineExpose<PopoverExpose>({
           </view>
         </slot>
 
-        <WdIcon v-if="showClose" name="close" custom-class="wd-popover__close-icon" @tap="toggle" />
+        <WdIcon v-if="showClose" name="close" custom-class="wd-popover__close-icon" @tap="close" />
       </view>
     </WdTransition>
     <view class="wd-popover__target" :id="popover.ids.target" @tap="toggle">

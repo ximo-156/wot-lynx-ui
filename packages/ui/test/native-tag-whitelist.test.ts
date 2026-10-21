@@ -216,6 +216,17 @@ describe('Lynx 模板标签白名单', () => {
     ).toEqual([])
   })
 
+  it('组件库不依赖可选 tag-transform 插件：内部组件直接使用 PascalCase', () => {
+    const violations: string[] = []
+    for (const file of libraryFiles) {
+      const template = stripComments(templateOf(readFileSync(file, 'utf8')))
+      for (const tag of new Set(tagsOf(template).filter((tag) => tag.startsWith('wd-')))) {
+        violations.push(`${relative(REPO_ROOT, file)}: <${tag}> 应写为 <${pascal(tag)}>`)
+      }
+    }
+    expect(violations, `库内 kebab-case 组件会被原生编译器当作 Lynx 元素：\n${violations.join('\n')}`).toEqual([])
+  })
+
   it('demo / 文档演示中的 wd-* 标签都能对应到真实组件目录', () => {
     const dirs = componentDirs()
     const violations: string[] = []

@@ -52,7 +52,7 @@ watch(
  */
 function scrollIntoView() {
   const panel = getPanel()
-  panel.scrollIntoView && panel.scrollIntoView()
+  panel?.scrollIntoView?.()
 }
 
 function getPanel() {

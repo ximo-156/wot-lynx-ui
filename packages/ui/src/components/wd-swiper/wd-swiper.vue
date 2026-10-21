@@ -48,13 +48,13 @@ import { uni } from '../../common/uni'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(swiperProps)
-const emit = defineEmits(['click', 'change', 'animationfinish', 'update:current'])
+const emit = defineEmits(['click', 'change', 'animationfinish', 'update:current', 'long-press'])
 const slots = useSlots()
 
 const isAlive = useAlive()
 
-const navCurrent = ref<number>(props.current) // 当前滑块 scroll-view 使用
-const currentValue = ref<number>(props.current) // 当前滑块
+const navCurrent = ref<number>(normalizeCurrent(props.current)) // 当前滑块 scroll-view 使用
+const currentValue = ref<number>(normalizeCurrent(props.current)) // 当前滑块
 
 const videoPlaying = ref<boolean>(false) // 当前是否在播放视频
 
@@ -77,12 +77,27 @@ const isVertical = computed(() => props.direction === 'vertical')
 
 const itemCount = computed(() => props.list.length || 0)
 
+function normalizeCurrent(value: number): number {
+  const count = props.list.length
+  if (count === 0 || !Number.isFinite(value)) return 0
+  const index = Math.trunc(value)
+  if (index < 0) return props.loop ? count - 1 : 0
+  if (index >= count) return props.loop ? 0 : count - 1
+  return index
+}
+
+watch(itemCount, () => {
+  const next = normalizeCurrent(currentValue.value)
+  if (next !== currentValue.value) updateCurrent(next, true)
+})
+
 /**
  * 更新当前滑块
  * @param current 当前滑块索引
  * @param force 是否强制更新 scroll-view 绑定的 current
  */
 const updateCurrent = (current: number, force: boolean = false) => {
+  current = normalizeCurrent(current)
   currentValue.value = current
   if (force) {
     navCurrent.value = current
@@ -90,18 +105,8 @@ const updateCurrent = (current: number, force: boolean = false) => {
   emit('update:current', current)
 }
 
-watch(
-  () => props.current,
-  (val) => {
-    if (val < 0) {
-      props.loop ? goToEnd() : goToStart()
-    } else if (val >= props.list.length) {
-      props.loop ? goToStart() : goToEnd()
-    } else {
-      navTo(val)
-    }
-  }
-)
+watch(() => props.current, (value) => navTo(normalizeCurrent(value)))
+watch(() => props.interval, startAutoplay)
 
 const swiperStyle = computed<Record<string, string>>(() => {
   const style: Record<string, string> = {
@@ -127,7 +132,7 @@ const swiperIndicator = computed(() => {
   }
   if (isObj(indicator)) {
     swiperIndicator.type = indicator.type || 'dots'
-    swiperIndicator.minShowNum = indicator.minShowNum || 2
+    swiperIndicator.minShowNum = indicator.minShowNum ?? 2
     swiperIndicator.showControls = indicator.showControls || false
   }
   return swiperIndicator
@@ -152,8 +157,12 @@ const isImage = (item: string | SwiperItem) => {
 }
 
 function navTo(index: number) {
+  index = normalizeCurrent(index)
   if (index === currentValue.value) return
+  const previous = currentValue.value
   updateCurrent(index, true)
+  emit('change', { current: index, source: '' })
+  handleVideoChange(previous, index)
 }
 
 function goToStart() {
@@ -311,6 +320,7 @@ function autoNext() {
   }
   updateCurrent(target, true)
   emit('change', { current: target, source: 'autoplay' })
+  handleVideoChange(target === 0 ? total - 1 : target - 1, target)
 }
 
 /** 容器宽高度量（一次性 + 尺寸 props 变化时重度量） */
@@ -345,8 +355,8 @@ onUnmounted(() => {
 function handleScroll(e: any) {
   const offset = Number(isVertical.value ? e.detail?.scrollTop : e.detail?.scrollLeft) || 0
   // itemSize 未度量（0）时不换算：round(任意值/1) 会产生离谱 index
-  if (itemSize.value <= 0) return
-  const index = Math.round(offset / itemSize.value)
+  if (itemSize.value <= 0 || itemCount.value === 0) return
+  const index = Math.min(itemCount.value - 1, Math.max(0, Math.round(offset / itemSize.value)))
   if (index !== currentValue.value) {
     const previous = currentValue.value
     currentValue.value = index
@@ -379,6 +389,10 @@ function handleScrollEnd() {
  */
 function handleClick(index: number, item: string | SwiperItem) {
   emit('click', { index, item })
+}
+
+function handleLongPress(index: number, item: string | SwiperItem) {
+  emit('long-press', { index, item })
 }
 
 /**
@@ -422,6 +436,7 @@ function handleStopVideoPaly(index: number) {
 function handleIndicatorChange({ dir }: { dir: 'prev' | 'next' }) {
   const { list, loop } = props
   const total = list.length
+  if (!total) return
   let nextPos = dir === 'next' ? currentValue.value + 1 : currentValue.value - 1
   if (loop) {
     nextPos = dir === 'next' ? (currentValue.value + 1) % total : (currentValue.value - 1 + total) % total
@@ -465,6 +480,7 @@ function handleIndicatorChange({ dir }: { dir: 'prev' | 'next' }) {
               :autoplay="autoplayVideo"
               object-fit="cover"
               @tap="handleClick(index, item)"
+              @longpress="handleLongPress(index, item)"
             />
             <image
               v-else
@@ -474,6 +490,7 @@ function handleIndicatorChange({ dir }: { dir: 'prev' | 'next' }) {
               :mode="imageMode"
               :show-menu-by-longpress="showMenuByLongpress"
               @tap="handleClick(index, item)"
+              @longpress="handleLongPress(index, item)"
             />
             <text v-if="isObj(item) && item[textKey]" :class="`wd-swiper__text ${customTextClass}`" :style="parseStyle(customTextStyle)">
               {{ item[textKey] }}
@@ -485,7 +502,7 @@ function handleIndicatorChange({ dir }: { dir: 'prev' | 'next' }) {
 
     <template v-if="indicator">
       <slot name="indicator" :current="currentValue" :total="list.length"></slot>
-      <wd-swiper-nav
+      <WdSwiperNav
         v-if="!slots.indicator"
         :custom-class="customIndicatorClass"
         :type="swiperIndicator.type"

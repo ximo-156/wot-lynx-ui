@@ -73,12 +73,12 @@ function handleBacktop() {
 </script>
 
 <template>
-  <wd-transition :show="show" name="fade" :custom-class="rootClass" :custom-style="rootStyle" @tap="handleBacktop">
+  <WdTransition :show="show" name="fade" :custom-class="rootClass" :custom-style="rootStyle" @tap="handleBacktop">
     <slot>
       <view class="wd-backtop__content">
-        <wd-icon custom-class="wd-backtop__backicon" name="top" :custom-style="iconStyle" />
+        <WdIcon custom-class="wd-backtop__backicon" name="top" :custom-style="iconStyle" />
         <text v-if="text" class="wd-backtop__text">{{ text }}</text>
       </view>
     </slot>
-  </wd-transition>
+  </WdTransition>
 </template>

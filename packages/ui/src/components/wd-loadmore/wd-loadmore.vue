@@ -61,15 +61,15 @@ function reload(event: any) {
 <template>
   <view :class="['wd-loadmore', customClass]" :style="parseStyle(customStyle)" @tap="reload">
     <slot v-if="state === 'finished'" name="finished">
-      <wd-divider custom-class="wd-loadmore__divider">{{ finishedText || translate('finished') }}</wd-divider>
+      <WdDivider custom-class="wd-loadmore__divider">{{ finishedText || translate('finished') }}</WdDivider>
     </slot>
     <slot v-else-if="state === 'error'" name="error">
       <text class="wd-loadmore__text">{{ errorText || translate('error') }}</text>
       <text class="wd-loadmore__refresh-text">{{ translate('retry') }}</text>
-      <wd-icon name="refresh" custom-class="wd-loadmore__refresh" />
+      <WdIcon name="refresh" custom-class="wd-loadmore__refresh" />
     </slot>
     <slot v-else-if="state === 'loading'" name="loading">
-      <wd-loading v-bind="customLoadingProps" />
+      <WdLoading v-bind="customLoadingProps" />
       <text class="wd-loadmore__text">{{ loadingText || translate('loading') }}</text>
     </slot>
   </view>

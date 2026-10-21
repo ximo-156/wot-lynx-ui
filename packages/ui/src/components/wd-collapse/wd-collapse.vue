@@ -174,7 +174,7 @@ defineExpose<CollapseExpose>({
           <text class="wd-collapse__more-txt">{{ !currentValue ? translate('expand') : translate('retract') }}</text>
           <view :class="`wd-collapse__arrow ${currentValue ? 'is-retract' : ''}`">
             <!-- Lynx 适配：内置图标集无 down 字形，取 arrow-down-bold -->
-            <wd-icon name="arrow-down-bold" />
+            <WdIcon name="arrow-down-bold" />
           </view>
         </template>
       </view>

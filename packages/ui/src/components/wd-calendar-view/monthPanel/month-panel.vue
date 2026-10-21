@@ -463,13 +463,13 @@ defineExpose<MonthPanelExpose>({
     <!-- 切换模式导航控制栏 -->
     <view v-if="switchMode !== 'none'" class="wd-month-panel__controls">
       <view class="wd-month-panel__control">
-        <wd-icon
+        <WdIcon
           v-if="switchMode === 'year-month'"
           name="arrow-double-left"
           :custom-class="`wd-month-panel__control-icon ${isPrevYearDisabled ? 'is-disabled' : ''}`"
           @tap="!isPrevYearDisabled && changeYear(-1)"
         />
-        <wd-icon
+        <WdIcon
           name="arrow-left-bold"
           :custom-class="`wd-month-panel__control-icon ${isPrevMonthDisabled ? 'is-disabled' : ''}`"
           @tap="!isPrevMonthDisabled && changeMonth(-1)"
@@ -477,12 +477,12 @@ defineExpose<MonthPanelExpose>({
       </view>
       <text class="wd-month-panel__controls-title">{{ controlsTitle }}</text>
       <view class="wd-month-panel__control">
-        <wd-icon
+        <WdIcon
           name="arrow-right-bold"
           :custom-class="`wd-month-panel__control-icon ${isNextMonthDisabled ? 'is-disabled' : ''}`"
           @tap="!isNextMonthDisabled && changeMonth(1)"
         />
-        <wd-icon
+        <WdIcon
           v-if="switchMode === 'year-month'"
           name="arrow-double-right"
           :custom-class="`wd-month-panel__control-icon ${isNextYearDisabled ? 'is-disabled' : ''}`"
@@ -533,7 +533,7 @@ defineExpose<MonthPanelExpose>({
         <text class="wd-month-panel__time-text">{{ timeType === 'start' ? translate('startTime') : translate('endTime') }}</text>
       </view>
       <view class="wd-month-panel__time-picker">
-        <wd-datetime-picker-view
+        <WdDatetimePickerView
           v-model="timeValue"
           type="time"
           :item-height="itemHeight"

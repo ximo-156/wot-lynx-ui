@@ -69,7 +69,7 @@ import WdStickyBox from '../wd-sticky-box/wd-sticky-box.vue'
 import { addUnit, checkNumRange, debounce, getRect, isDef, isNumber, isString, parseStyle, type CSSProperties } from '../../common/util'
 import { useTouch } from '../../composables/useTouch'
 import { TABS_KEY, tabsProps, type TabsExpose } from './types'
-import { useChildren } from '../../composables/useChildren'
+import { flattenVNodes, useChildren } from '../../composables/useChildren'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
@@ -186,12 +186,12 @@ type NavItem = { title: any; disabled: boolean; badgeProps: any; name: any }
 function navItems(): NavItem[] {
   const vnodes = slots.default ? slots.default() : []
   const items: NavItem[] = []
-  for (const vnode of vnodes as any[]) {
+  for (const vnode of flattenVNodes(vnodes as any) as any[]) {
     const p = vnode && vnode.props
-    if (!p) continue
+    if (!p || (vnode.type?.__name !== 'wd-tab' && vnode.type?.name !== 'wd-tab' && !('title' in p))) continue
     items.push({
       title: p.title,
-      disabled: Boolean(p.disabled),
+      disabled: p.disabled === true || p.disabled === '',
       badgeProps: p.badgeProps,
       name: p.name
     })
@@ -305,11 +305,11 @@ const getMapTabStyle = (index: number) => {
  */
 const updateActive = (value: number | string = 0, init: boolean = false, setScroll: boolean = true) => {
   // 没有tab子元素，不执行任何操作
-  if (children.length === 0) return
+  if (!isAlive() || navItems().length === 0 || children.length === 0) return
 
   value = getActiveIndex(value)
   // 被禁用，不执行任何操作
-  if (children[value].disabled) return
+  if (!children[value] || children[value].disabled) return
   state.activeIndex = value
   if (setScroll) {
     updateLineStyle(init === false)
@@ -366,12 +366,12 @@ function toggleMap() {
   if (state.mapShow) {
     state.animating = false
     setTimeout(() => {
-      state.mapShow = false
+      if (isAlive()) state.mapShow = false
     }, 300)
   } else {
     state.mapShow = true
     setTimeout(() => {
-      state.animating = true
+      if (isAlive()) state.animating = true
     }, 100)
   }
 }
@@ -390,10 +390,12 @@ async function updateLineStyle(animation: boolean = true) {
     } else {
       if (lineTheme === 'text') {
         const textRects = await getRect($itemText, true, proxy)
+        if (!isAlive() || !textRects[state.activeIndex]) return
         const textWidth = Number(textRects[state.activeIndex].width)
         lineStyle.width = addUnit(textWidth)
       } else if (lineTheme === 'underline') {
         const rects = await getRect($item, true, proxy)
+        if (!isAlive() || !rects[state.activeIndex]) return
         const rectWidth = Number(rects[state.activeIndex].width)
         lineStyle.width = addUnit(rectWidth)
       }
@@ -405,6 +407,7 @@ async function updateLineStyle(animation: boolean = true) {
     const rects = await getRect($item, true, proxy)
     if (!isAlive()) return
     const rect = rects[state.activeIndex]
+    if (!rect) return
     let left = rects.slice(0, state.activeIndex).reduce((prev: number, curr: any) => prev + Number(curr.width), 0) + Number(rect.width) / 2
     if (left) {
       lineStyle.transform = `translateX(${left}px) translateX(-50%)`
@@ -426,7 +429,7 @@ async function updateLineStyle(animation: boolean = true) {
  * 设置激活的 tab
  */
 function setActiveTab() {
-  if (!state.inited) return
+  if (!state.inited || !children[state.activeIndex]) return
   const name = getTabName(children[state.activeIndex], state.activeIndex)
   if (name !== props.modelValue) {
     emit('change', {
@@ -466,6 +469,7 @@ function scrollIntoView() {
 function handleSelect(index: number) {
   if (index === undefined) return
   const item = navItems()[index]
+  if (!item) return
   const name = getTabName(item, index)
 
   if (item.disabled) {
@@ -476,7 +480,7 @@ function handleSelect(index: number) {
     return
   }
   state.mapShow && toggleMap()
-  setActive(index)
+  setActive(name)
   emit('click', {
     index,
     name
@@ -514,9 +518,9 @@ function onTouchEnd(event: any) {
   const minSwipeDistance = 50
   if (direction.value === 'horizontal' && offsetX.value >= minSwipeDistance) {
     if (deltaX.value > 0 && state.activeIndex !== 0) {
-      setActive(state.activeIndex - 1)
+      setActive(getTabName(navItems()[state.activeIndex - 1], state.activeIndex - 1))
     } else if (deltaX.value < 0 && state.activeIndex !== navItems().length - 1) {
-      setActive(state.activeIndex + 1)
+      setActive(getTabName(navItems()[state.activeIndex + 1], state.activeIndex + 1))
     }
   }
   state.swiping = false
@@ -526,20 +530,11 @@ function onTouchEnd(event: any) {
  * 获取激活的索引
  * @param {number | string} value 绑定值
  */
-function getActiveIndex(value: number | string) {
+function getActiveIndex(value: number | string): number {
   const items = navItems()
-  // name代表的索引超过了children长度的边界，自动用0兜底
-  if (isNumber(value) && value >= items.length) {
-    console.error("[wot ui] warning(wd-tabs): the type of tabs' value is Number shouldn't be less than its children")
-    value = 0
-  }
-  // 如果是字符串直接匹配，匹配不到用0兜底
-  if (isString(value)) {
-    const index = items.findIndex((item) => item.name === value)
-    value = index === -1 ? 0 : index
-  }
-
-  return value
+  const named = items.findIndex((item) => isDef(item.name) && item.name === value)
+  if (named >= 0) return named
+  return isNumber(value) && Number.isInteger(value) && value >= 0 && value < items.length ? value : 0
 }
 
 defineExpose<TabsExpose>({
@@ -615,14 +610,14 @@ const onBodyTouchMove = (event: any) => {
 
 <template>
   <template v-if="sticky">
-    <wd-sticky-box>
+    <WdStickyBox>
       <view
         :class="`wd-tabs ${customClass} ${innerSlidable() ? 'is-slide' : ''} ${showMap() ? 'is-map' : ''} ${
           !showScrollbar ? 'is-hide-scrollbar' : ''
         }`"
         :style="rootStyle"
       >
-        <wd-sticky :offset-top="offsetTop">
+        <WdSticky :offset-top="offsetTop">
           <view class="wd-tabs__nav wd-tabs__nav--sticky">
             <view class="wd-tabs__nav--wrap">
               <scroll-view :scroll-x="innerSlidable()" :scroll-left="state.scrollLeft">
@@ -634,9 +629,9 @@ const onBodyTouchMove = (event: any) => {
                     :class="`wd-tabs__nav-item  ${state.activeIndex === index ? 'is-active' : ''} ${item.disabled ? 'is-disabled' : ''}`"
                     :style="getTabItemStyle(index)"
                   >
-                    <wd-badge v-if="item.badgeProps" v-bind="item.badgeProps">
+                    <WdBadge v-if="item.badgeProps" v-bind="item.badgeProps">
                       <text class="wd-tabs__nav-item-text">{{ item.title }}</text>
-                    </wd-badge>
+                    </WdBadge>
                     <text v-else class="wd-tabs__nav-item-text">{{ item.title }}</text>
 
                     <view
@@ -651,7 +646,7 @@ const onBodyTouchMove = (event: any) => {
             <view class="wd-tabs__map" v-if="showMap()">
               <view :class="`wd-tabs__map-btn  ${state.animating ? 'is-open' : ''}`" @tap="toggleMap">
                 <view :class="`wd-tabs__map-arrow  ${state.animating ? 'is-open' : ''}`">
-                  <wd-icon name="arrow-down-bold" custom-class="wd-tabs__map-arrow-icon" />
+                  <WdIcon name="arrow-down-bold" custom-class="wd-tabs__map-arrow-icon" />
                 </view>
               </view>
               <view class="wd-tabs__map-header" :style="mapHeaderStyle">
@@ -669,7 +664,7 @@ const onBodyTouchMove = (event: any) => {
               </view>
             </view>
           </view>
-        </wd-sticky>
+        </WdSticky>
 
         <!-- 手势分工：container（父）后台 @touchstart/@touchend 记起点与
              落定；body（子）主线程 main-thread-bindtouchstart/move 跟手
@@ -690,7 +685,7 @@ const onBodyTouchMove = (event: any) => {
 
         <view class="wd-tabs__mask" :style="mapHeaderStyle" @tap="toggleMap"></view>
       </view>
-    </wd-sticky-box>
+    </WdStickyBox>
   </template>
 
   <template v-else>
@@ -711,9 +706,9 @@ const onBodyTouchMove = (event: any) => {
                 :class="`wd-tabs__nav-item ${state.activeIndex === index ? 'is-active' : ''} ${item.disabled ? 'is-disabled' : ''}`"
                 :style="getTabItemStyle(index)"
               >
-                <wd-badge custom-class="wd-tabs__nav-item-badge" v-if="item.badgeProps" v-bind="item.badgeProps">
+                <WdBadge custom-class="wd-tabs__nav-item-badge" v-if="item.badgeProps" v-bind="item.badgeProps">
                   <text class="wd-tabs__nav-item-text">{{ item.title }}</text>
-                </wd-badge>
+                </WdBadge>
                 <text v-else class="wd-tabs__nav-item-text">{{ item.title }}</text>
                 <view
                   :class="`wd-tabs__line ${state.activeIndex === index && state.useInnerLine ? 'is-' + lineTheme : ''} wd-tabs__line--inner`"
@@ -727,7 +722,7 @@ const onBodyTouchMove = (event: any) => {
         <view class="wd-tabs__map" v-if="showMap()">
           <view class="wd-tabs__map-btn" @tap="toggleMap">
             <view :class="`wd-tabs__map-arrow ${state.animating ? 'is-open' : ''}`">
-              <wd-icon name="arrow-down-bold" custom-class="wd-tabs__map-arrow-icon" />
+              <WdIcon name="arrow-down-bold" custom-class="wd-tabs__map-arrow-icon" />
             </view>
           </view>
           <view class="wd-tabs__map-header" :style="mapHeaderStyle">

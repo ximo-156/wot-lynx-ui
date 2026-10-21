@@ -7,10 +7,9 @@
  *   fixed/absolute 定位；Lynx 无该能力，整套滚动联动不工作。改用渲染器原生
  *   position: sticky（与 wd-index-anchor / wd-table 同方案）：吸顶元素保持
  *   在文档流内，滚动到阈值位置时由引擎贴住 offsetTop 处，零 JS 开销；
- * - 因此参考源的外层占位 view（JS 改定位时撑起高度）、wd-resize 尺寸监听、
- *   defineExpose(setPosition/stickyState) 与 sticky-box 的 observerForChild
- *   联动均不再需要，DOM 精简为 wd-sticky（sticky 元素）> wd-sticky__container，
- *   类名与 id 保留；
+ * - 原生吸顶保留默认零 JS 滚动联动；兼容 expose(setPosition/stickyState/offsetTop)，
+ *   显式调用 setPosition 时切换真实定位样式。sticky-box 的 observer 联动
+ *   仍不模拟小程序 API，默认由原生包含块约束吸顶范围；
  * - 参考源 innerOffsetTop 的 H5 44px 导航栏补偿为条件编译（#ifdef H5），
  *   Lynx 无该概念，直接取 props.offsetTop；
  * - **根节点三件套 + 居中核查**（NATIVE-REWRITE §3.1）：display: flex +
@@ -26,14 +25,31 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed } from 'vue-lynx'
-import { stickyProps } from './types'
+import { computed, reactive, ref, watch } from 'vue-lynx'
+import { stickyProps, type StickyExpose } from './types'
 import { addUnit, parseStyle, uuid, type CSSProperties } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(stickyProps)
 
 const stickyId = `wd-sticky-${uuid()}`
+const manualPosition = ref(false)
+const stickyState = reactive({
+  position: 'sticky', boxLeaved: false, top: props.offsetTop,
+  height: 0, width: 0, state: 'normal'
+})
+watch(() => props.offsetTop, (top) => {
+  if (!manualPosition.value) stickyState.top = top
+})
+function setPosition(boxLeaved: boolean, position: string, top: number) {
+  if (!['static', 'relative', 'absolute', 'sticky', 'fixed'].includes(position)) return
+  manualPosition.value = position !== 'sticky'
+  stickyState.boxLeaved = boxLeaved
+  stickyState.position = position
+  stickyState.top = top
+  stickyState.state = boxLeaved ? 'leaved' : position === 'fixed' ? 'sticky' : 'normal'
+}
+defineExpose<StickyExpose>({ setPosition, stickyState, offsetTop: computed(() => props.offsetTop) })
 
 /**
  * 可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
@@ -49,8 +65,8 @@ const STICKY_STYLE = defineStyleKeys({
 const rootStyle = computed<CSSProperties>(() => {
   return {
     ...resolveStyle(STICKY_STYLE, {
-      position: 'sticky',
-      top: addUnit(props.offsetTop),
+      position: manualPosition.value ? stickyState.position : 'sticky',
+      top: addUnit(manualPosition.value ? stickyState.top : props.offsetTop),
       zIndex: String(props.zIndex)
     }),
     ...parseStyle(props.customStyle)

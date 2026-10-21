@@ -217,7 +217,7 @@ function isValueEqual(value1: number | string, value2: number | string) {
 <template>
   <view :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
     <view v-if="prefixIcon || $slots.prefix" class="wd-input__prefix">
-      <wd-icon
+      <WdIcon
         v-if="prefixIcon && !$slots.prefix"
         custom-class="wd-input__icon"
         :name="prefixIcon"
@@ -264,10 +264,10 @@ function isValueEqual(value1: number | string, value2: number | string) {
     />
     <view v-if="props.readonly" class="wd-input__readonly-mask" />
     <view v-if="showClear || showPassword || suffixIcon || showWordCount || $slots.suffix" class="wd-input__suffix">
-      <wd-icon v-if="showClear" custom-class="wd-input__clear" name="close-bold" @tap="handleClear" />
-      <wd-icon v-if="showPassword" custom-class="wd-input__icon" :name="isPwdVisible ? 'browse' : 'eye-close'" @tap="togglePwdVisible" />
+      <WdIcon v-if="showClear" custom-class="wd-input__clear" name="close-bold" @tap="handleClear" />
+      <WdIcon v-if="showPassword" custom-class="wd-input__icon" :name="isPwdVisible ? 'browse' : 'eye-close'" @tap="togglePwdVisible" />
       <view v-if="showWordCount" class="wd-input__count"><text>{{ currentLength }}/{{ maxlength }}</text></view>
-      <wd-icon
+      <WdIcon
         v-if="suffixIcon && !$slots.suffix"
         custom-class="wd-input__icon"
         :name="suffixIcon"

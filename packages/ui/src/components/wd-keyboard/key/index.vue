@@ -34,6 +34,7 @@ const keyClass = computed(() => {
  * @param {TouchEvent} event 触摸事件对象
  */
 function onTouchStart(event: any) {
+  if (props.loading) return
   touch.touchStart(event)
   active.value = true
 }
@@ -61,16 +62,16 @@ function onTouchEnd() {
 </script>
 
 <template>
-  <view :class="`wd-key-wrapper ${wider ? 'wd-key-wrapper--wider' : ''}`" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd">
+  <view :class="`wd-key-wrapper ${wider ? 'wd-key-wrapper--wider' : ''}`" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="active = false">
     <view :class="keyClass">
-      <wd-loading custom-class="wd-key__loading-icon" v-if="loading" />
+      <WdLoading custom-class="wd-key__loading-icon" v-if="loading" />
       <template v-if="type === 'delete'">
         <text v-if="text">{{ text }}</text>
-        <wd-icon v-else custom-class="wd-key__icon" name="delete" size="22px" />
+        <WdIcon v-else custom-class="wd-key__icon" name="delete" size="22px" />
       </template>
       <template v-else-if="type === 'extra'">
         <text v-if="text">{{ text }}</text>
-        <wd-icon v-else custom-class="wd-key__icon" name="keyboard-26" size="22px" />
+        <WdIcon v-else custom-class="wd-key__icon" name="keyboard-26" size="22px" />
       </template>
       <text v-else>{{ text }}</text>
     </view>

@@ -35,7 +35,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref, watch } from 'vue-lynx'
+import { computed, onUnmounted, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import WdVideoPreview from '../wd-video-preview/wd-video-preview.vue'
@@ -71,7 +71,7 @@ const emit = defineEmits<{
 
 defineExpose<UploadExpose>({
   submit: () => startUploadFiles(),
-  abort: () => abort()
+  abort: (task) => abort(task)
 })
 
 const { translate } = useTranslate('upload')
@@ -82,6 +82,8 @@ const { translate } = useTranslate('upload')
 const isAlive = useAlive()
 
 const uploadFiles = ref<UploadFileItem[]>([])
+const preparingUploads = new Set<number>()
+onUnmounted(() => abort())
 
 const showUpload = computed(() => !props.limit || uploadFiles.value.length < props.limit)
 
@@ -97,7 +99,7 @@ watch(
     if (isEqual(val, uploadFiles.value)) return
     const uploadFileList: UploadFileItem[] = (val as UploadFileItem[]).map((item) => {
       // 先浅拷贝再补默认值：不得直接改写消费方传入的 prop 对象
-      const copy = { ...item, uid: context.id++ } as UploadFileItem
+      const copy = { ...item, uid: isDef(item.uid) ? item.uid : context.id++ } as UploadFileItem
       copy[statusKey] = copy[statusKey] || 'success'
       copy.response = copy.response || ''
       return copy
@@ -131,65 +133,49 @@ function emitFileList() {
  *  开始上传文件
  */
 function startUploadFiles() {
+  if (!isAlive() || isDisabled.value) return
   const { buildFormData, formData = {}, statusKey } = props
   const { action, name, header = {}, accept, successStatus, uploadMethod } = props
   const statusCode = isDef(successStatus) ? successStatus : 200
 
   for (const uploadFile of uploadFiles.value) {
-    // 仅开始未上传的文件
-    if (uploadFile[statusKey] === UPLOAD_STATUS.PENDING) {
-      if (buildFormData) {
-        const res = buildFormData({ file: uploadFile, formData })
-        if (isPromise(res)) {
-          res
-            .then((newFormData) => {
-              if (newFormData) {
-                startUpload(uploadFile, {
-                  action,
-                  header,
-                  name,
-                  formData: newFormData,
-                  fileType: accept as 'image' | 'video' | 'audio',
-                  statusCode,
-                  statusKey,
-                  uploadMethod,
-                  onSuccess: handleSuccess,
-                  onError: handleError,
-                  onProgress: handleProgress
-                })
-              }
-            })
-            .catch(() => {})
-        } else if (res) {
-          startUpload(uploadFile, {
-            action,
-            header,
-            name,
-            formData: res,
-            fileType: accept as 'image' | 'video' | 'audio',
-            statusCode,
-            statusKey,
-            uploadMethod,
-            onSuccess: handleSuccess,
-            onError: handleError,
-            onProgress: handleProgress
-          })
-        }
-      } else {
-        startUpload(uploadFile, {
-          action,
-          header,
-          name,
-          formData,
-          fileType: accept as 'image' | 'video' | 'audio',
-          statusCode,
-          statusKey,
-          uploadMethod,
-          onSuccess: handleSuccess,
-          onError: handleError,
-          onProgress: handleProgress
+    if (uploadFile[statusKey] !== UPLOAD_STATUS.PENDING || preparingUploads.has(uploadFile.uid)) continue
+    preparingUploads.add(uploadFile.uid)
+    const uid = uploadFile.uid
+    // 上传适配层会原地更新 file；给它普通快照，晚到回调不可修改已卸载的响应式列表。
+    const fileSnapshot = { ...uploadFile }
+    const beginUpload = (data: Record<string, any>) => {
+      preparingUploads.delete(uid)
+      const current = uploadFiles.value.find((item) => item.uid === uid)
+      if (!isAlive() || isDisabled.value || !current || current[statusKey] !== UPLOAD_STATUS.PENDING || !data) return
+      current[statusKey] = UPLOAD_STATUS.LOADING
+      emitFileList()
+      try {
+        const result = startUpload(fileSnapshot, {
+          action, header, name, formData: data,
+          fileType: accept as 'image' | 'video' | 'audio', statusCode, statusKey, uploadMethod,
+          onSuccess: handleSuccess, onError: handleError, onProgress: handleProgress
         })
+        if (isPromise(result)) {
+          result.catch((error) => handleError(error as Record<string, any>, fileSnapshot, data))
+        }
+      } catch (error) {
+        handleError(error as Record<string, any>, fileSnapshot, data)
       }
+    }
+    try {
+      const data = buildFormData ? buildFormData({ file: fileSnapshot, formData }) : formData
+      if (isPromise(data)) {
+        data.then((value) => beginUpload(value)).catch((error) => {
+          preparingUploads.delete(uid)
+          handleError(error as Record<string, any>, fileSnapshot, formData)
+        })
+      } else {
+        beginUpload(data)
+      }
+    } catch (error) {
+      preparingUploads.delete(uid)
+      handleError(error as Record<string, any>, fileSnapshot, formData)
     }
   }
 }
@@ -217,6 +203,8 @@ function getImageInfo(img: string) {
  * @param {Object} file 上传的文件
  */
 function initFile(file: ChooseFile, currentIndex?: number) {
+  if (!isAlive() || isDisabled.value) return
+  if (!isDef(currentIndex) && props.limit && uploadFiles.value.length >= props.limit) return
   const { statusKey } = props
   // 状态初始化
   const initState: UploadFileItem = {
@@ -234,6 +222,8 @@ function initFile(file: ChooseFile, currentIndex?: number) {
   } else {
     uploadFiles.value.push(initState)
   }
+  emit('change', { fileList: uploadFiles.value })
+  emitFileList()
   if (props.autoUpload) {
     startUploadFiles()
   }
@@ -250,9 +240,9 @@ function handleError(err: Record<string, any>, file: UploadFileItem, formData: R
   const index = uploadFiles.value.findIndex((item) => item.uid === file.uid)
   if (index > -1) {
     uploadFiles.value[index][statusKey] = 'fail'
-    uploadFiles.value[index].error = err.message
+    uploadFiles.value[index].error = err.errMsg || err.message || translate('error')
     uploadFiles.value[index].response = err
-    emit('fail', { error: err, file, formData })
+    emit('fail', { error: err, file: uploadFiles.value[index], formData })
     emitFileList()
   }
 }
@@ -270,7 +260,7 @@ function handleSuccess(res: Record<string, any>, file: UploadFileItem, formData:
     uploadFiles.value[index][statusKey] = 'success'
     uploadFiles.value[index].response = res.data
     emit('change', { fileList: uploadFiles.value })
-    emit('success', { file, fileList: uploadFiles.value, formData })
+    emit('success', { file: uploadFiles.value[index], fileList: uploadFiles.value, formData })
     emitFileList()
   }
 }
@@ -285,7 +275,8 @@ function handleProgress(res: any, file: UploadFileItem) {
   const index = uploadFiles.value.findIndex((item) => item.uid === file.uid)
   if (index > -1) {
     uploadFiles.value[index].percent = res.progress
-    emit('progress', { response: res, file })
+    emit('progress', { response: res, file: uploadFiles.value[index] })
+    emitFileList()
   }
 }
 
@@ -293,12 +284,13 @@ function handleProgress(res: any, file: UploadFileItem) {
  * @description 选择文件的实际操作，将chooseFile自己用promise包了一层
  */
 function onChooseFile(currentIndex?: number) {
+  if (!isAlive() || isDisabled.value || (!isDef(currentIndex) && !showUpload.value)) return
   const { multiple, maxSize, accept, sizeType, limit, sourceType, compressed, maxDuration, camera, beforeUpload, extension } = props
   chooseFile({
     multiple: isDef(currentIndex) ? false : multiple,
     sizeType,
     sourceType,
-    maxCount: limit ? limit - uploadFiles.value.length : limit,
+    maxCount: isDef(currentIndex) ? 1 : limit ? limit - uploadFiles.value.length : limit,
     accept,
     compressed,
     maxDuration,
@@ -317,9 +309,11 @@ function onChooseFile(currentIndex?: number) {
       // 遍历列表逐个初始化上传参数
       const mapFiles = async (files: ChooseFile[]) => {
         for (let index = 0; index < files.length; index++) {
+          if (!isAlive() || isDisabled.value) return
           const file = files[index]
           if (file.type === 'image' && !file.size) {
             const imageInfo = await getImageInfo(file.path)
+            if (!isAlive() || isDisabled.value) return
             file.size = imageInfo.width * imageInfo.height
           }
           Number(file.size) <= maxSize ? initFile(file, currentIndex) : emit('oversize', { file })
@@ -329,11 +323,14 @@ function onChooseFile(currentIndex?: number) {
       // 上传前的钩子
       callInterceptor(beforeUpload, {
         args: [{ files, fileList: uploadFiles.value }],
-        done: () => mapFiles(files)
+        done: () => {
+          if (!isAlive() || isDisabled.value) return
+          mapFiles(files).catch((error) => { if (isAlive()) emit('chooseerror', { error }) })
+        }
       })
     })
     .catch((error) => {
-      emit('chooseerror', { error })
+      if (isAlive()) emit('chooseerror', { error })
     })
 }
 
@@ -354,7 +351,7 @@ function handleChoose(index?: number) {
   // 选择图片前的钩子
   callInterceptor(beforeChoose, {
     args: [{ fileList: uploadFiles.value }],
-    done: () => onChooseFile(index)
+    done: () => { if (isAlive() && !isDisabled.value) onChooseFile(index) }
   })
 }
 
@@ -363,10 +360,10 @@ function handleChoose(index?: number) {
  * @param {Object} file 上传的文件
  */
 function handleRemove(file: UploadFileItem) {
-  uploadFiles.value.splice(
-    uploadFiles.value.findIndex((item) => item.uid === file.uid),
-    1
-  )
+  if (!isAlive() || isDisabled.value || !file) return
+  const index = uploadFiles.value.findIndex((item) => item.uid === file.uid)
+  if (index < 0) return
+  uploadFiles.value.splice(index, 1)
   emit('change', {
     fileList: uploadFiles.value
   })
@@ -375,6 +372,7 @@ function handleRemove(file: UploadFileItem) {
 }
 
 function removeFile(index: number) {
+  if (isDisabled.value || !uploadFiles.value[index]) return
   const { beforeRemove } = props
   const intIndex: number = index
   const file = uploadFiles.value[intIndex]
@@ -440,7 +438,7 @@ function onPreviewImage(file: UploadFileItem) {
   } else {
     callInterceptor(beforePreview, {
       args: [{ file, index, fileList, imgList }],
-      done: () => handlePreviewImage(imgIndex, imgList)
+      done: () => { if (isAlive()) handlePreviewImage(imgIndex, imgList) }
     })
   }
 }
@@ -456,7 +454,7 @@ function onPreviewVideo(file: UploadFileItem) {
   } else {
     callInterceptor(beforePreview, {
       args: [{ file, index, fileList, imgList: [] }],
-      done: () => handlePreviewVieo(videoIndex, videoList)
+      done: () => { if (isAlive()) handlePreviewVieo(videoIndex, videoList) }
     })
   }
 }
@@ -470,7 +468,7 @@ function onPreviewFile(file: UploadFileItem) {
   } else {
     callInterceptor(beforePreview, {
       args: [{ file, index, fileList, imgList: [] }],
-      done: () => handlePreviewFile(file)
+      done: () => { if (isAlive()) handlePreviewFile(file) }
     })
   }
 }
@@ -508,7 +506,7 @@ function resolveIconName(name: string) {
         <template v-else-if="isVideo(file)">
           <view class="wd-upload__video" v-if="file.thumb" @tap="onPreviewVideo(file)">
             <image :src="file.thumb" :mode="imageMode" class="wd-upload__picture" />
-            <wd-icon :name="resolveIconName('play-circle-fill')" custom-class="wd-upload__video-play"></wd-icon>
+            <WdIcon :name="resolveIconName('play-circle-fill')" custom-class="wd-upload__video-play"></WdIcon>
           </view>
           <view v-else class="wd-upload__video" @tap="onPreviewVideo(file)">
             <video
@@ -528,12 +526,12 @@ function resolveIconName(name: string) {
               :enableNative="true"
               class="wd-upload__video"
             ></video>
-            <wd-icon :name="resolveIconName('play-circle-fill')" custom-class="wd-upload__video-play"></wd-icon>
+            <WdIcon :name="resolveIconName('play-circle-fill')" custom-class="wd-upload__video-play"></WdIcon>
           </view>
         </template>
 
         <view v-else class="wd-upload__file" @tap="onPreviewFile(file)">
-          <wd-icon name="file" custom-class="wd-upload__file-icon"></wd-icon>
+          <WdIcon name="file" custom-class="wd-upload__file-icon"></WdIcon>
           <text class="wd-upload__file-name">{{ file.name || file.url }}</text>
         </view>
       </view>
@@ -541,18 +539,18 @@ function resolveIconName(name: string) {
       <view v-if="file[props.statusKey] !== 'success'" class="wd-upload__mask">
         <!-- loading时展示loading图标和进度 -->
         <view v-if="file[props.statusKey] === 'loading'" class="wd-upload__status-content">
-          <wd-loading :type="loadingType" :size="loadingSize" :color="loadingColor" />
+          <WdLoading :type="loadingType" :size="loadingSize" :color="loadingColor" />
           <text class="wd-upload__progress-txt">{{ file.percent }}%</text>
         </view>
         <!-- 失败时展示失败图标以及失败信息 -->
         <view v-if="file[props.statusKey] === 'fail'" class="wd-upload__status-content">
-          <wd-icon :name="resolveIconName('close-circle')" custom-class="wd-upload__icon"></wd-icon>
+          <WdIcon :name="resolveIconName('close-circle')" custom-class="wd-upload__icon"></WdIcon>
           <text class="wd-upload__progress-txt">{{ file.error || translate('error') }}</text>
         </view>
       </view>
       <!-- 上传状态为上传中时不展示移除按钮 -->
       <view class="wd-upload__close" v-if="file[props.statusKey] !== 'loading' && !isDisabled" @tap="removeFile(index)">
-        <wd-icon name="close" custom-class="wd-upload__close-icon"></wd-icon>
+        <WdIcon name="close" custom-class="wd-upload__close-icon"></WdIcon>
       </view>
       <!-- 自定义预览样式 -->
       <slot name="preview-cover" v-if="$slots['preview-cover']" :file="file" :index="index"></slot>
@@ -565,11 +563,11 @@ function resolveIconName(name: string) {
       <!-- 唤起项 -->
       <view v-else @tap="onEvokeClick" :class="['wd-upload__evoke', isDisabled ? 'is-disabled' : '', customEvokeClass]">
         <!-- 唤起项图标 -->
-        <wd-icon :name="resolveIconName('camera-fill')" custom-class="wd-upload__evoke-icon"></wd-icon>
+        <WdIcon :name="resolveIconName('camera-fill')" custom-class="wd-upload__evoke-icon"></WdIcon>
         <!-- 有限制个数时确认是否展示限制个数 -->
         <text v-if="limit && showLimitNum" class="wd-upload__evoke-num">（{{ uploadFiles.length }}/{{ limit }}）</text>
       </view>
     </template>
   </view>
-  <wd-video-preview :selector="videoPreviewId"></wd-video-preview>
+  <WdVideoPreview :selector="videoPreviewId"></WdVideoPreview>
 </template>

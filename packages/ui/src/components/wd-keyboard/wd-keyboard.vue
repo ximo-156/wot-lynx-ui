@@ -206,7 +206,7 @@ const handlePress = (text: string, type: NumberKeyType) => {
 </script>
 
 <template>
-  <wd-popup
+  <WdPopup
     v-model="show"
     position="bottom"
     :z-index="zIndex"
@@ -229,21 +229,21 @@ const handlePress = (text: string, type: NumberKeyType) => {
       <template v-if="mode !== 'car'">
         <view :class="`wd-keyboard__body ${showHeader ? 'is-with-header' : ''}`">
           <view class="wd-keyboard__keys">
-            <wd-key v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
+            <WdKey v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
           </view>
           <view v-if="mode === 'custom'" class="wd-keyboard__sidebar">
-            <wd-key v-if="showDeleteKey" large :text="deleteText" type="delete" @press="handlePress" />
-            <wd-key large :text="closeText" type="close" :loading="closeButtonLoading" @press="handlePress" />
+            <WdKey v-if="showDeleteKey" large :text="deleteText" type="delete" @press="handlePress" />
+            <WdKey large :text="closeText" type="close" :loading="closeButtonLoading" @press="handlePress" />
           </view>
         </view>
       </template>
       <template v-else>
         <view :class="`wd-keyboard__body ${showHeader ? 'is-with-header' : ''}`">
           <view class="wd-keyboard__car-keys">
-            <wd-key v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" is-car @press="handlePress" />
+            <WdKey v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" is-car @press="handlePress" />
           </view>
         </view>
       </template>
     </view>
-  </wd-popup>
+  </WdPopup>
 </template>

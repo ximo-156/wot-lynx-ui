@@ -45,8 +45,8 @@ function handleBackHome() {
 
 <template>
   <view :class="`wd-navbar-capsule ${customClass}`" :style="parseStyle(customStyle)">
-    <wd-icon @tap="handleBack" name="arrow-left-bold" custom-class="wd-navbar-capsule__icon" />
+    <WdIcon @tap="handleBack" name="arrow-left-bold" custom-class="wd-navbar-capsule__icon" />
     <view class="wd-navbar-capsule__separator" />
-    <wd-icon @tap="handleBackHome" name="home" custom-class="wd-navbar-capsule__icon" />
+    <WdIcon @tap="handleBackHome" name="home" custom-class="wd-navbar-capsule__icon" />
   </view>
 </template>

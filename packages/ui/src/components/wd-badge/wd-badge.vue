@@ -19,7 +19,8 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { badgeProps } from './types'
-import { addUnit, filterStyle, isDef, isNumber, parseStyle } from '../../common/util'
+import { addUnit, isDef, isNumber, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(badgeProps)
 
@@ -38,8 +39,9 @@ const content = computed(() => {
 /**
  * 计算徽标样式
  */
+const BADGE_STYLE = defineStyleKeys({ 'background-color': '', top: '', right: '' })
 const contentStyle = computed(() => {
-  const style: Record<string, string> = {}
+  const style: Record<string, string> = { ...BADGE_STYLE }
   if (isDef(props.bgColor)) {
     style['background-color'] = props.bgColor
   }
@@ -51,7 +53,7 @@ const contentStyle = computed(() => {
   if (isDef(props.right)) {
     style.right = addUnit(props.right)
   }
-  return filterStyle(style)
+  return resolveStyle(BADGE_STYLE, style)
 })
 
 /**

@@ -18,19 +18,23 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onBeforeMount } from 'vue-lynx'
+import { computed, onBeforeMount, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import { switchProps } from './types'
 import { callInterceptor } from '../../common/interceptor'
 import { addUnit, isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
-import { defineStyleKeys } from '../../common/style'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { useFormDisabled } from '../../composables/useFormDisabled'
+import { useAlive } from '../../composables/useAlive'
 import type { LoadingProps } from '../wd-loading/types'
 
 const props = defineProps(switchProps)
 const emit = defineEmits(['change', 'update:modelValue', 'tap'])
 const isDisabled = useFormDisabled(props)
+const isAlive = useAlive()
+let changeRequest = 0
+watch([() => props.modelValue, isDisabled, () => props.loading], () => { changeRequest++ })
 
 const isActive = computed(() => {
   return props.modelValue === props.activeValue
@@ -56,18 +60,13 @@ const rootClass = computed(() => {
  * 在视觉上不可区分，同时又保证键集完整、无脏值残留。
  */
 const ROOT_STYLE = defineStyleKeys({
-  'font-size': 'var(--wot-switch-size, 26px)'
+  'font-size': 'var(--wot-switch-size, 26px)',
+  '--wot-switch-size': ''
 })
 
 const rootStyle = computed(() => {
   const size = isDef(props.size) ? addUnit(props.size) : ''
-  const base: Record<string, string> = size
-    ? // size prop 命中：同步改写 em 基准变量，派生尺寸随之一并缩放
-      { 'font-size': size, '--wot-switch-size': size }
-    : // 未命中：只写 font-size 且取值与类声明等价，`--wot-switch-size` 的
-      // 令牌默认值（及消费者经 CSS 变量的覆盖）保持生效
-      { 'font-size': ROOT_STYLE['font-size'] }
-  return { ...base, ...parseStyle(props.customStyle) }
+  return resolveStyle(ROOT_STYLE, { 'font-size': size, '--wot-switch-size': size }, parseStyle(props.customStyle))
 })
 
 const innerStyle = computed(() => {
@@ -104,8 +103,11 @@ const customLoadingProps = computed<Partial<LoadingProps>>(() => {
 
 function switchValue(event: any) {
   if (isDisabled.value || props.loading) return
+  const oldVal = props.modelValue
+  const request = ++changeRequest
   const newVal = isActive.value ? props.inactiveValue : props.activeValue
   const doSwitch = () => {
+    if (!isAlive() || request !== changeRequest || props.modelValue !== oldVal || isDisabled.value || props.loading) return
     emit('update:modelValue', newVal)
     emit('change', {
       value: newVal
@@ -132,7 +134,7 @@ onBeforeMount(() => {
 <template>
   <view :class="rootClass" :style="rootStyle" @tap="switchValue">
     <view class="wd-switch__inner" :style="innerStyle">
-      <wd-icon
+      <WdIcon
         v-if="innerIcon || innerCssIcon"
         custom-class="wd-switch__inner-icon"
         :name="innerIcon"
@@ -142,8 +144,8 @@ onBeforeMount(() => {
       <text v-else class="wd-switch__inner-text">{{ isActive ? activeText : inactiveText }}</text>
     </view>
     <view class="wd-switch__action">
-      <wd-loading v-if="loading" v-bind="customLoadingProps" />
-      <wd-icon
+      <WdLoading v-if="loading" v-bind="customLoadingProps" />
+      <WdIcon
         v-else-if="actionIcon || actionCssIcon"
         custom-class="wd-switch__action-icon"
         :name="actionIcon"

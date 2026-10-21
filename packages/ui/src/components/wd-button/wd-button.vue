@@ -9,9 +9,9 @@
  *   颜色经 loadingColor 显式下发（svg content 不继承 currentColor）；
  * - wot-ui 的 ::after 边框技巧（plain/dashed/hairline 描边）在 Lynx 无伪元素，
  *   改为根节点真实 border，见 index.scss；
- * - uni-app 开放能力 props（open-type / session-from 等）及其回调事件
- *   （getuserinfo / contact 等）在 Lynx 无对应能力：props 保留声明仅为
- *   API 对齐（传入不生效），事件不声明（无原生事件可转发）。
+ * - uni-app 开放能力 props 与回调事件保留；Lynx 无原生小程序授权按钮，
+ *   仅当宿主显式 configureUniAdapter({ openType }) 时执行开放能力并回传事件，
+ *   未注入时不自动授权或分享（普通 click / tap 仍正常）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -19,7 +19,9 @@ import './index.css'
 import { computed, useSlots } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
-import { buttonProps } from './types'
+import { buttonProps, type ButtonOpenType } from './types'
+import { hasUniAdapter, uni } from '../../common/uni'
+import { useAlive } from '../../composables/useAlive'
 import { isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
 import type { LoadingProps } from '../wd-loading/types'
@@ -51,7 +53,15 @@ const effectiveRound = computed(() => {
 const emit = defineEmits<{
   (e: 'click', event: any): void
   (e: 'tap', event: any): void
+  (e: 'getuserinfo' | 'contact' | 'getphonenumber' | 'getrealtimephonenumber' | 'error' | 'launchapp' | 'opensetting' | 'chooseavatar' | 'agreeprivacyauthorization', event: any): void
 }>()
+const isAlive = useAlive()
+type OpenTypeEvent = 'getuserinfo' | 'contact' | 'getphonenumber' | 'getrealtimephonenumber' | 'launchapp' | 'opensetting' | 'chooseavatar' | 'agreeprivacyauthorization'
+const OPEN_TYPE_EVENTS: Partial<Record<ButtonOpenType, OpenTypeEvent>> = {
+  getUserInfo: 'getuserinfo', contact: 'contact', getPhoneNumber: 'getphonenumber',
+  getRealtimePhoneNumber: 'getrealtimephonenumber', launchApp: 'launchapp',
+  openSetting: 'opensetting', chooseAvatar: 'chooseavatar', agreePrivacyAuthorization: 'agreeprivacyauthorization'
+}
 
 /** 加载配置：默认继承按钮文字色 */
 const customLoadingProps = computed(() => {
@@ -83,10 +93,31 @@ const rootClass = computed(() => {
 })
 
 function handleClick(event: any) {
-  if (!props.disabled && !props.loading) {
-    emit('click', event)
-    emit('tap', event)
-  }
+  if (props.disabled || props.loading) return
+  emit('click', event)
+  emit('tap', event)
+  if (!props.openType || !hasUniAdapter('openType')) return
+  const eventName = props.openType === 'getAuthorize'
+    ? props.scope === 'phoneNumber' ? 'getphonenumber' : props.scope === 'userInfo' ? 'getuserinfo' : undefined
+    : OPEN_TYPE_EVENTS[props.openType]
+  let settled = false
+  uni.openType({
+    openType: props.openType, scope: props.scope, lang: props.lang, buttonId: props.buttonId,
+    sessionFrom: props.sessionFrom, sendMessageTitle: props.sendMessageTitle,
+    sendMessagePath: props.sendMessagePath, sendMessageImg: props.sendMessageImg,
+    appParameter: props.appParameter, showMessageCard: props.showMessageCard,
+    event,
+    success(result: any) {
+      if (settled || !isAlive()) return
+      settled = true
+      if (eventName) emit(eventName, result)
+    },
+    fail(error: any) {
+      if (settled || !isAlive()) return
+      settled = true
+      emit('error', error)
+    }
+  })
 }
 </script>
 
@@ -95,8 +126,8 @@ function handleClick(event: any) {
        vue-lynx 的 patchProp 对字符串 style 会静默替换为 {}） -->
   <view :id="buttonId" :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
     <view class="wd-button__content">
-      <wd-loading v-if="loading" v-bind="customLoadingProps" />
-      <wd-icon
+      <WdLoading v-if="loading" v-bind="customLoadingProps" />
+      <WdIcon
         v-else-if="icon || cssIcon"
         class="wd-button__icon"
         :name="icon"

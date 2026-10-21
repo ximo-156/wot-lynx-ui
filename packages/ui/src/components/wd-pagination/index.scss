@@ -31,8 +31,11 @@ $pagination-size-separator-margin: var(--wot-pagination-size-separator-margin, $
 @include b(pagination) {
   background-color: $pagination-bg;
   padding: $pagination-padding;
-  // 原生优先重写（NATIVE-REWRITE §3.1）：根节点显式三件套——内容区
-  // （__content）与辅助文案（__message）纵向排布。
+  // 参考源 view 为块级；显式宽度在 Lynx / flex 行宿主中保留该视觉语义。
+  // border-box 避免 100% 再叠加 12px 内边距；不可被宿主压缩成内容宽度。
+  box-sizing: border-box;
+  width: 100%;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
 
@@ -54,11 +57,23 @@ $pagination-size-separator-margin: var(--wot-pagination-size-separator-margin, $
     line-height: $pagination-message-line-height;
     margin-top: $pagination-message-margin-top;
   }
-  @include edeep(nav) {
+  @include e(message-text) {
+    color: inherit;
+    text-align: center;
+  }
+  // 4 个类的特异性高于 wd-button.is-small.is-icon（3 个类）：
+  // 分页自己的 64px 最小宽度不能被图标按钮默认的 32px 覆盖。
+  .wd-pagination__content .wd-button.wd-pagination__nav {
     min-width: $pagination-nav-width;
+    flex-shrink: 0;
   }
   @include e(size) {
     flex: 1;
+    // Lynx view 默认为 linear；三个 text 必须显式横向排布、成对居中。
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
     text-align: center;
     font-size: $pagination-size-font-size;
     line-height: $pagination-size-line-height;

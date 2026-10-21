@@ -33,10 +33,10 @@ function handleNav(dir: 'prev' | 'next') {
 <template>
   <template v-if="showControls">
     <view class="wd-swiper-nav__btn wd-swiper-nav__btn--prev" @tap="handleNav('prev')">
-      <wd-icon name="arrow-left-bold" custom-class="wd-swiper-nav__btn-icon" />
+      <WdIcon name="arrow-left-bold" custom-class="wd-swiper-nav__btn-icon" />
     </view>
     <view class="wd-swiper-nav__btn wd-swiper-nav__btn--next" @tap="handleNav('next')">
-      <wd-icon name="arrow-right-bold" custom-class="wd-swiper-nav__btn-icon" />
+      <WdIcon name="arrow-right-bold" custom-class="wd-swiper-nav__btn-icon" />
     </view>
   </template>
   <view

@@ -268,7 +268,7 @@ defineExpose<NoticeBarExpose>({ reset })
 
 <template>
   <view v-if="show" :class="`wd-notice-bar ${customClass} ${noticeBarClass}`" :style="rootStyle">
-    <wd-icon v-if="prefix" custom-class="wd-notice-bar__prefix" :name="prefix"></wd-icon>
+    <WdIcon v-if="prefix" custom-class="wd-notice-bar__prefix" :name="prefix"></WdIcon>
     <slot v-else name="prefix"></slot>
     <view class="wd-notice-bar__wrap" :id="`${instanceId}-wrap`">
       <view class="wd-notice-bar__content" :id="`${instanceId}-content`" :style="animation" @transitionend="animationEnd" @tap="handleClick">
@@ -280,7 +280,7 @@ defineExpose<NoticeBarExpose>({ reset })
       </view>
     </view>
     <slot name="suffix">
-      <wd-icon v-if="closable" custom-class="wd-notice-bar__suffix" name="close" @tap="handleClose"></wd-icon>
+      <WdIcon v-if="closable" custom-class="wd-notice-bar__suffix" name="close" @tap="handleClose"></WdIcon>
     </slot>
   </view>
 </template>

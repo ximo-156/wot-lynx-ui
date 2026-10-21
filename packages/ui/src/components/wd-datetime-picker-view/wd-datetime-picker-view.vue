@@ -10,7 +10,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onBeforeMount, ref, watch } from 'vue-lynx'
+import { computed, ref, watch } from 'vue-lynx'
 import WdPickerView from '../wd-picker-view/wd-picker-view.vue'
 import { isArray, isDef, isString, padZero, range } from '../../common/util'
 import { datetimePickerViewProps, type DatetimePickerViewColumnType, type DatetimePickerViewExpose } from './types'
@@ -55,7 +55,13 @@ const columns = computed(() => {
       }
     })
   })
-  return columnFormatter ? columnFormatter(mappedColumns) : mappedColumns
+  const formatted = columnFormatter ? columnFormatter(mappedColumns) : mappedColumns
+  // 钩子保留官方 { label, value } 数据契约，渲染出口再映射消费者指定的键。
+  return formatted.map((column) => column.map((option) => ({
+    ...option,
+    [props.labelKey]: option.label,
+    [props.valueKey]: option.value
+  })))
 })
 
 watch(
@@ -79,10 +85,13 @@ watch(
   { deep: true, immediate: true }
 )
 
-onBeforeMount(() => {
-  const inner = correctValue(props.modelValue)
-  updateColumnValue(inner)
-})
+// 配置变化不会改变 modelValue，但仍须重新计算列、选中索引及边界修正值。
+watch(
+  [() => props.type, () => props.useSecond, () => props.minDate, () => props.maxDate,
+    () => props.minHour, () => props.maxHour, () => props.minMinute, () => props.maxMinute,
+    () => props.minSecond, () => props.maxSecond],
+  () => updateColumnValue(correctValue(innerValue.value ?? props.modelValue))
+)
 
 function onChange({ selectedValues }: { selectedValues: Array<string | number> }) {
   pickerValue.value = selectedValues
@@ -188,6 +197,8 @@ function getBoundary(type: 'min' | 'max', innerValue: number) {
 
 function updateColumnValue(value: string | number) {
   const values = getPickerValue(value, props.type, props.useSecond)
+  innerValue.value = value
+  pickerValue.value = values
   if (props.modelValue !== value) {
     emit('update:modelValue', value)
     emit('change', {
@@ -195,8 +206,6 @@ function updateColumnValue(value: string | number) {
       columns: getOriginColumns()
     })
   }
-  innerValue.value = value
-  pickerValue.value = values
 }
 
 function updateInnerValue(indexes: Array<string | number>): string | number {
@@ -251,9 +260,13 @@ function correctValue(value: string | number | Date): string | number {
   if (!isDateType) {
     // 非Date类型，直接走此逻辑
     let [hour, minute, second = '00'] = (isString(value) ? value : value.toString()).split(':')
-    hour = padZero(range(Number(hour), props.minHour, props.maxHour))
-    minute = padZero(range(Number(minute), props.minMinute, props.maxMinute))
-    second = padZero(range(Number(second), props.minSecond, props.maxSecond))
+    const bounded = (part: string | undefined, min: number, max: number) => {
+      const value = Number(part)
+      return padZero(range(Number.isFinite(value) ? value : min, min, max))
+    }
+    hour = bounded(hour, props.minHour, props.maxHour)
+    minute = bounded(minute, props.minMinute, props.maxMinute)
+    second = bounded(second, props.minSecond, props.maxSecond)
     return props.useSecond ? `${hour}:${minute}:${second}` : `${hour}:${minute}`
   }
 
@@ -292,12 +305,14 @@ function getSelectedOptions(): any[] {
 }
 
 defineExpose<DatetimePickerViewExpose>({
-  getSelectedOptions
+  getSelectedOptions,
+  correctValue,
+  getOriginColumns
 })
 </script>
 
 <template>
-  <wd-picker-view
+  <WdPickerView
     ref="datePickerview"
     :custom-class="customClass"
     :custom-style="customStyle"

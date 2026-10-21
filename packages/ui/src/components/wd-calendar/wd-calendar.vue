@@ -50,12 +50,13 @@ const lastCalendarValue = ref<null | number | number[]>(null)
 const confirmBtnDisabled = ref<boolean>(true)
 const currentTab = ref<number>(0)
 const lastTab = ref<number>(0)
-const currentType = ref<CalendarType>('date')
+const currentType = ref<CalendarType>(props.type)
 const lastCurrentType = ref<CalendarType>()
 const inited = ref<boolean>(false)
 const calendarViewRef = ref()
 const calendarTabs = ref()
 const isConfirming = ref<boolean>(false)
+let confirmRequest = 0
 /** 当前激活的快捷选项索引，-1 表示无激活项 */
 const activeShortcutIndex = ref<number>(-1)
 
@@ -114,7 +115,7 @@ watch(
       const tabs = ['date', 'week', 'month']
       const rangeTabs = ['daterange', 'weekrange', 'monthrange']
 
-      const index = newValue.indexOf('range') > -1 ? rangeTabs.indexOf(newValue) || 0 : tabs.indexOf(newValue)
+      const index = Math.max(0, newValue.indexOf('range') > -1 ? rangeTabs.indexOf(newValue) : tabs.indexOf(newValue))
       currentTab.value = index
     }
     currentType.value = deepClone(newValue)
@@ -128,6 +129,7 @@ watch(
 watch(
   () => props.visible,
   (val) => {
+    if (!val) confirmRequest++
     pickerShow.value = val
   },
   {
@@ -143,6 +145,7 @@ function handleOpened() {
 }
 
 function handleClosed() {
+  if (pickerShow.value) return
   if (isConfirming.value) {
     isConfirming.value = false
   } else {
@@ -154,6 +157,7 @@ function handleClosed() {
 }
 
 watch(pickerShow, async (val) => {
+  confirmRequest++
   emit('update:visible', val)
   if (val) {
     inited.value = true
@@ -162,6 +166,7 @@ watch(pickerShow, async (val) => {
     lastCurrentType.value = currentType.value
 
     await pause()
+    if (!isAlive() || !pickerShow.value) return
     scrollIntoView()
     emit('open')
   } else {
@@ -169,7 +174,7 @@ watch(pickerShow, async (val) => {
       emit('cancel')
     }
   }
-})
+}, { immediate: props.visible })
 
 function scrollIntoView() {
   calendarViewRef.value && calendarViewRef.value.scrollIntoView()
@@ -182,6 +187,7 @@ function open() {
 
 // 对外暴露方法
 function close() {
+  confirmRequest++
   pickerShow.value = false
 }
 
@@ -194,17 +200,10 @@ function handleTypeChange({ index }: { index: number }) {
 }
 
 function getConfirmBtnStatus(value: number | number[] | null) {
-  let confirmBtnDisabled = false
-  // 范围选择未选择满，或者多日期选择未选择日期，按钮置灰不可点击
-  if (
-    (props.type.indexOf('range') > -1 && (!isArray(value) || !value[0] || !value[1] || !value)) ||
-    (props.type === 'dates' && (!isArray(value) || value.length === 0 || !value)) ||
-    !value
-  ) {
-    confirmBtnDisabled = true
-  }
-
-  return confirmBtnDisabled
+  if (value == null) return true
+  if (isRange(currentType.value)) return !isArray(value) || value.length < 2 || value[0] == null || value[1] == null
+  if (currentType.value === 'dates') return !isArray(value) || value.length === 0
+  return false
 }
 
 function handleChange({ value }: { value: number | number[] | null }) {
@@ -223,9 +222,14 @@ function handleChange({ value }: { value: number | number[] | null }) {
 }
 
 function handleConfirm() {
+  if (!pickerShow.value || getConfirmBtnStatus(calendarValue.value)) return
+  const request = ++confirmRequest
   callInterceptor(props.beforeConfirm, {
     args: [calendarValue.value],
-    done: onConfirm
+    done: () => {
+      if (!isAlive() || request !== confirmRequest || !pickerShow.value) return
+      onConfirm()
+    }
   })
 }
 
@@ -270,7 +274,7 @@ defineExpose<CalendarExpose>({
 
 <template>
   <view :class="`wd-calendar ${customClass}`" :style="parseStyle(customStyle)">
-    <wd-action-sheet
+    <WdActionSheet
       v-model="pickerShow"
       :duration="duration"
       :close-on-click-modal="closeOnClickModal"
@@ -285,14 +289,14 @@ defineExpose<CalendarExpose>({
     >
       <view class="wd-calendar__header">
         <view v-if="showTypeSwitch" class="wd-calendar__tabs">
-          <wd-tabs ref="calendarTabs" v-model="currentTab" @change="handleTypeChange">
-            <wd-tab :title="translate('day')" :name="translate('day')" />
-            <wd-tab :title="translate('week')" :name="translate('week')" />
-            <wd-tab :title="translate('month')" :name="translate('month')" />
-          </wd-tabs>
+          <WdTabs ref="calendarTabs" v-model="currentTab" @change="handleTypeChange">
+            <WdTab :title="translate('day')" :name="translate('day')" />
+            <WdTab :title="translate('week')" :name="translate('week')" />
+            <WdTab :title="translate('month')" :name="translate('month')" />
+          </WdTabs>
         </view>
         <view v-if="shortcuts.length > 0" class="wd-calendar__shortcuts">
-          <wd-tag
+          <WdTag
             v-for="(item, index) in shortcuts"
             :key="index"
             :custom-class="`wd-calendar__tag ${index === shortcuts.length - 1 ? 'is-last-tag' : ''}`"
@@ -301,7 +305,7 @@ defineExpose<CalendarExpose>({
             @click="handleShortcutClick(index)"
           >
             <text>{{ item.text }}</text>
-          </wd-tag>
+          </WdTag>
         </view>
       </view>
       <view
@@ -317,7 +321,7 @@ defineExpose<CalendarExpose>({
             <text>{{ rangeLabel[1] }}</text>
           </view>
         </view>
-        <wd-calendar-view
+        <WdCalendarView
           ref="calendarViewRef"
           v-model="calendarValue"
           :type="currentType"
@@ -341,12 +345,12 @@ defineExpose<CalendarExpose>({
       <view v-if="showConfirm" class="wd-calendar__confirm">
         <slot name="confirm-left" />
         <view class="wd-calendar__confirm-btn-wrapper">
-          <wd-button size="large" block :disabled="confirmBtnDisabled" @tap="handleConfirm">
+          <WdButton size="large" block :disabled="confirmBtnDisabled" @tap="handleConfirm">
             <text>{{ confirmText || translate('confirm') }}</text>
-          </wd-button>
+          </WdButton>
         </view>
         <slot name="confirm-right" />
       </view>
-    </wd-action-sheet>
+    </WdActionSheet>
   </view>
 </template>

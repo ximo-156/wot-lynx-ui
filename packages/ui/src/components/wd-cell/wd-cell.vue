@@ -154,14 +154,14 @@ function onClick(event: any) {
         <text v-if="required && !hideAsterisk && asteriskPosition === 'start'" class="wd-cell__required wd-cell__required--left">*</text>
         <!--前置图标-->
         <slot name="prefix">
-          <wd-icon
+          <WdIcon
             v-if="prefixIcon"
             :name="prefixIcon"
             :size="iconSize"
             :class-prefix="iconPrefix"
             :css-icon="cssIcon"
             :custom-class="`wd-cell__prefix ${customPrefixClass}`"
-          ></wd-icon>
+          ></WdIcon>
         </slot>
 
         <view v-if="showTitle" class="wd-cell__title">
@@ -190,16 +190,16 @@ function onClick(event: any) {
             <slot><text>{{ showPlaceholder ? placeholder : value }}</text></slot>
           </view>
           <!--后置图标/箭头-->
-          <wd-icon v-if="isLink" custom-class="wd-cell__arrow-right" :name="arrowIcon" :class-prefix="iconPrefix" />
+          <WdIcon v-if="isLink" custom-class="wd-cell__arrow-right" :name="arrowIcon" :class-prefix="iconPrefix" />
           <slot v-else name="suffix">
-            <wd-icon
+            <WdIcon
               v-if="suffixIcon"
               :name="suffixIcon"
               :size="iconSize"
               :class-prefix="iconPrefix"
               :css-icon="cssIcon"
               :custom-class="`wd-cell__suffix ${customSuffixClass}`"
-            ></wd-icon>
+            ></WdIcon>
           </slot>
         </view>
       </view>

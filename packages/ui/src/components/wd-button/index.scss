@@ -432,6 +432,9 @@ $button-variants: (
   }
 
   @include e(text) {
+    // Web x-text 的 color: initial 会阻止继承；文本节点显式继承按钮色，
+    // primary / info / plain 等仍由上面的 wot 同源类型与变体规则决定。
+    color: inherit;
     user-select: none;
     white-space: nowrap;
   }

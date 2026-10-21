@@ -161,13 +161,13 @@ function handleClick(event: any) {
     <template v-if="isButton">
       <slot name="icon" :is-checked="isChecked">
         <view v-if="isChecked" class="wd-radio__shape">
-          <wd-icon custom-class="wd-radio__icon" :custom-style="iconStyle" :name="iconValue" />
+          <WdIcon custom-class="wd-radio__icon" :custom-style="iconStyle" :name="iconValue" />
         </view>
       </slot>
     </template>
     <view v-else class="wd-radio__shape">
       <slot name="icon" :is-checked="isChecked">
-        <wd-icon v-if="iconValue" custom-class="wd-radio__icon" :custom-style="iconStyle" :name="iconValue" />
+        <WdIcon v-if="iconValue" custom-class="wd-radio__icon" :custom-style="iconStyle" :name="iconValue" />
         <view v-else-if="isChecked" class="wd-radio__icon wd-radio__icon--dot" :style="parseStyle(iconStyle)">
           <view class="wd-radio__icon--dot-inner" />
         </view>

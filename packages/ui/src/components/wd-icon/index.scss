@@ -18,6 +18,11 @@ $icon-font-size: var(--wot-icon-font-size, $typography-body-size-main) !default;
   font-size: $icon-font-size;
   line-height: 1;
 
+  @include e(glyph) {
+    // Lynx Web text 默认重置颜色；继承根节点的 prop/custom-class/上下文色。
+    color: inherit;
+  }
+
   @include m(image) {
     width: $icon-font-size;
     height: $icon-font-size;

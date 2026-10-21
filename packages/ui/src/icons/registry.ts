@@ -10,7 +10,6 @@
  *   - 不带前缀时按注册顺序回退查找（内置集优先，保证存量图标行为不变）；
  *   - name 含 `/` 由 wd-icon 判定为图片，不进入本表。
  */
-import { registerIconFontOnWeb } from './fonts/web-font'
 import { iconfontSet } from './sets/iconfont'
 import type { IconPaths, IconSet, ResolvedIcon } from './types'
 
@@ -21,9 +20,6 @@ const iconSets = new Map<string, IconSet>()
 const SET_KEY_SEPARATOR = ':'
 
 registerIconSet(iconfontSet)
-
-// web 预览要把 @font-face 提到 document 级，shadow root 内的声明不会生效
-registerIconFontOnWeb()
 
 /**
  * 注册一套图标集（扩展入口）。

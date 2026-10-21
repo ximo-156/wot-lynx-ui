@@ -17,7 +17,8 @@ import './index.css'
 import { computed, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { imgProps } from './types'
-import { addUnit, isDef, filterStyle, parseStyle } from '../../common/util'
+import { addUnit, isDef, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { uni } from '../../common/uni'
 import { resolveIcon } from '../../icons/registry'
 
@@ -48,16 +49,13 @@ const rootClass = computed(() => {
   return classes.join(' ')
 })
 
-const rootStyle = computed(() => {
-  const style: Record<string, string> = {}
-  if (isDef(props.height)) style.height = addUnit(props.height)
-  if (isDef(props.width)) style.width = addUnit(props.width)
-  if (isDef(props.radius)) {
-    style['border-radius'] = addUnit(props.radius)
-    style['overflow'] = 'hidden'
-  }
-  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
-})
+const IMG_STYLE = defineStyleKeys({ height: '', width: '', borderRadius: '', overflow: '' })
+const rootStyle = computed(() => resolveStyle(IMG_STYLE, {
+  height: isDef(props.height) ? addUnit(props.height) : '',
+  width: isDef(props.width) ? addUnit(props.width) : '',
+  borderRadius: isDef(props.radius) ? addUnit(props.radius) : '',
+  overflow: isDef(props.radius) ? 'hidden' : ''
+}, parseStyle(props.customStyle)))
 
 function handleLoad(event: any) {
   status.value = 'success'
@@ -93,12 +91,12 @@ function handleClick(event: any) {
     />
     <view v-if="status === 'loading' && showLoading" class="wd-img__loading">
       <slot name="loading">
-        <wd-icon :name="resolveIconName('image')" custom-class="wd-img__loading-icon" />
+        <WdIcon :name="resolveIconName('image')" custom-class="wd-img__loading-icon" />
       </slot>
     </view>
     <view v-if="status === 'error' && showError" class="wd-img__error">
       <slot name="error">
-        <wd-icon :name="resolveIconName('image-failloading')" custom-class="wd-img__error-icon" />
+        <WdIcon :name="resolveIconName('image-failloading')" custom-class="wd-img__error-icon" />
       </slot>
     </view>
   </view>

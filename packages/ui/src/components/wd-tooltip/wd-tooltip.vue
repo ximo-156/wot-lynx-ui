@@ -28,6 +28,7 @@ import { usePopover } from '../../composables/usePopover'
 import { closeOther, pushToQueue, removeFromQueue } from '../../common/clickoutside'
 import { type Queue, queueKey } from '../../composables/useQueue'
 import { parseStyle } from '../../common/util'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(tooltipProps)
 const emit = defineEmits(['update:modelValue', 'menuclick', 'change', 'open', 'close', 'tap'])
@@ -37,7 +38,8 @@ const popover = usePopover(props.visibleArrow)
 const queue = inject<Queue | null>(queueKey, null)
 const selector: string = 'tooltip'
 const { proxy } = getCurrentInstance() as any
-const showTooltip = ref<boolean>(false) // 控制tooltip显隐
+const isAlive = useAlive()
+const showTooltip = ref<boolean>(props.modelValue) // 控制tooltip显隐
 
 watch(
   () => props.content,
@@ -49,10 +51,12 @@ watch(
 )
 
 watch(
-  () => props.placement,
+  [() => props.placement, () => props.visibleArrow, () => props.offset],
   () => {
     popover.init(props.placement, props.visibleArrow, selector)
-  }
+    if (showTooltip.value) popover.control(props.placement, props.offset)
+  },
+  { deep: true }
 )
 
 watch(
@@ -83,6 +87,7 @@ watch(
 
 onMounted(() => {
   popover.init(props.placement, props.visibleArrow, selector)
+  if (showTooltip.value) popover.control(props.placement, props.offset)
 })
 
 onBeforeMount(() => {
@@ -130,6 +135,7 @@ function close() {
  * 过渡动画完成后重新测量弹出层尺寸并更新定位
  */
 function handleAfterEnter() {
+  if (!isAlive()) return
   popover.updatePosition(props.placement, props.offset)
 }
 
@@ -138,6 +144,7 @@ function handleAfterEnter() {
  * @param {boolean} value 显示状态
  */
 function updateModelValue(value: boolean) {
+  if (!isAlive()) return
   showTooltip.value = value
   emit('update:modelValue', value)
 }
@@ -179,7 +186,7 @@ defineExpose<TooltipExpose>({
         <slot name="content">
           <view class="wd-tooltip__inner"><text>{{ content }}</text></view>
         </slot>
-        <WdIcon v-if="showClose" name="close" custom-class="wd-tooltip__close-icon" @tap="toggle" />
+        <WdIcon v-if="showClose" name="close" custom-class="wd-tooltip__close-icon" @tap="close" />
       </view>
     </WdTransition>
     <view class="wd-tooltip__target" :id="popover.ids.target" @tap="toggle">

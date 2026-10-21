@@ -23,9 +23,9 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref, watch } from 'vue-lynx'
+import { computed, onBeforeUnmount, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
-import { isArray, isDef, isObj, isString, filterStyle, parseStyle, pause } from '../../common/util'
+import { isArray, isDef, isObj, isString, parseStyle, pause } from '../../common/util'
 import { progressProps, type ProgressColor } from './types'
 
 const props = defineProps(progressProps)
@@ -40,16 +40,30 @@ const percentageDiff = ref<number>(0)
 
 // 进度条延迟定时器
 let animationTimer: ReturnType<typeof setTimeout> | null = null
+let renderTimer: ReturnType<typeof setTimeout> | null = null
+let revision = 0
+let alive = true
+
+function clearAnimation() {
+  if (animationTimer !== null) clearTimeout(animationTimer)
+  if (renderTimer !== null) clearTimeout(renderTimer)
+  animationTimer = renderTimer = null
+}
+onBeforeUnmount(() => {
+  alive = false
+  revision++
+  clearAnimation()
+})
 
 /**
  * 根节点样式，控制进度条底色、宽度及过渡动画
  */
 const rootStyle = computed<Record<string, string>>(() => {
-  return filterStyle({
+  return {
     background: displayColor.value,
     width: `${displayPercentage.value}%`,
-    'transition-duration': `${percentageDiff.value * props.duration * 0.001}s`
-  })
+    'transition-duration': `${percentageDiff.value * Math.max(0, props.duration) * 0.001}s`
+  }
 })
 
 /**
@@ -77,9 +91,11 @@ watch(
   () => [props.percentage, props.color, props.duration],
   () => {
     validatePercentage(props.percentage)
-    updateProgress()
+    clearAnimation()
+    revision++
+    updateProgress(revision)
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 )
 
 /**
@@ -128,19 +144,26 @@ function updateProgressBackward(partList: ProgressColor[], percentage: number) {
  * 更新进度条的显示逻辑主入口
  * @returns {Promise<void>}
  */
-async function updateProgress() {
+async function updateProgress(version = revision) {
+  if (!alive || version !== revision) return
   const { percentage, color } = props
-  if (!isDef(color) || (isArray(color) && color.length === 0)) {
+  if (!isDef(color) || color === '' || (isArray(color) && color.length === 0)) {
     percentageDiff.value = Math.abs(percentage - displayPercentage.value)
+    displayColor.value = ''
     await pause()
-    displayPercentage.value = percentage
+    if (alive && version === revision) displayPercentage.value = percentage
     return
   }
-  if (displayPercentage.value === percentage) return
 
   const colorArray = isArray(color) ? color : [color]
   validateColorArray(colorArray)
   const partList = createPartList(colorArray)
+  if (displayPercentage.value === percentage) {
+    const part = partList.find((item) => percentage <= item.percentage) || partList[partList.length - 1]
+    displayColor.value = part?.color || ''
+    percentageDiff.value = 0
+    return
+  }
   displayPercentage.value > percentage ? updateProgressBackward(partList, percentage) : updateProgressForward(partList, percentage)
 }
 
@@ -188,7 +211,7 @@ function validateColorArray(colorArray: string[] | ProgressColor[]) {
 function createPartList(colorArray: string[] | ProgressColor[]) {
   const partNum = 100 / colorArray.length
   return isProgressColorArray(colorArray)
-    ? colorArray.sort((a, b) => a.percentage - b.percentage)
+    ? [...colorArray].sort((a, b) => a.percentage - b.percentage)
     : colorArray.map((item, index) => ({
         color: item,
         percentage: (index + 1) * partNum
@@ -202,16 +225,18 @@ function createPartList(colorArray: string[] | ProgressColor[]) {
  * @returns {void}
  */
 function renderProgressStep(targetPercent: number, color: string) {
-  if (animationTimer) return
-  const { duration } = props
+  if (!alive || animationTimer !== null || renderTimer !== null) return
+  const version = revision
+  const duration = Math.max(0, props.duration)
   percentageDiff.value = Math.abs(targetPercent - displayPercentage.value)
-  setTimeout(() => {
+  renderTimer = setTimeout(() => {
+    renderTimer = null
+    if (!alive || version !== revision) return
     displayPercentage.value = targetPercent
     displayColor.value = color
     animationTimer = setTimeout(() => {
-      animationTimer && clearTimeout(animationTimer)
       animationTimer = null
-      updateProgress()
+      if (alive && version === revision) updateProgress(version)
     }, percentageDiff.value * duration)
   }, 50)
 }
@@ -231,14 +256,14 @@ function renderProgressStep(targetPercent: number, color: string) {
           <view v-if="!hideText" :class="['wd-progress__label', percentPosition.align ? `is-align-${percentPosition.align}` : '']">
             <text>{{ percentage }}%</text>
           </view>
-          <wd-icon
+          <WdIcon
             v-else-if="status"
             :custom-class="`wd-progress__label wd-progress__icon ${hideText ? 'is-hide-text' : ''} ${
               percentPosition.align ? `is-align-${percentPosition.align}` : ''
             }`"
             :name="iconName"
             :color="isString(color) ? color : ''"
-          ></wd-icon>
+          ></WdIcon>
         </template>
       </view>
     </view>
@@ -247,12 +272,12 @@ function renderProgressStep(targetPercent: number, color: string) {
       <view v-if="!hideText" class="wd-progress__label">
         <text>{{ percentage }}%</text>
       </view>
-      <wd-icon
+      <WdIcon
         v-else-if="status"
         :custom-class="`wd-progress__label wd-progress__icon ${hideText ? 'is-hide-text' : ''}`"
         :name="iconName"
         :color="isString(color) ? color : ''"
-      ></wd-icon>
+      ></WdIcon>
     </template>
   </view>
 </template>

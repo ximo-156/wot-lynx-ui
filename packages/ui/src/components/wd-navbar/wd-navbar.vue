@@ -27,7 +27,7 @@ import './index.css'
 import { computed, getCurrentInstance, nextTick, onMounted, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { navbarProps } from './types'
-import { addUnit, getRect, isDef, parseStyle } from '../../common/util'
+import { addUnit, getRect, isDef, parseStyle, uuid } from '../../common/util'
 import { useDeviceInfo } from '../../composables/useDeviceInfo'
 import { useAlive } from '../../composables/useAlive'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
@@ -37,6 +37,8 @@ const emit = defineEmits(['click-left', 'click-right'])
 
 /** 组件存活守卫：getRect 回调晚于卸载落地时丢弃（真机 9902 防护） */
 const isAlive = useAlive()
+const navbarId = `wd-navbar-${uuid()}`
+let heightRequest = 0
 
 /**
  * 占位高度
@@ -125,12 +127,14 @@ const { proxy } = getCurrentInstance() as any
  * 设置占位高度
  */
 function setPlaceholderHeight() {
+  const request = ++heightRequest
   if (!props.fixed || !props.placeholder) {
+    height.value = ''
     return
   }
 
-  getRect('.wd-navbar', false, proxy).then((res) => {
-    if (!isAlive()) return
+  getRect(`#${navbarId}`, false, proxy).then((res) => {
+    if (!isAlive() || request !== heightRequest || !props.fixed || !props.placeholder) return
     height.value = res.height as number
   })
 }
@@ -138,14 +142,14 @@ function setPlaceholderHeight() {
 
 <template>
   <view :style="placeholderStyle">
-    <view :class="`wd-navbar ${customClass} ${fixed ? 'is-fixed' : ''} ${bordered ? 'is-border' : ''}`" :style="rootStyle">
+    <view :id="navbarId" :class="`wd-navbar ${customClass} ${fixed ? 'is-fixed' : ''} ${bordered ? 'is-border' : ''}`" :style="rootStyle">
       <view class="wd-navbar__content">
         <view class="wd-navbar__capsule" v-if="$slots.capsule">
           <slot name="capsule" />
         </view>
 
         <view :class="`wd-navbar__left ${leftDisabled ? 'is-disabled' : ''}`" @tap="handleClickLeft" v-else-if="!$slots.left">
-          <wd-icon v-if="leftArrow" name="arrow-left-bold" custom-class="wd-navbar__arrow" />
+          <WdIcon v-if="leftArrow" name="arrow-left-bold" custom-class="wd-navbar__arrow" />
           <text v-if="leftText" class="wd-navbar__text">{{ leftText }}</text>
         </view>
 

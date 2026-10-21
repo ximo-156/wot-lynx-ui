@@ -88,12 +88,14 @@ const coverStyle = computed<Record<string, string>>(() => {
 async function hackFocus(focus: boolean) {
   showInput.value = focus
   await pause()
+  if (!isAlive() || (focus && props.disabled)) return
   isFocused.value = focus
 }
 
 async function closeCover() {
   if (props.disabled) return
   await pause(100)
+  if (!isAlive() || props.disabled) return
   showPlaceHolder.value = false
   hackFocus(true)
 }
@@ -182,10 +184,10 @@ function handleClick() {
       <slot name="prefix"></slot>
       <view class="wd-search__field">
         <view v-if="!placeholderLeft" :style="coverStyle" class="wd-search__cover" @tap="closeCover">
-          <wd-icon name="search" custom-class="wd-search__search-icon"></wd-icon>
+          <WdIcon name="search" custom-class="wd-search__search-icon"></WdIcon>
           <text :class="`wd-search__placeholder-txt ${placeholderClass}`">{{ placeholder || translate('search') }}</text>
         </view>
-        <wd-icon v-if="showInput || inputValue || placeholderLeft" name="search" custom-class="wd-search__search-left-icon"></wd-icon>
+        <WdIcon v-if="showInput || inputValue || placeholderLeft" name="search" custom-class="wd-search__search-left-icon"></WdIcon>
         <input
           v-if="showInput || inputValue || placeholderLeft"
           :placeholder="placeholder || translate('search')"
@@ -202,7 +204,7 @@ function handleClick() {
           :maxlength="maxlength"
           :focus="isFocused"
         />
-        <wd-icon v-if="inputValue" custom-class="wd-search__clear-icon" name="close-bold" @tap="handleClear" />
+        <WdIcon v-if="inputValue" custom-class="wd-search__clear-icon" name="close-bold" @tap="handleClear" />
         <slot name="input-suffix"></slot>
       </view>
     </view>

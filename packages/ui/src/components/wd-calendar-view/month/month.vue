@@ -365,7 +365,7 @@ function getFormatterDate(date: number, day: string | number, type?: CalendarDay
 
 <template>
   <view>
-    <wd-toast selector="wd-month" />
+    <WdToast selector="wd-month" />
     <view class="wd-month">
       <text v-if="showTitle" class="wd-month__title">{{ monthTitle(date) }}</text>
       <view class="wd-month__days">

@@ -28,6 +28,7 @@ import { useAlive } from '../../composables/useAlive'
 const props = defineProps(segmentedProps)
 const emit = defineEmits(['update:value', 'change', 'click'])
 const isAlive = useAlive()
+let styleRequest = 0
 
 /**
  * 滑块可切换的全部样式键 + 中性值（CONVENTIONS §20）。
@@ -59,10 +60,11 @@ const optionDisabled = (option: string | number | SegmentedOption): boolean => {
 
 /**
  * 当前激活项是否处于禁用状态
- * 检查全局禁用或第一个选项的禁用状态
+ * 检查全局禁用或当前激活选项的禁用状态
  */
 const activeDisabled = computed(() => {
-  return props.disabled || (props.options[0] && isObj(props.options[0]) ? props.options[0].disabled : false)
+  const active = props.options[state.activeIndex]
+  return props.disabled || (active && isObj(active) ? active.disabled : false)
 })
 
 watch(
@@ -79,6 +81,11 @@ watch(
   }
 )
 
+watch([() => props.options, () => props.theme], () => {
+  updateCurrentIndex()
+  updateActiveStyle(false)
+}, { deep: true })
+
 const { proxy } = getCurrentInstance() as any
 
 onMounted(async () => {
@@ -94,17 +101,19 @@ onMounted(async () => {
  * @param {boolean} animation 是否启用过渡动画,默认为 true
  */
 function updateActiveStyle(animation: boolean = true) {
-  // outline 模式下滑块隐藏，无需计算样式
-  if (props.theme === 'outline') {
+  const request = ++styleRequest
+  const index = state.activeIndex
+  if (props.theme === 'outline' || index < 0 || !props.options.length) {
+    state.activeStyle = resolveStyle(SLIDER_STYLE)
     return
   }
 
   getRect('.wd-segmented__item', true, proxy).then((rects: any[]) => {
     // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
-    if (!isAlive()) return
-    const rect = rects[state.activeIndex]
+    if (!isAlive() || request !== styleRequest) return
+    const rect = rects[index]
     if (!rect) return
-    const left = rects.slice(0, state.activeIndex).reduce((prev, curr) => prev + Number(curr.width), 0)
+    const left = rects.slice(0, index).reduce((prev, curr) => prev + Number(curr.width), 0)
     // 经 Style Funnel 下发：键集恒完整（transform 无条件写入 translateX(left)，
     // 归零时写 translateX(0px) 而非省略），从根上消除 SetStyle 合并语义下的脏值残留。
     // 同类缺陷参见 wd-transition 的 display、wd-swipe-action 的 transition。
@@ -134,11 +143,15 @@ function updateValue(newValue: string | number, option: string | number | Segmen
  */
 function updateCurrentIndex() {
   // options 为空数组时早退：否则会 emit update:value=undefined
-  if (!props.options.length) return
+  if (!props.options.length) {
+    state.activeIndex = -1
+    return
+  }
   const index = props.options.findIndex((option) => isEqual(optionValue(option), props.value))
   if (index >= 0) {
     state.activeIndex = index
   } else {
+    state.activeIndex = 0
     updateValue(optionValue(props.options[0]), props.options[0])
   }
 }

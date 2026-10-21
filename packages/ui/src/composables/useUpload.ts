@@ -147,12 +147,7 @@ export function useUpload(): UseUploadReturn {
    * 默认上传方法
    */
   const defaultUpload: UploadMethod = (file, formData, options) => {
-    // 如果配置了自动中断,则中断之前的上传任务
-    if (options.abortPrevious) {
-      abort()
-    }
-
-    const uploadTask = (globalThis as any).uni?.uploadFile({
+    const uploadTask = uni.uploadFile({
       url: options.action,
       header: options.header,
       name: options.name,
@@ -177,14 +172,12 @@ export function useUpload(): UseUploadReturn {
       }
     })
 
-    currentTask = uploadTask
-
     // 获取当前文件加载的百分比。
     // Lynx 适配：宿主未经 configureUniAdapter 注入 uploadFile 时，common/uni
     // 的降级实现返回 undefined（uni-app 中 uploadFile 恒返回任务对象）。
     // 此处必须可选链兜底——否则 startUploadFiles 的 for 循环会在第一个文件处
     // 抛 TypeError，同批其余文件全部无法入列（wd-upload 多选回归）。
-    uploadTask?.onProgressUpdate((res: any) => {
+    uploadTask?.onProgressUpdate?.((res: any) => {
       options.onProgress(res, file)
     })
 
@@ -211,6 +204,13 @@ export function useUpload(): UseUploadReturn {
     // 设置上传中状态
     file[statusKey] = UPLOAD_STATUS.LOADING
 
+    let task: UniApp.UploadTask | null = null
+    let settled = false
+    if (abortPrevious) abort()
+    const clearTask = () => {
+      settled = true
+      if (currentTask === task) currentTask = null
+    }
     const uploadOptions = {
       action,
       header,
@@ -222,14 +222,14 @@ export function useUpload(): UseUploadReturn {
       onSuccess: (res: UniApp.UploadFileSuccessCallbackResult, file: UploadFileItem, formData: Record<string, any>) => {
         // 更新文件状态
         file[statusKey] = UPLOAD_STATUS.SUCCESS
-        currentTask = null
+        clearTask()
         options.onSuccess?.(res, file, formData)
       },
       onError: (error: UniApp.GeneralCallbackResult, file: UploadFileItem, formData: Record<string, any>) => {
         // 更新文件状态和错误信息
         file[statusKey] = UPLOAD_STATUS.FAIL
         file.error = error.errMsg
-        currentTask = null
+        clearTask()
         options.onError?.(error, file, formData)
       },
       onProgress: (res: UniApp.OnProgressUpdateResult, file: UploadFileItem) => {
@@ -240,11 +240,14 @@ export function useUpload(): UseUploadReturn {
     }
 
     // 返回上传任务实例,支持外部获取uploadTask进行操作
-    if (isFunction(uploadMethod)) {
-      return uploadMethod(file, formData, uploadOptions)
-    } else {
-      return defaultUpload(file, formData, uploadOptions)
+    const result = isFunction(uploadMethod)
+      ? uploadMethod(file, formData, uploadOptions)
+      : defaultUpload(file, formData, uploadOptions)
+    if (result && typeof (result as UniApp.UploadTask).abort === 'function' && !settled) {
+      task = result as UniApp.UploadTask
+      currentTask = task
     }
+    return result
   }
 
   /**

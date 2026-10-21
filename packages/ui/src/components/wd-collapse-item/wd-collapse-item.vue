@@ -22,10 +22,15 @@ import { callInterceptor } from '../../common/interceptor'
 import { useParent } from '../../composables/useParent'
 import { COLLAPSE_KEY } from '../wd-collapse/types'
 import { collapseItemProps, type CollapseItemExpose } from './types'
+import { useAlive } from '../../composables/useAlive'
 
 const collapseId = ref<string>(`collapseId${uuid()}`)
 
 const props = defineProps(collapseItemProps)
+const isAlive = useAlive()
+let rectRequest = 0
+let clickRequest = 0
+let approvedSelection = false
 
 const { parent: collapse, index } = useParent(COLLAPSE_KEY)
 
@@ -49,9 +54,9 @@ const isFirst = computed(() => {
 const contentStyle = computed<Record<string, string>>(() => {
   const style: Record<string, string> = {
     transition: inited.value ? 'height 0.3s ease-in-out' : 'none',
-    height: '0px'
+    height: expanded.value ? 'auto' : '0px'
   }
-  if (expanded.value && height.value) {
+  if (expanded.value && height.value !== '' && Number(height.value) > 0) {
     style.height = addUnit(height.value)
   }
   return style
@@ -69,7 +74,10 @@ const isSelected = computed(() => {
 watch(
   () => isSelected.value,
   (newVal) => {
-    updateExpand(newVal)
+    ++clickRequest
+    const shouldIntercept = newVal && !approvedSelection
+    approvedSelection = false
+    void updateExpand(shouldIntercept)
   }
 )
 
@@ -82,33 +90,24 @@ onMounted(() => {
  * @param useBeforeExpand 是否使用展开前钩子
  */
 async function updateExpand(useBeforeExpand: boolean = true) {
-  try {
-    if (useBeforeExpand) {
-      await handleBeforeExpand()
-    }
-    initRect()
-  } catch (error) {
-    /* empty */
-  }
+  const request = ++rectRequest
+  if (!isAlive()) return
+  if (useBeforeExpand && isSelected.value && !(await handleBeforeExpand())) return
+  if (!isAlive() || request !== rectRequest) return
+  await initRect(request)
 }
 
-/**
- * 初始化内容高度
- */
-function initRect() {
-  getRect(`#${collapseId.value}`, false, proxy).then(async (rect) => {
-    const { height: rectHeight } = rect
-    height.value = isDef(rectHeight) ? Number(rectHeight) : ''
-    await pause()
-    if (isSelected.value) {
-      expanded.value = true
-    } else {
-      expanded.value = false
-    }
-    if (!inited.value) {
-      inited.value = true
-    }
-  })
+/** 一次性度量并只应用仍与当前选择一致的结果。 */
+async function initRect(request: number) {
+  const selected = isSelected.value
+  const rect = await getRect(`#${collapseId.value}`, false, proxy)
+  if (!isAlive() || request !== rectRequest || selected !== isSelected.value) return
+  const rectHeight = Number(rect && rect.height) || 0
+  height.value = rectHeight > 0 ? rectHeight : ''
+  await pause()
+  if (!isAlive() || request !== rectRequest || selected !== isSelected.value) return
+  expanded.value = selected
+  inited.value = true
 }
 
 /**
@@ -124,33 +123,25 @@ function handleTransitionEnd() {
  * 点击子项
  */
 async function handleClick() {
-  if (props.disabled) return
-  try {
-    await updateExpand()
-    const { name } = props
-    collapse.value && collapse.value.toggle(name, !expanded.value)
-  } catch (error) {
-    /* empty */
-  }
+  if (!isAlive() || props.disabled || !collapse.value) return
+  const request = ++clickRequest
+  const nextExpanded = !isSelected.value
+  if (nextExpanded && !(await handleBeforeExpand())) return
+  if (!isAlive() || props.disabled || request !== clickRequest || !collapse.value) return
+  // 受控回写随后触发选择 watcher，同一次点击不得重复调用 beforeExpend。
+  approvedSelection = nextExpanded
+  collapse.value.toggle(props.name, nextExpanded)
 }
 
-/**
- * 展开前钩子
- */
+/** 拒绝或抛错都返回 false，不能被吞掉后继续 toggle。 */
 function handleBeforeExpand() {
-  return new Promise<void>((resolve, reject) => {
-    const { name } = props
-    const nextexpanded = !expanded.value
-    if (nextexpanded) {
-      callInterceptor(props.beforeExpend as any, {
-        args: [name],
-        done: resolve,
-        canceled: reject,
-        error: reject
-      })
-    } else {
-      resolve()
-    }
+  return new Promise<boolean>((resolve) => {
+    callInterceptor(props.beforeExpend, {
+      args: [props.name],
+      done: () => resolve(true),
+      canceled: () => resolve(false),
+      error: () => resolve(false)
+    })
   })
 }
 
@@ -174,7 +165,7 @@ defineExpose<CollapseItemExpose>({ getExpanded, updateExpand })
     >
       <slot name="title" :expanded="expanded" :disabled="disabled" :isFirst="isFirst">
         <text class="wd-collapse-item__title">{{ title }}</text>
-        <wd-icon name="arrow-down-bold" :custom-class="`wd-collapse-item__arrow ${expanded ? 'is-retract' : ''}`" />
+        <WdIcon name="arrow-down-bold" :custom-class="`wd-collapse-item__arrow ${expanded ? 'is-retract' : ''}`" />
       </slot>
     </view>
     <view class="wd-collapse-item__wrapper" :style="contentStyle" @transitionend="handleTransitionEnd">

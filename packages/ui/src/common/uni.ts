@@ -46,10 +46,9 @@ function warnOnce(api: string, hint?: string): void {
 }
 
 /** 通用降级：调用宿主实现或 fail 回调 + warning */
-function degrade(api: string, options?: any, hint?: string): void {
+function degrade(api: string, options?: any, hint?: string): any {
   if (typeof hostAdapter[api] === 'function') {
-    hostAdapter[api](options)
-    return
+    return hostAdapter[api](options)
   }
   warnOnce(api, hint)
   if (options && typeof options.fail === 'function') {
@@ -194,6 +193,7 @@ export const uni: Record<string, any> = {
   pageScrollTo: (options: any) => degrade('pageScrollTo', options, '页面滚动请交由宿主处理'),
 
   // ---- 交互反馈 ----
+  openType: (options: any) => degrade('openType', options, '按钮开放能力请交由宿主实现'),
   showToast: (options: any) => degrade('showToast', options),
   makePhoneCall: (options: any) => degrade('makePhoneCall', options, '拨号请交由宿主处理'),
   showLoading: (options: any) => degrade('showLoading', options),

@@ -31,14 +31,14 @@
  * )
  * ```
  *
- * 中性值必须选「视觉上等同于不设置」的合法取值（`translateX(0px)` / `none` /
- * `flex` / `0px`）。**不要**用 `inherit` 去兜底可能被 CSS 类声明的属性
+ * 中性值可以选「视觉上等同于不设置」的合法取值（`translateX(0px)` / `none` /
+ * `flex` / `0px`），或选 `''` 清除内联覆盖，让 CSS 类与主题继续生效。
+ * **不要**用 `inherit` 去兜底可能被 CSS 类声明的属性
  * （如 `font-size`）——`inherit` 会把内联值变成父级取值，反而覆盖掉类里的声明。
  *
  * @see CONVENTIONS.md §20
  * @see test/style-funnel.test.ts
  */
-import { filterStyle } from './util'
 
 /** 单个样式键的取值（`undefined` / `null` / `''` 均表示「未设置」） */
 export type StyleValue = string | number | null | undefined
@@ -92,5 +92,11 @@ export function resolveStyle(
     }
   }
 
-  return filterStyle(merged)
+  // 空字符串是已声明键的「清除内联覆盖」值，不能再经 filterStyle 剔除。
+  // Lynx 下只省略键会保留旧值；显式下发 '' 才能恢复 CSS 类和主题变量。
+  return Object.fromEntries(
+    Object.entries(merged)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => [key, String(value)])
+  )
 }

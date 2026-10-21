@@ -184,7 +184,7 @@ function getFormatterDate(date: number, month: number, type?: CalendarDayType) {
 </script>
 
 <template>
-  <wd-toast selector="wd-year" />
+  <WdToast selector="wd-year" />
 
   <view class="wd-year year">
     <text v-if="showTitle" class="wd-year__title">{{ yearTitle(date) }}</text>

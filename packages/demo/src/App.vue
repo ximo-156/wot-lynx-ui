@@ -325,6 +325,7 @@ const tourSteps = ref([
 // Curtain 幕帘
 const curtainVisible = ref(false)
 // FloatingPanel 浮动面板（无 modelValue，:height 受控 + @height-change 回写）
+const panelVisible = ref(false)
 const panelHeight = ref(200)
 function onPanelHeightChange(e: any) {
   panelHeight.value = e.height
@@ -1393,12 +1394,15 @@ const portalBarVisible = ref(false)
         <view class="demo-panel">
           <text class="demo-panel__label">拖动手柄改变高度，松手吸附到最近锚点</text>
           <view class="demo-row">
+            <wd-button size="small" @tap="panelVisible = !panelVisible">{{ panelVisible ? '关闭面板' : '打开面板' }}</wd-button>
             <text class="demo-tag">height: {{ panelHeight }}px</text>
             <text class="demo-tag">anchors: 120 / 200 / 280</text>
           </view>
-          <view style="border-width: 1px; border-style: solid; border-color: #e4e7ed; border-radius: 12px; overflow: hidden">
+          <!-- 固定浮层仅在用户打开此项时挂载，避免常驻遮挡图标画廊和分页。 -->
+          <view v-if="panelVisible" style="border-width: 1px; border-style: solid; border-color: #e4e7ed; border-radius: 12px; overflow: hidden">
             <wd-floating-panel :height="panelHeight" :anchors="[120, 200, 280]" safe-area-inset-bottom @height-change="onPanelHeightChange">
               <view style="padding: 12px">
+                <wd-button size="small" variant="text" @tap="panelVisible = false">关闭面板</wd-button>
                 <text class="demo-panel__label">面板内容区（内容可滚动）</text>
                 <text class="demo-panel__label">当前高度：{{ panelHeight }}px</text>
               </view>

@@ -39,11 +39,15 @@ import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { useParent } from '../../composables/useParent'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { callInterceptor } from '../../common/interceptor'
+import { useAlive } from '../../composables/useAlive'
 import { FORM_ITEM_VALIDATE_KEY } from '../../composables/useFormItemValidate'
 
 const props = defineProps(inputNumberProps)
 const { parent: formItemValidate } = useParent(FORM_ITEM_VALIDATE_KEY)
 const isDisabled = useFormDisabled(props)
+const isAlive = useAlive()
+let changeRequest = 0
+watch([() => props.modelValue, isDisabled, () => props.disableInput], () => { changeRequest++ })
 
 /**
  * 输入框可切换样式键 + 中性值（CONVENTIONS §20 Style Funnel）。
@@ -333,6 +337,10 @@ function cleanInput(val: string): string {
  * 更新值并触发事件
  */
 function updateValue(val: string | number) {
+  if (!isAlive() || isDisabled.value) return
+  const request = ++changeRequest
+  const oldValue = props.modelValue
+  const canCommit = () => isAlive() && request === changeRequest && props.modelValue === oldValue && !isDisabled.value
   // 空值处理
   if (props.allowNull && (!isDef(val) || val === '')) {
     if (isEqual('', String(props.modelValue))) {
@@ -341,6 +349,7 @@ function updateValue(val: string | number) {
     }
 
     const doUpdate = () => {
+      if (!canCommit()) return
       inputValue.value = ''
       emit('update:modelValue', '')
       emit('change', { value: '' })
@@ -359,6 +368,7 @@ function updateValue(val: string | number) {
   }
 
   const doUpdate = () => {
+    if (!canCommit()) return
     inputValue.value = display
     emit('update:modelValue', num)
     emit('change', { value: num })
@@ -395,12 +405,14 @@ function handleClick(type: OperationType) {
  * 处理输入事件
  */
 function handleInput(event: any) {
+  if (isDisabled.value || props.disableInput) return
   const rawVal = event.detail.value || ''
 
   // 立即更新显示
   inputValue.value = rawVal
 
   nextTick(() => {
+    if (!isAlive() || isDisabled.value || props.disableInput) return
     // 空值处理
     if (rawVal === '') {
       inputValue.value = ''

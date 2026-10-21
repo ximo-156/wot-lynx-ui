@@ -67,7 +67,7 @@ function onSubmit() {
     </view>
     <view class="wd-submit-bar__right">
       <slot name="default" />
-      <wd-button
+      <WdButton
         v-if="showButton"
         :type="buttonType"
         :disabled="buttonDisabled"
@@ -76,7 +76,7 @@ function onSubmit() {
         @tap="onSubmit"
       >
         {{ buttonText }}
-      </wd-button>
+      </WdButton>
     </view>
   </view>
 </template>

@@ -22,9 +22,14 @@ import { sidebarProps } from './types'
 import { useChildren } from '../../composables/useChildren'
 import { SIDEBAR_KEY } from './types'
 import { callInterceptor } from '../../common/interceptor'
+import { watch } from 'vue-lynx'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(sidebarProps)
 const emit = defineEmits(['change', 'update:modelValue'])
+const isAlive = useAlive()
+let changeRequest = 0
+watch(() => props.modelValue, () => { ++changeRequest }, { flush: 'sync' })
 
 const { linkChildren } = useChildren(SIDEBAR_KEY)
 
@@ -34,9 +39,13 @@ const { linkChildren } = useChildren(SIDEBAR_KEY)
  * @param label 目标值标题
  */
 function setChange(value: number | string, label: string) {
+  const request = ++changeRequest
+  if (!isAlive() || value === props.modelValue) return
   callInterceptor(props.beforeChange, {
     args: [value],
-    done: () => updateValue(value, label)
+    done: () => {
+      if (isAlive() && request === changeRequest) updateValue(value, label)
+    }
   })
 }
 

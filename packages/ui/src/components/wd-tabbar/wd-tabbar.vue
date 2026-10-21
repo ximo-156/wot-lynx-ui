@@ -27,14 +27,20 @@ import './index.css'
 
 import { computed, nextTick, onMounted, ref, watch } from 'vue-lynx'
 import type { TabbarItem } from '../wd-tabbar-item/types'
-import { addUnit, getRect, isDef, parseStyle } from '../../common/util'
+import { addUnit, getRect, isDef, parseStyle, uuid } from '../../common/util'
 import { useChildren } from '../../composables/useChildren'
 import { callInterceptor } from '../../common/interceptor'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { TABBAR_KEY, tabbarProps } from './types'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(tabbarProps)
 const emit = defineEmits(['change', 'update:modelValue'])
+const isAlive = useAlive()
+const tabbarId = `wd-tabbar-${uuid()}`
+let changeRequest = 0
+let heightRequest = 0
+watch(() => props.modelValue, () => { ++changeRequest }, { flush: 'sync' })
 
 const height = ref<number | string>('') // 占位高度
 
@@ -86,11 +92,14 @@ onMounted(() => {
  * @param child 子项
  */
 function setChange(child: TabbarItem) {
-  let active = child.name
+  const request = ++changeRequest
+  if (!isAlive()) return
+  const active = child.name
   if (active === props.modelValue) {
     return
   }
   const change = () => {
+    if (!isAlive() || request !== changeRequest) return
     emit('update:modelValue', active)
     emit('change', {
       value: active
@@ -100,11 +109,14 @@ function setChange(child: TabbarItem) {
 }
 
 function setPlaceholderHeight() {
+  const request = ++heightRequest
   if (!props.fixed || !props.placeholder) {
+    height.value = ''
     return
   }
 
-  getRect('.wd-tabbar', false).then((res) => {
+  getRect(`#${tabbarId}`, false).then((res) => {
+    if (!isAlive() || request !== heightRequest || !props.fixed || !props.placeholder) return
     height.value = Number(res.height)
   })
 }
@@ -113,6 +125,7 @@ function setPlaceholderHeight() {
 <template>
   <view :class="{ 'wd-tabbar__placeholder': fixed && placeholder && safeAreaInsetBottom && shape === 'round' }" :style="placeholderStyle">
     <view
+      :id="tabbarId"
       :class="`wd-tabbar wd-tabbar--${shape} ${customClass} ${fixed ? 'is-fixed' : ''} ${safeAreaInsetBottom ? 'is-safe' : ''} ${
         bordered ? 'is-border' : ''
       }`"

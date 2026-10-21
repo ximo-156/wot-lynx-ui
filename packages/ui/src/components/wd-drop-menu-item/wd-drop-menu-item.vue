@@ -48,6 +48,8 @@ const isAlive = useAlive()
 const queue = inject<Queue | null>(queueKey, null)
 const showWrapper = ref<boolean>(false)
 const showPop = ref<boolean>(false)
+let toggleRequest = 0
+let opening = false
 const position = ref<PopupType>()
 const zIndex = ref<number>(12)
 const duration = ref<number>(0)
@@ -125,7 +127,7 @@ function getShowPop() {
 }
 // 模拟单选操作 默认根据 value 选中操作
 function choose(index: number) {
-  if (props.disabled) return
+  if (!isAlive() || props.disabled || !props.options[index]) return
   const { valueKey } = props
   const item = props.options[index]
   const newValue = item[valueKey] !== undefined ? item[valueKey] : item
@@ -138,12 +140,14 @@ function choose(index: number) {
 }
 // 外部关闭弹出框
 function close() {
-  if (!showPop.value) {
+  const request = ++toggleRequest
+  opening = false
+  if (!isAlive() || !showPop.value) {
     return
   }
   callInterceptor(props.beforeToggle, {
     args: [{ status: false }],
-    done: handleClose
+    done: () => { if (request === toggleRequest) handleClose() }
   })
 }
 
@@ -156,12 +160,20 @@ function handleClose() {
 }
 
 function open() {
-  if (showPop.value) {
+  const request = ++toggleRequest
+  if (!isAlive() || props.disabled || showPop.value) {
     return
   }
+  opening = true
   callInterceptor(props.beforeToggle, {
     args: [{ status: true }],
-    done: handleOpen
+    done: () => {
+      if (request !== toggleRequest) return
+      opening = false
+      handleOpen()
+    },
+    canceled: () => { if (request === toggleRequest) opening = false },
+    error: () => { if (request === toggleRequest) opening = false }
   })
 }
 
@@ -170,13 +182,14 @@ function handleOpen() {
   showWrapper.value = true
   showPop.value = true
   if (dropMenu.value) {
+    zIndex.value = Number(dropMenu.value.props.zIndex ?? 12)
     duration.value = Number(dropMenu.value.props.duration)
     position.value = dropMenu.value.props.direction === 'down' ? 'top' : 'bottom'
   }
 }
 
 function toggle() {
-  if (showPop.value) {
+  if (showPop.value || opening) {
     close()
   } else {
     open()
@@ -184,6 +197,7 @@ function toggle() {
 }
 
 function afterLeave() {
+  if (!isAlive() || showPop.value) return
   showWrapper.value = false
   emit('closed')
 }
@@ -202,7 +216,7 @@ defineExpose<DropMenuItemExpose>({ getShowPop, open, close, toggle })
 
 <template>
   <view v-if="showWrapper" :class="`wd-drop-item ${customClass}`" :style="rootStyle">
-    <wd-popup
+    <WdPopup
       v-model="showPop"
       :z-index="zIndex"
       :duration="duration"
@@ -223,17 +237,17 @@ defineExpose<DropMenuItemExpose>({ getShowPop, open, close, toggle })
             v-for="(item, index) in options"
             :key="index"
             @tap="choose(index)"
-            :class="`wd-drop-item__option ${(item[valueKey] !== '' ? item[valueKey] : item) === modelValue ? 'is-active' : ''}`"
+            :class="`wd-drop-item__option ${(item[valueKey] !== undefined ? item[valueKey] : item) === modelValue ? 'is-active' : ''}`"
           >
             <view class="wd-drop-item__title">
               <text class="wd-drop-item__title-text">{{ item[labelKey] ? item[labelKey] : item }}</text>
               <text v-if="item[tipKey]" class="wd-drop-item__tip">{{ item[tipKey] }}</text>
             </view>
             <!-- Lynx 适配：check 字形映射到 check-item（CONVENTIONS §8） -->
-            <wd-icon v-if="(item[valueKey] !== '' ? item[valueKey] : item) === modelValue" :name="iconName === 'check' ? 'check-item' : iconName" custom-class="wd-drop-item__icon" />
+            <WdIcon v-if="(item[valueKey] !== undefined ? item[valueKey] : item) === modelValue" :name="iconName === 'check' ? 'check-item' : iconName" custom-class="wd-drop-item__icon" />
           </view>
         </scroll-view>
       </slot>
-    </wd-popup>
+    </WdPopup>
   </view>
 </template>

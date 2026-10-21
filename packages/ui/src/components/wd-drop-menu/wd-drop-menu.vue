@@ -44,6 +44,7 @@ const queue = inject<Queue | null>(queueKey, null)
 const dropMenuId = ref<string>(`dropMenuId${uuid()}`)
 const offset = ref<number>(0)
 const windowHeight = ref<number>(0)
+let foldRequest = 0
 const modalStyle = computed(() => {
   return props.direction === 'down'
     ? `top: calc(var(--window-top, 0px) + ${offset.value}px); bottom: 0;`
@@ -145,9 +146,11 @@ function toggle(child: any) {
  * 控制菜单内容是否展开
  */
 function fold(child: any) {
+  const request = ++foldRequest
+  if (!child) return
   getRect(`#${dropMenuId.value}`, false, proxy).then((rect) => {
     // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
-    if (!isAlive()) return
+    if (!isAlive() || request !== foldRequest) return
     if (!rect) return
     const { top, bottom } = rect
     if (props.direction === 'down') {
@@ -164,6 +167,7 @@ function fold(child: any) {
 
 function handleClickOverlay() {
   if (props.closeOnClickModal) {
+    ++foldRequest
     // 关闭所有打开的菜单项
     children.forEach((child) => {
       const exposed = child.$ && child.$.exposed
@@ -177,10 +181,10 @@ function handleClickOverlay() {
 
 <template>
   <view :style="parseStyle(customStyle)" :class="`wd-drop-menu ${customClass}`" @tap.stop.prevent="handleRootTap" :id="dropMenuId">
-    <wd-overlay
+    <WdOverlay
       :show="overlayVisible"
       :duration="duration"
-      :z-index="12"
+      :z-index="zIndex"
       :custom-style="modalStyle"
       @click="handleClickOverlay"
       v-if="modal"
@@ -197,7 +201,7 @@ function handleClickOverlay() {
           <view class="wd-drop-menu__option-title-text">
             <text>{{ getDisplayTitle(child) }}</text>
           </view>
-          <wd-icon :name="arrowIcon(child.icon)" :size="child.iconSize" custom-class="wd-drop-menu__arrow" />
+          <WdIcon :name="arrowIcon(child.icon)" :size="child.iconSize" custom-class="wd-drop-menu__arrow" />
         </view>
       </view>
     </view>

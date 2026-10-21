@@ -182,7 +182,7 @@ const showPlaceholder = computed(() => {
 </script>
 
 <template>
-  <wd-cell
+  <WdCell
     :custom-class="`wd-form-item ${isDisabled ? 'is-disabled' : ''} ${customClass}`"
     :custom-style="customStyle"
     :use-title-slot="!!$slots.title"
@@ -224,5 +224,5 @@ const showPlaceholder = computed(() => {
       <text v-else-if="isDef(value)">{{ value }}</text>
     </slot>
     <view v-if="errorMessage" class="wd-form-item__error-message"><text>{{ errorMessage }}</text></view>
-  </wd-cell>
+  </WdCell>
 </template>

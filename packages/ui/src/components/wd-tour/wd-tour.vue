@@ -30,6 +30,7 @@ import { tourProps, type TourEmits, type TourExpose, type TourStep } from './typ
 import { addUnit, filterStyle, getRect, getSystemInfo, isDef, parseStyle } from '../../common/util'
 import { useRaf } from '../../composables/useRaf'
 import { useTranslate } from '../../composables/useTranslate'
+import { useAlive } from '../../composables/useAlive'
 import { uni } from '../../common/uni'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 
@@ -53,7 +54,14 @@ const finishText = computed(() => {
   return isDef(props.finishText) ? props.finishText : translate('finish')
 })
 
-const currentIndex = ref<number>(0) // 当前步骤索引
+const isAlive = useAlive()
+let rectRequest = 0
+
+function normalizeCurrent(value: number) {
+  return Math.min(Math.max(0, Number.isFinite(value) ? Math.trunc(value) : 0), Math.max(0, props.steps.length - 1))
+}
+
+const currentIndex = ref<number>(normalizeCurrent(props.current)) // 初始值与受控 current 一致
 const elementInfo = ref({
   top: 0,
   left: 0,
@@ -123,7 +131,7 @@ const highlightStyle = computed<Record<string, string>>(() => {
     height: addUnit(elementInfo.value.height || 0),
     width: addUnit(elementInfo.value.width || 0)
   }
-  if (isDef(props.mask) && isDef(props.maskColor)) {
+  if (props.mask && isDef(props.maskColor)) {
     style['box-shadow'] = `0 0 0 100vh ${props.maskColor}`
   }
   return { ...style, ...(props.highlightStyle as Record<string, string>) }
@@ -169,7 +177,7 @@ const highlightElementInfo = computed<CSSProperties>(() => {
     width: addUnit((elementInfo.value.width || 0) + stepPadding * 2),
     height: addUnit((elementInfo.value.height || 0) + stepPadding * 2)
   }
-  if (isDef(props.mask) && isDef(props.maskColor)) {
+  if (props.mask && isDef(props.maskColor)) {
     style.boxShadow = `0 0 0 100vh ${props.maskColor}`
   }
   return style
@@ -187,11 +195,15 @@ function noop(event?: any) {
  * 更新元素信息
  */
 async function updateElementInfo() {
+  if (!isAlive() || !props.modelValue) return
+  const request = ++rectRequest
+  const index = currentIndex.value
   updateSystemInfo()
   const element = currentStep.value.element
   if (!element) return
   try {
     const res = await getRect(element, false, props.scope)
+    if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value) return
     // Lynx 适配：本地 getRect 契约为「永不 reject」——选择器未命中时解析为
     // 零尺寸矩形；参考源（uni-app）此时会 reject 进入 catch。零尺寸即视为
     // 「未找到目标元素」，显式抛出以对齐参考源的错误分支（error 事件 +
@@ -205,6 +217,7 @@ async function updateElementInfo() {
     handleScrolling(res, scrollNeeds, effectiveBoundaries)
     calculateTipPosition(res)
   } catch (error) {
+    if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value) return
     console.error('updateElementInfo error:', error)
     emit('error', {
       message: '无法找到指定的引导元素',
@@ -421,14 +434,15 @@ function handleMask() {
 }
 
 watch(
-  () => props.current,
-  (newVal) => {
-    currentIndex.value = newVal
+  [() => props.current, () => props.steps.length],
+  ([newVal]) => {
+    currentIndex.value = normalizeCurrent(newVal)
   }
 )
 // 在 setup 作用域中创建 raf 实例，避免在 watch 回调中调用 onUnmounted
 const indexRaf = useRaf(updateElementInfo)
 const modelRaf = useRaf(() => {
+  if (!isAlive() || !props.modelValue) return
   updateElementInfo()
   emit('update:current', currentIndex.value)
 })
@@ -437,9 +451,10 @@ const modelRaf = useRaf(() => {
 watch(
   () => currentIndex.value,
   (newVal) => {
+    ++rectRequest
     indexRaf.cancel()
     nextTick(() => {
-      indexRaf.start()
+      if (isAlive() && props.modelValue) indexRaf.start()
     })
     emit('update:current', newVal)
   }
@@ -449,13 +464,16 @@ watch(
 watch(
   () => props.modelValue,
   (newVal) => {
+    ++rectRequest
+    indexRaf.cancel()
+    modelRaf.cancel()
     if (newVal) {
       // 组件显示时重置滚动位置并更新系统信息
       lastScrollTop.value = 0
       updateSystemInfo()
       modelRaf.cancel()
       nextTick(() => {
-        modelRaf.start()
+        if (isAlive() && props.modelValue) modelRaf.start()
       })
     }
   },
@@ -489,12 +507,12 @@ defineExpose<TourExpose>({
 </script>
 
 <template>
-  <view class="wd-tour" v-if="modelValue" :style="rootStyle" @touchmove.stop.prevent="noop">
+  <view :class="`wd-tour ${customClass}`" v-if="modelValue" :style="rootStyle" @touchmove.stop.prevent="noop">
     <view class="wd-tour__mask" @tap.stop="handleMask">
       <slot name="highlight" :elementInfo="highlightElementInfo">
         <view :class="highlightClass" :style="highlightStyle"></view>
       </slot>
-      <view class="wd-tour__popover" :style="popoverStyle">
+      <view class="wd-tour__popover" :style="popoverStyle" @tap.stop="() => {}">
         <view class="wd-tour__info">
           <slot name="content">
             <!-- Lynx 适配：参考源为 rich-text :nodes，Lynx 无该元素，降级为 text -->

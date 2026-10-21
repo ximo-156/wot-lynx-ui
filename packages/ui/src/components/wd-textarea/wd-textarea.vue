@@ -195,7 +195,7 @@ function handleLineChange({ detail }: any) {
 <template>
   <view :class="rootClass" :style="parseStyle(customStyle)">
     <view :class="['wd-textarea__body', customTextareaContainerClass]">
-      <wd-icon
+      <WdIcon
         v-if="hasPrefixIcon"
         custom-class="wd-textarea__prefix"
         :name="prefixIcon"
@@ -236,7 +236,7 @@ function handleLineChange({ detail }: any) {
         @keyboardheightchange="handleKeyboardheightchange"
       />
       <view v-if="readonly" class="wd-textarea__readonly-mask" />
-      <wd-icon v-if="showClear" custom-class="wd-textarea__clear" name="close-bold" @tap="handleClear" />
+      <WdIcon v-if="showClear" custom-class="wd-textarea__clear" name="close-bold" @tap="handleClear" />
     </view>
     <view v-if="showWordCount" class="wd-textarea__count"><text>{{ currentLength }}/{{ maxlength }}</text></view>
   </view>

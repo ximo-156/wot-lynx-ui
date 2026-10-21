@@ -1,6 +1,7 @@
-import { getCurrentInstance, ref } from 'vue-lynx'
+import { ref } from 'vue-lynx'
 import { getRect, isObj, uuid } from '../common/util'
 import { useAlive } from './useAlive'
+import { defineStyleKeys, resolveStyle } from '../common/style'
 
 /**
  * Popover/Tooltip 弹出位置类型
@@ -41,7 +42,6 @@ export interface PopoverMenuItem {
  * @param visibleArrow 是否显示箭头
  */
 export function usePopover(visibleArrow = true) {
-  const { proxy } = getCurrentInstance() as any
   const isAlive = useAlive()
   // 实例唯一 id 前缀：Lynx 引擎按 id 维护节点注册（createSelectorQuery
   // 解析用），模板里写死静态 id 时同页多实例（如 demo 主页 2×popover +
@@ -61,11 +61,34 @@ export function usePopover(visibleArrow = true) {
   const arrowClass = ref<string>('')
   const popWidth = ref<number>(0)
   const popHeight = ref<number>(0)
-  const left = ref<number>(0)
-  const bottom = ref<number>(0)
   const width = ref<number>(0)
   const height = ref<number>(0)
-  const top = ref<number>(0)
+  let arrowEnabled = visibleArrow
+  let measureRequest = 0
+  let currentPlacement: PlacementType = 'top'
+  let currentOffset: PopoverOffset = 0
+  const POSITION_STYLE = defineStyleKeys({ left: '', right: '', top: '', bottom: '', transform: '' })
+
+  async function measurePosition(contentId: string) {
+    const request = ++measureRequest
+    try {
+      const [targetRect, contentRect] = await Promise.all([getRect(`#${ids.target}`), getRect(`#${contentId}`)])
+      if (!isAlive() || request !== measureRequest) return
+      if (targetRect) {
+        width.value = Number(targetRect.width) || 0
+        height.value = Number(targetRect.height) || 0
+      }
+      if (contentRect) {
+        popWidth.value = Number(contentRect.width) || 0
+        popHeight.value = Number(contentRect.height) || 0
+      }
+      // 浮层相对触发器父容器定位，纯平移由原生布局带动。触发器尺寸或
+      // offset 变化即使内容尺寸未变也必须重新计算，且只应用最新一次度量。
+      control(currentPlacement, currentOffset)
+    } catch {
+      // 防御宿主度量异常，保留最后一次有效定位。
+    }
+  }
 
   /**
    * 初始化弹出框位置和箭头方向
@@ -75,6 +98,8 @@ export function usePopover(visibleArrow = true) {
    *        节点度量一律走实例唯一 id ids.*，不使用页面级静态 id）
    */
   function init(placement: PlacementType, visibleArrow: boolean, selector: string) {
+    arrowEnabled = visibleArrow
+    currentPlacement = placement
     // 初始化 class
     if (visibleArrow) {
       const arrowClassArr = [
@@ -85,33 +110,11 @@ export function usePopover(visibleArrow = true) {
         placement === 'top' || placement === 'top-start' || placement === 'top-end' ? `wd-${selector}__arrow-down` : ''
       ]
       arrowClass.value = arrowClassArr.join(' ')
+    } else {
+      arrowClass.value = ''
     }
 
-    // 初始化数据获取
-    getRect(`#${ids.target}`)
-      .then((rect) => {
-        if (!rect || !isAlive()) return
-        left.value = (rect as any).left as number
-        bottom.value = (rect as any).bottom as number
-        width.value = (rect as any).width as number
-        height.value = (rect as any).height as number
-        top.value = (rect as any).top as number
-      })
-      .catch((error) => {
-        // 节点度量失败（无匹配节点 / 宿主不支持 SelectorQuery）时保留默认定位，
-        // 避免未处理的 Promise 拒绝被 Sentry 上报为 USER_RUNTIME_ERROR。
-      })
-    // 用透明度可在初始化时获取到pop尺寸
-    getRect(`#${ids.pos}`)
-      .then((rect) => {
-        if (!rect || !isAlive()) return
-        popWidth.value = (rect as any).width as number
-        popHeight.value = (rect as any).height as number
-      })
-      .catch((error) => {
-        // 节点度量失败（无匹配节点 / 宿主不支持 SelectorQuery）时保留默认尺寸，
-        // 避免未处理的 Promise 拒绝被 Sentry 上报为 USER_RUNTIME_ERROR。
-      })
+    void measurePosition(ids.pos)
   }
 
   /**
@@ -120,8 +123,11 @@ export function usePopover(visibleArrow = true) {
    * @param offset 偏移量
    */
   function control(placement: PlacementType, offset: PopoverOffset) {
+    if (!isAlive()) return
+    currentPlacement = placement
+    currentOffset = offset
     // arrow size
-    const arrowSize = visibleArrow ? 9 : 0
+    const arrowSize = arrowEnabled ? 9 : 0
     // 上下位（纵轴）对应的距离左边的距离
     const verticalX = width.value / 2
     // 上下位（纵轴）对应的距离底部的距离
@@ -135,7 +141,7 @@ export function usePopover(visibleArrow = true) {
     let offsetY = 0
     if (Array.isArray(offset)) {
       offsetX = (verticalX - 17 > 0 ? 0 : verticalX - 25) + offset[0]
-      offsetY = (horizontalY - 17 > 0 ? 0 : horizontalY - 25) + (offset[1] ? offset[1] : offset[0])
+      offsetY = (horizontalY - 17 > 0 ? 0 : horizontalY - 25) + (offset[1] ?? offset[0])
     } else if (isObj(offset)) {
       offsetX = (verticalX - 17 > 0 ? 0 : verticalX - 25) + offset.x
       offsetY = (horizontalY - 17 > 0 ? 0 : horizontalY - 25) + offset.y
@@ -219,8 +225,8 @@ export function usePopover(visibleArrow = true) {
       console.warn(`[wot-lynx-ui] usePopover: 未知的 placement "${placement}"，已降级为 top`)
     }
     const fallbackStyle = placements.get('top')!
-    popStyle.value = placementStyle ? placementStyle[0] : fallbackStyle[0]
-    arrowStyle.value = placementStyle ? placementStyle[1] : fallbackStyle[1]
+    popStyle.value = resolveStyle(POSITION_STYLE, placementStyle ? placementStyle[0] : fallbackStyle[0])
+    arrowStyle.value = resolveStyle(POSITION_STYLE, placementStyle ? placementStyle[1] : fallbackStyle[1])
   }
 
   /**
@@ -230,22 +236,9 @@ export function usePopover(visibleArrow = true) {
    * @param offset 偏移量
    */
   function updatePosition(placement: PlacementType, offset: PopoverOffset) {
-    getRect(`#${ids.content}`)
-      .then((rect) => {
-        if (!rect || !isAlive()) return
-        const newWidth = (rect as any).width as number
-        const newHeight = (rect as any).height as number
-        // 仅当尺寸发生变化时重新计算定位
-        if (newWidth !== popWidth.value || newHeight !== popHeight.value) {
-          popWidth.value = newWidth
-          popHeight.value = newHeight
-          control(placement, offset)
-        }
-      })
-      .catch((error) => {
-        // 节点度量失败（无匹配节点 / 宿主不支持 SelectorQuery）时保留当前定位，
-        // 避免未处理的 Promise 拒绝被 Sentry 上报为 USER_RUNTIME_ERROR。
-      })
+    currentPlacement = placement
+    currentOffset = offset
+    return measurePosition(ids.content)
   }
 
   return { popStyle, arrowStyle, showStyle, arrowClass, ids, init, control, updatePosition }

@@ -73,19 +73,19 @@ function onExchange() {
       </view>
     </view>
     <view v-if="showExchangeBar" class="wd-coupon__exchange">
-      <wd-input
+      <WdInput
         v-model="exchangeCode"
         :placeholder="exchangePlaceholder"
         custom-class="wd-coupon__exchange-input"
       />
-      <wd-button
+      <WdButton
         type="primary"
         size="small"
         custom-class="wd-coupon__exchange-btn"
         @tap="onExchange"
       >
         {{ exchangeButtonText }}
-      </wd-button>
+      </WdButton>
     </view>
   </view>
 </template>

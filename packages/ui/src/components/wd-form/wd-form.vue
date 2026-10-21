@@ -21,8 +21,13 @@ import { formProps, type ErrorMessage, type FormExpose, type FormSchemaIssue } f
 import { isArray, isDef, parseStyle } from '../../common/util'
 import { useChildren } from '../../composables/useChildren'
 import { FORM_KEY } from '../../composables/useFormDisabled'
+import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(formProps)
+const isAlive = useAlive()
+let validationGeneration = 0
+let validationSequence = 0
+const validationRequests = new Map<string, number>()
 
 const { children, linkChildren } = useChildren(FORM_KEY)
 const errorMessages = reactive<Record<string, string>>({})
@@ -37,6 +42,7 @@ watch(
   () => props.model,
   () => {
     if (props.resetOnChange) {
+      validationGeneration++
       clearMessage()
     }
   },
@@ -49,6 +55,10 @@ watch(
  */
 async function validate(prop?: string | string[]): Promise<{ valid: boolean; errors: ErrorMessage[] }> {
   const propsToValidate = isArray(prop) ? prop : isDef(prop) ? [prop] : []
+  const generation = validationGeneration
+  const request = ++validationSequence
+  const scope = propsToValidate.slice().sort().join('\0')
+  validationRequests.set(scope, request)
   const rawIssues: FormSchemaIssue[] = props.schema ? await Promise.resolve(props.schema.validate(props.model)) : []
   const errors = rawIssues
     .filter((issue) => issue.path && issue.path.length > 0 && issue.message)
@@ -64,6 +74,8 @@ async function validate(prop?: string | string[]): Promise<{ valid: boolean; err
       : visibleErrors
   const valid = filteredErrors.length === 0
 
+  // 校验结果仍返回调用者；取消/重置/新校验之后不可把旧结果写回界面。
+  if (!isAlive() || generation !== validationGeneration || request !== validationRequests.get(scope)) return { valid, errors: filteredErrors }
   showMessage(filteredErrors)
 
   if (valid) {
@@ -128,6 +140,7 @@ function clearMessage(prop?: string) {
  * 重置表单项的验证提示
  */
 function reset() {
+  validationGeneration++
   clearMessage()
 }
 
@@ -137,6 +150,6 @@ defineExpose<FormExpose>({ validate, reset })
 <template>
   <view :class="`wd-form ${customClass}`" :style="parseStyle(customStyle)">
     <slot />
-    <wd-toast v-if="errorType === 'toast'" selector="wd-form-toast" />
+    <WdToast v-if="errorType === 'toast'" selector="wd-form-toast" />
   </view>
 </template>

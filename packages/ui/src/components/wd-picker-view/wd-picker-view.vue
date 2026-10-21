@@ -144,8 +144,8 @@ const dragging: boolean[] = []
 const offsets = ref<number[]>([])
 
 watch(
-  selectedIndex,
-  (indexes) => {
+  [selectedIndex, () => props.itemHeight],
+  ([indexes]) => {
     indexes.forEach((idx, col) => {
       if (offsets.value[col] === undefined || Math.abs(offsets.value[col] - idx * props.itemHeight) > 0.5) {
         if (!dragging[col]) {

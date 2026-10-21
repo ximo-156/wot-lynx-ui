@@ -1,0 +1,1172 @@
+{
+  "version": "2.3.2",
+  "source": "https://wot-ui.cn/",
+  "components": {
+    "wd-action-sheet": {
+      "events": [
+        "after-enter",
+        "after-leave",
+        "cancel",
+        "click-modal",
+        "close",
+        "enter",
+        "leave",
+        "select",
+        "update:modelValue"
+      ],
+      "slots": [
+        "close",
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-avatar": {
+      "events": [
+        "click",
+        "error"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-avatar-group": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-backtop": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-badge": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-button": {
+      "events": [
+        "agreeprivacyauthorization",
+        "chooseavatar",
+        "click",
+        "contact",
+        "error",
+        "getphonenumber",
+        "getrealtimephonenumber",
+        "getuserinfo",
+        "launchapp",
+        "opensetting"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-calendar": {
+      "events": [
+        "cancel",
+        "change",
+        "confirm",
+        "open",
+        "update:modelValue",
+        "update:visible"
+      ],
+      "slots": [
+        "confirm-left",
+        "confirm-right"
+      ],
+      "methods": [
+        "close",
+        "open"
+      ]
+    },
+    "wd-calendar-view": {
+      "events": [
+        "change",
+        "pickend",
+        "pickstart",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": [
+        "scrollIntoView"
+      ]
+    },
+    "wd-card": {
+      "events": [],
+      "slots": [
+        "default",
+        "footer",
+        "title"
+      ],
+      "methods": []
+    },
+    "wd-cascader": {
+      "events": [
+        "close",
+        "confirm",
+        "update:modelValue",
+        "update:visible"
+      ],
+      "slots": [],
+      "methods": [
+        "close",
+        "open"
+      ]
+    },
+    "wd-cell": {
+      "events": [
+        "click"
+      ],
+      "slots": [
+        "default",
+        "label",
+        "prefix",
+        "suffix",
+        "title"
+      ],
+      "methods": []
+    },
+    "wd-cell-group": {
+      "events": [],
+      "slots": [
+        "default",
+        "title",
+        "value"
+      ],
+      "methods": []
+    },
+    "wd-checkbox": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default",
+        "icon"
+      ],
+      "methods": [
+        "toggle"
+      ]
+    },
+    "wd-checkbox-group": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": [
+        "toggleAll"
+      ]
+    },
+    "wd-circle": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-col": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-collapse": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default",
+        "more"
+      ],
+      "methods": [
+        "toggleAll"
+      ]
+    },
+    "wd-collapse-item": {
+      "events": [],
+      "slots": [
+        "default",
+        "title"
+      ],
+      "methods": [
+        "getExpanded",
+        "updateExpand"
+      ]
+    },
+    "wd-config-provider": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-count-down": {
+      "events": [
+        "change",
+        "finish"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": [
+        "pause",
+        "reset",
+        "start"
+      ]
+    },
+    "wd-count-to": {
+      "events": [
+        "finish",
+        "mounted"
+      ],
+      "slots": [
+        "default",
+        "prefix",
+        "suffix"
+      ],
+      "methods": [
+        "pause",
+        "reset",
+        "start"
+      ]
+    },
+    "wd-curtain": {
+      "events": [
+        "afterenter",
+        "afterleave",
+        "beforeenter",
+        "beforeleave",
+        "click",
+        "click-modal",
+        "close",
+        "closed",
+        "enter",
+        "error",
+        "leave",
+        "load",
+        "update:modelValue"
+      ],
+      "slots": [
+        "close"
+      ],
+      "methods": []
+    },
+    "wd-datetime-picker": {
+      "events": [
+        "cancel",
+        "change",
+        "confirm",
+        "open",
+        "toggle",
+        "update:modelValue",
+        "update:visible"
+      ],
+      "slots": [],
+      "methods": [
+        "close",
+        "open"
+      ]
+    },
+    "wd-datetime-picker-view": {
+      "events": [
+        "change",
+        "pickend",
+        "pickstart",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": [
+        "correctValue",
+        "getOriginColumns",
+        "getSelectedOptions"
+      ]
+    },
+    "wd-dialog": {
+      "events": [],
+      "slots": [
+        "actions",
+        "default",
+        "header",
+        "image",
+        "title"
+      ],
+      "methods": []
+    },
+    "wd-divider": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-drop-menu": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-drop-menu-item": {
+      "events": [
+        "change",
+        "close",
+        "closed",
+        "open",
+        "opened",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": [
+        "close",
+        "getShowPop",
+        "open",
+        "toggle"
+      ]
+    },
+    "wd-empty": {
+      "events": [],
+      "slots": [
+        "bottom",
+        "image"
+      ],
+      "methods": []
+    },
+    "wd-fab": {
+      "events": [
+        "click",
+        "update:active"
+      ],
+      "slots": [
+        "default",
+        "trigger"
+      ],
+      "methods": [
+        "close",
+        "open"
+      ]
+    },
+    "wd-floating-panel": {
+      "events": [
+        "height-change",
+        "update:height"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-form": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": [
+        "reset",
+        "validate"
+      ]
+    },
+    "wd-form-item": {
+      "events": [
+        "click"
+      ],
+      "slots": [
+        "default",
+        "label",
+        "title"
+      ],
+      "methods": []
+    },
+    "wd-gap": {
+      "events": [],
+      "slots": [],
+      "methods": []
+    },
+    "wd-grid": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-grid-item": {
+      "events": [
+        "click"
+      ],
+      "slots": [
+        "default",
+        "icon",
+        "text"
+      ],
+      "methods": []
+    },
+    "wd-icon": {
+      "events": [
+        "click",
+        "touch"
+      ],
+      "slots": [],
+      "methods": []
+    },
+    "wd-image-preview": {
+      "events": [
+        "change",
+        "click",
+        "close",
+        "long-press",
+        "open"
+      ],
+      "slots": [
+        "close",
+        "default",
+        "indicator"
+      ],
+      "methods": [
+        "close",
+        "open",
+        "setActive"
+      ]
+    },
+    "wd-img": {
+      "events": [
+        "click",
+        "error",
+        "load"
+      ],
+      "slots": [
+        "error",
+        "loading"
+      ],
+      "methods": []
+    },
+    "wd-img-cropper": {
+      "events": [
+        "cancel",
+        "confirm",
+        "imgloaded",
+        "imgloaderror",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": [
+        "resetImg",
+        "revertIsAnimation",
+        "setRotate"
+      ]
+    },
+    "wd-index-anchor": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": [
+        "top"
+      ]
+    },
+    "wd-index-bar": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-input": {
+      "events": [
+        "blur",
+        "clear",
+        "click",
+        "clickprefixicon",
+        "clicksuffixicon",
+        "confirm",
+        "focus",
+        "input",
+        "keyboardheightchange",
+        "update:modelValue"
+      ],
+      "slots": [
+        "prefix",
+        "suffix"
+      ],
+      "methods": []
+    },
+    "wd-input-number": {
+      "events": [
+        "blur",
+        "change",
+        "focus",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": []
+    },
+    "wd-keyboard": {
+      "events": [
+        "close",
+        "delete",
+        "input",
+        "update:carLang",
+        "update:modelValue",
+        "update:visible"
+      ],
+      "slots": [
+        "title"
+      ],
+      "methods": []
+    },
+    "wd-loading": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-loadmore": {
+      "events": [
+        "reload"
+      ],
+      "slots": [
+        "error",
+        "finished",
+        "loading"
+      ],
+      "methods": []
+    },
+    "wd-navbar": {
+      "events": [
+        "click-left",
+        "click-right"
+      ],
+      "slots": [
+        "capsule",
+        "left",
+        "right",
+        "title"
+      ],
+      "methods": []
+    },
+    "wd-navbar-capsule": {
+      "events": [
+        "back",
+        "back-home"
+      ],
+      "slots": [],
+      "methods": []
+    },
+    "wd-notice-bar": {
+      "events": [
+        "click",
+        "close",
+        "next"
+      ],
+      "slots": [
+        "default",
+        "prefix",
+        "suffix"
+      ],
+      "methods": [
+        "reset"
+      ]
+    },
+    "wd-notify": {
+      "events": [
+        "click",
+        "closed",
+        "opened",
+        "update:visible"
+      ],
+      "slots": [
+        "close",
+        "default",
+        "prefix"
+      ],
+      "methods": []
+    },
+    "wd-overlay": {
+      "events": [
+        "after-enter",
+        "after-leave",
+        "before-enter",
+        "before-leave",
+        "click",
+        "enter",
+        "leave"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-pagination": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [
+        "message",
+        "next",
+        "prev",
+        "size"
+      ],
+      "methods": []
+    },
+    "wd-password-input": {
+      "events": [
+        "focus"
+      ],
+      "slots": [],
+      "methods": []
+    },
+    "wd-picker": {
+      "events": [
+        "cancel",
+        "confirm",
+        "open",
+        "update:modelValue",
+        "update:visible"
+      ],
+      "slots": [],
+      "methods": [
+        "close",
+        "open"
+      ]
+    },
+    "wd-picker-view": {
+      "events": [
+        "change",
+        "pickend",
+        "pickstart",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": [
+        "getColumnData",
+        "getColumnIndex",
+        "getColumnsData",
+        "getSelectedIndex",
+        "getSelectedLabels",
+        "getSelectedOptions",
+        "getSelectedValues",
+        "resetColumns"
+      ]
+    },
+    "wd-popover": {
+      "events": [
+        "change",
+        "close",
+        "menuclick",
+        "open",
+        "update:modelValue"
+      ],
+      "slots": [
+        "content",
+        "default"
+      ],
+      "methods": [
+        "close",
+        "open",
+        "updatePosition"
+      ]
+    },
+    "wd-popup": {
+      "events": [
+        "after-enter",
+        "after-leave",
+        "before-enter",
+        "before-leave",
+        "click-modal",
+        "close",
+        "enter",
+        "leave",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-progress": {
+      "events": [],
+      "slots": [],
+      "methods": []
+    },
+    "wd-qr-code": {
+      "events": [
+        "click",
+        "error"
+      ],
+      "slots": [],
+      "methods": [
+        "exportImage"
+      ]
+    },
+    "wd-radio": {
+      "events": [],
+      "slots": [
+        "default",
+        "icon"
+      ],
+      "methods": []
+    },
+    "wd-radio-group": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-rate": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": []
+    },
+    "wd-resize": {
+      "events": [
+        "resize"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-root-portal": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-row": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-search": {
+      "events": [
+        "blur",
+        "cancel",
+        "change",
+        "clear",
+        "click",
+        "focus",
+        "search",
+        "update:modelValue"
+      ],
+      "slots": [
+        "input-suffix",
+        "prefix",
+        "suffix"
+      ],
+      "methods": []
+    },
+    "wd-segmented": {
+      "events": [
+        "change",
+        "click",
+        "update:value"
+      ],
+      "slots": [
+        "label"
+      ],
+      "methods": [
+        "updateActiveStyle"
+      ]
+    },
+    "wd-select-picker": {
+      "events": [
+        "cancel",
+        "change",
+        "close",
+        "confirm",
+        "open",
+        "update:modelValue",
+        "update:visible"
+      ],
+      "slots": [],
+      "methods": [
+        "close",
+        "open"
+      ]
+    },
+    "wd-sidebar": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-sidebar-item": {
+      "events": [],
+      "slots": [
+        "icon"
+      ],
+      "methods": []
+    },
+    "wd-signature": {
+      "events": [
+        "clear",
+        "confirm",
+        "end",
+        "signing",
+        "start"
+      ],
+      "slots": [
+        "footer"
+      ],
+      "methods": [
+        "clear",
+        "confirm",
+        "init",
+        "restore",
+        "revoke"
+      ]
+    },
+    "wd-skeleton": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-slide-verify": {
+      "events": [
+        "fail",
+        "success"
+      ],
+      "slots": [
+        "icon",
+        "success-icon",
+        "success-text",
+        "text"
+      ],
+      "methods": [
+        "init",
+        "reset"
+      ]
+    },
+    "wd-slider": {
+      "events": [
+        "change",
+        "dragend",
+        "dragmove",
+        "dragstart",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": [
+        "initSlider"
+      ]
+    },
+    "wd-sort-button": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": []
+    },
+    "wd-step": {
+      "events": [],
+      "slots": [
+        "description",
+        "icon",
+        "title"
+      ],
+      "methods": []
+    },
+    "wd-steps": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-sticky": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": [
+        "offsetTop",
+        "setPosition",
+        "stickyState"
+      ]
+    },
+    "wd-sticky-box": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-swipe-action": {
+      "events": [
+        "click",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default",
+        "left",
+        "right"
+      ],
+      "methods": [
+        "close"
+      ]
+    },
+    "wd-swiper": {
+      "events": [
+        "animationfinish",
+        "change",
+        "click",
+        "update:current"
+      ],
+      "slots": [
+        "default",
+        "indicator"
+      ],
+      "methods": []
+    },
+    "wd-swiper-nav": {
+      "events": [
+        "change"
+      ],
+      "slots": [],
+      "methods": []
+    },
+    "wd-switch": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": []
+    },
+    "wd-tab": {
+      "events": [],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-tabbar": {
+      "events": [
+        "change",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-tabbar-item": {
+      "events": [],
+      "slots": [
+        "default",
+        "icon"
+      ],
+      "methods": []
+    },
+    "wd-table": {
+      "events": [
+        "row-click",
+        "sort-method"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-table-column": {
+      "events": [],
+      "slots": [
+        "value"
+      ],
+      "methods": [
+        "sortDirection"
+      ]
+    },
+    "wd-tabs": {
+      "events": [
+        "change",
+        "click",
+        "disabled",
+        "update:modelValue"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": [
+        "scrollIntoView",
+        "setActive",
+        "updateLineStyle"
+      ]
+    },
+    "wd-tag": {
+      "events": [
+        "click",
+        "close",
+        "confirm"
+      ],
+      "slots": [
+        "add",
+        "default",
+        "icon"
+      ],
+      "methods": []
+    },
+    "wd-text": {
+      "events": [
+        "click"
+      ],
+      "slots": [
+        "prefix",
+        "suffix"
+      ],
+      "methods": []
+    },
+    "wd-textarea": {
+      "events": [
+        "blur",
+        "clear",
+        "click",
+        "confirm",
+        "focus",
+        "input",
+        "keyboardheightchange",
+        "linechange",
+        "update:modelValue"
+      ],
+      "slots": [],
+      "methods": []
+    },
+    "wd-toast": {
+      "events": [],
+      "slots": [],
+      "methods": []
+    },
+    "wd-tooltip": {
+      "events": [
+        "change",
+        "close",
+        "menuclick",
+        "open",
+        "update:modelValue"
+      ],
+      "slots": [
+        "content",
+        "default"
+      ],
+      "methods": [
+        "close",
+        "open",
+        "updatePosition"
+      ]
+    },
+    "wd-tour": {
+      "events": [
+        "change",
+        "error",
+        "finish",
+        "next",
+        "prev",
+        "skip",
+        "update:current",
+        "update:modelValue"
+      ],
+      "slots": [
+        "content",
+        "finish",
+        "highlight",
+        "next",
+        "prev",
+        "skip"
+      ],
+      "methods": [
+        "handleFinish",
+        "handleNext",
+        "handlePrev",
+        "handleSkip"
+      ]
+    },
+    "wd-transition": {
+      "events": [
+        "after-enter",
+        "after-leave",
+        "before-enter",
+        "before-leave",
+        "click",
+        "enter",
+        "leave"
+      ],
+      "slots": [
+        "default"
+      ],
+      "methods": []
+    },
+    "wd-upload": {
+      "events": [
+        "change",
+        "chooseerror",
+        "fail",
+        "oversize",
+        "progress",
+        "remove",
+        "success",
+        "update:fileList"
+      ],
+      "slots": [
+        "default",
+        "preview-cover"
+      ],
+      "methods": [
+        "abort",
+        "submit"
+      ]
+    },
+    "wd-video-preview": {
+      "events": [
+        "close",
+        "open"
+      ],
+      "slots": [],
+      "methods": [
+        "close",
+        "open"
+      ]
+    },
+    "wd-watermark": {
+      "events": [],
+      "slots": [],
+      "methods": []
+    },
+    "wot-ui": {
+      "events": [],
+      "slots": [],
+      "methods": []
+    }
+  }
+}

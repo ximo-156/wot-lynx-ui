@@ -31,7 +31,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onBeforeMount, ref } from 'vue-lynx'
+import { computed, ref, watch } from 'vue-lynx'
 import WdOverlay from '../wd-overlay/wd-overlay.vue'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import WdRootPortal from '../wd-root-portal/wd-root-portal.vue'
@@ -113,17 +113,18 @@ const rootClass = computed(() => {
   return classes.filter(Boolean).join(' ')
 })
 
-onBeforeMount(() => {
-  if (props.safeAreaInsetBottom) {
-    const { safeArea, safeAreaInsets } = getSystemInfo()
+watch(() => props.safeAreaInsetBottom, (enabled) => {
+  safeBottom.value = 0
+  if (enabled) {
+    const { safeAreaInsets } = getSystemInfo()
 
-    if (safeArea && safeAreaInsets) {
-      safeBottom.value = safeAreaInsets.bottom || 0
+    if (safeAreaInsets) {
+      safeBottom.value = Number(safeAreaInsets.bottom) || 0
     } else {
       safeBottom.value = 0
     }
   }
-})
+}, { immediate: true })
 
 function handleClickModal() {
   emit('click-modal')

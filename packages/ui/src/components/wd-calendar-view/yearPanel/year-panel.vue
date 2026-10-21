@@ -208,7 +208,7 @@ defineExpose<YearPanelExpose>({
     <!-- 切换模式导航控制栏 -->
     <view v-if="switchMode !== 'none'" class="wd-year-panel__controls">
       <view class="wd-year-panel__control">
-        <wd-icon
+        <WdIcon
           name="arrow-left-bold"
           :custom-class="`wd-year-panel__control-icon ${isPrevYearDisabled ? 'is-disabled' : ''}`"
           @tap="!isPrevYearDisabled && changeYear(-1)"
@@ -216,7 +216,7 @@ defineExpose<YearPanelExpose>({
       </view>
       <text class="wd-year-panel__controls-title">{{ controlsTitle }}</text>
       <view class="wd-year-panel__control">
-        <wd-icon
+        <WdIcon
           name="arrow-right-bold"
           :custom-class="`wd-year-panel__control-icon ${isNextYearDisabled ? 'is-disabled' : ''}`"
           @tap="!isNextYearDisabled && changeYear(1)"

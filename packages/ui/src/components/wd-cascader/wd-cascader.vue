@@ -47,6 +47,8 @@ const inited = ref<boolean>(false)
 const loadingTabs = ref<number[]>([]) // 正在异步加载数据的列下标集合
 const innerOptions = ref<CascaderOption[]>(props.options as CascaderOption[]) // 内部维护的选项数据（静态 + 异步缓存）
 const isRestoring = ref<boolean>(false) // 是否正在执行自动逐级恢复
+let dataRequest = 0
+let confirmRequest = 0
 
 /** 获取 modelValue 对应的叶子值（单值场景取值本身，数组取最后一项）。 */
 function getLeafValue(): string | number | '' {
@@ -128,6 +130,7 @@ function autoRestoreFromPath(pathValues: (string | number)[]) {
   const { lazyLoad, valueKey } = props
   if (!lazyLoad || pathValues.length === 0) return
 
+  const request = ++dataRequest
   isRestoring.value = true
   const newTabs: CascaderTab[] = []
 
@@ -163,6 +166,7 @@ function autoRestoreFromPath(pathValues: (string | number)[]) {
       loadingTabs.value = [...loadingTabs.value, tabIndex]
 
       lazyLoad!(parentOption, tabIndex, (children) => {
+        if (!isAlive() || request !== dataRequest) return
         loadingTabs.value = loadingTabs.value.filter((i) => i !== tabIndex)
 
         // 写入缓存
@@ -199,6 +203,9 @@ function autoRestoreFromPath(pathValues: (string | number)[]) {
 /** 核心逻辑：根据当前的初始值或重新传入的 source 建立 tabs 结构。 */
 function buildTabs() {
   const { lazyLoad } = props
+  dataRequest++
+  loadingTabs.value = []
+  isRestoring.value = false
 
   if (lazyLoad) {
     // 异步模式：先尝试从缓存树恢复
@@ -214,6 +221,11 @@ function buildTabs() {
     const pathValues = getPathValues()
     if (pathValues.length > 0) {
       autoRestoreFromPath(pathValues)
+    } else if (innerOptions.value.length > 0) {
+      tabs.value = [{ options: innerOptions.value, selectedOption: null }]
+      activeTab.value = 0
+    } else {
+      tabs.value = []
     }
     return
   }
@@ -276,10 +288,7 @@ watch(
     if (!props.lazyLoad) {
       buildTabs()
     } else {
-      const pathValues = getPathValues()
-      if (pathValues.length > 0) {
-        buildTabs()
-      }
+      buildTabs()
     }
   },
   { immediate: true }
@@ -303,11 +312,17 @@ watch(pickerShow, (val) => {
 
 /** 关闭级联选择器弹窗。 */
 function close() {
+  confirmRequest++
+  dataRequest++
+  loadingTabs.value = []
+  isRestoring.value = false
   pickerShow.value = false
   handlePickerClose()
 }
 
 function open() {
+  if (pickerShow.value) return
+  confirmRequest++
   pickerShow.value = true
   // 异步模式：弹窗打开时，有缓存直接重建，否则加载根节点
   if (props.lazyLoad && !tabs.value.length) {
@@ -318,7 +333,9 @@ function open() {
       // 无缓存，加载根节点
       tabs.value = [{ options: [], selectedOption: null }]
       loadingTabs.value = [0]
+      const request = ++dataRequest
       props.lazyLoad(null, 0, (children) => {
+        if (!isAlive() || request !== dataRequest) return
         innerOptions.value = children
         tabs.value = [{ options: children, selectedOption: null }]
         loadingTabs.value = loadingTabs.value.filter((i) => i !== 0)
@@ -341,10 +358,13 @@ function handleAfterEnter() {
 }
 
 function handlePickerClose() {
+  confirmRequest++
+  dataRequest++
   emit('close')
 }
 
 function handleAfterLeave() {
+  if (!isAlive() || pickerShow.value) return
   // 异步模式利用缓存树重建 tabs，静态模式直接重建
   buildTabs()
 }
@@ -361,9 +381,11 @@ function handleStrictConfirm() {
  */
 function chooseItem(tabIndex: number, index: number) {
   const currentTab = tabs.value[tabIndex]
-  const item = currentTab.options[index]
+  const item = currentTab?.options[index]
 
-  if (item.disabled) return
+  if (!pickerShow.value || !item || item.disabled || loadingTabs.value.includes(tabIndex)) return
+  const request = ++dataRequest
+  confirmRequest++
 
   const { childrenKey, lazyLoad, isLeafKey, valueKey, checkStrictly } = props
 
@@ -411,6 +433,7 @@ function chooseItem(tabIndex: number, index: number) {
         activeTab.value = nextTabIndex
       })
       lazyLoad(item, nextTabIndex, (children) => {
+        if (!isAlive() || request !== dataRequest) return
         loadingTabs.value = loadingTabs.value.filter((i) => i !== nextTabIndex)
         // 写入缓存
         attachChildrenToTree(item[valueKey], children)
@@ -447,6 +470,8 @@ function chooseItem(tabIndex: number, index: number) {
 
 /** 处理确认逻辑，包含 beforeConfirm 校验。 */
 function handleFinish() {
+  if (!pickerShow.value) return
+  const request = ++confirmRequest
   const { beforeConfirm } = props
   const values = selectedValues.value
   const options = selectedOptions.value
@@ -456,7 +481,7 @@ function handleFinish() {
     args: [finalValue, options],
     done: () => {
       // beforeConfirm 可返回未决 Promise：done 落地时组件可能已卸载
-      if (!isAlive()) return
+      if (!isAlive() || request !== confirmRequest || !pickerShow.value) return
       onConfirm(values, options)
     }
   })
@@ -497,7 +522,7 @@ defineExpose<CascaderExpose>({
 
 <template>
   <view :class="['wd-cascader', customClass]" :style="parseStyle(customStyle)">
-    <wd-action-sheet
+    <WdActionSheet
       v-model="pickerShow"
       :title="title || translate('title')"
       :close-on-click-modal="closeOnClickModal"
@@ -521,7 +546,7 @@ defineExpose<CascaderExpose>({
           </view>
         </view>
       </template>
-      <wd-tabs
+      <WdTabs
         ref="tabsRef"
         :model-value="activeTab"
         slidable="always"
@@ -531,7 +556,7 @@ defineExpose<CascaderExpose>({
         :line-height="lineHeight"
         :line-theme="lineTheme"
       >
-        <wd-tab
+        <WdTab
           v-for="(tab, tabIndex) in tabs"
           :key="tabIndex"
           :title="tab.selectedOption ? tab.selectedOption[textKey] : translate('select')"
@@ -558,7 +583,7 @@ defineExpose<CascaderExpose>({
                     <text>{{ item[tipKey] }}</text>
                   </view>
                 </view>
-                <wd-icon
+                <WdIcon
                   custom-class="wd-cascader__checked"
                   name="check"
                   v-if="tab.selectedOption && item[valueKey] === tab.selectedOption[valueKey]"
@@ -566,11 +591,11 @@ defineExpose<CascaderExpose>({
               </view>
             </scroll-view>
             <view v-if="loadingTabs.includes(tabIndex)" class="wd-cascader__loading">
-              <wd-loading custom-class="wd-cascader__loading-icon" />
+              <WdLoading custom-class="wd-cascader__loading-icon" />
             </view>
           </view>
-        </wd-tab>
-      </wd-tabs>
-    </wd-action-sheet>
+        </WdTab>
+      </WdTabs>
+    </WdActionSheet>
   </view>
 </template>

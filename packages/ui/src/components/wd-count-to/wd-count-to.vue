@@ -62,6 +62,7 @@ function resetTime() {
 
 function parseFormat(remain: number) {
   const { startVal, endVal, duration, useEasing } = props
+  if (duration <= 0) return formatNumber(endVal)
   const progress = duration - remain // 已经进行的时间
   const isPositive = startVal > endVal // 判断startVal是否大于endVal
   const progressRatio = progress / duration // 计算进度比例
@@ -117,15 +118,15 @@ defineExpose<CountToExpose>({ start, reset: resetTime, pause })
   <view :class="rootClass">
     <!-- 前缀插槽 -->
     <slot name="prefix">
-      <wd-text custom-class="wd-count-to__separator-text" :type="type" :color="color" :text="prefix"></wd-text>
+      <WdText custom-class="wd-count-to__separator-text" :type="type" :color="color" :text="prefix"></WdText>
     </slot>
     <!-- 默认文本插槽 -->
     <slot>
-      <wd-text custom-class="wd-count-to__main-text" :type="type" :color="color" :text="timeText"></wd-text>
+      <WdText custom-class="wd-count-to__main-text" :type="type" :color="color" :text="timeText"></WdText>
     </slot>
     <!-- 后缀插槽 -->
     <slot name="suffix">
-      <wd-text custom-class="wd-count-to__separator-text" :type="type" :color="color" :text="suffix"></wd-text>
+      <WdText custom-class="wd-count-to__separator-text" :type="type" :color="color" :text="suffix"></WdText>
     </slot>
   </view>
 </template>

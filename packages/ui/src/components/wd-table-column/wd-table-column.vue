@@ -30,7 +30,7 @@
 import './index.css'
 
 import { computed, ref } from 'vue-lynx'
-import { isDef, isFunction, isOdd } from '../../common/util'
+import { addUnit, isDef, isFunction, isOdd } from '../../common/util'
 import { tableColumnProps, type SortDirection } from './types'
 import { useParent } from '../../composables/useParent'
 import { TABLE_KEY } from '../wd-table/types'
@@ -101,7 +101,7 @@ const isLastColumn = computed(() => {
  */
 const columnStyle = computed<Record<string, string>>(() => {
   return {
-    width: props.width as string,
+    width: addUnit(props.width),
     left: props.fixed ? fixedLeft.value || '0' : 'auto'
   }
 })
@@ -179,9 +179,9 @@ const cellConfigs = computed(() => {
 
     const style: Record<string, string> = {}
     // Lynx 适配：grid-column 跨度由单元格宽度（所跨列宽之和）表达
-    style.width = span.colspan > 1 ? calcSpanWidth(span.colspan) : (props.width as string)
-    // Lynx 适配：grid-row 定高由虚拟滚动的固定行高表达（键恒写，CONVENTIONS §20）
-    style.height = virtual ? `${rowHeightPx.value}px` : 'auto'
+    style.width = span.colspan > 1 ? calcSpanWidth(span.colspan) : addUnit(props.width)
+    // 固定高度的虚拟行合并必须撑满所跨行，防止下一行向上错位。
+    style.height = virtual ? `${rowHeightPx.value * Math.max(1, span.rowspan)}px` : 'auto'
     // left 键恒写（CONVENTIONS §20）：非固定列置 auto（无定位上下文时被忽略），
     // 避免 fixed 由真转假时旧偏移残留
     style.left = isFixed && fixedLeft.value ? fixedLeft.value : 'auto'
@@ -204,7 +204,7 @@ function calcSpanWidth(colspan: number): string {
   const children = table.value ? table.value.children : []
   const widths: string[] = []
   for (let i = columnIndex.value; i < columnIndex.value + colspan && i < children.length; i++) {
-    widths.push(`${(children[i] as any).width}px`)
+    widths.push(addUnit((children[i] as any).width))
   }
   return `calc(${widths.join(' + ')})`
 }

@@ -33,7 +33,8 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { avatarProps, type AvatarShape, type AvatarSize } from './types'
 import { useParent } from '../../composables/useParent'
 import { AVATAR_GROUP_KEY } from '../wd-avatar-group/types'
-import { addUnit, filterStyle, getPropByPath, isDef, isString, parseStyle } from '../../common/util'
+import { addUnit, getPropByPath, isDef, isString, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(avatarProps)
 
@@ -127,8 +128,12 @@ const rootClass = computed(() => {
 /**
  * 根节点样式
  */
+const AVATAR_STYLE = defineStyleKeys({
+  width: '', height: '', 'font-size': '', '--wot-avatar-overlap': '',
+  'z-index': '', color: '', background: ''
+})
 const rootStyle = computed(() => {
-  const style: Record<string, string> = {}
+  const style: Record<string, string> = { ...AVATAR_STYLE }
   if (isDef(sizeValue.value) && !isBuiltInSize.value) {
     style.width = addUnit(sizeValue.value)
     style.height = addUnit(sizeValue.value)
@@ -171,7 +176,7 @@ const rootStyle = computed(() => {
     }
   }
 
-  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
+  return resolveStyle(AVATAR_STYLE, style, parseStyle(props.customStyle))
 })
 
 /**
@@ -196,10 +201,10 @@ const handleClick = (event: any) => {
     <!-- 默认插槽优先 -->
     <slot v-if="hasDefaultSlot"></slot>
     <!-- 图片 -->
-    <wd-img v-else-if="src" :src="src" :mode="mode" custom-class="wd-avatar__img" @error="handleError" />
+    <WdImg v-else-if="src" :src="src" :mode="mode" custom-class="wd-avatar__img" @error="handleError" />
     <!-- 文本 -->
     <text v-else-if="text" class="wd-avatar__text">{{ text }}</text>
     <!-- 图标 -->
-    <wd-icon v-else-if="hasIcon" :name="icon" :class-prefix="iconPrefix" :css-icon="cssIcon" custom-class="wd-avatar__icon" />
+    <WdIcon v-else-if="hasIcon" :name="icon" :class-prefix="iconPrefix" :css-icon="cssIcon" custom-class="wd-avatar__icon" />
   </view>
 </template>

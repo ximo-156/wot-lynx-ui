@@ -61,6 +61,19 @@ describe('resolveStyle', () => {
     expect(resolveStyle(keys, { width: 120 }).width).toBe('120')
   })
 
+  it('空中性值也必须保留，用于清除内联样式并恢复 CSS 类', () => {
+    const keys = defineStyleKeys({ color: '', width: '', fontSize: '' })
+    expect(resolveStyle(keys)).toEqual({ color: '', width: '', fontSize: '' })
+    expect(resolveStyle(keys, { color: null, width: undefined, fontSize: '' })).toEqual({
+      color: '', width: '', fontSize: ''
+    })
+  })
+
+  it('未声明键仍剔除空值，不会输出 undefined 或 null 字符串', () => {
+    const keys = defineStyleKeys({ transform: 'none' })
+    expect(resolveStyle(keys, { opacity: '', color: null, width: undefined })).toEqual({ transform: 'none' })
+  })
+
   it('不修改传入的 neutral 对象（模块级常量可安全复用）', () => {
     const keys = defineStyleKeys({ transform: 'translateX(0px)' })
     resolveStyle(keys, { transform: 'translateX(99px)' })

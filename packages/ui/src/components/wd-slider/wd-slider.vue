@@ -307,7 +307,7 @@ function normalizeRangeValues(value: number[]): [number, number] {
 function calcByStep(value: number): number {
   value = clamp(value, props.min, props.max)
   const steps = Math.round((value - props.min) / validStep.value)
-  return parseFloat((props.min + steps * validStep.value).toFixed(10))
+  return clamp(parseFloat((props.min + steps * validStep.value).toFixed(10)), props.min, props.max)
 }
 
 /**
@@ -352,7 +352,16 @@ function pointerToValue(event: any, index: number): number {
   if (!props.range) return calcByStep(raw)
   // 范围模式：以另一滑块为界钳制，避免两滑块交叉
   const other = index === 0 ? currentValue.value[1] : currentValue.value[0]
-  return calcByStep(clamp(raw, props.min, other))
+  return index === 0 ? calcByStep(clamp(raw, props.min, other)) : calcByStep(clamp(raw, other, props.max))
+}
+
+/** 范围拖动始终保留另一端；所有 drag 事件与 v-model 使用同一种值形状。 */
+function dragValue(event: any): SliderValue {
+  const value = pointerToValue(event, touchIndex.value)
+  if (!props.range) return value
+  const values: [number, number] = [...currentValue.value]
+  values[touchIndex.value] = value
+  return values
 }
 
 /**
@@ -425,10 +434,11 @@ function onTouchStart(event: any, index: number) {
  * 滑块触摸结束（后台：绝对公式重算终值并 commit）
  */
 function onTouchEnd(event: any) {
-  if (isDisabled.value) return
-
+  if (!isDragging.value) return
   isDragging.value = false
-  updateValue(pointerToValue(event, touchIndex.value))
+  if (isDisabled.value || trackSize.value <= 0 || !Number.isFinite(trackSize.value)) return
+
+  updateValue(dragValue(event))
   emit('dragend', { value: modelValue.value })
   emit('change', modelValue.value)
 }
@@ -441,7 +451,7 @@ function onTouchEnd(event: any) {
  */
 function onBarTouchMove(event: any) {
   if (isDisabled.value || !isDragging.value) return
-  emit('dragmove', { value: pointerToValue(event, touchIndex.value) })
+  emit('dragmove', { value: dragValue(event) })
 }
 
 /**
@@ -455,7 +465,9 @@ function onBarClick(event: any) {
   getRect(`#${trackId.value}`, false, proxy).then((data) => {
     // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive()) return
-    const start = props.vertical ? Number(data.top) : Number(data.left)
+    trackSize.value = Number(props.vertical ? data.height : data.width)
+    trackStart.value = Number(props.vertical ? data.top : data.left)
+    const start = trackStart.value
     const pointer = props.vertical
       ? Number(event.touches?.[0]?.clientY ?? event.detail?.y ?? 0)
       : Number(event.touches?.[0]?.clientX ?? event.detail?.x ?? 0)
@@ -469,6 +481,7 @@ function onBarClick(event: any) {
  * @param {number} position 相对起始点的点击位置
  */
 function handleBarClickAt(position: number) {
+  if (trackSize.value <= 0 || !Number.isFinite(trackSize.value)) return
   const clickValue = calcByStep(positionToValue(position))
 
   if (props.range) {
@@ -626,7 +639,7 @@ const onDotTouchMove = (event: any) => {
             <view class="wd-slider__dot-popover-arrow" />
           </view>
           <view class="wd-slider__dot-slider">
-            <wd-icon name="drag" size="14px" color="#868a9c" />
+            <WdIcon name="drag" size="14px" color="#868a9c" />
           </view>
         </view>
 
@@ -645,7 +658,7 @@ const onDotTouchMove = (event: any) => {
             <view class="wd-slider__dot-popover-arrow" />
           </view>
           <view class="wd-slider__dot-slider">
-            <wd-icon name="drag" size="14px" color="#868a9c" />
+            <WdIcon name="drag" size="14px" color="#868a9c" />
           </view>
         </view>
       </view>

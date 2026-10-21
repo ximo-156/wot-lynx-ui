@@ -29,7 +29,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { ref, computed, watch } from 'vue-lynx'
+import { computed } from 'vue-lynx'
 import type { SkeletonRowCol, SkeletonRowColObj } from './types'
 import { skeletonProps } from './types'
 import { isNumber, addUnit, parseStyle } from '../../common/util'
@@ -48,7 +48,9 @@ const themeMap = {
   paragraph: [1, 1, 1, { width: '55%' }]
 }
 const props = defineProps(skeletonProps)
-const rowCols = ref<SkeletonRowCol[]>([])
+const rowCols = computed<SkeletonRowCol[]>(() =>
+  props.rowCol.length ? props.rowCol : themeMap[props.theme]
+)
 
 const parsedRowCols = computed(() => {
   return rowCols.value.map((item) => {
@@ -56,7 +58,7 @@ const parsedRowCols = computed(() => {
       return [
         {
           class: getColItemClass({ type: 'text' }),
-          style: {}
+          style: getColItemStyle({})
         }
       ]
     }
@@ -87,7 +89,7 @@ function getColItemClass(rowCol: SkeletonRowColObj) {
 /**
  * 占位块可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
  * 中性值取 ''（未设置）——宽高圆角由 wd-skeleton--type-* 类承担，
- * 与 filterStyle 的剔空语义一致（size 展开为 width + height）。
+ * 解除内联覆盖并恢复类型类上的尺寸（size 展开为 width + height）。
  */
 const COL_STYLE_KEYS = defineStyleKeys({
   width: '',
@@ -118,14 +120,6 @@ function getColItemStyle(rowCol: SkeletonRowColObj) {
   }
   return resolveStyle(COL_STYLE_KEYS, source)
 }
-
-watch(
-  () => props.rowCol,
-  (rowCol) => {
-    rowCols.value = [...(Array.isArray(rowCol) && rowCol.length ? props.rowCol : themeMap[props.theme])]
-  },
-  { immediate: true }
-)
 
 const show = computed(() => props.loading == undefined || props.loading === true)
 </script>

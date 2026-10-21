@@ -129,7 +129,8 @@ const PURE_TESTS = [
   'test/style-funnel.test.ts',
   'test/tag-transform-loader.test.ts',
   'test/theme-token-parity.test.ts',
-  'test/util-merge.test.ts'
+  'test/util-merge.test.ts',
+  'test/web-font-plugin.test.ts'
 ]
 
 export default defineConfig({

@@ -60,7 +60,7 @@ defineExpose({
 </script>
 
 <template>
-  <wd-popup
+  <WdPopup
     v-model="showPopup"
     position="bottom"
     :round="true"
@@ -81,7 +81,7 @@ defineExpose({
           @tap="onSelect(option, index)"
         >
           <view class="wd-share-sheet__option-icon">
-            <wd-icon :name="option.icon" custom-class="wd-share-sheet__icon" />
+            <WdIcon :name="option.icon" custom-class="wd-share-sheet__icon" />
           </view>
           <text class="wd-share-sheet__option-name">{{ option.name }}</text>
         </view>
@@ -90,5 +90,5 @@ defineExpose({
         <text class="wd-share-sheet__cancel-text">{{ cancelText }}</text>
       </view>
     </view>
-  </wd-popup>
+  </WdPopup>
 </template>

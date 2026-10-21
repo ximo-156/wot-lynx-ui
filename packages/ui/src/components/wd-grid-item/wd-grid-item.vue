@@ -15,8 +15,8 @@
  * - **Style Funnel**（CONVENTIONS §20）：rootStyle 的全部可切换键
  *   （宽度 / 正方形 padding / gutter 右内边距与上边距）经 defineStyleKeys +
  *   resolveStyle 每帧输出完整键集——gutter 由有值变 0 时旧 padding-right /
- *   margin-top 不会残留；contentStyle 的 right/bottom/height 由 CSS 类承担
- *   「不设置」语义（见该 computed 上的说明），不走 Funnel；
+ *   margin-top 不会残留；contentStyle 的 right/bottom/height 同样完整输出，
+ *   以 SCSS 的 height: 100% 和无偏移作为中性值；
  * - url 跳转：参考源调用全局 uni.navigateTo 等，改为 common/uni 兼容层
  *   下发（宿主可注入路由，未注入时降级 warning）；
  * - 列数兜底：参考源 columnNum 为 0（无父级 grid 的独立使用场景）时会算出
@@ -137,32 +137,27 @@ const rootStyle = computed<CSSProperties>(() => {
 })
 
 /**
- * 内容区域样式计算
- * 当存在间距且为正方形时，调整位置及尺寸；否则只设置背景颜色
- *
- * 注意：此处**不走 Style Funnel**——right / bottom / height 三个键的
- * 「不设置」语义由 CSS 类承担（is-square 下 __content 为绝对定位且
- * height: 100%），不存在「视觉上等同于不设置」的中性值（height: auto
- * 会压掉类的 height: 100%，使正方形内容区塌高）。按 CONVENTIONS §20
- * 的「低风险」类别保留条件写：这三个键只在 square 由真转假时可能残留，
- * 而 square 由父级 grid 统一下发、实例内不变。
- *
- * @returns {CSSProperties} 内容区域的 CSS 样式对象
+ * 内容区默认 height 与 SCSS 一致；right=0 / bottom=auto 对非 square
+ * 相对定位无额外位移，square + gutter 则按参考源缩进右边和底边。
+ * 完整键集防止 gutter / square 动态切回时残留旧 right、bottom、height。
  */
-const contentStyle = computed<CSSProperties>(() => {
-  const style: CSSProperties = {}
+const GRID_ITEM_CONTENT_STYLE = defineStyleKeys({
+  right: '0px',
+  bottom: 'auto',
+  height: '100%'
+})
 
-  // Lynx 适配：bgColor 经 CSS 变量下发（替代参考源的 background 简写内联），
-  // 使 :active 按压背景不被内联样式覆盖
+const contentStyle = computed<CSSProperties>(() => {
+  const inset = square.value && gutter.value ? addUnit(gutter.value) : ''
+  const style: CSSProperties = resolveStyle(GRID_ITEM_CONTENT_STYLE, {
+    right: inset,
+    bottom: inset,
+    height: inset ? 'auto' : ''
+  })
+
+  // 保留参考源 bgColor 的定制点；按压背景仍由 :active 胜出。
   if (bgColor.value) {
     style['--wot-grid-item-bg'] = bgColor.value
-  }
-
-  if (square.value && gutter.value) {
-    const gutterValue = addUnit(gutter.value)
-    style.right = gutterValue
-    style.bottom = gutterValue
-    style.height = 'auto'
   }
 
   return style
@@ -292,9 +287,9 @@ function click(event: any) {
     <view :class="contentClass" :style="contentStyle">
       <slot>
         <view class="wd-grid-item__wrapper" v-if="hasIcon || $slots.icon">
-          <wd-badge v-bind="customBadgeProps" custom-class="wd-grid-item__badge">
+          <WdBadge v-bind="customBadgeProps" custom-class="wd-grid-item__badge">
             <slot name="icon">
-              <wd-icon
+              <WdIcon
                 :name="icon"
                 :size="iconSize"
                 :color="iconColor"
@@ -303,10 +298,10 @@ function click(event: any) {
                 :custom-class="`wd-grid-item__icon ${customIcon}`"
               />
             </slot>
-          </wd-badge>
+          </WdBadge>
         </view>
         <slot name="text">
-          <view v-if="text" :class="`wd-grid-item__text ${ellipsis ? 'is-ellipsis' : ''} ${customText}`"><text>{{ text }}</text></view>
+          <text v-if="text" :class="`wd-grid-item__text ${ellipsis ? 'is-ellipsis' : ''} ${customText}`" :text-maxline="ellipsis ? 1 : undefined">{{ text }}</text>
         </slot>
       </slot>
     </view>

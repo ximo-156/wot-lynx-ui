@@ -139,4 +139,8 @@ export type DatetimePickerViewExpose = {
    * 获取选中的选项对象
    */
   getSelectedOptions: () => any[]
+  /** 按当前类型和边界修正外部值，不提交模型。 */
+  correctValue: (value: string | number | Date) => string | number
+  /** 获取过滤后、展示格式化前的原始列。 */
+  getOriginColumns: () => DatetimePickerViewColumn[]
 }

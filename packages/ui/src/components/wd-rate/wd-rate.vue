@@ -457,7 +457,7 @@ const onItemTouchMove = (event: any) => {
       :main-thread-bindtouchstart="onItemTouchStart"
       :main-thread-bindtouchmove="onItemTouchMove"
     >
-      <wd-icon
+      <WdIcon
         :custom-class="`wd-rate__item-star ${rate === '100%' ? 'wd-rate__item-star--active' : ''}`"
         :name="resolveIconName(isActive(rate) ? activeIcon : icon)"
         :class-prefix="iconPrefix"
@@ -467,7 +467,7 @@ const onItemTouchMove = (event: any) => {
         @tap="handleClick(index, false)"
       />
       <view v-if="allowHalf" class="wd-rate__item-half" @tap.stop="handleClick(index, true)">
-        <wd-icon
+        <WdIcon
           :custom-class="`wd-rate__item-star ${rate !== '0' ? 'wd-rate__item-star--active' : ''}`"
           :name="resolveIconName(isActive(rate) ? activeIcon : icon)"
           :class-prefix="iconPrefix"

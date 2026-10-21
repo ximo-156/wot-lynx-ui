@@ -55,5 +55,6 @@ export function pluginWotLynxTags(options: PluginWotLynxTagsOptions = {}): Rsbui
 
 export default pluginWotLynxTags
 
+export { pluginWotLynxWebFonts } from './web-fonts.js'
 export { pluginWotLynxAutoImport } from './auto-import'
 export type { PluginWotLynxAutoImportOptions } from './auto-import'

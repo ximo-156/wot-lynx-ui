@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { pluginCssMinimizer } from '@rsbuild/plugin-css-minimizer'
 import { pluginQRCode } from '@lynx-js/qrcode-rsbuild-plugin'
 import { pluginVueLynx } from 'vue-lynx/plugin'
-import { pluginWotLynxTags } from 'wot-lynx-ui/plugin'
+import { pluginWotLynxTags, pluginWotLynxWebFonts } from 'wot-lynx-ui/plugin'
 
 /** 组件库源码内文件（相对 packages/ui/src 的路径）的绝对路径 */
 const uiSrc = (p: string) => fileURLToPath(new URL(`../ui/src/${p}`, import.meta.url))
@@ -28,6 +28,7 @@ export default defineConfig({
       }
     }),
     pluginWotLynxTags(),
+    pluginWotLynxWebFonts(),
     pluginQRCode({
       schema(url) {
         return `${url}?fullscreen=true`
@@ -42,9 +43,8 @@ export default defineConfig({
     })
   ],
   server: {
-    // 开启 CORS：web 预览页与静态资源（iconfont.ttf 等）可能经不同端口
-    // 分发，缺 Access-Control-Allow-Origin 时浏览器会拦截字体请求，
-    // 表现为图标不渲染（仅显示文字兜底）。
+    port: 3000,
+    // 保留跨源调试支持；图标字体由宿主 HTML 插件注册，不依赖 CORS 补救。
     cors: true
   },
   tools: {

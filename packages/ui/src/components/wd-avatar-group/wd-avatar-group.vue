@@ -22,7 +22,7 @@ import { computed, useSlots } from 'vue-lynx'
 import WdAvatar from '../wd-avatar/wd-avatar.vue'
 import { avatarGroupProps, AVATAR_GROUP_KEY } from './types'
 import { useChildren } from '../../composables/useChildren'
-import { addUnit, filterStyle, isString, parseStyle } from '../../common/util'
+import { addUnit, isString, parseStyle } from '../../common/util'
 
 const props = defineProps(avatarGroupProps)
 const slots = useSlots()
@@ -79,7 +79,7 @@ const hasDefaultSlot = computed(() => !!slots.default)
  * 折叠头像样式
  */
 const collapseStyle = computed(() => {
-  const style: Record<string, string> = {}
+  const style: Record<string, string> = { 'margin-top': '', 'margin-left': '' }
   if (props.cascading === 'left-up') {
     const count = maxCountValue.value > 0 ? maxCountValue.value : children.length
     style['z-index'] = String(count + 1)
@@ -95,7 +95,7 @@ const collapseStyle = computed(() => {
       style['margin-left'] = margin
     }
   }
-  return filterStyle(style)
+  return style
 })
 </script>
 
@@ -103,7 +103,7 @@ const collapseStyle = computed(() => {
   <view :class="rootClass" :style="parseStyle(customStyle)">
     <slot></slot>
     <!-- 折叠头像 -->
-    <wd-avatar
+    <WdAvatar
       v-if="showCollapse"
       :custom-style="collapseStyle"
       _internal

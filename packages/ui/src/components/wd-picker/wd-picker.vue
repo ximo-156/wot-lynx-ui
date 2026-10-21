@@ -33,6 +33,13 @@ const pickerViewRef = ref<PickerViewExpose>()
 const displayColumns = ref<Array<PickerOption | Array<PickerOption>>>([])
 const isPicking = ref<boolean>(false)
 const hasConfirmed = ref<boolean>(false)
+let confirmRequest = 0
+
+function resetPendingConfirm() {
+  confirmRequest++
+  hasConfirmed.value = false
+  isPicking.value = false
+}
 
 watch(
   () => props.modelValue,
@@ -59,6 +66,7 @@ watch(
     if (val) {
       showPopup()
     } else {
+      resetPendingConfirm()
       popupShow.value = false
     }
   }
@@ -87,6 +95,8 @@ function close() {
 }
 
 function showPopup() {
+  if (popupShow.value) return
+  resetPendingConfirm()
   emit('open')
   popupShow.value = true
   pickerValue.value = props.modelValue
@@ -94,29 +104,33 @@ function showPopup() {
 }
 
 function onCancel() {
+  resetPendingConfirm()
   popupShow.value = false
   emit('cancel')
 }
 
 function onConfirm() {
+  if (!popupShow.value) return
   // 滑动未结束：挂起确认，pickend 后自动继续
   if (isPicking.value) {
     hasConfirmed.value = true
     return
   }
   const { beforeConfirm } = props
+  const request = ++confirmRequest
   callInterceptor(beforeConfirm, {
     args: [pickerValue.value],
     done: () => {
       // beforeConfirm 可返回未决 Promise：期间组件/页面可能已卸载，
       // done 落地时不得在已销毁树上写 ref（真机 9902 晚到 patch 家族）。
-      if (!isAlive()) return
+      if (!isAlive() || request !== confirmRequest || !popupShow.value) return
       handleConfirm()
     }
   })
 }
 
 function handleConfirm() {
+  resetPendingConfirm()
   const values = pickerViewRef.value?.getSelectedValues() || pickerValue.value
   const selects = pickerViewRef.value?.getSelectedOptions() || pickerSelectedOptions.value
   popupShow.value = false
@@ -152,7 +166,7 @@ defineExpose<PickerExpose>({
 
 <template>
   <view :class="`wd-picker ${customClass}`" :style="parseStyle(customStyle)">
-    <wd-popup
+    <WdPopup
       v-model="popupShow"
       position="bottom"
       :hide-when-close="false"
@@ -175,7 +189,7 @@ defineExpose<PickerExpose>({
             <text>{{ confirmButtonText || translate('done') }}</text>
           </view>
         </view>
-        <wd-picker-view
+        <WdPickerView
           ref="pickerViewRef"
           :custom-class="customViewClass"
           v-model="pickerValue"
@@ -192,6 +206,6 @@ defineExpose<PickerExpose>({
           @pickend="onPickEnd"
         />
       </view>
-    </wd-popup>
+    </WdPopup>
   </view>
 </template>

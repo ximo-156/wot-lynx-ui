@@ -27,7 +27,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, reactive, ref } from 'vue-lynx'
+import { computed, reactive } from 'vue-lynx'
 import WdSortButton from '../wd-sort-button/wd-sort-button.vue'
 import { addUnit, isDef, isObj, parseStyle, throttle, uuid } from '../../common/util'
 import type { SortDirection, TableColumn, TableColumnInstance, TableColumnProps } from '../wd-table-column/types'
@@ -72,15 +72,15 @@ linkChildren({ props, state, visibleRange, rowClick, getIsLastFixed, getFixedLef
 const indexUUID = uuid()
 
 /** 索引列配置（Lynx 适配：宽度由参考源的 100rpx 取 100px） */
-const indexColumn = ref<TableColumnProps>({
-  prop: indexUUID,
+const indexColumn = computed<TableColumnProps>(() => ({
   label: translate('indexLabel'),
   width: '100px',
   sortable: false,
   fixed: false,
   align: 'left',
-  ...(isObj(props.index) ? props.index : {})
-})
+  ...(isObj(props.index) ? props.index : {}),
+  prop: indexUUID
+}))
 
 /** 是否显示索引列 */
 const showIndex = computed(() => props.index !== false)
@@ -275,7 +275,7 @@ function rowClick(index: number) {
             ]"
             :style="getHeaderCellStyle(index)"
           >
-            <wd-sort-button
+            <WdSortButton
               v-if="column.sortable"
               v-model="column.$.exposed!.sortDirection.value"
               allow-reset
@@ -289,7 +289,7 @@ function rowClick(index: number) {
 
         <!-- 表体（列主布局，虚拟滚动时列内以占位视图撑高） -->
         <view class="wd-table__body">
-          <wd-table-column
+          <WdTableColumn
             v-if="showIndex"
             :prop="indexColumn.prop"
             :label="indexColumn.label"
@@ -301,7 +301,7 @@ function rowClick(index: number) {
             <template #value="{ index }">
               <text>{{ index + 1 }}</text>
             </template>
-          </wd-table-column>
+          </WdTableColumn>
           <slot></slot>
         </view>
       </view>

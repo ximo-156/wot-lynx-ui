@@ -32,7 +32,7 @@ function resolveIconName(name: string): string {
 <template>
   <view :class="`wd-empty ${customClass}`" :style="parseStyle(customStyle)">
     <slot name="image">
-      <wd-icon
+      <WdIcon
         :name="resolveIconName(icon)"
         :class-prefix="iconPrefix"
         :css-icon="cssIcon"
