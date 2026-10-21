@@ -10,21 +10,23 @@ import './index.css'
 import { computed } from 'vue-lynx'
 import { loadingProps } from './types'
 import { addUnit, isDef, parseStyle, sanitizeSvgContent } from '../../common/util'
-import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { defineStyleKeys, resolveStyle, createStyleResolver } from '../../common/style'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
 import { PRIMARY_COLOR, SECONDARY_COLOR } from '../../common/theme'
 
 const props = defineProps(loadingProps)
 const globalConfig = useGlobalConfig()
 const dots = Array.from({ length: 12 }, (_, i) => i)
-const ROOT_STYLE = defineStyleKeys({ color: '' })
-const rootStyle = computed(() => resolveStyle(ROOT_STYLE,
-  { color: props.inheritColor ? 'inherit' : props.color }, parseStyle(props.customStyle)))
+const resolveRootStyle = createStyleResolver({ color: '' })
+const customStyle = computed(() => parseStyle(props.customStyle))
+const inheritCircularColor = computed(() => props.inheritColor || ['inherit', 'currentColor'].includes(String(customStyle.value.color || props.color)))
+const rootStyle = computed(() => resolveRootStyle(
+  { color: props.inheritColor ? 'inherit' : props.color }, customStyle.value))
 const SPINNER_STYLE = defineStyleKeys({ width: '', height: '' })
 const spinnerStyle = computed(() => resolveStyle(SPINNER_STYLE, {
   height: isDef(props.size) ? addUnit(props.size) : '', width: isDef(props.size) ? addUnit(props.size) : ''
 }))
-const circularColor = computed(() => parseStyle(props.customStyle).color || props.color ||
+const circularColor = computed(() => customStyle.value.color || (props.inheritColor ? 'currentColor' : props.color) ||
   globalConfig.value.themeVars.loadingColorMain || globalConfig.value.themeVars.primary6 ||
   (globalConfig.value.theme === 'dark' ? SECONDARY_COLOR : PRIMARY_COLOR))
 /** radial closest-side 的 15% 是半径的 15%，不是直径的 15%。 */
@@ -74,7 +76,7 @@ function waveBarStyle(index: number): Record<string, string> {
   <view :class="`wd-loading wd-loading--${direction} ${customClass}`" :style="rootStyle">
     <view :class="`wd-loading__spinner wd-loading__spinner--${type} ${customSpinnerClass}`" :style="spinnerStyle">
       <view v-if="type === 'circular'" class="wd-loading__spinner-wraper">
-        <view v-if="inheritColor" class="wd-loading__spinner-circular">
+        <view v-if="inheritCircularColor" class="wd-loading__spinner-circular">
           <view v-for="(style, index) in inheritedSegments" :key="index" class="wd-loading__circular-segment" :style="style" />
         </view>
         <svg v-else class="wd-loading__spinner-circular" :content="circularSvg" />

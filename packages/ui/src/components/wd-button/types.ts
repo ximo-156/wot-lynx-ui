@@ -15,8 +15,8 @@ export type ButtonLang = 'zh_CN' | 'zh_TW' | 'en'
 /**
  * 开放能力类型
  *
- * Lynx 实现说明：以下开放能力均为 uni-app / 微信小程序专有属性，
- * 在 Lynx 中无对应能力，保留声明仅为 API 对齐（传入不生效）。
+ * Lynx 通过 configureUniAdapter({ openType }) 请求宿主能力；无宿主实现时仅普通点击，
+ * 不自动授权或分享。结果按官方回调事件名转发。
  */
 export type ButtonOpenType =
   | 'feedback'
@@ -120,16 +120,17 @@ export const buttonProps = {
    */
   loading: makeBooleanProp(false),
   /**
-   * 加载图标颜色
+   * 加载图标颜色（兼容别名，loadingProps.color 优先；修正官方声明但未使用的问题）
    */
   loadingColor: String,
   /**
-   * 开放能力（Lynx 无对应能力，保留声明仅为 API 对齐）
+   * 开放能力（由显式宿主 openType 适配器实现）
    * 类型: ButtonOpenType
    */
   openType: String as PropType<ButtonOpenType>,
   /**
    * 指定是否阻止本节点的祖先节点出现点击态
+   * Lynx 无仅抑制任意祖先 CSS :active 的原生接口；不以阻止点击/触摸冒泡冒充此能力。
    * 默认值: false
    */
   hoverStopPropagation: Boolean,

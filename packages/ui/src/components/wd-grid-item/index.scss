@@ -33,32 +33,26 @@ $grid-item-text-spacing: var(--wot-grid-item-text-spacing, $spacing-super-tight)
   text-align: center;
   overflow: hidden;
 
-  /* Lynx 适配：参考源 when(border) 的 ::before（上边线）/ ::after（右边线）
-     伪元素在无伪元素平台改为主元素真实 border；参考源以 scaleY/scaleX(0.5)
-     细化 1px 边框，此处用 1ppx 物理像素边框直接表达 0.5px 细线 */
-  @include when(border) {
-    border-top-width: 1ppx;
-    border-top-style: solid;
-    border-top-color: $grid-item-border-color;
-    border-right-width: 1ppx;
-    border-right-style: solid;
-    border-right-color: $grid-item-border-color;
+  // 真实线段不参与宽度计算；厚度令牌保持官方 0.5 缩放。
+  @include e(line) {
+    position: absolute;
+    background-color: $grid-item-border-color;
+    pointer-events: none;
+    z-index: 1;
+    @include m(top) { top: 0; left: 0; width: 100%; height: $grid-item-border-width; transform: scaleY(0.5); }
+    @include m(right) { top: 0; right: 0; height: 100%; width: $grid-item-border-width; transform: scaleX(0.5); }
   }
-
-  // 第一行元素：仅有右边线（参考源 when(first) 的 ::after）
-  @include when(first) {
-    border-right-width: 1ppx;
-    border-right-style: solid;
-    border-right-color: $grid-item-border-color;
-  }
-
-  // 每行右侧的元素：去掉右边线（参考源 when(right) 的 ::after display:none）
-  @include when(right) {
-    border-right-width: 0;
-  }
-
-  @include when(last) {
-    border-right-width: 0;
+  @include e(around) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 200%;
+    border: $grid-item-border-width solid $grid-item-border-color;
+    transform-origin: top left;
+    transform: scale(0.5);
+    box-sizing: border-box;
+    pointer-events: none;
   }
 
   @include e(wrapper) {
@@ -78,11 +72,12 @@ $grid-item-text-spacing: var(--wot-grid-item-text-spacing, $spacing-super-tight)
     display: flex;
     flex-direction: column;
     justify-content: center;
-    /* Lynx 适配：参考源以 `.wd-grid-item__wrapper + .wd-grid-item__text`
-       相邻兄弟选择器控制图标与文字间距（含 horizontal / reverse 变体），
-       Lynx 兄弟选择器支持有限，统一改用容器 gap（单子节点时无间隙，
-       语义等价；四种排列方向的间距值相同） */
+    // fallback text 有图标时才有间距，不给任意 default slot 强加 gap。
     gap: 0;
+    .wd-grid-item__text.is-spaced { margin-top: $grid-item-text-spacing; }
+    &.is-horizontal .wd-grid-item__text.is-spaced { margin-top: 0; margin-left: $grid-item-text-spacing; }
+    &.is-reverse .wd-grid-item__text.is-spaced { margin-top: 0; margin-bottom: $grid-item-text-spacing; }
+    &.is-reverse.is-horizontal .wd-grid-item__text.is-spaced { margin-left: 0; margin-bottom: 0; margin-right: $grid-item-text-spacing; }
 
     @include when(square) {
       box-sizing: border-box;
@@ -109,10 +104,6 @@ $grid-item-text-spacing: var(--wot-grid-item-text-spacing, $spacing-super-tight)
       &.is-horizontal {
         flex-direction: row-reverse;
       }
-    }
-
-    @include when(around) {
-      @include halfPixelBorderSurround($grid-item-border-color);
     }
 
     /* Lynx 适配：参考源 m(hover) 为 hover-class 的按压背景（带 !important

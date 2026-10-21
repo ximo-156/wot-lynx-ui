@@ -74,17 +74,22 @@ async function validate(prop?: string | string[]): Promise<{ valid: boolean; err
       : visibleErrors
   const valid = filteredErrors.length === 0
 
-  // 校验结果仍返回调用者；取消/重置/新校验之后不可把旧结果写回界面。
+  // 返回调用者真实结果；界面按字段识别重叠校验，旧的全表单请求不能覆盖新的单字段请求。
   if (!isAlive() || generation !== validationGeneration || request !== validationRequests.get(scope)) return { valid, errors: filteredErrors }
-  showMessage(filteredErrors)
-
-  if (valid) {
-    if (propsToValidate.length) {
-      propsToValidate.forEach(clearMessage)
-    } else {
-      clearMessage()
+  const currentFields = childrenProps.filter((field) => {
+    if (propsToValidate.length && !propsToValidate.some((target) => isSameOrSubPath(field, target))) return false
+    for (const [newerScope, newerRequest] of validationRequests) {
+      if (newerRequest <= request) continue
+      if (!newerScope || newerScope.split('\0').some((target) => isSameOrSubPath(field, target))) return false
     }
-  }
+    return true
+  })
+  showMessage(filteredErrors.filter((error) => {
+    const field = getMatchedChildProp(error.prop, childrenProps)
+    return field !== undefined && currentFields.includes(field)
+  }))
+
+  if (valid) currentFields.forEach(clearMessage)
 
   return { valid, errors: filteredErrors }
 }

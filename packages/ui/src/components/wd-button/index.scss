@@ -283,7 +283,7 @@ $button-variants: (
   position: relative;
   // Lynx 适配：wot-ui 根节点为 inline-flex + flex-direction: column；
   // Lynx 不识别 inline-flex，改用 display: flex + row（内容宽度自适应），
-  // ::after 边框技巧改为根节点真实 border（Lynx 无伪元素）。
+  // ::after 改为真实绝对定位覆盖层，描边不得挤压内容区。
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -318,6 +318,8 @@ $button-variants: (
       // 避免 Lynx 下为每个 类型×变体×状态 组合展开选择器（与 wot-ui 等效）。
       --wot-button-bg: #{map.get($conf, "bg")};
       --wot-button-bg-active: #{map.get($conf, "bg-active")};
+      --wot-button-current-bg-active: #{map.get($conf, "bg-active")};
+      --wot-button-current-text-active: #{map.get($conf, "text")};
       --wot-button-plain-bg: #{map.get($conf, "plain-bg")};
       --wot-button-plain-bg-active: #{map.get($conf, "plain-bg-active")};
       --wot-button-plain-text: #{map.get($conf, "plain-text")};
@@ -332,10 +334,27 @@ $button-variants: (
     }
   }
 
-  // Lynx 适配：hover-class 的 wd-button--active 按压态改用 :active 伪类，
-  // 与 wot-ui 的 hover 态等效（CONVENTIONS §17）。
-  &:active {
-    background: var(--wot-button-bg-active, transparent);
+  // 颜色由类型/变体提供，声明式 MTS 在官方 hover 延时之后使用这组原生 CSS 变量。
+  // 不并用 :active：它会绕过 hoverStartTime/hoverStayTime，禁用/加载态也不应变色。
+  @include e(border) {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    border: $stroke-main solid transparent;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  @include when(hairline) {
+    @include edeep(border) {
+      // 原生分数线宽替代 200% 伪元素 scale(.5)，覆盖层不参与布局。
+      border-width: calc(#{$stroke-main} / 2);
+    }
   }
 
   // Variant 样式处理
@@ -352,38 +371,20 @@ $button-variants: (
           color: map.get($type-conf, "plain-text");
 
           @if map.get($variant-conf, "show-border") {
-            // Lynx 适配：wot-ui 的 ::after 边框改为主元素真实 border
-            border-width: $stroke-main;
-            border-style: solid;
-
-            @if map.get($variant-conf, "border-style") {
-              border-style: map.get($variant-conf, "border-style");
+            @include edeep(border) {
+              border-color: map.get($type-conf, "plain-border");
+              @if map.get($variant-conf, "border-style") {
+                border-style: map.get($variant-conf, "border-style");
+              }
             }
+          }
 
-            border-color: map.get($type-conf, "plain-border");
+          @if map.get($variant-conf, "soft-bg") {
+            --wot-button-current-bg-active: #{map.get($type-conf, "soft-bg-active")};
           } @else {
-            border: none;
+            --wot-button-current-bg-active: #{map.get($type-conf, "plain-bg-active")};
           }
-
-          &:active {
-            @if map.get($variant-conf, "soft-bg") {
-              background: map.get($type-conf, "soft-bg-active");
-            } @else {
-              background: map.get($type-conf, "plain-bg-active");
-            }
-
-            color: map.get($type-conf, "plain-text-active");
-
-            @if map.get($variant-conf, "show-border") {
-              border-color: map.get($type-conf, "plain-border-active");
-            }
-          }
-
-          @include when(hairline) {
-            @if map.get($variant-conf, "show-border") {
-              @include halfPixelBorderSurround(map.get($type-conf, "plain-border"));
-            }
-          }
+          --wot-button-current-text-active: #{map.get($type-conf, "plain-text-active")};
         }
       }
 
@@ -426,6 +427,13 @@ $button-variants: (
     }
   }
 
+  @include when(loading) {
+    @include edeep(content) {
+      // 官方加载间距固定为 loading-spacing，不应复用各 size 的 icon-spacing。
+      gap: $button-loading-spacing;
+    }
+  }
+
   @include when(block) {
     display: flex;
     width: 100%;
@@ -434,9 +442,19 @@ $button-variants: (
   @include e(text) {
     // Web x-text 的 color: initial 会阻止继承；文本节点显式继承按钮色，
     // primary / info / plain 等仍由上面的 wot 同源类型与变体规则决定。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     color: inherit;
-    user-select: none;
+    font-size: inherit;
+    line-height: inherit;
     white-space: nowrap;
+
+    text {
+      color: inherit;
+      font-size: inherit;
+      line-height: inherit;
+    }
   }
 }
 

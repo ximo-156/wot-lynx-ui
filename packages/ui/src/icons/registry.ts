@@ -1,15 +1,9 @@
 /*
- * 内置图标注册表。
- *
- * 设计动机：
- * - 内置图标以单一形态注册（CONVENTIONS §8）：
- *   - iconfont 集（src/icons/sets/iconfont.ts，180 个）：.ttf 字体图标
- *     （src/icons/fonts/iconfont.ttf + @font-face），经 <text> 字形渲染。
- * - 寻址规则：
- *   - `name` 带 `集合键:` 前缀（如 `iconfont:menu`）时精确命中该集合；
- *   - 不带前缀时按注册顺序回退查找（内置集优先，保证存量图标行为不变）；
- *   - name 含 `/` 由 wd-icon 判定为图片，不进入本表。
+ * 字体图标注册表：wot 为官方 305 字形，iconfont 为原 180 扩展字形。
+ * 裸名字优先官方；iconfont: 精确选择旧集合，官方没有的扩展名仍可不带前缀。
+ * name 含 / 由 wd-icon 判定为图片。所有字体字形使用原生 text，不用伪元素。
  */
+import { shallowReactive } from 'vue-lynx'
 import { iconfontSet } from './sets/iconfont'
 import { wotIconsSet } from './sets/wot-icons'
 import type { IconPaths, IconSet, ResolvedIcon } from './types'

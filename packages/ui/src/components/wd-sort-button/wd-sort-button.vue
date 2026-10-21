@@ -69,8 +69,8 @@ function handleClick(event: any) {
         <view v-if="line" :class="`wd-sort-button__underline ${modelValue !== 0 ? 'is-active' : ''}`" />
       </view>
       <view class="wd-sort-button__right">
-        <WdIcon name="arrow-up-filling" :custom-class="`wd-sort-button__icon-up ${modelValue === -1 ? 'wd-sort-button__icon-up--active' : ''}`" />
-        <WdIcon name="arrow-down-filling" :custom-class="`wd-sort-button__icon-down  ${modelValue === 1 ? 'wd-sort-button__icon-down--active' : ''}`" />
+        <WdIcon name="caret-up" :custom-class="`wd-sort-button__icon-up ${modelValue === -1 ? 'wd-sort-button__icon-up--active' : ''}`" />
+        <WdIcon name="caret-down" :custom-class="`wd-sort-button__icon-down  ${modelValue === 1 ? 'wd-sort-button__icon-down--active' : ''}`" />
       </view>
     </view>
   </view>

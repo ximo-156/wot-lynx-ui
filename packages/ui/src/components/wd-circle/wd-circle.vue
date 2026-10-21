@@ -35,13 +35,15 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue-lynx'
+import { computed, onBeforeUnmount, ref, watch } from 'vue-lynx'
 import { circleProps } from './types'
-import { filterStyle, isObj, parseStyle, sanitizeSvgContent } from '../../common/util'
+import { isObj, parseStyle, sanitizeSvgContent } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
 
-// 大于等于0且小于等于100
+// 保留官方 0–100 范围；非法数值归零，不生成 NaN SVG 或无限动画。
 function format(rate: number) {
-  return Math.min(Math.max(rate, 0), 100)
+  const value = Number(rate)
+  return Number.isNaN(value) ? 0 : Math.min(Math.max(value, 0), 100)
 }
 // 结束角度（整圆）
 const PERIMETER = 2 * Math.PI
@@ -59,26 +61,16 @@ const progressColor = computed<string>(() => {
   return (props.color as string) || ''
 })
 
-const currentValue = ref<number>(0) // 当前值
-const interval = ref<any>(null) // 定时器
-
-const rootStyle = computed(() => {
-  const style: Record<string, string> = {
-    color: isObj(props.color) ? 'var(--wot-text-main)' : props.color
-  }
-
-  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
-})
-
-// canvas渲染大小（Lynx 以 SVG 矢量绘制，无需 pixelRatio 适配）
-const canvasSize = computed(() => {
-  return props.size
-})
-
-// 进度条宽度
-const sWidth = computed(() => {
-  return props.strokeWidth
-})
+const currentValue = ref<number>(format(props.modelValue))
+let interval: ReturnType<typeof setTimeout> | undefined
+let animationRevision = 0
+let disposed = false
+const resolveRootStyle = createStyleResolver({ color: '' })
+const rootStyle = computed(() => resolveRootStyle({
+  color: isObj(props.color) ? 'var(--wot-text-main)' : props.color
+}, parseStyle(props.customStyle)))
+const canvasSize = computed(() => Number.isFinite(Number(props.size)) ? Math.max(0, Number(props.size)) : 100)
+const sWidth = computed(() => Number.isFinite(Number(props.strokeWidth)) ? Math.max(0, Number(props.strokeWidth)) : 0)
 
 /**
  * 进度弧几何：参考源 presetCanvas 在无 fill 时线宽取 strokeWidth/2，
@@ -96,12 +88,9 @@ const trackWidth = computed(() => (props.fill ? sWidth.value : ringWidth.value))
 const trackRadius = computed(() => Math.max(canvasSize.value / 2 - trackWidth.value / 2, 0))
 
 // Circle 样式
-const canvasStyle = computed(() => {
-  return {
-    width: `${props.size}px`,
-    height: `${props.size}px`
-  }
-})
+const canvasStyle = computed(() => ({
+  width: `${canvasSize.value}px`, height: `${canvasSize.value}px`
+}))
 
 // 监听目标数值变化
 watch(
@@ -132,12 +121,8 @@ watch(
   { immediate: false, deep: true }
 )
 
-onMounted(() => {
-  currentValue.value = props.modelValue
-  drawCircle()
-})
-
-onUnmounted(() => {
+onBeforeUnmount(() => {
+  disposed = true
   clearTimeInterval()
 })
 
@@ -196,7 +181,7 @@ function renderDot() {
  */
 const svgContent = computed(() => {
   const markup =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${props.size} ${props.size}">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvasSize.value} ${canvasSize.value}">` +
     renderLayerCircle() +
     (format(currentValue.value) !== 0 ? renderHoverCircle(format(currentValue.value)) : renderDot()) +
     `</svg>`
@@ -209,36 +194,30 @@ const svgContent = computed(() => {
  */
 function reRender() {
   clearTimeInterval()
-  if (!Number.isFinite(props.speed) || props.speed <= 0 || props.speed > 1000) {
-    currentValue.value = props.modelValue
-    drawCircle()
+  const target = format(props.modelValue)
+  const speed = Number(props.speed)
+  if (!Number.isFinite(speed) || speed <= 0 || speed > 1000) {
+    currentValue.value = target
     return
   }
-  currentValue.value = currentValue.value || 0
+  currentValue.value = format(currentValue.value)
+  if (currentValue.value === target || disposed) return
+  const revision = animationRevision
   const run = () => {
-    interval.value = setTimeout(() => {
-      if (currentValue.value !== props.modelValue) {
-        if (Math.abs(currentValue.value - props.modelValue) < STEP) {
-          currentValue.value = props.modelValue
-        } else if (currentValue.value < props.modelValue) {
-          currentValue.value += STEP
-        } else {
-          currentValue.value -= STEP
-        }
-        drawCircle()
-        run()
-      } else {
-        clearTimeInterval()
-      }
-    }, 1000 / props.speed)
+    interval = setTimeout(() => {
+      interval = undefined
+      if (disposed || revision !== animationRevision) return
+      const distance = target - currentValue.value
+      currentValue.value = Math.abs(distance) <= STEP ? target : currentValue.value + Math.sign(distance) * STEP
+      if (currentValue.value !== target) run()
+    }, 1000 / speed)
   }
   run()
 }
-/**
- * 清除定时器
- */
 function clearTimeInterval() {
-  interval.value && clearTimeout(interval.value)
+  animationRevision++
+  if (interval !== undefined) clearTimeout(interval)
+  interval = undefined
 }
 </script>
 

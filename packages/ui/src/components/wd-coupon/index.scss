@@ -1,37 +1,24 @@
 @use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 本地扩展：仅依赖语义主题令牌，不回退到旧蓝色预设。
 @include b(coupon) {
   display: flex;
   flex-direction: column;
   padding: 12px 16px;
-  background: var(--wot-bg-color, var(--wot-filled-oppo));
-
-  @include e(list) {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
+  background: var(--wot-bg-color, $filled-oppo);
+  @include e(list) { display: flex; flex-direction: column; gap: 12px; }
   @include e(item) {
     display: flex;
     flex-direction: row;
     align-items: stretch;
-    background: var(--wot-bg-color, var(--wot-filled-oppo));
+    background: var(--wot-bg-color, $filled-oppo);
     border-radius: 8px;
     overflow: hidden;
-    border: 1px solid var(--wot-border-color, var(--wot-n-200));
-
-    &--chosen {
-      border-color: var(--wot-primary, var(--wot-blue-6));
-    }
-
-    &--disabled {
-      opacity: 0.5;
-      pointer-events: none;
-    }
+    border: 1px solid var(--wot-border-color, $border-main);
+    &--chosen { border-color: var(--wot-primary, $primary-6); }
+    &--disabled { opacity: 0.5; pointer-events: none; }
   }
-
   @include e(left) {
     display: flex;
     flex-direction: column;
@@ -39,99 +26,34 @@
     justify-content: center;
     width: 100px;
     padding: 12px 8px;
-    background: linear-gradient(135deg, var(--wot-primary-light, var(--wot-blue-1)), var(--wot-primary, var(--wot-blue-6)));
+    background: linear-gradient(135deg, var(--wot-primary-light, $primary-1), var(--wot-primary, $primary-6));
   }
-
   @include e(value) {
     display: flex;
     flex-direction: row;
     align-items: baseline;
-
-    &-prefix {
-      font-size: 14px;
-      color: #fff;
-      font-weight: 500;
-    }
-
-    &-num {
-      font-size: 24px;
-      color: #fff;
-      font-weight: 600;
-    }
-
-    &-suffix {
-      font-size: 14px;
-      color: #fff;
-      font-weight: 500;
-    }
+    &-prefix { font-size: 14px; color: $filled-oppo; font-weight: 500; }
+    &-num { font-size: 24px; color: $filled-oppo; font-weight: 600; }
+    &-suffix { font-size: 14px; color: $filled-oppo; font-weight: 500; }
   }
-
-  @include e(condition) {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.8);
-    margin-top: 4px;
-  }
-
-  @include e(divider) {
-    width: 1px;
-    background: repeating-linear-gradient(
-      to bottom,
-      var(--wot-border-color, var(--wot-n-200)) 0px,
-      var(--wot-border-color, var(--wot-n-200)) 4px,
-      transparent 4px,
-      transparent 8px
-    );
-  }
-
-  @include e(right) {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    justify-content: center;
-    padding: 12px;
-    gap: 4px;
-  }
-
-  @include e(name) {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--wot-text-main, var(--wot-n-900));
-  }
-
-  @include e(reason) {
-    font-size: 12px;
-    color: var(--wot-text-secondary, var(--wot-n-600));
-  }
-
+  @include e(condition) { font-size: 11px; color: $filled-oppo; opacity: 0.8; margin-top: 4px; }
+  @include e(divider) { width: 0; border-left: 1px dashed var(--wot-border-color, $border-main); }
+  @include e(right) { display: flex; flex-direction: column; flex: 1; justify-content: center; padding: 12px; gap: 4px; }
+  @include e(name) { font-size: 14px; font-weight: 500; color: $text-main; }
+  @include e(reason) { font-size: 12px; color: $text-secondary; }
   @include e(chosen-tag) {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     padding: 2px 8px;
-    background: var(--wot-primary, var(--wot-blue-6));
+    background: var(--wot-primary, $primary-6);
     border-radius: 4px;
     align-self: flex-start;
     margin-top: 4px;
   }
-
-  @include e(chosen-text) {
-    font-size: 11px;
-    color: #fff;
-  }
-
-  @include e(exchange) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-  }
-
-  @include e(exchange-input) {
-    flex: 1;
-  }
-
-  @include e(exchange-btn) {
-    flex-shrink: 0;
-  }
+  @include e(chosen-text) { font-size: 11px; color: $filled-oppo; }
+  @include e(exchange) { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 12px; }
+  @include e(exchange-input) { flex: 1; }
+  @include e(exchange-btn) { flex-shrink: 0; }
 }

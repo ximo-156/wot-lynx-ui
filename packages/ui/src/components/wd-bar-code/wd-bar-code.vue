@@ -10,9 +10,10 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed } from 'vue-lynx'
+import { computed, watch } from 'vue-lynx'
 import { barCodeProps } from './types'
-import { parseStyle, sanitizeSvgContent } from '../../common/util'
+import { addUnit, parseStyle, sanitizeSvgContent } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
 
 const props = defineProps(barCodeProps)
 
@@ -57,18 +58,29 @@ function checksum(values: number[]): number {
   return sum % 103
 }
 
-const barWidth = computed(() => Number(props.width) || 300)
-const barHeight = computed(() => Number(props.height) || 80)
+function dimension(value: number | string | undefined, fallback: number): number {
+  const pixels = value === undefined ? fallback : parseFloat(addUnit(value))
+  return Number.isFinite(pixels) && pixels > 0 ? pixels : fallback
+}
+const barWidth = computed(() => dimension(props.width, 300))
+const barHeight = computed(() => dimension(props.height, 80))
+const validText = computed(() => !/[^\x20-\x7e]/.test(props.text))
+watch(() => props.text, () => {
+  if (!validText.value) console.warn('[wd-bar-code] Code128 B supports printable ASCII (32-126) only; barcode omitted instead of changing the supplied text')
+}, { immediate: true })
+const resolveRootStyle = createStyleResolver()
+const rootStyle = computed(() => resolveRootStyle(parseStyle(props.customStyle)))
+function escapeAttribute(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
 /** 生成条带矩形 */
 const bars = computed(() => {
   const text = props.text || ''
-  if (!text) return []
+  if (!text || !validText.value) return []
 
   const values: number[] = [104] // START B
-  for (const ch of text) {
-    values.push(Math.min(Math.max(ch.charCodeAt(0) - 32, 0), 94))
-  }
+  for (const ch of text) values.push(ch.charCodeAt(0) - 32)
   values.push(checksum(values))
 
   let bits = START_B
@@ -101,11 +113,11 @@ const bars = computed(() => {
 
 const svgContent = computed(() => {
   const rects = bars.value
-    .map((r) => `<rect x="${r.x.toFixed(2)}" y="0" width="${r.w.toFixed(2)}" height="${barHeight.value}" fill="${props.color}"/>`)
+    .map((r) => `<rect x="${r.x.toFixed(2)}" y="0" width="${r.w.toFixed(2)}" height="${barHeight.value}" fill="${escapeAttribute(props.color)}"/>`)
     .join('')
   return sanitizeSvgContent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${barWidth.value} ${barHeight.value}" width="${barWidth.value}" height="${barHeight.value}">` +
-      `<rect width="${barWidth.value}" height="${barHeight.value}" fill="${props.background}"/>` +
+      `<rect width="${barWidth.value}" height="${barHeight.value}" fill="${escapeAttribute(props.background)}"/>` +
       rects +
       `</svg>`
   )
@@ -113,8 +125,8 @@ const svgContent = computed(() => {
 </script>
 
 <template>
-  <view :class="`wd-bar-code ${customClass}`" :style="parseStyle(customStyle)">
-    <svg :content="svgContent" :style="{ width: `${barWidth}px`, height: `${barHeight}px` }" />
+  <view :class="`wd-bar-code ${customClass}`" :style="rootStyle">
+    <svg v-if="validText" :content="svgContent" :style="{ width: `${barWidth}px`, height: `${barHeight}px` }" />
     <text v-if="showText" class="wd-bar-code__text" :style="{ 'font-size': `${fontSize}px`, color }">{{ text }}</text>
   </view>
 </template>

@@ -81,6 +81,12 @@ watch(
   }
 )
 
+watch(() => [props.name, props.disabled], () => {
+  ++clickRequest
+  ++rectRequest
+  approvedSelection = false
+}, { flush: 'sync' })
+
 onMounted(() => {
   updateExpand(isSelected.value)
 })
@@ -165,7 +171,7 @@ defineExpose<CollapseItemExpose>({ getExpanded, updateExpand })
     >
       <slot name="title" :expanded="expanded" :disabled="disabled" :isFirst="isFirst">
         <text class="wd-collapse-item__title">{{ title }}</text>
-        <WdIcon name="arrow-down-bold" :custom-class="`wd-collapse-item__arrow ${expanded ? 'is-retract' : ''}`" />
+        <WdIcon name="down" :custom-class="`wd-collapse-item__arrow ${expanded ? 'is-retract' : ''}`" />
       </slot>
     </view>
     <view class="wd-collapse-item__wrapper" :style="contentStyle" @transitionend="handleTransitionEnd">

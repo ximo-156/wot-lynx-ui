@@ -67,6 +67,7 @@ onBeforeUnmount(() => {
 })
 
 /** 是否曾展示过（v-show 分支 + lazyRender 时的内容门控） */
+const initiallyShown = props.show
 const everShown = ref(false)
 watch(
   () => props.show,
@@ -195,7 +196,7 @@ const touchmoveLocked = computed(() =>
 
 <template>
   <LynxTransition
-    :appear="true"
+    :appear="useVif || initiallyShown"
     :name="transitionName"
     :duration="durationForFramework"
     :enter-from-class="orUndefined(enterFromClass)"

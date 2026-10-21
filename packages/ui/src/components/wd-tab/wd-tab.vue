@@ -50,7 +50,7 @@ const tabBodyStyle = computed(() =>
   resolveStyle(TAB_BODY_STYLE, {
     // 非激活且父级未开切换动画时收起内容；激活或 animated 下保持参与布局
     // （animated 由 left 位移驱动，见 wd-tabs 的 bodyStyle）
-    display: !active.value && (!isDef(tabs.value) || !tabs.value.props.animated) ? 'none' : 'linear'
+    display: !active.value && (!isDef(tabs.value) || !tabs.value.props.animated) ? 'none' : 'flex'
   })
 )
 

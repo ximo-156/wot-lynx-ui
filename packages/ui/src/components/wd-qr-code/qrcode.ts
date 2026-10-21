@@ -1143,10 +1143,7 @@ QRCodeModel.PAD0 = 0xec
 QRCodeModel.PAD1 = 0x11
 
 function getUTF8Length(text: string): number {
-  const replacedText = encodeURI(text)
-    .toString()
-    .replace(/%[0-9a-fA-F]{2}/g, 'a')
-  return replacedText.length
+  return new QR8bitByte(text).getLength()
 }
 
 function getTypeNumber(text: string, correctLevel: QRErrorCorrectLevelValue): number {

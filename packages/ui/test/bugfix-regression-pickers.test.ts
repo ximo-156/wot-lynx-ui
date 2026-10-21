@@ -202,10 +202,13 @@ describe('修复清单回归（选择器 / 日历 / 菜单 / 弹层）', () => {
       expect(() => sel.selectWithValue(undefined)).not.toThrow()
       expect(sel.selectedIndex.value).toEqual([])
 
-      // columns: [[]] → 空列
+      // columns: [[]] → 空列保留列索引，-1 表示该列无选项。
       sel.formatColumns.value = formatColumnsData([[]], 'value', 'label')
       expect(() => sel.selectWithValue(undefined)).not.toThrow()
-      expect(sel.selectedIndex.value).toEqual([])
+      expect(sel.selectedIndex.value).toEqual([-1])
+      expect(sel.selectedOptions.value).toEqual([{}])
+      expect(sel.selectedValues.value).toEqual([undefined])
+      expect(sel.selectedLabels.value).toEqual([''])
     })
 
     it('wd-cascader 不传 options 打开不崩', async () => {

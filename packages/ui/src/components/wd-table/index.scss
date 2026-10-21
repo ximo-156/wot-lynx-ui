@@ -134,11 +134,12 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
     }
   }
 
+  // 固定列阴影：官方 30rpx（Lynx 无 rpx），改用 px 并保留 --wot-table-shadow-width
   @include e(shadow) {
     position: absolute;
     top: 0;
-    right: calc(-1 * var(--wot-table-shadow-width, 4vw));
-    width: var(--wot-table-shadow-width, 4vw);
+    right: calc(-1 * var(--wot-table-shadow-width, 30px));
+    width: var(--wot-table-shadow-width, 30px);
     height: 100%;
     background: $table-shadow-gradient;
     pointer-events: none;

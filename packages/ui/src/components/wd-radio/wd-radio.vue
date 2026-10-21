@@ -7,9 +7,8 @@
  * - wot-ui 的 `wd-radio--horizontal` 用 inline-flex + `:not(:last-child)`
  *   控制横向间距：Lynx 不识别 inline-flex（改为 display: flex + row），
  *   兄弟选择器改由 wd-radio-group 的 `--horizontal` 容器 gap 承担；
- * - 未选中态空心圆/方（wot-ui 的 uncheck-circle / uncheck-square 字体图标）
- *   与 dot 选中态圆心点：内置 iconfont 集无对应字形，按 CONVENTIONS §8 以
- *   真实元素 + border / currentColor 绘制；
+ * - 圆形、方形、dot、按钮使用 wot-ui 2.3.2 原始字体字形；
+ *   原生 text 渲染官方随包字体，不再以近似图标或 CSS 轮廓替代；
  * - customStyle 为字符串，经 parseStyle 归一为对象后下发（CONVENTIONS §19）。
  */
 <script lang="ts" setup>
@@ -43,17 +42,16 @@ const iconValue = computed(() => {
   let icon = ''
   switch (typeValue.value) {
     case 'circle':
-      icon = isChecked.value ? 'success-filling' : ''
+      icon = isChecked.value ? 'check-circle-fill' : 'uncheck-circle'
       break
     case 'square':
-      icon = isChecked.value ? 'check-item-filling' : ''
+      icon = isChecked.value ? 'check-square-fill' : 'uncheck-square'
       break
     case 'dot':
-      // dot 选中态（圆心实心点）与未选中态（空心圆）内置集均无对应字形，走 CSS 绘制
-      icon = ''
+      icon = isChecked.value ? 'check-circle-radio-fill' : 'uncheck-circle'
       break
     case 'button':
-      icon = isChecked.value ? 'select' : ''
+      icon = isChecked.value ? 'check' : ''
       break
     default:
       break
@@ -167,16 +165,7 @@ function handleClick(event: any) {
     </template>
     <view v-else class="wd-radio__shape">
       <slot name="icon" :is-checked="isChecked">
-        <WdIcon v-if="iconValue" custom-class="wd-radio__icon" :custom-style="iconStyle" :name="iconValue" />
-        <view v-else-if="isChecked" class="wd-radio__icon wd-radio__icon--dot" :style="parseStyle(iconStyle)">
-          <view class="wd-radio__icon--dot-inner" />
-        </view>
-        <view
-          v-else
-          class="wd-radio__icon wd-radio__icon--empty"
-          :class="typeValue === 'square' ? 'wd-radio__icon--square' : 'wd-radio__icon--circle'"
-          :style="parseStyle(iconStyle)"
-        />
+        <WdIcon custom-class="wd-radio__icon" :custom-style="iconStyle" :name="iconValue" />
       </slot>
     </view>
   </view>

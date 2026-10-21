@@ -146,14 +146,27 @@ function updateCurrent(index: number, source: string) {
   handleVideoChange(previous, index)
   return true
 }
+function finishNavigation(version: number) {
+  if (!isAlive() || pendingNavigation?.version !== version) return
+  const { current, source, offset } = pendingNavigation
+  lastOffset = offset
+  pendingNavigation = null
+  userScrolling.value = false
+  hasScroll = false
+  emit('animationfinish', { current, source })
+}
 function scrollToPage(index: number, source: string, smooth: boolean) {
   if (itemSize.value <= 0 || !itemCount.value) return
   const version = ++navigationVersion
   const offset = pageOffset(index)
+  const alreadyAtTarget = !pendingNavigation && Math.abs(lastOffset - offset) <= 0.5
   pendingNavigation = { version, current: index, source, offset }
   // 先提交轨道布局，再调用原生方法；不同时改 scroll-left/top 瞬时属性抢占动画。
   void nextTick(() => {
-    if (isAlive() && pendingNavigation?.version === version) scrollViewTo(`#${swiperId}`, offset, smooth)
+    if (!isAlive() || pendingNavigation?.version !== version) return
+    scrollViewTo(`#${swiperId}`, offset, smooth)
+    // 多项展示的末尾页可能共享钳制偏移；没有位移就不会收到原生 scrollend。
+    if (alreadyAtTarget) finishNavigation(version)
   })
 }
 function navTo(index: number, source = '', wrap = false) {
@@ -254,17 +267,13 @@ function handleScroll(event: any) {
 function handleScrollEnd(event: any) {
   if (itemSize.value <= 0 || !itemCount.value) return
   const offset = eventOffset(event)
-  if (offset !== undefined) lastOffset = offset
   if (pendingNavigation) {
     // 旧动画的收尾不能结束较新的定位请求。
     if (offset !== undefined && Math.abs(offset - pendingNavigation.offset) > 0.5) return
-    const { current, source } = pendingNavigation
-    pendingNavigation = null
-    userScrolling.value = false
-    hasScroll = false
-    emit('animationfinish', { current, source })
+    finishNavigation(pendingNavigation.version)
     return
   }
+  if (offset !== undefined) lastOffset = offset
   if (!hasScroll && !userScrolling.value) return
   if (offset !== undefined) updateCurrent(indexAtOffset(offset), 'touch')
   const target = pageOffset(currentValue.value)

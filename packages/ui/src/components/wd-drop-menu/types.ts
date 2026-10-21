@@ -3,10 +3,12 @@ import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp } from '../.
 
 export type DropDirection = 'up' | 'down'
 
+export type DropMenuHeader = { title: any; disabled: boolean; icon: string; iconSize: string | number | undefined }
 export type DropMenuProvide = {
   props: Partial<DropMenuProps>
   fold: (child?: any) => void
   offset: Ref<number>
+  syncHeader: (uid: number, header: DropMenuHeader | null) => void
 }
 
 export const DROP_MENU_KEY: InjectionKey<DropMenuProvide> = Symbol('wd-drop-menu')

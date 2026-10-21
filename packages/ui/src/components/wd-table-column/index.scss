@@ -29,6 +29,17 @@
     padding: $table-cell-padding;
     min-width: 0;
   }
+  // 固定列阴影宽度/偏移：官方为 30rpx（小程序专有单位，Lynx 不识别），改 px。
+  // 保留 --wot-table-shadow-width 主题变量；只把回退值从 4vw 换成 30px。
+  .wd-table__shadow {
+    position: absolute;
+    top: 0;
+    right: calc(-1 * var(--wot-table-shadow-width, 30px));
+    width: var(--wot-table-shadow-width, 30px);
+    height: 100%;
+    background: $table-shadow-gradient;
+    pointer-events: none;
+  }
   .wd-table__cell-content.is-left { justify-content: flex-start; }
   .wd-table__cell-content.is-center { justify-content: center; }
   .wd-table__cell-content.is-right { justify-content: flex-end; }

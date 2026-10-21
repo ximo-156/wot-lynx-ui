@@ -139,8 +139,8 @@ describe('Tier 1 基础组件', () => {
       const { container } = render(Icon, { name: 'close', size: 20 })
       const text = container.querySelector('text')
       expect(text).not.toBeNull()
-      // close -> e679
-      expect(text!.textContent).toBe(String.fromCharCode(0xe679))
+      // 裸名优先官方图标集：close -> e728（wot-ui 2.3.2 官方字体 wd-wot-icons）
+      expect(text!.textContent).toBe(String.fromCharCode(0xe728))
       cleanup()
     })
 

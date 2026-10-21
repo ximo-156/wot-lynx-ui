@@ -21,14 +21,15 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref } from 'vue-lynx'
+import { computed } from 'vue-lynx'
 import WdDivider from '../wd-divider/wd-divider.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { useTranslate } from '../../composables/useTranslate'
-import { loadmoreProps, type LoadMoreState } from './types'
+import { loadmoreProps } from './types'
 import type { LoadingProps } from '../wd-loading/types'
 import { isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
 
 // 计算 Loading 组件的属性 - 合并用户传入的属性和组件需要的自定义样式
 const customLoadingProps = computed(() => {
@@ -42,24 +43,18 @@ const emit = defineEmits(['reload', 'tap'])
 
 const { translate } = useTranslate('loadmore')
 
-/** 当前加载状态 */
-const currentState = ref<LoadMoreState | null>(null)
+const resolveRootStyle = createStyleResolver()
+const rootStyle = computed(() => resolveRootStyle(parseStyle(props.customStyle)))
 
-/**
- * 处理重新加载操作 - 当加载失败时，点击可触发 reload 事件
- */
+/** reload is controlled by state; the official unused internal state never changed the UI. */
 function reload(event: any) {
-  if (props.state !== 'error') return
-  currentState.value = 'loading'
-  emit('reload')
-  // Lynx 适配：根 view 绑 @tap，按 CONVENTIONS §14 转发原生 tap 事件，
-  // 避免消费方 @tap 穿透 $attrs 与根元素同名监听合并成数组
   emit('tap', event)
+  if (props.state === 'error') emit('reload')
 }
 </script>
 
 <template>
-  <view :class="['wd-loadmore', customClass]" :style="parseStyle(customStyle)" @tap="reload">
+  <view :class="['wd-loadmore', customClass]" :style="rootStyle" @tap="reload">
     <slot v-if="state === 'finished'" name="finished">
       <WdDivider custom-class="wd-loadmore__divider">{{ finishedText || translate('finished') }}</WdDivider>
     </slot>

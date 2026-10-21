@@ -19,4 +19,10 @@ $count-down-line-height: var(--wot-count-down-line-height, $typography-body-line
   color: $count-down-text-color;
   font-size: $count-down-font-size;
   line-height: $count-down-line-height;
+
+  @include e(text) {
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
 }

@@ -1,8 +1,6 @@
-import { ref, computed, onBeforeUnmount } from 'vue-lynx'
-import { isDef } from '../common/util'
+import { computed, onBeforeUnmount, ref } from 'vue-lynx'
 import { useRaf } from './useRaf'
 
-// 定义倒计时时间的数据结构
 export type CurrentTime = {
   days: number
   hours: number
@@ -12,127 +10,90 @@ export type CurrentTime = {
   milliseconds: number
 }
 
-// 定义倒计时的配置项
 export type UseCountDownOptions = {
-  time: number // 倒计时总时间，单位为毫秒
-  millisecond?: boolean // 是否开启毫秒级倒计时，默认为 false
-  onChange?: (current: CurrentTime) => void // 倒计时每次变化时的回调函数
-  onFinish?: () => void // 倒计时结束时的回调函数
+  time: number
+  millisecond?: boolean
+  onChange?: (current: CurrentTime) => void
+  onFinish?: () => void
 }
 
-// 定义常量
 const SECOND = 1000
 const MINUTE = 60 * SECOND
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
-// 将时间转换为倒计时数据结构
+function normalizeTime(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, value) : 0
+}
 function parseTime(time: number): CurrentTime {
-  const days = Math.floor(time / DAY)
-  const hours = Math.floor((time % DAY) / HOUR)
-  const minutes = Math.floor((time % HOUR) / MINUTE)
-  const seconds = Math.floor((time % MINUTE) / SECOND)
-  const milliseconds = Math.floor(time % SECOND)
-
   return {
     total: time,
-    days,
-    hours,
-    minutes,
-    seconds,
-    milliseconds
+    days: Math.floor(time / DAY),
+    hours: Math.floor((time % DAY) / HOUR),
+    minutes: Math.floor((time % HOUR) / MINUTE),
+    seconds: Math.floor((time % MINUTE) / SECOND),
+    milliseconds: Math.floor(time % SECOND)
   }
 }
 
-// 判断两个时间是否在同一秒内
-function isSameSecond(time1: number, time2: number): boolean {
-  return Math.floor(time1 / 1000) === Math.floor(time2 / 1000)
-}
-
-// 定义 useCountDown 函数
+/**
+ * The options may use property getters so component props stay live without changing
+ * the public number/boolean contract. A completed/reset cycle emits finish at most
+ * once; paused sub-second time and late callbacks must not restart an old cycle.
+ */
 export function useCountDown(options: UseCountDownOptions) {
-  let endTime: number // 结束时间
-  let counting: boolean // 是否计时中
-
+  let endTime = 0
+  let counting = false
+  let finished = false
+  let alive = true
+  let revision = 0
+  const remain = ref(normalizeTime(options.time))
+  const current = computed(() => parseTime(remain.value))
   const { start: startRaf, cancel: cancelRaf } = useRaf(tick)
 
-  const remain = ref(options.time) // 剩余时间
-  const current = computed(() => parseTime(remain.value)) // 当前倒计时数据
-
-  // 暂停倒计时
-  const pause = () => {
+  function pause() {
+    if (!alive) return
+    if (counting) remain.value = Math.max(0, endTime - Date.now())
     counting = false
+    revision++
     cancelRaf()
   }
-
-  // 获取当前剩余时间
-  const getCurrentRemain = () => Math.max(endTime - Date.now(), 0)
-
-  // 设置剩余时间
-  const setRemain = (value: number) => {
-    remain.value = value
-    isDef(options.onChange) && options.onChange(current.value)
-    if (value === 0) {
-      pause()
-      isDef(options.onFinish) && options.onFinish()
-    }
-  }
-
-  // 每毫秒更新一次倒计时
-  const microTick = () => {
-    if (counting) {
-      setRemain(getCurrentRemain())
-      if (remain.value > 0) {
-        startRaf()
-      }
-    }
-  }
-
-  // 每秒更新一次倒计时
-  const macroTick = () => {
-    if (counting) {
-      const remainRemain = getCurrentRemain()
-      if (!isSameSecond(remainRemain, remain.value) || remainRemain === 0) {
-        setRemain(remainRemain)
-      }
-
-      if (remain.value > 0) {
-        startRaf()
-      }
-    }
-  }
-
-  // 根据配置项选择更新方式
   function tick() {
-    if (options.millisecond) {
-      microTick()
-    } else {
-      macroTick()
+    if (!alive || !counting) return
+    const version = revision
+    const value = Math.max(0, endTime - Date.now())
+    if (options.millisecond || Math.floor(value / SECOND) !== Math.floor(remain.value / SECOND) || value === 0) {
+      remain.value = value
+      if (value === 0) {
+        counting = false
+        finished = true
+        cancelRaf()
+      }
+      // Events are immutable-by-ownership snapshots, not the slot's cached object.
+      options.onChange?.({ ...current.value })
+      if (!alive || version !== revision) return
+      if (value === 0) options.onFinish?.()
     }
+    if (alive && counting && version === revision) startRaf()
   }
-
-  // 开始倒计时
-  const start = () => {
-    if (!counting) {
-      endTime = Date.now() + remain.value
-      counting = true
-      startRaf()
-    }
+  function start() {
+    if (!alive || counting || finished) return
+    endTime = Date.now() + remain.value
+    counting = true
+    revision++
+    startRaf()
   }
-
-  // 重置倒计时
-  const reset = (totalTime: number = options.time) => {
+  function reset(totalTime: number = options.time) {
+    if (!alive) return
     pause()
-    remain.value = totalTime
+    finished = false
+    remain.value = normalizeTime(totalTime)
   }
-
-  // 在组件卸载前暂停倒计时
-  onBeforeUnmount(pause)
-
-  return {
-    start,
-    pause,
-    reset,
-    current
-  }
+  onBeforeUnmount(() => {
+    alive = false
+    counting = false
+    revision++
+    cancelRaf()
+  })
+  return { start, pause, reset, current }
 }

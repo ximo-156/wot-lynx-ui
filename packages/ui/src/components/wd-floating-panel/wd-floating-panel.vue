@@ -47,12 +47,19 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onBeforeMount, ref, watch, useMainThreadRef } from 'vue-lynx'
+import { computed, getCurrentInstance, onBeforeMount, onBeforeUnmount, ref, watch, useMainThreadRef } from 'vue-lynx'
 import { floatingPanelProps } from './types'
-import { addUnit, closest, getSystemInfo, parseStyle } from '../../common/util'
+import { addUnit, closest, getRect, getSystemInfo, noop, parseStyle, uuid } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
 
 const props = defineProps(floatingPanelProps)
-const emit = defineEmits(['update:height', 'height-change', 'touchstart', 'touchmove', 'touchend', 'touchcancel'])
+const emit = defineEmits(['update:height', 'height-change', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'layoutchange'])
+const { proxy } = getCurrentInstance() as any
+const instanceId = `wd-floating-panel-${uuid()}`
+const disposed = ref(false)
+const gestureRevision = ref(0)
+const gestureEpoch = ref(0)
+const gestureSource = ref<'header' | 'content' | 'blocked'>('header')
 
 const heightValue = ref<number>(props.height)
 
@@ -64,18 +71,9 @@ const DAMP = 0.2 // 阻尼系数
  * 用 ref 而非裸 let：突变 let 会被 script-setup 编译成访问器（返回对象
  * 出现嵌套花括号），主线程 worklet 无法随模板绑定序列化。
  */
-const gestureStart = ref<{ clientY: number; height: number } | null>(null)
+const gestureStart = ref<{ clientY: number; height: number; rawHeight: number; lastY: number; moved: boolean } | null>(null)
 const windowHeight = ref<number>(0)
-/**
- * 落定记号：touchend 时递增，强制 rootStyle 重算并重写内联样式。
- *
- * 主线程 worklet 跟手期直改的 transform / transition 只落在元素行内值上，
- * 后台 heightValue 并不跟踪拖动过程；当落定值与拖前高度相同时（如拖到
- * 210 吸附回 200、或原地抬手），heightValue 不变化 → 不触发重渲染 →
- * SET_STYLE 不会下发 → 面板停留在跟手位置而不回锚点。递增该记号让
- * computed 产出新对象，Vue 必定走一次 patchProp，把行内值覆写为落定值
- * （同时恢复 transition，落位动画由 CSS 过渡承接）。
- */
+/** Same-value commits must restore MT transform/transition, too. */
 const commitTick = ref(0)
 
 const boundary = computed(() => ({
@@ -84,129 +82,120 @@ const boundary = computed(() => ({
 }))
 
 const anchors = computed(() => (props.anchors.length >= 2 ? props.anchors : [boundary.value.min, boundary.value.max]))
-
-// Lynx 适配：参考源为 `${objToStyle(style)}${props.customStyle}` 字符串，
-// 本地改为对象语法（CONVENTIONS §19）；height / transform / transition 三键
-// 每帧输出完整键集（Style Funnel，§20）。
-// 注意：不再用 dragging 状态在跟手期把 transition 切成 none——那会让后台
-// touchstart 触发一次重渲染，把「尚未变化的旧 transform」经 SET_STYLE 覆盖
-// 到已被主线程 worklet 直改的节点上（双线程无顺序保证，掉帧时出现回跳）。
-// 跟手期的 transition: none 由 worklet 每次 touchmove 直写（见 onTouchMoveMt），
-// 落定时 Vue 在同一帧写回 transition + 终值 transform，CSS 过渡自然承接。
-const rootStyle = computed<Record<string, string>>(() => {
-  // 依赖落定记号：仅用于「高度未变也要覆写行内值」时强制产出新对象
+const resolveRootStyle = createStyleResolver({ height: '', transform: 'none', transition: 'none' })
+const rootStyle = computed(() => {
   void commitTick.value
-  const style: Record<string, string> = {
+  return resolveRootStyle({
     height: addUnit(boundary.value.max),
     transform: `translateY(calc(100% + ${addUnit(-heightValue.value)}))`,
     transition: `transform ${props.duration}ms cubic-bezier(0.18, 0.89, 0.32, 1.28)`
-  }
-
-  return { ...style, ...parseStyle(props.customStyle) }
+  }, parseStyle(props.customStyle))
 })
+const extensionStyle = computed(() => ({ height: addUnit(windowHeight.value), bottom: addUnit(-windowHeight.value) }))
 
-const updateHeight = (value: number) => {
+function updateHeight(value: number) {
+  if (disposed.value) return
   heightValue.value = value
   emit('update:height', value)
 }
-
-/**
- * 记录手势起点（后台）：头部 / 可拖拽内容区的 touchstart 共用
- * @param event 触摸事件
- */
-function recordGestureStart(event: any) {
-  const touch0 = event && event.touches && event.touches[0]
-  gestureStart.value = touch0 ? { clientY: Number(touch0.clientY), height: heightValue.value } : null
-  // CONVENTIONS §14：根 view 原生事件名声明为 emit 并转发
-  emit('touchstart', event)
-}
-
-/**
- * 头部触摸开始（后台）：记录手势起点（头部触摸冒泡到根 view 的主线程
- * touchstart / touchmove worklet 完成跟手）
- */
-function handleTouchStart(event: any) {
-  recordGestureStart(event)
-}
-
-/**
- * 内容区不可拖拽时的触摸开始（后台）：作废手势起点——内容区触摸被
- * scroll-view 的 catch 拦截（不冒泡、不跟手），落定不得按坐标重算
- */
-function handleBlockedContentTouchStart(event: any) {
+function invalidateGesture() {
+  gestureRevision.value++
+  gestureEpoch.value++
   gestureStart.value = null
-  // CONVENTIONS §14：根 view 原生事件名声明为 emit 并转发
-  emit('touchstart', event)
-}
-
-/**
- * 内容区不可拖拽时的滚动接管占位（catch 语义：阻止冒泡到根 view 的主线程
- * worklet，同时阻止 scroll-view 原生滚动——与参考源 .stop.prevent 一致）
- */
-function noop() {}
-
-/**
- * 触摸结束 / 取消（后台）：绝对公式重算终值、吸附最近锚点并 commit
- * （touchmove 跟手在主线程 worklet，落定在后台——CONVENTIONS §10）
- */
-function handleTouchEnd(event?: any) {
-  let finalHeight = heightValue.value
-  const start = gestureStart.value
-  gestureStart.value = null
-
-  if (start) {
-    const changed = (event && (event.changedTouches?.[0] || event.touches?.[0])) || null
-    const clientY = changed ? Number(changed.clientY) : NaN
-    if (Number.isFinite(clientY)) {
-      // 与主线程 worklet onTouchMoveMt 同一套绝对公式
-      finalHeight = -ease(clientY - start.clientY - start.height)
-    }
-  }
-
-  updateHeight(closest(anchors.value, finalHeight) as number)
-  // 强制重写行内样式：高度未变时也要把 worklet 跟手值覆写为落定值
   commitTick.value++
-
-  if (start && heightValue.value !== start.height) {
-    emit('height-change', { height: heightValue.value })
-  }
-  emit('touchend', event)
 }
-
-const ease = (y: number) => {
+// Invert an already damped visible height before applying a new absolute delta.
+// Otherwise the first zero-distance move damps that height a second time.
+function uneaseHeight(height: number) {
+  const { min, max } = boundary.value
+  if (height > max) return max + (height - max) / DAMP
+  if (height < min) return min - (min - height) / DAMP
+  return height
+}
+function ease(y: number) {
   const absDistance = Math.abs(y)
   const { min, max } = boundary.value
-
-  if (absDistance > max) {
-    return -(max + (absDistance - max) * DAMP)
-  }
-
-  if (absDistance < min) {
-    return -(min - (min - absDistance) * DAMP)
-  }
-
+  if (absDistance > max) return -(max + (absDistance - max) * DAMP)
+  if (absDistance < min) return -(min - (min - absDistance) * DAMP)
   return y
 }
-
-watch(
-  () => props.height,
-  (value) => {
-    heightValue.value = value
+function recordGestureStart(event: any, source: 'header' | 'content' = 'header') {
+  if (disposed.value) return
+  gestureRevision.value++ // Invalidate an older end-only geometry query.
+  gestureSource.value = source
+  const y = Number(event?.touches?.[0]?.clientY)
+  gestureStart.value = Number.isFinite(y)
+    ? { clientY: y, height: heightValue.value, rawHeight: uneaseHeight(heightValue.value), lastY: y, moved: false } : null
+  emit('touchstart', event)
+}
+function handleTouchStart(event: any) { recordGestureStart(event, 'header') }
+function handleContentTouchStart(event: any) { recordGestureStart(event, 'content') }
+function handleBlockedContentTouchStart(event: any) {
+  if (disposed.value) return
+  gestureSource.value = 'blocked'
+  invalidateGesture()
+  emit('touchstart', event)
+}
+function recordGestureMove(event: any) {
+  if (disposed.value) return
+  const start = gestureStart.value
+  const y = Number(event?.touches?.[0]?.clientY)
+  if (start && Number.isFinite(y)) { start.lastY = y; start.moved = true }
+  emit('touchmove', event)
+}
+async function finishGesture(event: any, canceled: boolean) {
+  if (disposed.value) return
+  emit(canceled ? 'touchcancel' : 'touchend', event)
+  const start = gestureStart.value
+  gestureStart.value = null
+  const revision = ++gestureRevision.value
+  gestureEpoch.value++ // Also kills MT state when no child finish event arrives.
+  // A prop change/newer end invalidated the gesture: restore, but do not resnap
+  // a programmatically supplied non-anchor height or emit a stale model update.
+  if (!start && gestureSource.value !== 'blocked') { commitTick.value++; return }
+  let finalHeight = heightValue.value
+  const y = Number((event?.changedTouches?.[0] || event?.touches?.[0])?.clientY)
+  if (start && Number.isFinite(y)) {
+    finalHeight = -ease(y - start.clientY - start.rawHeight)
+  } else if (start?.moved) {
+    finalHeight = -ease(start.lastY - start.clientY - start.rawHeight)
+  } else if (start) {
+    // Some native touchcancel/end payloads omit coordinates. Query once at
+    // release (never on move) so cancellation settles the rendered MT position.
+    try {
+      const rect = await getRect(`.${instanceId}`, false, proxy)
+      if (disposed.value || revision !== gestureRevision.value) return
+      if (Number(rect?.height) > 0 && Number.isFinite(Number(rect?.top))) finalHeight = windowHeight.value - Number(rect.top)
+    } catch {
+      if (disposed.value || revision !== gestureRevision.value) return
+    }
   }
-)
+  if (disposed.value || revision !== gestureRevision.value) return
+  updateHeight(closest(anchors.value, finalHeight) as number)
+  commitTick.value++
+  if (start && heightValue.value !== start.height) emit('height-change', { height: heightValue.value })
+}
+function handleTouchEnd(event?: any) { void finishGesture(event, false) }
+function handleTouchCancel(event?: any) { void finishGesture(event, true) }
 
-watch(
-  boundary,
-  () => {
-    updateHeight(closest(anchors.value, heightValue.value) as number)
-  },
-  { immediate: true }
-)
-
-onBeforeMount(() => {
-  const { windowHeight: _windowHeight } = getSystemInfo()
-  windowHeight.value = _windowHeight
+watch(() => props.height, (value) => {
+  invalidateGesture()
+  heightValue.value = value
 })
+watch(anchors, () => {
+  invalidateGesture()
+  updateHeight(closest(anchors.value, heightValue.value) as number)
+}, { immediate: true, deep: true })
+watch(() => [props.contentDraggable, props.duration, props.safeAreaInsetBottom], () => { invalidateGesture() })
+watch(() => props.customStyle, () => { invalidateGesture() }, { deep: true })
+function handleLayoutChange(event: any) {
+  if (disposed.value) return
+  emit('layoutchange', event)
+  const currentWindowHeight = getSystemInfo().windowHeight
+  if (currentWindowHeight !== windowHeight.value) { invalidateGesture(); windowHeight.value = currentWindowHeight }
+}
+onBeforeMount(() => { windowHeight.value = getSystemInfo().windowHeight })
+onBeforeUnmount(() => { disposed.value = true; gestureRevision.value++; gestureStart.value = null })
 
 // ---------- 主线程 worklet（跟手，零线程跨越） ----------
 
@@ -223,7 +212,7 @@ interface MtElement {
 /** 根（面板）元素：worklet 跟手直改 transform / transition */
 const panelRef = useMainThreadRef<MtElement | null>(null)
 /** 手势起点 { startY, startH }（worklet 内 .current 活值，每次主线程 touchstart 刷新） */
-const dragRef = useMainThreadRef<{ startY: number; startH: number } | null>(null)
+const dragRef = useMainThreadRef<{ startY: number; startH: number; epoch: string | null; content: boolean } | null>(null)
 
 /** worklet 捕获的静态配置快照（setup 期常量，实例内不变） */
 const cfgDamp = DAMP
@@ -237,14 +226,21 @@ const cfgDamp = DAMP
  */
 const onTouchStartMt = (event: any) => {
   'main thread'
+  dragRef.current = null
   const el = panelRef.current
   const touch0 = event.touches && event.touches[0]
   if (!el || !touch0) return
+  const source = event.target && typeof event.target.getAttribute === 'function' ? event.target.getAttribute('gesture-source') : null
+  const content = source === 'content' || el.getAttribute('gesture-source') === 'content'
+  if (source === 'blocked' || el.getAttribute('gesture-source') === 'blocked' || (content && el.getAttribute('content-draggable') !== 'true')) return
   const curHeight = Number(el.getAttribute('cur-height'))
-  dragRef.current = {
-    startY: Number(touch0.clientY),
-    startH: Number.isFinite(curHeight) ? curHeight : 0
-  }
+  const min = Number(el.getAttribute('min-bound')), max = Number(el.getAttribute('max-bound'))
+  const y = Number(touch0.clientY)
+  if (!Number.isFinite(curHeight) || !Number.isFinite(y) || !Number.isFinite(min) || !Number.isFinite(max)) return
+  const rawHeight = curHeight > max ? max + (curHeight - max) / cfgDamp
+    : curHeight < min ? min - (min - curHeight) / cfgDamp : curHeight
+  dragRef.current = { startY: y, startH: rawHeight, epoch: el.getAttribute('gesture-epoch'), content }
+  el.setStyleProperty('transition', 'none')
 }
 
 /**
@@ -259,7 +255,7 @@ const onTouchMoveMt = (event: any) => {
   'main thread'
   const el = panelRef.current
   const drag = dragRef.current
-  if (!el || !drag) return
+  if (!el || !drag || drag.epoch !== el.getAttribute('gesture-epoch') || (drag.content && el.getAttribute('content-draggable') !== 'true') || el.getAttribute('gesture-source') === 'blocked') return
   const touch0 = event.touches && event.touches[0]
   if (!touch0) return
 

@@ -382,7 +382,13 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
         resolveUnavailable()
       }
     }
-    const nodesRef = all ? query.selectAll(selector) : query.select(selector)
+    let nodesRef: any
+    try {
+      nodesRef = all ? query.selectAll(selector) : query.select(selector)
+    } catch {
+      if (!domMeasure()) resolveUnavailable()
+      return
+    }
     // 超时竞速：个别运行时（如 Web 预览注入的空实现 SelectorQuery）的
     // createSelectorQuery 存在但永不回调 success/fail——不竞速会让 Promise
     // 永久挂起，所有依赖度量的交互（slider/tour/popover…）全部失效。
@@ -586,6 +592,15 @@ export function parseStyle(style?: string | Record<string, any> | null): Record<
     if (key && value) result[key] = value
   })
   return result
+}
+
+/**
+ * 过滤 CSS 自定义属性值：去掉 `;` / `{` / `}`，防止单条值截断声明或被注入
+ * 额外规则；空串表示「清除该变量」（由调用方保留键、输出空声明）。
+ */
+export function sanitizeCssVariableText(value: unknown): string {
+  if (value === undefined || value === null) return ''
+  return String(value).replace(/[;{}]/g, '').trim()
 }
 
 /**

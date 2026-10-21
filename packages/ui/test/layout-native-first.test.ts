@@ -196,14 +196,26 @@ describe('原生优先：居中成对写全（NATIVE-REWRITE §3.2）', () => {
     expect(centered.decls['justify-content']).toBe('center')
   })
 
-  it('wd-cell：左侧区与右侧区均为 flex 行 + 交叉轴居中', () => {
+  it('wd-cell：左侧区与右侧区均为 flex 行 + 与官方一致的交叉轴对齐', () => {
     const rules = cssRules('wd-cell')
-    for (const sel of ['.wd-cell__left', '.wd-cell__body', '.wd-cell .wd-cell__prefix', '.wd-cell .wd-cell__arrow-right', '.wd-cell .wd-cell__suffix']) {
-      const rule = rules.find((r) => r.selector === sel)
-      expect(rule, `wd-cell 缺少 ${sel}`).toBeTruthy()
-      expect(rule!.decls.display, `${sel} 应显式 display: flex`).toBe('flex')
-      expect(rule!.decls['flex-direction'], `${sel} 应为横向行`).toBe('row')
-      expect(rule!.decls['align-items'], `${sel} 应交叉轴居中`).toBe('center')
+    // 官方：__left 为 flex-start（多行标题顶对齐），图标/箭头/正文为 center；
+    // 同一选择器可能在压缩产物里拆成两条规则，按层叠顺序合并后再断言。
+    const declared = (sel: string, prop: string) => {
+      const merged = rules.filter((r) => r.selector === sel).map((r) => r.decls[prop]).filter(Boolean)
+      expect(merged.length, `wd-cell 缺少 ${sel} 的 ${prop}`).toBeGreaterThan(0)
+      return merged[merged.length - 1]
+    }
+    const expected: Record<string, string> = {
+      '.wd-cell__left': 'flex-start',
+      '.wd-cell__body': 'center',
+      '.wd-cell .wd-cell__prefix': 'center',
+      '.wd-cell .wd-cell__arrow-right': 'center',
+      '.wd-cell .wd-cell__suffix': 'center'
+    }
+    for (const [sel, align] of Object.entries(expected)) {
+      expect(declared(sel, 'display'), `${sel} 应显式 display: flex`).toBe('flex')
+      expect(declared(sel, 'flex-direction'), `${sel} 应为横向行`).toBe('row')
+      expect(declared(sel, 'align-items'), `${sel} 应交叉轴居中`).toBe(align)
     }
     // is-center：三个层级成对补全
     const centerWrapper = rules.find((r) => r.selector === '.wd-cell.is-center .wd-cell__wrapper')!

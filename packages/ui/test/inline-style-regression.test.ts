@@ -140,15 +140,21 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     cleanup()
   })
 
-  it('WdConfigProvider themeVars 映射为 --wot-* 对象（定制主题曾整体失效）', () => {
-    // mapThemeVarsToCSSVars 输出对象（字符串形式会被 patchProp 丢弃）；
-    // 真机经 enableCSSInlineVariables 支持内联 CSS 变量，测试环境的
-    // JSDOM 不支持 setProperty 自定义属性，故在单元层断言映射结果。
+  it('WdConfigProvider themeVars 映射为 --wot-* 并写入根节点 style 属性（定制主题曾整体失效）', async () => {
+    // 映射结果以对象返回（组件据此拼接 style 属性字符串：CSSOM 会丢弃
+    // el.style['--x'] 赋值，故不能只依赖对象通道）。
     const vars = mapThemeVarsToCSSVars({ colorPrimary: '#ff0000', fontSizeSmall: '12px' })
     expect(vars).toEqual({
       '--wot-color-primary': '#ff0000',
       '--wot-font-size-small': '12px'
     })
+    const { container } = render(ConfigProvider, {
+      themeVars: { primaryColor: '#ff0000' }
+    })
+    await pause(0)
+    const root = container.querySelector('.wot-theme-light')
+    expect(styleOf(root)).toContain('--wot-primary-color:#ff0000')
+    cleanup()
   })
 
   it('WdConfigProvider customStyle 合并进根节点对象样式', () => {
@@ -163,13 +169,16 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
   })
 
   it('WdSwitch 轨道 / 滑块尺寸由 SCSS 类承担（对齐 wot-ui：em 基准改 --wot-switch-size）', () => {
-    const { container } = render(Switch, { modelValue: true, activeColor: '#34C759' })
+    let switchInstance: any
+    const { container } = render({
+      setup: () => () => h(Switch, { modelValue: true, size: 40, activeColor: '#34C759', ref: (instance: any) => { switchInstance = instance } })
+    } as any)
     const root = container.querySelector('.wd-switch')
     // wot-ui 2.3.2：尺寸体系在 SCSS（--wot-switch-size 基准的 calc 链），
     // JS 侧只经内联 font-size（+ 同名 CSS 变量）下发 size prop；
-    // 对象语法断言：内联样式必须是对象而非被丢弃的字符串
-    expect(styleOf(root)).toMatch(/font-size/)
-    expect(styleOf(root)).toContain('--wot-switch-size')
+    // JSDOM 不序列化自定义变量，直接核验双线程下发的 VNode 对象键。
+    expect(styleOf(root)).toMatch(/font-size:\s*40px/)
+    expect(switchInstance.$.subTree.props.style['--wot-switch-size']).toBe('40px')
     const action = container.querySelector('.wd-switch__action')
     expect(action).not.toBeNull()
     cleanup()

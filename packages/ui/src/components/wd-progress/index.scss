@@ -94,6 +94,18 @@ $progress-radius: var(--wot-progress-radius, $radius-full) !default;
 
   @include edeep(icon) {
     font-size: $progress-icon-size;
+    .wd-icon__glyph {
+      font-size: $progress-icon-size;
+      color: inherit;
+      line-height: inherit;
+    }
+  }
+
+  @include e(label-text) {
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    text-align: inherit;
   }
 
   @include m(danger) {

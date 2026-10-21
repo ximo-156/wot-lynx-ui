@@ -20,6 +20,7 @@ import WdButton from '../wd-button/wd-button.vue'
 import { paginationProps } from './types'
 import { useTranslate } from '../../composables/useTranslate'
 import { parseStyle } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
 
 const { translate } = useTranslate('pagination')
 
@@ -66,7 +67,7 @@ function sub() {
           size="small"
           :disabled="modelValue <= 1"
           :custom-class="`wd-pagination__nav`"
-          :icon="showIcon ? 'arrow-left-bold' : ''"
+          :icon="showIcon ? 'left' : ''"
           :text="showIcon ? '' : prevText || translate('prev')"
           @tap="sub"
         />
@@ -86,7 +87,7 @@ function sub() {
           size="small"
           :disabled="modelValue >= totalPageNum"
           :custom-class="`wd-pagination__nav`"
-          :icon="showIcon ? 'arrow-right-bold' : ''"
+          :icon="showIcon ? 'right' : ''"
           :text="showIcon ? '' : nextText || translate('next')"
           @tap="add"
         />

@@ -331,10 +331,11 @@ describe('原生优先：居中成对写全（NATIVE-REWRITE §3.2）', () => {
     expect(column['flex-direction']).toBe('column')
     expect(column['flex-shrink'], '.wd-table-column 需要 flex-shrink: 0（防被表体压缩）').toBe('0')
 
-    // 固定列阴影：px 单位（参考源 30rpx 为小程序专有单位，Lynx 不识别）
+    // 固定列阴影：px 单位（参考源 30rpx 为小程序专有单位，Lynx 不识别）；
+    // 保留 --wot-table-shadow-width 主题变量，只要求回退值为 px
     const shadow = ruleOf('wd-table-column', '.wd-table-column .wd-table__shadow')
-    expect(shadow.width, '阴影宽度应为 px').toBe('30px')
-    expect(shadow.right, '阴影偏移应为 px').toBe('-30px')
+    expect(shadow.width, '阴影宽度回退值应为 px').toBe('var(--wot-table-shadow-width, 30px)')
+    expect(shadow.right, '阴影偏移回退值应为 px').toBe('calc(-1*var(--wot-table-shadow-width, 30px))')
   })
 
   it('wd-table：居中对齐的单元格文本同步 text-align: center', () => {

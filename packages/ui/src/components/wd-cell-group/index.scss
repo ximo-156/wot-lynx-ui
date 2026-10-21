@@ -69,6 +69,15 @@ $cell-group-insert-margin: var(--wot-cell-group-insert-margin, $spacing-zero $sp
     font-size: $cell-group-value-font-size;
   }
 
+  @include e(title-text) {
+    font-size: $cell-group-title-font-size;
+    font-weight: $cell-group-font-weight;
+    color: $cell-group-title-color;
+  }
+  @include e(value-text) {
+    font-size: $cell-group-value-font-size;
+    color: $cell-group-value-color;
+  }
   @include e(body) {
     display: flex;
     flex-direction: column;

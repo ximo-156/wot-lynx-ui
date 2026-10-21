@@ -145,7 +145,7 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
        交叉轴居中（NATIVE-REWRITE §3.2 图标与文字基线场景） */
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     text-align: left;
     font-size: $cell-title-font-size;
     line-height: $cell-title-line-height;
@@ -174,6 +174,36 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
     overflow-wrap: break-word;
   }
 
+  @include e(title-text) {
+    font-size: $cell-title-font-size;
+    line-height: $cell-title-line-height;
+    color: $cell-title-color;
+    white-space: normal;
+  }
+  @include e(label-text) {
+    font-size: $cell-label-font-size;
+    line-height: $cell-label-line-height;
+    color: $cell-label-color;
+    white-space: normal;
+  }
+  @include e(value-text) {
+    font-size: $cell-value-font-size;
+    line-height: $cell-value-line-height;
+    color: $cell-value-color;
+    width: 100%;
+    white-space: normal;
+    text-align: right;
+  }
+  .wd-cell__value--left .wd-cell__value-text { text-align: left; }
+  .wd-cell__value--center .wd-cell__value-text { text-align: center; }
+  .wd-cell__wrapper--vertical .wd-cell__value-text { text-align: left; }
+  .wd-cell__placeholder .wd-cell__value-text {
+    color: $cell-placeholder-color;
+    font-size: $cell-placeholder-font-size;
+    line-height: $cell-placeholder-line-height;
+  }
+  .wd-cell__wrapper--vertical .wd-cell__left,
+  .wd-cell__wrapper--vertical .wd-cell__right { flex: none; width: 100%; }
   @include e(required) {
     font-size: $cell-required-font-size;
     line-height: $cell-required-line-height;

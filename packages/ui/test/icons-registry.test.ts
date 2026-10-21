@@ -43,9 +43,9 @@ describe('icons/registry', () => {
     const icon = resolveIcon('close')
     expect(icon).not.toBeNull()
     expect(icon!.type).toBe('font')
-    expect(icon!.setKey).toBe('iconfont')
+    expect(icon!.setKey).toBe('wot')
     if (icon!.type !== 'font') throw new Error('unreachable')
-    expect(icon!.fontFamily).toBe('wd-iconfont')
+    expect(icon!.fontFamily).toBe('wd-wot-icons')
     expect(icon!.unicode).toMatch(/^[0-9a-f]{4}$/)
     expect(hasIcon('pdf')).toBe(true)
   })
@@ -70,8 +70,11 @@ describe('icons/registry', () => {
     expect(hasIcon('https://example.com/a.png')).toBe(false)
   })
 
-  it('listIcons：全量名单 = 180', () => {
-    expect(listIcons()).toHaveLength(180)
+  it('listIcons 返回两集合的完整去重名单', () => {
+    const expected = new Set([...Object.keys(wotIconsSet.unicodes), ...Object.keys(iconfontSet.unicodes)])
+    expect(new Set(listIcons())).toEqual(expected)
+    expect(listIcons()).toHaveLength(expected.size)
+    expect(listIcons('wot')).toHaveLength(305)
     expect(listIcons('iconfont')).toHaveLength(180)
     expect(listIcons('no-such-set')).toEqual([])
   })

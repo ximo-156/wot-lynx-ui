@@ -17,7 +17,20 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, ref, watch } from 'vue-lynx'
+import { cloneVNode, computed, defineComponent, ref, watch, type VNode } from 'vue-lynx'
+
+/** Native text nodes can clamp exactly; arbitrary component trees keep clipping fallback. */
+const ViewmoreContent = defineComponent({
+  props: { lineNum: { type: Number, default: 0 } },
+  setup(clampProps, { slots }) {
+    const clamp = (vnode: VNode): VNode => {
+      const copy = cloneVNode(vnode, vnode.type === 'text' ? { 'text-maxline': clampProps.lineNum } : undefined)
+      if (Array.isArray(vnode.children)) copy.children = vnode.children.map((child: any) => child?.__v_isVNode ? clamp(child) : child)
+      return copy
+    }
+    return () => (slots.default?.() || []).map(clamp)
+  }
+})
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { COLLAPSE_KEY, collapseProps, type CollapseExpose, type CollapseToggleAllOptions, type CollapseValue } from './types'
 import { useChildren } from '../../composables/useChildren'
@@ -131,10 +144,10 @@ const toggleAll = (options: CollapseToggleAllOptions = {}) => {
   const names: string[] = []
   children.forEach((item, index) => {
     if (item.disabled && skipDisabled) {
-      if (item.$.exposed!.getExpanded()) {
+      if (item.$.exposed?.getExpanded?.()) {
         names.push(item.name || index)
       }
-    } else if (isDef(expanded) ? expanded : !item.$.exposed!.getExpanded()) {
+    } else if (isDef(expanded) ? expanded : !item.$.exposed?.getExpanded?.()) {
       names.push(item.name || index)
     }
   })
@@ -162,7 +175,7 @@ defineExpose<CollapseExpose>({
     <!-- 查看更多模式 -->
     <view v-else>
       <view :class="`wd-collapse__content ${!currentValue ? 'is-retract' : ''} `" :style="{ 'max-height': contentLineNum ? `${contentLineNum * 1.4}em` : 'none' }">
-        <slot></slot>
+        <ViewmoreContent :line-num="contentLineNum"><slot /></ViewmoreContent>
       </view>
       <view class="wd-collapse__more" @tap="handleMore">
         <!-- 自定义展开按钮 -->
@@ -173,8 +186,7 @@ defineExpose<CollapseExpose>({
         <template v-else>
           <text class="wd-collapse__more-txt">{{ !currentValue ? translate('expand') : translate('retract') }}</text>
           <view :class="`wd-collapse__arrow ${currentValue ? 'is-retract' : ''}`">
-            <!-- Lynx 适配：内置图标集无 down 字形，取 arrow-down-bold -->
-            <WdIcon name="arrow-down-bold" />
+            <WdIcon name="down" />
           </view>
         </template>
       </view>

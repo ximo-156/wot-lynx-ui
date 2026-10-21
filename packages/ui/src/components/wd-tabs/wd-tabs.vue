@@ -671,6 +671,7 @@ const onBodyTouchMove = (event: any) => {
         !showScrollbar ? 'is-hide-scrollbar' : ''
       }`"
       :style="rootStyle"
+      :id="tabsId"
     >
       <view class="wd-tabs__nav">
         <view class="wd-tabs__nav--wrap">
@@ -725,6 +726,8 @@ const onBodyTouchMove = (event: any) => {
           :style="bodyStyle"
           :active-index="String(state.activeIndex)"
           :tab-count="String(navItems().length)"
+          :swipeable="String(swipeable)"
+          :animated="String(animated)"
           :main-thread-bindtouchstart="onBodyTouchStart"
           :main-thread-bindtouchmove="onBodyTouchMove"
         >

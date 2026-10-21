@@ -81,7 +81,9 @@ let dragMoved = false
 
 let rectRequest = 0
 let interactionRequest = 0
-watch([isDisabled, () => props.min, () => props.max, () => props.step, () => props.range, () => props.vertical], () => { interactionRequest++; isDragging.value = false }, { flush: 'sync' })
+watch([isDisabled, () => props.min, () => props.max, () => props.step, () => props.range, () => props.vertical], () => { interactionRequest++; rectRequest++; isDragging.value = false; trackSize.value = 0 }, { flush: 'sync' })
+// Measure the rendered orientation, not the obsolete setup-time horizontal track.
+watch([isDisabled, () => props.min, () => props.max, () => props.step, () => props.range, () => props.vertical, () => props.theme, () => props.showExtremeValue, () => props.marks], () => initSlider(), { flush: 'post', deep: true })
 
 /**
  * 计算滑块的取值范围大小

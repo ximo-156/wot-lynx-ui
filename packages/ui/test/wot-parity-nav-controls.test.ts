@@ -7,6 +7,8 @@ import { Fragment, h, ref } from 'vue-lynx'
 import { cleanup, render } from './render'
 import { fireEvent } from './fire-event'
 import { pause } from '../src/common/util'
+import { configureUniAdapter, getUniAdapter } from '../src/common/uniAdapter'
+import { useDeviceInfo } from '../src/composables/useDeviceInfo'
 import Tabs from '../src/components/wd-tabs/wd-tabs.vue'
 import Tab from '../src/components/wd-tab/wd-tab.vue'
 import Tabbar from '../src/components/wd-tabbar/wd-tabbar.vue'
@@ -174,11 +176,10 @@ describe('tabs and panels', () => {
     await frames(); rects.delay()
     const older = first.value.updateLineStyle(), newer = first.value.updateLineStyle()
     second.value.updateLineStyle()
-    expect(rects.pending).toHaveLength(3); expect(rects.pending[0].selector).not.toBe(rects.pending[2].selector)
-    rects.pending[1].deliver([{ ...RECT, width: 55 }]); await frames(1)
-    rects.pending[3].deliver([{ ...RECT, width: 100 }]); await newer; await frames(1)
-    rects.pending[0].deliver([{ ...RECT, width: 12 }]); rects.pending[2].deliver([{ ...RECT, width: 20 }]); await frames(1)
-    for (const request of rects.pending.slice(4)) request.deliver([{ ...RECT, width: 100 }])
+    expect(rects.pending).toHaveLength(6); expect(rects.pending[0].selector).not.toBe(rects.pending[4].selector)
+    rects.pending[2].deliver([{ ...RECT, width: 100 }]); rects.pending[3].deliver([{ ...RECT, width: 55 }]); await newer; await frames(1)
+    rects.pending[0].deliver([{ ...RECT, width: 100 }]); rects.pending[1].deliver([{ ...RECT, width: 12 }])
+    rects.pending[4].deliver([{ ...RECT, width: 100 }]); rects.pending[5].deliver([{ ...RECT, width: 20 }])
     await older; await frames()
     expect(node(container, '.wd-tabs__nav-container > .wd-tabs__line').style.width).toBe('55px')
   })
@@ -527,7 +528,7 @@ function resolveVars(value: string, variables: Record<string, string>, depth = 0
     result += selected === `var(${name})` ? selected : resolveVars(selected, variables, depth + 1)
     start = end
   }
-  return (result + value.slice(start)).replace(/\s+/g, ' ').trim()
+  return (result + value.slice(start)).replace(/(^|[^\w.])\.(\d)/g, '$10.$2').replace(/\s*([*,])\s*/g, '$1').replace(/\s+/g, ' ').trim()
 }
 const cssCache = new Map<string, Map<string, Record<string, string>>>()
 function cssRules(component: string, official: boolean) {

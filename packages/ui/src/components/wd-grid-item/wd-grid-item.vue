@@ -36,7 +36,7 @@ import WdBadge from '../wd-badge/wd-badge.vue'
 import { useParent } from '../../composables/useParent'
 import { GRID_KEY } from '../wd-grid/types'
 import { addUnit, deepAssign, isDef, isString, isUndefined, omitBy, parseStyle, type CSSProperties } from '../../common/util'
-import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { defineStyleKeys, resolveStyle, createStyleResolver } from '../../common/style'
 import { gridItemProps } from './types'
 import { uni } from '../../common/uni'
 import type { BadgeProps } from '../wd-badge/types'
@@ -299,6 +299,9 @@ function click(event: any) {
           <text v-if="text" :class="['wd-grid-item__text', { 'is-ellipsis': ellipsis, 'is-spaced': hasIcon || $slots.icon }, customText]" :text-maxline="ellipsis ? 1 : undefined">{{ text }}</text>
         </slot>
       </slot>
+      <view v-if="border && gutter > 0" class="wd-grid-item__around" />
     </view>
+    <view v-if="borderClass.includes('is-border')" class="wd-grid-item__line wd-grid-item__line--top" />
+    <view v-if="borderClass && !borderClass.includes('is-right') && !borderClass.includes('is-last')" class="wd-grid-item__line wd-grid-item__line--right" />
   </view>
 </template>

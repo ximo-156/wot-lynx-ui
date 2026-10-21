@@ -4,9 +4,8 @@
  * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
  * - 根元素为 view，`@click` → `@tap`，并在 emits 声明 'tap' 转发原生事件
  *   （CONVENTIONS §6 事件映射 / §14 同名事件）；
- * - 未选中态空心圆/方（wot-ui 的 uncheck-circle / uncheck-square 字体图标）
- *   与 dot 选中态圆心点：内置 iconfont 集无对应字形，按 CONVENTIONS §8 以
- *   真实元素 + border / currentColor 绘制；
+ * - 圆形、方形、dot、按钮及不确定态使用 wot-ui 2.3.2 原始字体字形；
+ *   原生 text 渲染官方随包字体，不再以近似图标或 CSS 轮廓替代；
  * - size / maxWidth 在 wot-ui 2.3.2 参考实现的模板与样式中均未消费，
  *   此处保持一致：props 保留声明（API 对齐）但不产生副作用；
  * - customStyle 为字符串，经 parseStyle 归一为对象后下发（CONVENTIONS §19）。
@@ -53,22 +52,21 @@ const isButton = computed(() => {
 const iconValue = computed(() => {
   // indeterminate 状态下，且非 button 类型，使用 minus-circle-fill
   if (props.indeterminate && !isButton.value) {
-    return 'minus-circle'
+    return 'minus-circle-fill'
   }
   let icon = ''
   switch (typeValue.value) {
     case 'circle':
-      icon = isChecked.value ? 'success-filling' : ''
+      icon = isChecked.value ? 'check-circle-fill' : 'uncheck-circle'
       break
     case 'square':
-      icon = isChecked.value ? 'check-item-filling' : ''
+      icon = isChecked.value ? 'check-square-fill' : 'uncheck-square'
       break
     case 'dot':
-      // dot 选中态（圆心实心点）与未选中态（空心圆）内置集均无对应字形，走 CSS 绘制
-      icon = ''
+      icon = isChecked.value ? 'check-circle-radio-fill' : 'uncheck-circle'
       break
     case 'button':
-      icon = isChecked.value ? 'select' : ''
+      icon = isChecked.value ? 'check' : ''
       break
   }
   return icon
@@ -217,16 +215,7 @@ function toggle() {
     </template>
     <view v-else class="wd-checkbox__shape">
       <slot name="icon" :is-checked="isChecked">
-        <WdIcon v-if="iconValue" custom-class="wd-checkbox__icon" :custom-style="iconStyle" :name="iconValue" />
-        <view v-else-if="isChecked" class="wd-checkbox__icon wd-checkbox__icon--dot" :style="parseStyle(iconStyle)">
-          <view class="wd-checkbox__icon--dot-inner" />
-        </view>
-        <view
-          v-else
-          class="wd-checkbox__icon wd-checkbox__icon--empty"
-          :class="typeValue === 'square' ? 'wd-checkbox__icon--square' : 'wd-checkbox__icon--circle'"
-          :style="parseStyle(iconStyle)"
-        />
+        <WdIcon custom-class="wd-checkbox__icon" :custom-style="iconStyle" :name="iconValue" />
       </slot>
     </view>
   </view>

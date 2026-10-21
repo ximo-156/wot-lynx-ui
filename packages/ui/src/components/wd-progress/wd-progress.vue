@@ -26,9 +26,15 @@ import './index.css'
 import { computed, onBeforeUnmount, ref, watch } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { isArray, isDef, isObj, isString, parseStyle, pause } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
 import { progressProps, type ProgressColor } from './types'
 
 const props = defineProps(progressProps)
+const duration = computed(() => Number.isFinite(props.duration) ? Math.max(0, props.duration) : 0)
+const targetPercentage = computed(() => Number.isFinite(props.percentage) ? Math.max(0, Math.min(100, props.percentage)) : 0)
+const position = computed(() => ({ type: props.percentPosition?.type || 'outer', align: props.percentPosition?.align || 'right' }))
+const resolveCustomStyle = createStyleResolver()
+const customRootStyle = computed(() => resolveCustomStyle(parseStyle(props.customStyle)))
 // 进度条渲染颜色
 const displayColor = ref<string>('')
 
@@ -62,7 +68,7 @@ const rootStyle = computed<Record<string, string>>(() => {
   return {
     background: displayColor.value,
     width: `${displayPercentage.value}%`,
-    'transition-duration': `${percentageDiff.value * Math.max(0, props.duration) * 0.001}s`
+    'transition-duration': `${percentageDiff.value * duration.value * 0.001}s`
   }
 })
 
@@ -103,7 +109,7 @@ watch(
  * @param {number} value 百分比值
  */
 function validatePercentage(value: number) {
-  if (Number.isNaN(value) || value < 0 || value > 100) {
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
     console.error('The value of percentage must be between 0 and 100')
   }
 }
@@ -146,7 +152,20 @@ function updateProgressBackward(partList: ProgressColor[], percentage: number) {
  */
 async function updateProgress(version = revision) {
   if (!alive || version !== revision) return
-  const { percentage, color } = props
+  const percentage = targetPercentage.value
+  const color = props.color
+  if (duration.value === 0) {
+    percentageDiff.value = 0
+    displayPercentage.value = percentage
+    if (!isDef(color) || color === '' || (isArray(color) && color.length === 0)) displayColor.value = ''
+    else {
+      const colorArray = isArray(color) ? color : [color]
+      validateColorArray(colorArray)
+      const partList = createPartList(colorArray)
+      displayColor.value = (partList.find((item) => percentage <= item.percentage) || partList[partList.length - 1])?.color || ''
+    }
+    return
+  }
   if (!isDef(color) || color === '' || (isArray(color) && color.length === 0)) {
     percentageDiff.value = Math.abs(percentage - displayPercentage.value)
     displayColor.value = ''
@@ -198,7 +217,7 @@ function validateColorArray(colorArray: string[] | ProgressColor[]) {
   if (!isStrArray && !isObjArray) {
     throw Error('Color must be String or Object with color and percentage')
   }
-  if (isObjArray && colorArray.some(({ percentage }) => Number.isNaN(percentage))) {
+  if (isObjArray && colorArray.some(({ percentage, color }) => !Number.isFinite(percentage) || percentage < 0 || percentage > 100 || typeof color !== 'string')) {
     throw Error('All the percentage must can be formatted to Number')
   }
 }
@@ -227,7 +246,7 @@ function createPartList(colorArray: string[] | ProgressColor[]) {
 function renderProgressStep(targetPercent: number, color: string) {
   if (!alive || animationTimer !== null || renderTimer !== null) return
   const version = revision
-  const duration = Math.max(0, props.duration)
+  const stepDuration = duration.value
   percentageDiff.value = Math.abs(targetPercent - displayPercentage.value)
   renderTimer = setTimeout(() => {
     renderTimer = null
@@ -237,47 +256,24 @@ function renderProgressStep(targetPercent: number, color: string) {
     animationTimer = setTimeout(() => {
       animationTimer = null
       if (alive && version === revision) updateProgress(version)
-    }, percentageDiff.value * duration)
+    }, percentageDiff.value * stepDuration)
   }, 50)
 }
 </script>
 
 <template>
-  <view
-    :class="`wd-progress ${percentPosition.type === 'inner' ? 'wd-progress--inner' : ''} ${status ? 'wd-progress--' + status : ''} ${
-      percentage === 0 ? 'is-zero' : ''
-    } ${customClass}`"
-    :style="parseStyle(customStyle)"
-  >
+  <view :class="`wd-progress ${position.type === 'inner' ? 'wd-progress--inner' : ''} ${status ? 'wd-progress--' + status : ''} ${targetPercentage === 0 ? 'is-zero' : ''} ${customClass}`" :style="customRootStyle">
     <view class="wd-progress__outer">
       <view class="wd-progress__inner" :style="rootStyle">
-        <!-- inner 渲染到 progress__inner 内部 -->
-        <template v-if="percentPosition.type === 'inner'">
-          <view v-if="!hideText" :class="['wd-progress__label', percentPosition.align ? `is-align-${percentPosition.align}` : '']">
-            <text>{{ percentage }}%</text>
-          </view>
-          <WdIcon
-            v-else-if="status"
-            :custom-class="`wd-progress__label wd-progress__icon ${hideText ? 'is-hide-text' : ''} ${
-              percentPosition.align ? `is-align-${percentPosition.align}` : ''
-            }`"
-            :name="iconName"
-            :color="isString(color) ? color : ''"
-          ></WdIcon>
+        <template v-if="position.type === 'inner'">
+          <view v-if="!hideText" :class="['wd-progress__label', `is-align-${position.align}`]"><text class="wd-progress__label-text">{{ targetPercentage }}%</text></view>
+          <WdIcon v-else-if="status" :custom-class="`wd-progress__label wd-progress__icon is-hide-text is-align-${position.align}`" :name="iconName" />
         </template>
       </view>
     </view>
-    <!-- outer 渲染到外侧 -->
-    <template v-if="percentPosition.type === 'outer'">
-      <view v-if="!hideText" class="wd-progress__label">
-        <text>{{ percentage }}%</text>
-      </view>
-      <WdIcon
-        v-else-if="status"
-        :custom-class="`wd-progress__label wd-progress__icon ${hideText ? 'is-hide-text' : ''}`"
-        :name="iconName"
-        :color="isString(color) ? color : ''"
-      ></WdIcon>
+    <template v-if="position.type === 'outer'">
+      <view v-if="!hideText" class="wd-progress__label"><text class="wd-progress__label-text">{{ targetPercentage }}%</text></view>
+      <WdIcon v-else-if="status" custom-class="wd-progress__label wd-progress__icon is-hide-text" :name="iconName" :color="isString(color) ? color : ''" />
     </template>
   </view>
 </template>

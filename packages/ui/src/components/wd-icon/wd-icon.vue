@@ -11,7 +11,7 @@ import '../../icons/fonts/wot-icons.css'
 import { computed, normalizeClass } from 'vue-lynx'
 import { iconProps } from './types'
 import { addUnit, isDef, sanitizeSvgContent, parseStyle } from '../../common/util'
-import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { defineStyleKeys, resolveStyle, createStyleResolver } from '../../common/style'
 import { resolveIcon } from '../../icons/registry'
 import { THEME_ICON_COLOR } from '../../common/theme'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
@@ -32,25 +32,26 @@ const rootClass = computed(() => {
   else { classes[props.classPrefix] = true; classes[`${props.classPrefix}-${props.name.replace(/:/g, '-')}`] = true }
   return normalizeClass([classes, props.customClass])
 })
-const iconSize = computed(() => props.size ? addUnit(props.size) : (globalConfig.value.themeVars.iconFontSize || '14px'))
-const ROOT_STYLE = defineStyleKeys({ color: '', 'font-size': '', width: '', height: '' })
-const rootStyle = computed(() => resolveStyle(ROOT_STYLE, {
+const customStyle = computed(() => parseStyle(props.customStyle))
+const iconSize = computed(() => String(customStyle.value['font-size'] || customStyle.value.fontSize ||
+  (props.size ? addUnit(props.size) : globalConfig.value.themeVars.iconFontSize || '14px')))
+const resolveRootStyle = createStyleResolver({ color: '', 'font-size': '', width: '', height: '' })
+const rootStyle = computed(() => resolveRootStyle({
   color: props.color,
-  'font-size': props.size ? iconSize.value : '',
-  width: props.size && (props.cssIcon || isImage.value) ? iconSize.value : '',
-  height: props.size && (props.cssIcon || isImage.value) ? iconSize.value : ''
-}, parseStyle(props.customStyle)))
+  'font-size': props.size ? addUnit(props.size) : '',
+  width: props.size && (props.cssIcon || isImage.value) ? addUnit(props.size) : '',
+  height: props.size && (props.cssIcon || isImage.value) ? addUnit(props.size) : ''
+}, customStyle.value))
 const svgContent = computed(() => {
   const icon = resolvedIcon.value
   if (icon?.type !== 'svg') return ''
-  const customColor = parseStyle(props.customStyle).color
-  return sanitizeSvgContent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.viewBox}" width="${iconSize.value}" height="${iconSize.value}" fill="${customColor || props.color || themeColor.value}">${icon.paths.map((d) => `<path d="${d}"/>`).join('')}</svg>`)
+  const color = customStyle.value.color || props.color || themeColor.value
+  return sanitizeSvgContent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.viewBox}" fill="${color}">${icon.paths.map((d) => `<path d="${d}"/>`).join('')}</svg>`)
 })
-const glyph = computed(() => resolvedIcon.value?.type === 'font' ? String.fromCharCode(parseInt(resolvedIcon.value.unicode, 16)) : '')
-const GLYPH_STYLE = defineStyleKeys({ fontFamily: '', lineHeight: '1', fontSize: '', color: '' })
+const glyph = computed(() => resolvedIcon.value?.type === 'font' ? String.fromCodePoint(parseInt(resolvedIcon.value.unicode, 16)) : '')
+const GLYPH_STYLE = defineStyleKeys({ fontFamily: '', lineHeight: 'inherit', fontSize: 'inherit', color: 'inherit' })
 const glyphStyle = computed(() => resolveStyle(GLYPH_STYLE, {
-  fontFamily: resolvedIcon.value?.type === 'font' ? resolvedIcon.value.fontFamily : '',
-  fontSize: props.size ? iconSize.value : '', color: props.color
+  fontFamily: resolvedIcon.value?.type === 'font' ? resolvedIcon.value.fontFamily : ''
 }))
 function handleClick(event: any) { emit('click', event); emit('tap', event) }
 </script>

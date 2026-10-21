@@ -287,7 +287,7 @@ watch(
   { immediate: true, deep: true }
 )
 
-watch([() => props.valueKey, () => props.labelKey, () => props.childrenKey, () => props.isLeafKey, () => props.lazyLoad], () => { confirmRequest++; buildTabs() }, { flush: 'sync' })
+watch([() => props.valueKey, () => props.textKey, () => props.childrenKey, () => props.isLeafKey, () => props.lazyLoad], () => { confirmRequest++; buildTabs() }, { flush: 'sync' })
 
 watch(
   () => props.visible,

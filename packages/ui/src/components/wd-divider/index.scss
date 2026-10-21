@@ -60,15 +60,21 @@ $divider-padding-default: var(--wot-divider-padding-default, $spacing-zero) !def
     border-width: $divider-line-height 0 0;
   }
 
-  /* 参考源 m(center,left,right) 中 ::after margin-left / ::before margin-right
-     的内容间距，等价落到内容元素两侧（内容仅在插槽非空时渲染）。 */
   @include e(content) {
-    margin-left: $divider-margin-content-left;
-    margin-right: $divider-margin-content-right;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+  @include m(center, left, right) {
+    .wd-divider__line--first { margin-right: $divider-margin-content-right; }
+    .wd-divider__line--last { margin-left: $divider-margin-content-left; }
+  }
+  .wd-divider__content text {
+    color: var(--wot-divider-content-color, $divider-color-default);
+    font-size: $divider-font-size-default;
   }
 
-  /* Lynx 适配：参考源 hairline 以 transform: scaleY(0.5) 细化 3px 边框，
-     此处用 1ppx 物理像素边框直接表达 0.5px 细线（本地细线约定）。 */
+  // 令牌厚度保留，hairline 只按官方比例缩放。
   @include when(hairline) {
     @include edeep(line) {
       transform: scaleY(0.5);

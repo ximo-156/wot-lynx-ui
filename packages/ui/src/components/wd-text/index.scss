@@ -20,6 +20,18 @@ $text-default-color: var(--wot-text-default-color, $text-auxiliary) !default;
   font-size: $text-font-size;
   line-height: $text-line-height;
 
+  @include e(body, prefix, suffix) {
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+    font-style: inherit;
+    font-family: inherit;
+    text-decoration: inherit;
+    text-align: inherit;
+    letter-spacing: inherit;
+  }
+
   @include when(bold) {
     font-weight: bold;
   }

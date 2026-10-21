@@ -591,6 +591,40 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
     expect(mounted.container.querySelector('.wd-tour__highlight')!.getAttribute('style')).toContain('top: 192px')
   })
 
+  it('notify standalone auto-dismiss survives unrelated prop updates', async () => {
+    const mounted = mount(Notify)
+    mounted.exposed.value.showNotify({ message: 'auto-dismiss', duration: 100 })
+    await frames(1)
+    mounted.props.value.customClass = 'updated-notify'
+    await frames(1)
+    expect(mounted.container.querySelector('.updated-notify')).not.toBeNull()
+    await settled()
+    expect(hidden(popup(mounted.container))).toBe(true)
+  })
+
+  it('video replacement requests fullscreen and close cancels a queued host request', async () => {
+    const requestFullScreen = vi.fn(), factory = vi.fn(() => ({ requestFullScreen }))
+    configureUniAdapter({ createVideoContext: factory })
+    const mounted = mount(VideoPreview)
+    mounted.exposed.value.open({ url: 'normal.mp4', fullScreen: false })
+    await frames(2)
+    expect(factory).not.toHaveBeenCalled()
+    mounted.exposed.value.open({ url: 'fullscreen.mp4', fullScreen: true })
+    await nextTick()
+    expect(requestFullScreen).toHaveBeenCalledExactlyOnceWith({ direction: 0 })
+    mounted.exposed.value.open({ url: 'canceled.mp4', fullScreen: true })
+    mounted.exposed.value.close()
+    await nextTick()
+    expect(requestFullScreen).toHaveBeenCalledOnce()
+  })
+
+  it('tour HTML content falls back to decoded readable text, not literal markup', async () => {
+    mockRects()
+    const mounted = mount(Tour, { modelValue: true, steps: [{ element: '.target', content: '<p>Hello &amp; &#x1F44B;<br>next</p><script>hidden()</script>' }] })
+    await frames(3)
+    expect(mounted.container.querySelector('.wd-tour__info')!.textContent).toBe('Hello & 👋\nnext')
+  })
+
   it('tour scoped highlight/content/button slots and skipped payload work with hidden buttons', async () => {
     mockRects()
     const skip = vi.fn()

@@ -118,46 +118,6 @@ $radio-button-icon-left: var(--wot-radio-button-icon-left, $n-4) !default;
     justify-content: center;
   }
 
-  /* 未选中态空心圆/方：wot-ui 用 uncheck-circle / uncheck-square 字体图标，
-     内置 iconfont 集无对应字形，改为真实元素 + border 绘制（CONVENTIONS §8） */
-  @include e(icon--empty) {
-    width: $radio-icon-size;
-    box-sizing: border-box;
-    border-width: $radio-button-border-width;
-    border-style: solid;
-    border-color: currentColor;
-  }
-
-  @include e(icon--circle) {
-    border-radius: $radio-button-shape-border-radius;
-  }
-
-  @include e(icon--square) {
-    border-radius: $radius-small;
-  }
-
-  /* dot 选中态：空心圆 + 圆心实心点（wot-ui 为 check-circle-radio-fill 字形） */
-  @include e(icon--dot) {
-    width: $radio-icon-size;
-    box-sizing: border-box;
-    border-width: $radio-button-border-width;
-    border-style: solid;
-    border-color: currentColor;
-    border-radius: $radio-button-shape-border-radius;
-    // Lynx 适配：圆心点的居中属性显式挂在 display: flex 上（§15）
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-  }
-
-  @include e(icon--dot-inner) {
-    width: $radio-button-icon-size;
-    height: $radio-button-icon-size;
-    border-radius: $radio-button-shape-border-radius;
-    background-color: currentColor;
-  }
-
   @include when(checked) {
     @include edeep(icon) {
       color: $radio-checked-color;

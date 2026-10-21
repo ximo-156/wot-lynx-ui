@@ -113,12 +113,14 @@ function showNotify(option: NotifyProps | string) {
   }
   clearTimer()
   applyOptions({ ...(isString(option) ? { message: option } : option), visible: true })
-  const request = state.value
-  if (request.duration && request.duration > 0) {
+  const request = notifyRequest
+  const duration = state.value.duration
+  if (duration && duration > 0) {
     timer = setTimeout(() => {
+      if (!isAlive() || request !== notifyRequest) return
       timer = undefined
-      if (isAlive() && state.value === request) closeNotify()
-    }, request.duration)
+      closeNotify()
+    }, duration)
   }
 }
 watch(() => state.value.visible, (visible) => emit('update:visible', !!visible))

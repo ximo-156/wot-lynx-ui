@@ -23,10 +23,12 @@ import WdAvatar from '../wd-avatar/wd-avatar.vue'
 import { avatarGroupProps, AVATAR_GROUP_KEY } from './types'
 import { useChildren } from '../../composables/useChildren'
 import { addUnit, isString, parseStyle } from '../../common/util'
-import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { createStyleResolver, defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(avatarGroupProps)
 const slots = useSlots()
+const resolveRootStyle = createStyleResolver()
+const rootStyle = computed(() => resolveRootStyle(parseStyle(props.customStyle)))
 
 const { children, linkChildren } = useChildren(AVATAR_GROUP_KEY)
 
@@ -77,24 +79,24 @@ const collapseText = computed(() => {
 const hasDefaultSlot = computed(() => !!slots.default)
 
 /**
- * 折叠头像样式
+ * 折叠头像样式。Avatar 的静态样式漏斗剔除未知空键，非叠层轴须显式写 0px。
  */
-const COLLAPSE_STYLE = defineStyleKeys({ 'margin-top': '', 'margin-left': '', 'z-index': '0' })
+const COLLAPSE_STYLE = defineStyleKeys({ 'margin-top': '0px', 'margin-left': '0px', 'z-index': '0' })
 const collapseStyle = computed(() => {
   const isBuiltIn = isString(props.size) && ['large', 'medium', 'normal', 'small'].includes(props.size)
   const overlap = isBuiltIn ? 'var(--wot-avatar-overlap)' : `calc(${addUnit(props.size)} * -0.25)`
-  const margin = hasDefaultSlot.value ? overlap : ''
+  const margin = hasDefaultSlot.value ? overlap : '0px'
   const count = maxCountValue.value > 0 ? maxCountValue.value : children.length
   return resolveStyle(COLLAPSE_STYLE, {
     'z-index': props.cascading === 'left-up' ? String(count + 1) : '0',
-    'margin-top': props.vertical ? margin : '',
-    'margin-left': props.vertical ? '' : margin
+    'margin-top': props.vertical ? margin : '0px',
+    'margin-left': props.vertical ? '0px' : margin
   })
 })
 </script>
 
 <template>
-  <view :class="rootClass" :style="parseStyle(customStyle)">
+  <view :class="rootClass" :style="rootStyle">
     <slot></slot>
     <!-- 折叠头像 -->
     <WdAvatar

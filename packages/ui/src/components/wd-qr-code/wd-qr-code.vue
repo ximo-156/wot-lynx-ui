@@ -19,8 +19,7 @@
  * - 平台能力调用（uni.canvasToTempFilePath）无 Lynx 等价实现，exportImage
  *   降级为返回 SVG data URI（矢量导出，分辨率与 size 无关）；
  * - customStyle 为字符串，经 parseStyle 归一为对象语法（CONVENTIONS §19）；
- * - canvasId 为 uni-app / 小程序专有 props（canvas 元素 id），Lynx 无 canvas
- *   元素，保留声明但不生效（PORTING §2.3）；
+ * - canvasId 绑定实际原生根节点；默认生成稳定唯一 id，可供宿主定位；
  * - 编码由同目录 qrcode.ts 承担（wot-ui 2.3.2 同源编码器：Byte 模式 / 版本
  *   1-40 自适应 / L/M/Q/H 四级纠错 / RS 纠错 / 掩码评估），在后台线程同步完成；
  * - 布局居中（NATIVE-REWRITE §3）：根 view 显式 display: flex +
@@ -34,7 +33,8 @@ import './index.css'
 import { computed, ref, watch } from 'vue-lynx'
 import { qrCodeProps, type QrCodeExpose } from './types'
 import { generateQRCode, QRErrorCorrectLevel } from './qrcode'
-import { parseStyle, sanitizeSvgContent } from '../../common/util'
+import { parseStyle, sanitizeSvgContent, uuid } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
 
 const props = defineProps(qrCodeProps)
 const emit = defineEmits<{
@@ -44,6 +44,14 @@ const emit = defineEmits<{
 }>()
 
 const rootClass = computed(() => `wd-qr-code ${props.customClass}`)
+const automaticId = `wd-qr-code-${uuid()}`
+const canvasId = computed(() => props.canvasId || automaticId)
+const resolveRootStyle = createStyleResolver()
+const rootStyle = computed(() => resolveRootStyle(parseStyle(props.customStyle)))
+/** 属性写入 SVG 前转义，避免 URL 的 &/引号破坏 XML 或注入额外节点。 */
+function xml(value: unknown): string {
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&apos;')
+}
 
 /** 二维码模块矩阵（未编码 / 编码失败时为 null） */
 const modules = ref<boolean[][] | null>(null)
@@ -56,7 +64,7 @@ watch(
     if (!props.text) return
     try {
       const errorCorrectLevel =
-        QRErrorCorrectLevel[props.correctLevel as keyof typeof QRErrorCorrectLevel] || QRErrorCorrectLevel.H
+        QRErrorCorrectLevel[props.correctLevel as keyof typeof QRErrorCorrectLevel] ?? QRErrorCorrectLevel.H
       modules.value = generateQRCode(props.text, { errorCorrectLevel }).modules
     } catch (error) {
       emit('error', error)
@@ -207,14 +215,14 @@ const svgContent = computed(() => {
   // 参考源先以 colorLight 铺满画布；设置背景图时由原生 image 垫底，
   // 这里不再铺底色（否则 svg 底色会盖住背景图）。
   if (!props.backgroundImage) {
-    body += `<rect width="${n(size)}" height="${n(size)}" fill="${props.colorLight}"/>`
+    body += `<rect width="${n(size)}" height="${n(size)}" fill="${xml(props.colorLight)}"/>`
   }
   if (m && m.length) {
     const tile = (size - props.margin * 2) / m.length
     if (props.dotType === 'square' && props.dotScale === 1) {
-      body += `<g fill="${darkColor.value}">${squareModules(m, tile)}</g>`
+      body += `<g fill="${xml(darkColor.value)}">${squareModules(m, tile)}</g>`
     } else {
-      body += `<g fill="${darkColor.value}">${dotModules(m, tile)}</g>`
+      body += `<g fill="${xml(darkColor.value)}">${dotModules(m, tile)}</g>`
     }
   }
   return sanitizeSvgContent(
@@ -257,9 +265,7 @@ const logoBoxStyle = computed<Record<string, string>>(() => {
     height: `${logoHeight + padding * 2}px`,
     'border-radius': `${props.logoRadius || 0}px`,
     'background-color': props.logoBackgroundColor || '#ffffff',
-    'border-width': `${props.logoBorderWidth || 0}px`,
-    'border-style': 'solid',
-    'border-color': props.logoBorderColor || 'transparent',
+    'border-width': '0px',
     'box-sizing': 'border-box',
     display: 'flex',
     'flex-direction': 'row',
@@ -276,6 +282,19 @@ const logoImageStyle = computed(() => {
     width: `${logoWidth}px`,
     height: `${logoHeight}px`,
     'border-radius': `${innerRadius}px`
+  }
+})
+
+const logoBorderStyle = computed(() => {
+  const border = Math.max(0, props.logoBorderWidth || 0)
+  const { logoWidth, logoHeight } = logoSize.value
+  return {
+    position: 'absolute', left: `${-border / 2}px`, top: `${-border / 2}px`,
+    width: `${logoWidth + 8 + border}px`, height: `${logoHeight + 8 + border}px`,
+    'border-width': `${border}px`, 'border-style': 'solid',
+    'border-color': props.logoBorderColor || 'transparent',
+    'border-radius': `${Math.max(0, props.logoRadius || 0) + border / 2}px`,
+    'box-sizing': 'border-box', 'pointer-events': 'none'
   }
 })
 
@@ -310,10 +329,10 @@ function gradientStops(): string {
   if (props.gradientColors.length > 0) {
     const lastIndex = Math.max(props.gradientColors.length - 1, 1)
     return props.gradientColors
-      .map((color, index) => `<stop offset="${n(index / lastIndex)}" stop-color="${color}"/>`)
+      .map((color, index) => `<stop offset="${n(index / lastIndex)}" stop-color="${xml(color)}"/>`)
       .join('')
   }
-  return `<stop offset="0" stop-color="${props.colorDark}"/><stop offset="1" stop-color="${props.gradientColor}"/>`
+  return `<stop offset="0" stop-color="${xml(props.colorDark)}"/><stop offset="1" stop-color="${xml(props.gradientColor)}"/>`
 }
 
 /**
@@ -335,9 +354,9 @@ async function exportImage(): Promise<string> {
       })()
     : ''
   const body =
-    (props.backgroundImage ? '' : `<rect width="${n(size)}" height="${n(size)}" fill="${props.colorLight}"/>`) +
-    (props.backgroundImage ? `<image href="${props.backgroundImage}" x="0" y="0" width="${n(size)}" height="${n(size)}"/>` : '') +
-    `<g fill="${fill}">` +
+    (props.backgroundImage ? '' : `<rect width="${n(size)}" height="${n(size)}" fill="${xml(props.colorLight)}"/>`) +
+    (props.backgroundImage ? `<image preserveAspectRatio="none" href="${xml(props.backgroundImage)}" x="0" y="0" width="${n(size)}" height="${n(size)}"/>` : '') +
+    `<g fill="${xml(fill)}">` +
     (props.dotType === 'square' && props.dotScale === 1 ? squareModules(m, tile) : dotModules(m, tile)) +
     `</g>` +
     (props.logo
@@ -348,14 +367,14 @@ async function exportImage(): Promise<string> {
           const padding = 4
           const radius = props.logoRadius || 0
           const innerRadius = Math.max(0, radius - padding)
-          const box = `<rect x="${n(logoX - padding)}" y="${n(logoY - padding)}" width="${n(logoWidth + padding * 2)}" height="${n(logoHeight + padding * 2)}" rx="${n(radius)}" fill="${props.logoBackgroundColor || '#ffffff'}" stroke="${props.logoBorderColor || 'transparent'}" stroke-width="${props.logoBorderWidth || 0}"/>`
+          const box = `<rect x="${n(logoX - padding)}" y="${n(logoY - padding)}" width="${n(logoWidth + padding * 2)}" height="${n(logoHeight + padding * 2)}" rx="${n(radius)}" fill="${xml(props.logoBackgroundColor || '#ffffff')}" stroke="${xml(props.logoBorderColor || 'transparent')}" stroke-width="${props.logoBorderWidth || 0}"/>`
           // 内圈圆角裁剪（对应参考源 drawLogoContent 的 ctx.clip()）：
           // 标准 SVG 的 clipPath 元素，导出路径不受 Lynx 白名单约束。
           const clip =
             innerRadius > 0
               ? `<clipPath id="wot-qr-code-logo-clip"><rect x="${n(logoX)}" y="${n(logoY)}" width="${n(logoWidth)}" height="${n(logoHeight)}" rx="${n(innerRadius)}"/></clipPath>`
               : ''
-          const img = `<image href="${props.logo}" x="${n(logoX)}" y="${n(logoY)}" width="${n(logoWidth)}" height="${n(logoHeight)}"${clip ? ' clip-path="url(#wot-qr-code-logo-clip)"' : ''}/>`
+          const img = `<image preserveAspectRatio="none" href="${xml(props.logo)}" x="${n(logoX)}" y="${n(logoY)}" width="${n(logoWidth)}" height="${n(logoHeight)}"${clip ? ' clip-path="url(#wot-qr-code-logo-clip)"' : ''}/>`
           return clip + box + img
         })()
       : '')
@@ -376,11 +395,12 @@ defineExpose<QrCodeExpose>({
 </script>
 
 <template>
-  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
-    <image v-if="backgroundImage" :src="backgroundImage" :style="backgroundImageStyle" />
+  <view :id="canvasId" :class="rootClass" :style="rootStyle" @tap="handleClick">
+    <image v-if="backgroundImage" :src="backgroundImage" :style="backgroundImageStyle" mode="scaleToFill" />
     <svg :content="svgContent" :style="canvasStyle" />
-    <view v-if="logo" :style="logoBoxStyle">
-      <image :src="logo" :style="logoImageStyle" />
+    <view v-if="logo" class="wd-qr-code__logo" :style="logoBoxStyle">
+      <image :src="logo" :style="logoImageStyle" mode="scaleToFill" />
+      <view class="wd-qr-code__logo-border" :style="logoBorderStyle" />
     </view>
   </view>
 </template>

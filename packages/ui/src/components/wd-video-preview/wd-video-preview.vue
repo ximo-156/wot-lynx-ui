@@ -71,7 +71,7 @@ function enterFullScreen() {
   if (!options.value.fullScreen || !hasUniAdapter('createVideoContext')) return
   const request = videoRequest
   nextTick(() => {
-    if (!isAlive() || !state.show || request !== videoRequest) return
+    if (!isAlive() || !state.show || !options.value.fullScreen || request !== videoRequest) return
     const context = uni.createVideoContext(videoId, instance.proxy)
     context?.requestFullScreen?.({ direction: 0 })
   })

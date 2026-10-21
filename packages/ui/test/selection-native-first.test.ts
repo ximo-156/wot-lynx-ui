@@ -34,12 +34,15 @@ import Segmented from '../src/components/wd-segmented/wd-segmented.vue'
 const SRC = path.resolve(__dirname, '..', 'src/components')
 const css = (rel: string) => readFileSync(path.join(SRC, rel), 'utf8')
 
-/** 抽取指定选择器的声明体（编译产物为压缩单行，按选择器精确切分） */
+/** 抽取指定选择器的全部声明体（同一选择器可拆成多条规则，按层叠顺序合并） */
 function ruleOf(cssText: string, selector: string): string {
-  const re = new RegExp(`(?:^|[,}])\\s*${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\{([^{}]*)\\}`, 'm')
-  const m = cssText.match(re)
-  if (!m) throw new Error(`selector not found in compiled css: ${selector}`)
-  return m[1]
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`(?:^|[,}])\\s*${escaped}\\{([^{}]*)\\}`, 'gm')
+  const bodies: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = re.exec(cssText))) bodies.push(m[1])
+  if (!bodies.length) throw new Error(`selector not found in compiled css: ${selector}`)
+  return bodies.join(';')
 }
 
 /** 根节点三件套：display: flex + 显式 flex-direction */
@@ -95,9 +98,8 @@ describe('原生优先重写 · 布局居中契约（radio / checkbox / switch /
   it('wd-radio：根节点横向三件套 + 图标容器/文案居中', () => {
     const c = css('wd-radio/index.css')
     expectRootFlex(c, '.wd-radio', 'row')
-    // 图标容器（未选中空心圆 / dot 圆心点 / 字体图标）：成对居中
+    // 图标容器（字体图标的定位框）：成对居中
     expectCenterPair(c, '.wd-radio__shape')
-    expectCenterPair(c, '.wd-radio__icon--dot')
     // 文案：flex 居中 + 文本居中
     expect(ruleOf(c, '.wd-radio__label')).toMatch(/(^|;)text-align:center(;|$)/)
     // 按钮模式（wot-ui 为 inline-block）：内容宽度自适应 + 横向流
@@ -119,7 +121,6 @@ describe('原生优先重写 · 布局居中契约（radio / checkbox / switch /
     const c = css('wd-checkbox/index.css')
     expectRootFlex(c, '.wd-checkbox', 'row')
     expectCenterPair(c, '.wd-checkbox__shape')
-    expectCenterPair(c, '.wd-checkbox__icon--dot')
     expectRootFlex(c, '.wd-checkbox.is-button', 'row')
     // 按钮模式文案居中（wot-ui 同款 text-align）
     expect(ruleOf(c, '.wd-checkbox.is-button .wd-checkbox__label')).toMatch(/(^|;)text-align:center(;|$)/)
@@ -185,8 +186,10 @@ describe('原生优先重写 · 布局居中契约（radio / checkbox / switch /
     // 选中项：is-checked + 选中态图标（circle 型为 success-filling 字形）
     expect(radios[0].classList.contains('is-checked')).toBe(true)
     expect(radios[1].classList.contains('is-checked')).toBe(false)
-    // 未选中态空心圆：CSS 绘制（border + currentColor）
-    expect(radios[1].querySelector('.wd-radio__icon--empty')).not.toBeNull()
+    // 官方四态字形：选中 check-circle-fill（e747），未选中 uncheck-circle（e734）
+    const glyph = (el: Element) => el.querySelector('.wd-radio__icon')
+    expect(glyph(radios[0])!.textContent).toBe(String.fromCharCode(0xe747))
+    expect(glyph(radios[1])!.textContent).toBe(String.fromCharCode(0xe734))
     cleanup()
 
     const boxes = render(

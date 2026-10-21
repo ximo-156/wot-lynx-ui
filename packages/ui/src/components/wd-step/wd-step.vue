@@ -175,7 +175,7 @@ function getCurrentTitle(currentStatus: string): string {
           <WdIcon v-if="icon" custom-class="wd-step__icon" :name="icon" />
         </slot>
         <view v-else class="wd-step__circle">
-          <WdIcon custom-class="wd-step__finished-icon" v-if="currentStatus === 'finished'" name="check-item" />
+          <WdIcon custom-class="wd-step__finished-icon" v-if="currentStatus === 'finished'" name="check" />
           <WdIcon custom-class="wd-step__error-icon" v-else-if="currentStatus === 'error'" name="close" />
           <text class="wd-step__circle-text" v-else>{{ index + 1 }}</text>
         </view>

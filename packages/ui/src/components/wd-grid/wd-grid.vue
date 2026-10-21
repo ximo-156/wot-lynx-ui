@@ -21,7 +21,7 @@ import { computed } from 'vue-lynx'
 import { useChildren } from '../../composables/useChildren'
 import { GRID_KEY, gridProps } from './types'
 import { addUnit, isDef, parseStyle, type CSSProperties } from '../../common/util'
-import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { defineStyleKeys, createStyleResolver } from '../../common/style'
 
 const props = defineProps(gridProps)
 

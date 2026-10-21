@@ -6,8 +6,11 @@ import {
   type GlobalConfig
 } from './global-config'
 
+import { USE_CONFIG_PROVIDER_KEY } from './useConfigProvider'
+
 export function useGlobalConfig(): ComputedRef<GlobalConfig> {
   const injected = inject<ConfigProviderProvide | null>(CONFIG_PROVIDER_KEY, null)
   if (injected) return injected.globalConfig
-  return computed(() => ({ ...DEFAULT_GLOBAL_CONFIG }))
+  const hook = inject<ConfigProviderProvide | null>(USE_CONFIG_PROVIDER_KEY, null)
+  return hook?.globalConfig || computed(() => ({ ...DEFAULT_GLOBAL_CONFIG }))
 }

@@ -1,183 +1,76 @@
 /*
- * wd-resize — 尺寸监听
- *
- * Lynx 实现说明（相对 wot-ui 的适配点）：
- * - 容器度量：参考源用 uni.createSelectorQuery().in(proxy).select('#id')
- *   .boundingClientRect()（uni-app 小程序 API）。Lynx 无 uni 全局与组件
- *   作用域查询，改用本地 common/util 的 getRect()（内部映射
- *   lynx.createSelectorQuery，并提供 Web 预览 DOM 度量兜底，永不 reject）；
- * - 参考源把 onScrollHandler 定义在首次度量回调内、以闭包记录容器尺寸，
- *   依赖 let 绑定在模板中的动态重定向；本实现将 lastHeight/lastWidth 提升为
- *   setup 作用域变量、处理器保持单一稳定函数（逻辑逐行一致，避免
- *   options script 与 script setup 双块编译为非 inline 模式时 let 重定向失效）；
- * - rootStyle 与探测占位样式由参考源的字符串拼接改为对象语法
- *   （parseStyle 归一 customStyle / :style 对象，CONVENTIONS §19）；
- * - **根节点三件套**（NATIVE-REWRITE §3.1）：display: flex +
- *   flex-direction: column 在 index.scss 显式声明；探测 scroll-view 以
- *   四边 0 绝对定位铺满容器（§3.2 绝对定位写法）；
- * - **原生元素优先**：两个探测节点即 Lynx 原生 scroll-view（scroll-x /
- *   scroll-y + scroll-left / scroll-top 程序定位），无 Web 专有降级分支；
- * - **Style Funnel**（CONVENTIONS §20）：rootStyle 的宽高两个可切换键
- *   经 defineStyleKeys + resolveStyle 每帧输出完整键集，避免度量未返回时
- *   上一帧尺寸残留；
- * - 探测机制本身沿用参考源：容器 absolute 脱离文档流，两个隐藏 scroll-view
- *   绝对定位铺满容器，滚动位置布置到远超底部后被引擎钳制，触发 scroll
- *   事件后重新度量并比对 emit；无交互、无事件转发。
+ * wd-resize — 尺寸监听。
+ * getRect 使用真实宿主/引擎查询；原生 layoutchange 补足不触发 scroll 的初始化/变化。
+ * 保留官方两个隐藏滚动探针，但不用事件计数猜测初始化，尺寸变化只通知一次。
+ * 查询版本和卸载守卫拒绝晚到结果，customStyle 使用逐元素 Style Funnel。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onMounted, ref } from 'vue-lynx'
-import { addUnit, getRect, parseStyle, uuid, type CSSProperties } from '../../common/util'
-import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref } from 'vue-lynx'
+import { addUnit, getRect, parseStyle, uuid } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
 import { resizeProps } from './types'
 
 const props = defineProps(resizeProps)
-/**
- * resize 事件，容器尺寸变化时触发
- * 事件参数: { top, bottom, left, right, height, width }
- */
-const emit = defineEmits<{
-  (e: 'resize', detail: Record<string, string | number>): void
-}>()
+const emit = defineEmits(['resize', 'layoutchange'])
+const instance = getCurrentInstance()!
+const resizeId = `resize${uuid()}`
+const height = ref(0)
+const width = ref(0)
+const expandScrollTop = ref(0)
+const shrinkScrollTop = ref(0)
+const expandScrollLeft = ref(0)
+const shrinkScrollLeft = ref(0)
+let measured = false
+let alive = true
+let revision = 0
+const resolveRootStyle = createStyleResolver({ width: '0px', height: '0px' })
+const rootStyle = computed(() => resolveRootStyle({ width: addUnit(width.value), height: addUnit(height.value) }, parseStyle(props.customStyle)))
 
-const expandScrollTop = ref<number>(0) // 监听容器变大时的纵向滚动距离
-const shrinkScrollTop = ref<number>(0) // 监听容器变小时的纵向滚动距离
-const expandScrollLeft = ref<number>(0) // 监听容器变大时的横向滚动距离
-const shrinkScrollLeft = ref<number>(0) // 监听容器变小时的横向滚动距离
-const height = ref<number>(0) // 容器当前高度
-const width = ref<number>(0) // 容器当前宽度
-const scrollEventCount = ref<number>(0) // 滚动事件计数
-
-const resizeId = ref<string>(`resize${uuid()}`) // 容器唯一标识符
-
-/** 闭包记录的容器尺寸（参考源定义在首次度量回调内，此处提升为 setup 作用域） */
-let lastHeight = 0
-let lastWidth = 0
-
-/**
- * 可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
- * 中性值 0px：度量未返回（或容器塌缩）时不约束尺寸。
- */
-const RESIZE_STYLE = defineStyleKeys({
-  width: '0px',
-  height: '0px'
-})
-
-const rootStyle = computed<CSSProperties>(() => {
-  return {
-    ...resolveStyle(RESIZE_STYLE, {
-      width: addUnit(width.value),
-      height: addUnit(height.value)
-    }),
-    ...parseStyle(props.customStyle)
+function scrollToBottom() {
+  expandScrollTop.value = 100000 + height.value
+  shrinkScrollTop.value = 4 * height.value
+  expandScrollLeft.value = 100000 + width.value
+  shrinkScrollLeft.value = 4 * width.value
+}
+async function measure() {
+  if (!alive) return
+  const version = ++revision
+  const rect = await getRect(`#${resizeId}`, false, instance.proxy)
+  if (!alive || version !== revision) return
+  const newWidth = Number(rect?.width)
+  const newHeight = Number(rect?.height)
+  if (!Number.isFinite(newWidth) || !Number.isFinite(newHeight) || newWidth < 0 || newHeight < 0) return
+  const changed = !measured || newWidth !== width.value || newHeight !== height.value
+  width.value = newWidth
+  height.value = newHeight
+  measured = true
+  scrollToBottom()
+  if (changed) {
+    const detail: Record<string, number> = {}
+    for (const key of ['top', 'bottom', 'left', 'right', 'height', 'width']) detail[key] = Number(rect[key]) || 0
+    emit('resize', detail)
   }
-})
-
-/**
- * 滚动条拉到底部，重置两个 scroll-view 的滚动位置
- * 用于检测容器尺寸变化
- * @param {Object} params 参数对象
- * @param {number} params.lastWidth 上一次记录的宽度
- * @param {number} params.lastHeight 上一次记录的高度
- */
-function scrollToBottom({ lastWidth, lastHeight }: { lastWidth: number; lastHeight: number }) {
-  expandScrollTop.value = 100000 + lastHeight
-  shrinkScrollTop.value = 3 * height.value + lastHeight
-  expandScrollLeft.value = 100000 + lastWidth
-  shrinkScrollLeft.value = 3 * width.value + lastWidth
 }
-
-/** 滚动事件处理函数，动态定义用于闭包记录容器尺寸 */
-function onScrollHandler() {
-  getRect(`#${resizeId.value}`).then((res) => {
-    // 前两次滚动事件被触发，说明初始化修改已渲染，通知用户代码当前容器大小
-    if (scrollEventCount.value++ === 0) {
-      const result: Record<string, string | number> = {}
-      ;['bottom', 'top', 'left', 'right', 'height', 'width'].forEach((propName) => {
-        result[propName] = res[propName]
-      })
-      emit('resize', result)
-    }
-    // 滚动条拉到底部会触发多余的事件，前 3 次事件需要屏蔽掉初始化事件
-    if (scrollEventCount.value < 3) return
-    // 手动设置父容器高宽，防止父容器坍塌
-    // 滚动完，重新获取容器新的高度和宽度
-    const newHeight = res.height
-    const newWidth = res.width
-    // 立即填充父容器高宽
-    height.value = newHeight
-    width.value = newWidth
-    // 宽高都改变时，只需要触发一次 resize 事件
-    const emitStack: number[] = []
-    if (newHeight !== lastHeight) {
-      lastHeight = newHeight
-      emitStack.push(1)
-    }
-    if (newWidth !== lastWidth) {
-      lastWidth = newWidth
-      emitStack.push(1)
-    }
-    if (emitStack.length !== 0) {
-      const result: Record<string, any> = {}
-      ;['bottom', 'top', 'left', 'right', 'height', 'width'].forEach((propName) => {
-        result[propName] = res[propName]
-      })
-      emit('resize', result)
-    }
-    // 滚动条拉到底部进行新一轮的尺寸监听（如果使用 nextTick 效果更佳）
-    scrollToBottom({
-      lastWidth: lastWidth,
-      lastHeight: lastHeight
-    })
-  })
+function onLayoutChange(event: any) {
+  emit('layoutchange', event)
+  if (measured && Number(event?.detail?.width) === width.value && Number(event?.detail?.height) === height.value) return
+  void measure()
 }
-
-onMounted(() => {
-  // 初始化数据获取，获取容器的初始尺寸
-  getRect(`#${resizeId.value}`).then((res) => {
-    // 闭包记录容器高度和宽度，用于监听容器尺寸变化
-    lastHeight = res.height
-    lastWidth = res.width
-    // 立即填充父容器高宽
-    height.value = lastHeight
-    width.value = lastWidth
-    // 滚动条拉到底部进行初始化的尺寸监听（如果使用 nextTick 效果更佳）
-    scrollToBottom({
-      lastWidth: lastWidth,
-      lastHeight: lastHeight
-    })
-  })
-})
+onMounted(measure)
+onBeforeUnmount(() => { alive = false; revision++ })
 </script>
 
 <template>
   <view :class="`wd-resize ${customClass}`" :style="rootStyle">
-    <!--插槽需要脱离父容器文档流，防止父容器固宽固高，进而导致插槽大小被被父容器限制-->
-    <view :id="resizeId" :class="`wd-resize__container ${customContainerClass}`">
-      <!--被监听的插槽-->
+    <view :id="resizeId" :class="`wd-resize__container ${customContainerClass}`" @layoutchange="onLayoutChange">
       <slot />
-      <!--监听插槽变大-->
-      <scroll-view
-        class="wd-resize__wrapper"
-        :scroll-y="true"
-        :scroll-top="expandScrollTop"
-        :scroll-x="true"
-        :scroll-left="expandScrollLeft"
-        @scroll="onScrollHandler"
-      >
-        <view class="wd-resize__wrapper--placeholder" :style="{ height: '100000px', width: '100000px' }"></view>
+      <scroll-view class="wd-resize__wrapper" :scroll-y="true" :scroll-top="expandScrollTop" :scroll-x="true" :scroll-left="expandScrollLeft" @scroll="measure">
+        <view class="wd-resize__wrapper--placeholder" :style="{ height: '100000px', width: '100000px' }" />
       </scroll-view>
-      <!--监听插槽变小-->
-      <scroll-view
-        class="wd-resize__wrapper"
-        :scroll-y="true"
-        :scroll-top="shrinkScrollTop"
-        :scroll-x="true"
-        :scroll-left="shrinkScrollLeft"
-        @scroll="onScrollHandler"
-      >
-        <view class="wd-resize__wrapper--placeholder" :style="{ height: '250%', width: '250%' }"></view>
+      <scroll-view class="wd-resize__wrapper" :scroll-y="true" :scroll-top="shrinkScrollTop" :scroll-x="true" :scroll-left="shrinkScrollLeft" @scroll="measure">
+        <view class="wd-resize__wrapper--placeholder" :style="{ height: '250%', width: '250%' }" />
       </scroll-view>
     </view>
   </view>
