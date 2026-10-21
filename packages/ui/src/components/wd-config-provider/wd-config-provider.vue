@@ -1,9 +1,6 @@
 /* 主题样式与行为配置共享同一解析结果；Hook 使用独立注入键。
- * 修正官方 Hook theme/button/tag 未被组件消费、嵌套 portal 丢失外层变量的缺口。
- *
- * 通道划分（见 composables/useCssVarHost）：CSS 自定义属性走 `style` 属性字符串
- * （vue-lynx SET_STYLE 的逐属性写入会丢弃 `--x`），普通 customStyle 走 `:style`
- * 对象通道，两路键集互不重叠；撤回的变量输出空声明。
+ * CSS 自定义属性与普通样式同走原生对象通道，逐元素 Style Funnel 支持撤回。
+ * 不查询 DOM：组件在后台线程运行；Web 样式由主线程 WASM API 应用。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -13,7 +10,6 @@ import { parseStyle } from '../../common/util'
 import { createStyleResolver } from '../../common/style'
 import { useChildren } from '../../composables/useChildren'
 import { useParent } from '../../composables/useParent'
-import { useCssVarHost } from '../../composables/useCssVarHost'
 import { mapThemeVarsToCSSVars, USE_CONFIG_PROVIDER_KEY } from '../../composables/useConfigProvider'
 import { CONFIG_PROVIDER_KEY, mergeConfig, type ConfigProviderInput, type ConfigProviderProvide, type GlobalConfig } from '../../composables/global-config'
 
@@ -39,14 +35,12 @@ const themeClass = computed(() => `wd-config-provider wot-theme-${globalConfig.v
 
 const customStyle = computed(() => parseStyle(props.customStyle))
 const resolvePlainStyle = createStyleResolver()
-/** 普通内联样式（对象通道）；变量键由属性通道负责，二者不重叠 */
-const rootStyle = computed(() => resolvePlainStyle(themeStyle.value as Record<string, any>, customStyle.value))
-const { hostId } = useCssVarHost(() => [themeStyle.value, customStyle.value], () => rootStyle.value)
+/** CSS 变量和普通样式合并；所有历史覆盖键都能显式撤回。 */
+const rootStyle = computed(() => resolvePlainStyle(themeStyle.value, customStyle.value))
 
 linkChildren({ themeStyle, globalConfig })
 </script>
 <template>
-  <!-- data-theme 在 vue-lynx 0.5.1 上走 dataset 专用 PAPI 会抛错；主题类承担切换。
-       根节点带一次性 uid 标记，供变量属性通道精确定位本实例节点。 -->
-  <view :class="themeClass" :style="rootStyle" :wd-css-vars="hostId"><slot /></view>
+  <!-- data-theme 需要 dataset 专用 API；主题类已承担切换。 -->
+  <view :class="themeClass" :style="rootStyle"><slot /></view>
 </template>

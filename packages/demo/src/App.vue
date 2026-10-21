@@ -58,7 +58,7 @@ const actionSheetRef = ref<any>(null)
 const notifyRef = ref<any>(null)
 const asVisible = ref(false)
 
-// 内置图标画廊：全部 180 个图标经 wd-pagination 分页展示（每页 30 个 = 5 列 × 6 行）
+// 内置图标画廊：当前全部注册图标经 wd-pagination 分页展示（每页 30 个 = 5 列 × 6 行）
 const allIcons = listIcons()
 const iconPageSize = 30
 const iconTotalPage = Math.ceil(allIcons.length / iconPageSize)
@@ -428,7 +428,7 @@ const portalBarVisible = ref(false)
         <view class="demo-panel">
           <text class="demo-panel__label">内置图标（{{ allIcons.length }} 个，wd-pagination 分页展示）</text>
           <wd-grid :column="5">
-            <wd-grid-item v-for="name in pagedIcons" :key="name" :icon="name" :text="name" />
+            <wd-grid-item v-for="name in pagedIcons" :key="name" :icon="name" :text="name" ellipsis />
           </wd-grid>
           <view class="demo-row" style="justify-content: center; margin-top: 4px">
             <wd-pagination v-model="iconPage" :total-page="iconTotalPage" show-icon />
