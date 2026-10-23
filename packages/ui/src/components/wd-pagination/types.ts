@@ -1,6 +1,6 @@
 import { type ExtractPropTypes, type PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeRequiredProp } from '../../common/props'
-import { type ButtonVariant } from '../wd-button/types'
+import { type ButtonVariant } from '../../primitives/wd-button/types'
 
 export const paginationProps = {
   ...baseProps,

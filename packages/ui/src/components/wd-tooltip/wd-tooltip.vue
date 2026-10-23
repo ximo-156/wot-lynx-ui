@@ -21,8 +21,8 @@
 import './index.css'
 
 import { getCurrentInstance, inject, onBeforeMount, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdTransition from '../wd-transition/wd-transition.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdTransition from '../../primitives/wd-transition/wd-transition.vue'
 import { tooltipProps, type TooltipExpose } from './types'
 import { usePopover } from '../../composables/usePopover'
 import { closeOther, pushToQueue, removeFromQueue } from '../../common/clickoutside'

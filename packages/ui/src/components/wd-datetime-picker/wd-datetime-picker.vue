@@ -17,7 +17,7 @@
 import './index.css'
 
 import { computed, nextTick, onMounted, ref, watch } from 'vue-lynx'
-import WdPopup from '../wd-popup/wd-popup.vue'
+import WdPopup from '../../primitives/wd-popup/wd-popup.vue'
 import WdDatetimePickerView from '../wd-datetime-picker-view/wd-datetime-picker-view.vue'
 import { deepClone, isArray, isDef, isEqual, padZero, parseStyle } from '../../common/util'
 import { callInterceptor } from '../../common/interceptor'

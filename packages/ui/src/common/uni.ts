@@ -6,6 +6,7 @@
 import { getSystemInfo } from './util'
 import { createCanvasContext, canvasToTempFilePath } from './canvasHelper'
 import { getUniAdapter } from './uniAdapter'
+import { getPlatform } from './platform'
 export { configureUniAdapter, hasUniAdapter } from './uniAdapter'
 export type { UniAdapter } from './uniAdapter'
 
@@ -13,7 +14,11 @@ const warned = new Set<string>()
 function warnOnce(api: string, hint?: string): void {
   if (warned.has(api)) return
   warned.add(api)
-  console.warn(`[wot-lynx-ui] uni.${api} 在 Lynx 中不可用${hint ? `：${hint}` : ''}。可通过 configureUniAdapter({ ${api} }) 注入宿主实现。`)
+  // 平台名来自 getPlatform()，而不是写死 "Lynx"：本库也跑在 web 环境
+  // （packages/demo 的 environments.web），报错文案写错平台会误导排查。
+  console.warn(
+    `[wot-lynx-ui] uni.${api} 在当前平台（${getPlatform().name}）不可用${hint ? `：${hint}` : ''}。可通过 configureUniAdapter({ ${api} }) 注入宿主实现。`
+  )
 }
 
 function degrade(api: string, options?: any, hint?: string): any {

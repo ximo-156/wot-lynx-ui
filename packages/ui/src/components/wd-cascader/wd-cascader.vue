@@ -20,11 +20,11 @@
 import './index.css'
 
 import { computed, nextTick, ref, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import WdActionSheet from '../wd-action-sheet/wd-action-sheet.vue'
 import WdTabs from '../wd-tabs/wd-tabs.vue'
 import WdTab from '../wd-tab/wd-tab.vue'
-import WdLoading from '../wd-loading/wd-loading.vue'
+import WdLoading from '../../primitives/wd-loading/wd-loading.vue'
 import { callInterceptor } from '../../common/interceptor'
 import { useAlive } from '../../composables/useAlive'
 import { deepClone, isArray, isDef, parseStyle } from '../../common/util'

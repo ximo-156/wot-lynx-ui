@@ -24,13 +24,14 @@ import './index.css'
 
 import { computed, nextTick, ref, watch } from 'vue-lynx'
 import type { CSSProperties } from '../../common/util'
-import WdButton from '../wd-button/wd-button.vue'
+import WdButton from '../../primitives/wd-button/wd-button.vue'
 import { tourProps, type TourEmits, type TourExpose, type TourStep } from './types'
 import { addUnit, filterStyle, getRect, getSystemInfo, isDef, parseStyle } from '../../common/util'
 import { useRaf } from '../../composables/useRaf'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
-import { hasUniAdapter, uni } from '../../common/uni'
+import { uni } from '../../common/uni'
+import { getPlatform } from '../../common/platform'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(tourProps)
@@ -335,7 +336,7 @@ function scrollDown(res: any) {
   requestScroll(lastScrollTop.value + bottom - windowHeight.value + padding + Number(props.bottomSafetyOffset))
 }
 function requestScroll(scrollTop: number) {
-  if (!hasUniAdapter('pageScrollTo')) return
+  if (!getPlatform().capabilities.pageScroll) return
   const request = rectRequest
   const index = currentIndex.value
   const element = currentStep.value.element

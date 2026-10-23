@@ -1,0 +1,38 @@
+{
+  "wd-alpha": {
+    "name": "wd-alpha",
+    "layer": "primitives",
+    "family": null,
+    "modelValue": true,
+    "events": ["change", "update:modelValue"],
+    "slots": ["default"],
+    "props": [
+      {"name":"value","type":"number","default":"0","description":"值"},
+      {"name":"mode","type":"string","default":"'a'","options":"'a' | 'b'","description":"模式"},
+      {"name":"legacy","type":"number","default":"1","description":"旧名字"},
+      {"name":"strict","type":"boolean","default":"false","description":"严格"}
+    ]
+  },
+  "wd-beta": {
+    "name": "wd-beta",
+    "layer": "components",
+    "family": "nav",
+    "modelValue": false,
+    "events": ["click"],
+    "slots": [],
+    "props": [
+      {"name":"title","type":"string","description":"标题"},
+      {"name":"size","type":"string","default":"'small'","description":"尺寸"},
+      {"name":"count","type":"number","description":"数量"}
+    ]
+  },
+  "wd-gamma": {
+    "name": "wd-gamma",
+    "layer": "components",
+    "family": null,
+    "modelValue": false,
+    "events": [],
+    "slots": [],
+    "props": []
+  }
+}

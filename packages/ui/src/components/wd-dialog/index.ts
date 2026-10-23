@@ -1,7 +1,7 @@
 import { inject, provide, ref } from 'vue-lynx'
 import type { Dialog, DialogOptions, DialogOptionsWithCallBack, DialogResult, DialogType } from './types'
 import { deepMerge, isDef, isObj, isString } from '../../common/util'
-import { type IconProps } from '../wd-icon/types'
+import { type IconProps } from '../../primitives/wd-icon/types'
 import { useAlive } from '../../composables/useAlive'
 
 const dialogDefaultOptionKey = '__MESSAGE_OPTION__'

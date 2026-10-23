@@ -27,14 +27,21 @@ coverage/
 # ---------------------------------------------------------------------------
 # 3. 文档站（VitePress）缓存与产物
 #
-#    ⚠️ 注意：docs/guide/、docs/components/、docs/adr/ 是**文档源码**，
-#       由 docs/.vitepress/config.ts 的侧边栏引用，必须入库，不得忽略。
+#    两类文件要分开处理：
+#
+#    · docs/adr/、docs/guide/ 是**人工撰写的源码**，必须入库。历史上这里
+#      误加了 `docs/adr/*` / `docs/guide/*` 两条规则，导致 001–016 共 16 篇
+#      ADR 与全部指南只存在于本机、从未进过仓库——与文末「必须入库」清单
+#      直接矛盾。已于 2026-10-23 移除。
+#
+#    · docs/components/*.md 是 `scripts/gen-docs.mjs` 的**纯生成物**（由
+#      packages/ui/meta.json 推导），不入库。`docs:build` 会先跑 gen-docs，
+#      所以文档站不会 404。与 index.css 的区别：后者是运行时 import 的必需
+#      产物，前者只影响文档站构建。
 # ---------------------------------------------------------------------------
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 docs/components/*
-docs/adr/*
-docs/guide/*
 
 # ---------------------------------------------------------------------------
 # 4. 本地开发 / 调试产物
@@ -86,6 +93,7 @@ Thumbs.db
 #   packages/ui/src/components/*/index.css    由 index.scss 编译，CI 校验一致性
 #   packages/ui/src/components/index.ts       由 scripts/gen-index.mjs 生成，CI 校验一致性
 #   review-lint.baseline.json                 规范检查的存量豁免清单
+#   packages/ui/test/durations.json           测试耗时缓存，CI 分片均衡的依据
 #   docs/**/*.md                              文档站内容（侧边栏与 README 均引用）
 #
 # 这些文件由 CI 的 `generated` 与 `conventions` job 校验：
@@ -98,3 +106,15 @@ docs/public/_t3.html
 .wot-ref/
 .changeset/initial-features.md
 docs/rendering-verification-2026-10-21.md
+
+# API 变更清单与迁移计划（scripts/api-diff.mjs 的产物，按需生成，不入库）
+api-changes.md
+api-changes.json
+codemod-plan.json
+
+# 视觉回归的当次截图与差异图（基线与它们不同：基线入库，这里不入库）
+visual/current/
+
+# 测试耗时采集的中间产物（缓存本体 packages/ui/test/durations.json 要入库）
+.tmp-test-durations.json
+.tmp-testprof.json

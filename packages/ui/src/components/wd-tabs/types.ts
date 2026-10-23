@@ -21,14 +21,10 @@ export type TabsProvide = {
 
 export type TabsSlidable = 'auto' | 'always'
 
-/**
- * 底部条位置样式
- * normal: 默认宽度，不设置 lineWidth 时 宽度为 24px
- * text: 宽度跟随文字，不设置 lineWidth 时 宽度等于文字宽度
- * underline: 下划线，宽度等于 tab 宽度
- * dot: 点状，宽度等于 6px
- */
-export type TabsLineTheme = 'normal' | 'text' | 'underline' | 'dot'
+// TabsLineTheme 已下沉 common（wd-cascader 也需要它，避免跨组件借类型）。
+// 这里重新转出，保持 wd-tabs 的对外 API 不变。
+export type { TabsLineTheme } from '../../common/types'
+import type { TabsLineTheme } from '../../common/types'
 
 export const TABS_KEY: InjectionKey<TabsProvide> = Symbol('wd-tabs')
 

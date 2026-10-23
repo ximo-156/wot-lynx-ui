@@ -12,12 +12,11 @@ import { fireEvent } from './fire-event'
 import Grid from '../src/components/wd-grid/wd-grid.vue'
 import GridItem from '../src/components/wd-grid-item/wd-grid-item.vue'
 import Pagination from '../src/components/wd-pagination/wd-pagination.vue'
+import { compRead } from './helpers/component-roots'
 
 type Declarations = Record<string, string>
-const componentDir = join(__dirname, '..', 'src', 'components')
-
 function cssRules(component: string) {
-  const css = readFileSync(join(componentDir, component, 'index.css'), 'utf8')
+  const css = compRead(component, 'index.css')
   return Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g), ([, selector, body]) => {
     const declarations: Declarations = {}
     for (const declaration of body.split(';')) {

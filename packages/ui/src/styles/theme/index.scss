@@ -8,11 +8,13 @@
  * position: fixed 弹层会被 Lynx 提升到页面根节点、脱离 ConfigProvider
  * 子树，因此 .wd-root-portal 容器内需镜像一份同名变量（选择器保序：
  * 暗色在前、亮色在后，page 经层叠级默认落到亮色）。
+ *
+ * **不含预设主题**（brand-a / compact / high-contrast）：它们是覆盖层，
+ * 按需从 `wot-lynx-ui/theme/presets/*` 引入（ADR-016）。
  */
 @use './base/index.scss' as *;
 @use './light.scss' as light;
 @use './dark.scss' as dark;
-@use './presets/index.scss' as presets;
 
 page,
 .wot-theme-dark,
@@ -26,5 +28,3 @@ page,
   @include light.light-theme-vars;
 }
 
-/* 预设主题（brand-a / compact / high-contrast） */
-@include presets.preset-theme-classes;

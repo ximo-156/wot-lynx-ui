@@ -4,7 +4,7 @@
  */
 import { ref } from 'vue'
 import WdTour from 'wot-lynx-ui/components/wd-tour/wd-tour.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const visible = ref(false)
 const steps = ref([

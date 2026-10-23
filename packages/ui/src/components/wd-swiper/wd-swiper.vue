@@ -19,7 +19,8 @@ import { swiperProps, type SwiperItem } from './types'
 import type { SwiperNavProps } from '../wd-swiper-nav/types'
 import { addUnit, getRect, isObj, isVideoUrl, parseStyle, scrollViewTo, uuid } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
-import { hasUniAdapter, uni } from '../../common/uni'
+import { uni } from '../../common/uni'
+import { getPlatform } from '../../common/platform'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(swiperProps)
@@ -128,7 +129,7 @@ function recordVideo(index: number, playing: boolean) {
   playingVideos.value = next
 }
 function handleVideoChange(previous: number, current: number) {
-  if (!hasUniAdapter('createVideoContext')) return
+  if (!getPlatform().capabilities.videoContext) return
   if (props.stopPreviousVideo && props.list[previous] !== undefined && isVideo(props.list[previous])) {
     uni.createVideoContext(`video-${previous}-${uid}`, instance.proxy)?.pause?.()
     recordVideo(previous, false)

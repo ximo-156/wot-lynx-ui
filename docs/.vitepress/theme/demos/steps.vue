@@ -5,7 +5,7 @@
 import { ref } from 'vue'
 import WdSteps from 'wot-lynx-ui/components/wd-steps/wd-steps.vue'
 import WdStep from 'wot-lynx-ui/components/wd-step/wd-step.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const active = ref(1)
 </script>

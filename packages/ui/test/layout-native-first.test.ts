@@ -34,7 +34,7 @@ import Col from '../src/components/wd-col/wd-col.vue'
 import Grid from '../src/components/wd-grid/wd-grid.vue'
 import GridItem from '../src/components/wd-grid-item/wd-grid-item.vue'
 import Card from '../src/components/wd-card/wd-card.vue'
-import Cell from '../src/components/wd-cell/wd-cell.vue'
+import Cell from '../src/primitives/wd-cell/wd-cell.vue'
 import CellGroup from '../src/components/wd-cell-group/wd-cell-group.vue'
 import Divider from '../src/components/wd-divider/wd-divider.vue'
 import Gap from '../src/components/wd-gap/wd-gap.vue'
@@ -42,8 +42,8 @@ import Text from '../src/components/wd-text/wd-text.vue'
 import Resize from '../src/components/wd-resize/wd-resize.vue'
 import Sticky from '../src/components/wd-sticky/wd-sticky.vue'
 import StickyBox from '../src/components/wd-sticky-box/wd-sticky-box.vue'
+import { compRead } from './helpers/component-roots'
 
-const COMPONENT_DIR = join(__dirname, '..', 'src', 'components')
 
 /** 本批全部组件（wd-text 根为 text 元素，单独处理） */
 const VIEW_ROOTED = [
@@ -63,7 +63,7 @@ const VIEW_ROOTED = [
 
 /** 读取组件编译产物 index.css 并按选择器拆成声明表 */
 function cssRules(component: string): Array<{ selector: string; decls: Record<string, string> }> {
-  const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+  const css = compRead(component, 'index.css')
   const rules: Array<{ selector: string; decls: Record<string, string> }> = []
   const re = /([^{}]+)\{([^{}]*)\}/g
   let m: RegExpExecArray | null
@@ -161,17 +161,17 @@ describe('原生优先：Web 专有声明清零（NATIVE-REWRITE §3.1 / PORTING
   const ALL = VIEW_ROOTED.concat(['wd-text'])
 
   it.each(ALL)('%s 不含 inline-flex / inline-block', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css).not.toMatch(/display\s*:\s*inline-(?:flex|block)/)
   })
 
   it.each(ALL)('%s 不含 float / vertical-align / cursor / user-select / outline', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css, `${component} 残留 Web 专有声明`).not.toMatch(/(?:^|[;\s])(?:float|vertical-align|cursor|user-select|outline)\s*:/)
   })
 
   it.each(ALL)('%s 不含 -webkit-* / background-clip', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css).not.toMatch(/-webkit-/)
     expect(css).not.toMatch(/background-clip\s*:/)
   })

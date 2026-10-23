@@ -1,0 +1,18 @@
+{
+  "_note": "视觉回归设置。页面清单由 packages/ui/meta.json 派生，这里只放参数与排除项——避免出现第四份手写清单。exclude 每条必须写 reason（同 ADR-013 对 families.json 的要求）。",
+  "viewport": { "width": 1600, "height": 1200 },
+  "selector": ".wd-h5-phone__screen",
+  "settleMs": 350,
+  "threshold": 0.002,
+  "tolerance": 8,
+  "exclude": [
+    {
+      "name": "count-to",
+      "reason": "数字滚动由 JS 计时器驱动，冻结 CSS 动画无效；连拍两次差异 0.23%，每次都会误报"
+    },
+    {
+      "name": "datetime-picker-view",
+      "reason": "显示当前时间，跨分钟/跨天时截图必然变化；实测某次 check 出现 19x264 的竖向差异带（时间列）"
+    }
+  ]
+}

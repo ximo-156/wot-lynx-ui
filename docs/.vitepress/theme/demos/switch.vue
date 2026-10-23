@@ -4,7 +4,7 @@
  */
 import { ref } from 'vue'
 import WdSwitch from 'wot-lynx-ui/components/wd-switch/wd-switch.vue'
-import WdCell from 'wot-lynx-ui/components/wd-cell/wd-cell.vue'
+import WdCell from 'wot-lynx-ui/primitives/wd-cell/wd-cell.vue'
 import WdCellGroup from 'wot-lynx-ui/components/wd-cell-group/wd-cell-group.vue'
 
 const value = ref(true)

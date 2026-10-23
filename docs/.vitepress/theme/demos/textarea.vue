@@ -3,7 +3,7 @@
  * Textarea 文本域 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdTextarea from 'wot-lynx-ui/components/wd-textarea/wd-textarea.vue'
+import WdTextarea from 'wot-lynx-ui/primitives/wd-textarea/wd-textarea.vue'
 
 const value = ref('')
 </script>

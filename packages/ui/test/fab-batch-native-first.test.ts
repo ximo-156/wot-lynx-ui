@@ -30,9 +30,10 @@ import { pause } from '../src/common/util'
 import Backtop from '../src/components/wd-backtop/wd-backtop.vue'
 import QrCode from '../src/components/wd-qr-code/wd-qr-code.vue'
 import Upload from '../src/components/wd-upload/wd-upload.vue'
+import { compRead } from './helpers/component-roots'
 
-const SRC = path.resolve(__dirname, '..', 'src/components')
-const css = (rel: string) => readFileSync(path.join(SRC, rel), 'utf8')
+// 双组件根解析（ADR-012）：rel 形如 'wd-cell/index.css'
+const css = (rel: string) => compRead(...rel.split('/'))
 
 /**
  * 抽取指定选择器的声明体（编译产物为压缩单行）。

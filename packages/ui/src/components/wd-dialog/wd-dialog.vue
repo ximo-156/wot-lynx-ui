@@ -32,11 +32,11 @@
 import './index.css'
 
 import { computed, inject, reactive, ref, useSlots, watch } from 'vue-lynx'
-import WdPopup from '../wd-popup/wd-popup.vue'
-import WdButton from '../wd-button/wd-button.vue'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdInput from '../wd-input/wd-input.vue'
-import WdTextarea from '../wd-textarea/wd-textarea.vue'
+import WdPopup from '../../primitives/wd-popup/wd-popup.vue'
+import WdButton from '../../primitives/wd-button/wd-button.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdInput from '../../primitives/wd-input/wd-input.vue'
+import WdTextarea from '../../primitives/wd-textarea/wd-textarea.vue'
 import {
   dialogProps,
   type DialogBeforeConfirm,
@@ -55,7 +55,7 @@ import { callInterceptor } from '../../common/interceptor'
 import { deepAssign, deepMerge, isDef, isFunction, isObj, isString, isUndefined, omitBy } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
-import type { ButtonProps, ButtonVariant } from '../wd-button/types'
+import type { ButtonProps, ButtonVariant } from '../../primitives/wd-button/types'
 
 const props = defineProps(dialogProps)
 const isAlive = useAlive()

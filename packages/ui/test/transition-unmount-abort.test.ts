@@ -18,7 +18,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { pause } from '../src/common/util'
-import WdTransition from '../src/components/wd-transition/wd-transition.vue'
+import WdTransition from '../src/primitives/wd-transition/wd-transition.vue'
 import { AbortablePromise } from '../src/common/AbortablePromise'
 
 /** 等待 enter 完成（pause 约 33ms 一帧，enter 需 3 帧） */

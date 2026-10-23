@@ -1,6 +1,6 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeStringProp, numericProp } from '../../common/props'
-import type { BadgeProps } from '../wd-badge/types'
+import type { BadgeProps } from '../../primitives/wd-badge/types'
 
 /**
  * 页面跳转方式

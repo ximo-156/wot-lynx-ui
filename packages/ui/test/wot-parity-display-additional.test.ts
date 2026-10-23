@@ -12,14 +12,15 @@ import { pause } from '../src/common/util'
 import { uni } from '../src/common/uni'
 import Avatar from '../src/components/wd-avatar/wd-avatar.vue'
 import AvatarGroup from '../src/components/wd-avatar-group/wd-avatar-group.vue'
-import Badge from '../src/components/wd-badge/wd-badge.vue'
+import Badge from '../src/primitives/wd-badge/wd-badge.vue'
 import Tag from '../src/components/wd-tag/wd-tag.vue'
-import Img from '../src/components/wd-img/wd-img.vue'
+import Img from '../src/primitives/wd-img/wd-img.vue'
 import Empty from '../src/components/wd-empty/wd-empty.vue'
 import Skeleton from '../src/components/wd-skeleton/wd-skeleton.vue'
 import NoticeBar from '../src/components/wd-notice-bar/wd-notice-bar.vue'
+import { compRead } from './helpers/component-roots'
 
-const source = (name: string, file = 'index.css') => readFileSync(path.resolve(__dirname, `../src/components/${name}/${file}`), 'utf8')
+const source = (name: string, file = 'index.css') => compRead(name, file)
 const style = (el: Element) => (el as HTMLElement).style
 const settle = () => pause(25)
 function nativeEvent(el: Element, name: string, detail: Record<string, any> = {}) {

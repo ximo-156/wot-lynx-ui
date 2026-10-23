@@ -1,6 +1,6 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps } from '../../common/props'
-import type { LoadingProps } from '../wd-loading/types'
+import type { LoadingProps } from '../../primitives/wd-loading/types'
 
 /**
  * loadmore 组件的加载状态

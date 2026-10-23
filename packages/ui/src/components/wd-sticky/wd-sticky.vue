@@ -17,7 +17,8 @@ import { useParent } from '../../composables/useParent'
 import { useAlive } from '../../composables/useAlive'
 import { addUnit, getRect, parseStyle, uuid } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
-import { hasUniAdapter, uni } from '../../common/uni'
+import { uni } from '../../common/uni'
+import { getPlatform } from '../../common/platform'
 
 const props = defineProps(stickyProps)
 const emit = defineEmits(['layoutchange'])
@@ -25,8 +26,8 @@ const instance = getCurrentInstance()!
 const isAlive = useAlive()
 const { parent: stickyBox } = useParent(STICKY_BOX_KEY)
 const stickyId = `wd-sticky-${uuid()}`
-// 宿主能力应在挂载前配置；默认没有 observer 时不创建假的监听对象。
-const observerSupported = hasUniAdapter('createIntersectionObserver')
+// 宿主能力应在挂载前配置；没有交叉观察器能力时不创建假的监听对象。
+const observerSupported = getPlatform().capabilities.intersectionObserver
 const manualPosition = ref(observerSupported)
 const stickyState = reactive({ position: 'absolute', boxLeaved: false, top: 0, height: 0, width: 0, state: 'normal' })
 let observer: any = null
@@ -91,7 +92,7 @@ async function measure() {
   clearObserver()
   await nextTick()
   if (!isAlive() || version !== measureVersion) return
-  if (observerSupported && hasUniAdapter('createIntersectionObserver') && stickyState.height > 0) {
+  if (observerSupported && getPlatform().capabilities.intersectionObserver && stickyState.height > 0) {
     const nextObserver = uni.createIntersectionObserver(instance.proxy, { thresholds: [0, 0.5] })
     observer = nextObserver
     nextObserver?.relativeToViewport?.({ top: -(props.offsetTop + stickyState.height) })

@@ -9,7 +9,7 @@
 import './index.css'
 
 import { computed, onBeforeUnmount, ref, useMainThreadRef, watch } from 'vue-lynx'
-import WdLoading from '../wd-loading/wd-loading.vue'
+import WdLoading from '../../primitives/wd-loading/wd-loading.vue'
 import { pullRefreshProps } from './types'
 import { parseStyle } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'

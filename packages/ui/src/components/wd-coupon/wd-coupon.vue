@@ -3,8 +3,8 @@
 import './index.css'
 
 import { ref } from 'vue-lynx'
-import WdButton from '../wd-button/wd-button.vue'
-import WdInput from '../wd-input/wd-input.vue'
+import WdButton from '../../primitives/wd-button/wd-button.vue'
+import WdInput from '../../primitives/wd-input/wd-input.vue'
 import { couponProps, type Coupon } from './types'
 import { parseStyle } from '../../common/util'
 

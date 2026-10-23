@@ -20,3 +20,15 @@
   --wot-primary-particular: var(--wot-primary-2);
   --wot-primary-surface: var(--wot-primary-1);
 }
+
+/**
+ * 预设类名。
+ *
+ * 本文件既可被 `presets/index.scss` 聚合，也可**单独编译**为
+ * `presets/brand-a.css`（ADR-016：预设不进主包，按需引入）。
+ * 因此类名规则写在这里，而不是集中在 index.scss 的 mixin 里——
+ * 单独 `@use` 本文件即可得到可用的 CSS，不依赖聚合入口。
+ */
+.wot-theme-brand-a {
+  @include brand-a-theme-vars;
+}

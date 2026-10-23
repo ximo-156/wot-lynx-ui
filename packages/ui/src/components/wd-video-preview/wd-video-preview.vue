@@ -10,12 +10,13 @@
 import './index.css'
 
 import { computed, getCurrentInstance, inject, nextTick, reactive, ref, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdOverlay from '../wd-overlay/wd-overlay.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdOverlay from '../../primitives/wd-overlay/wd-overlay.vue'
 import { videoPreviewProps, type PreviewVideo, type VideoPreviewExpose, type VideoPreviewOptions } from './types'
 import { getVideoPreviewOptionKey } from './index'
 import { isDef, isFunction, uuid } from '../../common/util'
-import { hasUniAdapter, uni } from '../../common/uni'
+import { uni } from '../../common/uni'
+import { getPlatform } from '../../common/platform'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(videoPreviewProps)
@@ -68,7 +69,7 @@ function handleEnter() {
   enterFullScreen()
 }
 function enterFullScreen() {
-  if (!options.value.fullScreen || !hasUniAdapter('createVideoContext')) return
+  if (!options.value.fullScreen || !getPlatform().capabilities.videoContext) return
   const request = videoRequest
   nextTick(() => {
     if (!isAlive() || !state.show || !options.value.fullScreen || request !== videoRequest) return

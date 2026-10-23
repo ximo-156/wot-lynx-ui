@@ -5,23 +5,34 @@
  *   1. 引入主题：import 'wot-lynx-ui/theme'（提供 --wot-* 设计令牌）；
  *   2. 按需引入组件，或通过 createApp().use(wotLynxUI) 全局注册。
  *
- * 组件清单**不在此文件维护**：它由 scripts/gen-index.mjs 从 src/components/
- * 的目录结构生成（见 ./components/index.ts）。新增组件后运行 `pnpm gen:index`。
- * 本文件只负责：组件 barrel 的转出、非组件导出、以及全局注册插件。
+ * 组件清单**不在此文件维护**：它由 scripts/gen-index.mjs 从两处目录结构生成：
+ *   - src/primitives/  L3.5 基础件（icon / popup / button …）
+ *   - src/components/  L4 业务组件（calendar / tabs / form …）
+ * 新增组件后运行 `pnpm gen:index`。分层依据见 docs/adr/012-primitives-layer.md。
+ *
+ * 本文件只负责：两份 barrel 的转出、非组件导出、以及全局注册插件。
  */
 import type { App, Plugin } from 'vue-lynx'
+import { allPrimitives } from './primitives'
 import { allComponents } from './components'
 import { configureUniAdapter, hasUniAdapter, uni } from './common/uni'
 
 // ---------------------------------------------------------------------------
 // 组件（barrel 为生成物，勿手工维护清单）
 // ---------------------------------------------------------------------------
+export * from './primitives'
 export * from './components'
 
 // ---------------------------------------------------------------------------
 // uni-app 兼容层：宿主可注入路由 / 媒体选择 / Toast 等能力
 // ---------------------------------------------------------------------------
 export { configureUniAdapter, hasUniAdapter, uni }
+
+// ---------------------------------------------------------------------------
+// 平台能力（ADR-005 / ADR-015）：能力判定统一走 getPlatform().capabilities
+// ---------------------------------------------------------------------------
+export { getPlatform, configurePlatform, mockPlatform } from './common/platform'
+export type { PlatformAdapter, PlatformCapabilities, PlatformName } from './common/platform'
 
 // ---------------------------------------------------------------------------
 // 命令式 API（弹层系）
@@ -153,13 +164,15 @@ function toPascalCase(name: string): string {
 /**
  * 全局注册全部组件的 Vue 插件。
  *
- * 组件清单来自生成物 `./components`（单一来源），不再在此手工维护。
+ * 组件清单来自两份生成物（单一来源）：基础件在前、业务组件在后。
+ * 基础件不依赖业务组件，注册顺序不影响解析，但保持层序便于调试。
  */
 export const wotLynxUI: Plugin = {
   install(app: App) {
     installGlobalErrorGuard(app)
 
-    allComponents.forEach((component) => {
+    const registry = [...allPrimitives, ...allComponents]
+    registry.forEach((component) => {
       const rawName = component.name || (component as { __name?: string }).__name || 'WdComponent'
       app.component(rawName, component)
       const pascalName = toPascalCase(rawName)

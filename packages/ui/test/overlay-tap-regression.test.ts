@@ -20,8 +20,8 @@ import { h, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { pause } from '../src/common/util'
 import { fireEvent } from './fire-event'
-import Overlay from '../src/components/wd-overlay/wd-overlay.vue'
-import Popup from '../src/components/wd-popup/wd-popup.vue'
+import Overlay from '../src/primitives/wd-overlay/wd-overlay.vue'
+import Popup from '../src/primitives/wd-popup/wd-popup.vue'
 
 /** 等待过渡入场（pause 约 33ms 一帧，enter 需 2 帧置 display） */
 async function frames(n = 6) {

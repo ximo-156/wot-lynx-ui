@@ -7,7 +7,7 @@
  */
 import { ref } from 'vue'
 import WdCalendar from 'wot-lynx-ui/components/wd-calendar/wd-calendar.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const dateVisible = ref(false)
 const rangeVisible = ref(false)

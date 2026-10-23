@@ -68,6 +68,11 @@ import App from './App.vue'
 createApp(App).mount()
 ```
 
+> **预设主题按需引入**（ADR-016）：`brand-a` / `compact` / `high-contrast` 不进主包。
+> 需要时额外 `import 'wot-lynx-ui/theme/presets/brand-a'`（或 `/theme/presets` 全量），
+> 再用 `<WdConfigProvider theme="brand-a">` 或 `class="wot-theme-brand-a"` 启用。
+> 未引入对应 CSS 时不会报错，只是主题不生效。
+
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue-lynx'
@@ -154,10 +159,68 @@ pnpm build:css        # 编译 SCSS → CSS（组件样式）
 pnpm dev:demo         # 启动 Demo（Rspeedy dev server）
 pnpm build:demo       # 构建 Demo（web + lynx 双端）
 pnpm typecheck        # 类型检查
-pnpm test             # 单元测试（Vue Lynx 双线程环境）
+pnpm test             # 全部测试（node + jsdom 双 project，约 35s）
+pnpm test:shard --index=1 --count=4   # 只跑 1/4 分片（CI 用，按实测耗时均衡）
+pnpm test:shard:plan  # 只看分片负载，不跑
 pnpm docs:dev         # 文档站
 pnpm verify           # 一键校验：CSS 编译 + 类型检查 + 测试 + Demo 构建
 ```
+
+### 测试结构
+
+`vitest.config.ts` 把测试分成两个 project：
+
+| project | 环境 | 内容 | 特点 |
+|---|---|---|---|
+| `unit` | node | 纯函数 / 静态数据（`PURE_TESTS` 精确清单） | 不搭双线程环境，单文件约 20ms |
+| `component` | jsdom | 其余全部（组件渲染、交互回归） | 环境按 worker 复用 |
+
+文件隔离在**根 `test`** 上关闭（`test.isolate: false`），两个 project 都受益：JSDOM +
+`LynxTestingEnv` 每文件重建约 3s，比单文件真正要验的逻辑（中位数 < 300ms）大一个数量级。
+全量因此从 110s 降到 33s。
+
+> ⚠️ 这一行**必须写在根 `test` 上**。写在 project 内部会被静默忽略（不报错、不警告），
+> 只有量耗时能发现：实测 project 内写 `isolate: false` 是 113.88s，根层才是 33.35s。
+
+代价是模块级状态不再随文件结束而消失。**新增「测试会写、生产不撤销」的全局注册表时，
+必须在 `packages/ui/test/setup.ts` 的 `beforeEach` 里复位**，否则结果依赖文件执行顺序。
+验证方法：
+
+```bash
+cd packages/ui
+npx vitest run --sequence.shuffle.files --sequence.seed=7   # 换几个 seed，失败数应恒等于基线
+```
+
+（注意用 `--sequence.shuffle.files`，不要用 `--sequence.shuffle`——后者会连文件内的用例
+一起打乱，把「文件内顺序依赖」误判成「跨文件泄漏」。）
+
+新增测试文件后建议跑 `pnpm test:shard:update` 刷新耗时缓存，让 CI 分片保持均衡
+（不刷新只会不均，不会漏跑）。详见 [ADR-021](./docs/adr/021-test-isolation-and-sharding.md)。
+
+### 改组件 API 时
+
+组件的 props / events / slots 由源码推导到 `packages/ui/meta.json`（`pnpm gen:meta`），
+文档与侧边栏从 meta 生成（`pnpm gen:docs`）。改完跑：
+
+```bash
+pnpm gen:meta                                     # 重新推导契约
+pnpm api:diff --base main --md api-changes.md     # 看这次改了什么、哪些是破坏性的
+pnpm codemod --plan codemod-plan.json --dir .     # 按迁移计划改写调用方（默认 dry-run）
+```
+
+`api:diff` 把差异分成 major / minor / patch / docs 四级；`codemod` 只自动改写**能证明
+等价**的 prop 改名，其余变更输出人工指引。详见 [ADR-019](./docs/adr/019-api-diff-and-codemod.md)。
+
+### 改样式时
+
+```bash
+pnpm docs:build       # 视觉回归拍的是文档站的组件预览
+pnpm visual:check     # 与基线比较，有差异会指出区域并生成差异图
+pnpm visual:baseline  # 差异是有意的 → 更新基线；换平台后也要先跑一次
+```
+
+基线按平台隔离（字体光栅化不同），位于 `visual/baseline/<platform>/`。首次在新平台
+运行 `visual:check` 会提示「缺基线」而不是判失败。详见 [ADR-020](./docs/adr/020-visual-regression.md)。
 
 ## 目录结构
 

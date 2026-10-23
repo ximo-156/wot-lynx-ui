@@ -1,8 +1,8 @@
 /*
  * ⚠️ 本文件由 scripts/gen-index.mjs 自动生成，请勿手动编辑。
  *
+ * L4 业务组件的清单单一来源：src/components/ 下的目录（含 <dir>.vue 与 types.ts）。
  * 新增 / 删除组件后运行：pnpm gen:index
- * 组件清单的单一来源是 src/components/ 下的目录（含 <dir>.vue 与 types.ts）。
  */
 
 import ActionSheet from './wd-action-sheet/wd-action-sheet.vue'
@@ -10,14 +10,11 @@ import AddressEdit from './wd-address-edit/wd-address-edit.vue'
 import Avatar from './wd-avatar/wd-avatar.vue'
 import AvatarGroup from './wd-avatar-group/wd-avatar-group.vue'
 import Backtop from './wd-backtop/wd-backtop.vue'
-import Badge from './wd-badge/wd-badge.vue'
 import BarCode from './wd-bar-code/wd-bar-code.vue'
-import Button from './wd-button/wd-button.vue'
 import Calendar from './wd-calendar/wd-calendar.vue'
 import CalendarView from './wd-calendar-view/wd-calendar-view.vue'
 import Card from './wd-card/wd-card.vue'
 import Cascader from './wd-cascader/wd-cascader.vue'
-import Cell from './wd-cell/wd-cell.vue'
 import CellGroup from './wd-cell-group/wd-cell-group.vue'
 import Checkbox from './wd-checkbox/wd-checkbox.vue'
 import CheckboxGroup from './wd-checkbox-group/wd-checkbox-group.vue'
@@ -44,28 +41,22 @@ import FormItem from './wd-form-item/wd-form-item.vue'
 import Gap from './wd-gap/wd-gap.vue'
 import Grid from './wd-grid/wd-grid.vue'
 import GridItem from './wd-grid-item/wd-grid-item.vue'
-import Icon from './wd-icon/wd-icon.vue'
 import ImagePreview from './wd-image-preview/wd-image-preview.vue'
-import Img from './wd-img/wd-img.vue'
 import ImgCropper from './wd-img-cropper/wd-img-cropper.vue'
 import IndexAnchor from './wd-index-anchor/wd-index-anchor.vue'
 import IndexBar from './wd-index-bar/wd-index-bar.vue'
-import Input from './wd-input/wd-input.vue'
 import InputNumber from './wd-input-number/wd-input-number.vue'
 import Keyboard from './wd-keyboard/wd-keyboard.vue'
-import Loading from './wd-loading/wd-loading.vue'
 import Loadmore from './wd-loadmore/wd-loadmore.vue'
 import Navbar from './wd-navbar/wd-navbar.vue'
 import NavbarCapsule from './wd-navbar-capsule/wd-navbar-capsule.vue'
 import NoticeBar from './wd-notice-bar/wd-notice-bar.vue'
 import Notify from './wd-notify/wd-notify.vue'
-import Overlay from './wd-overlay/wd-overlay.vue'
 import Pagination from './wd-pagination/wd-pagination.vue'
 import PasswordInput from './wd-password-input/wd-password-input.vue'
 import Picker from './wd-picker/wd-picker.vue'
 import PickerView from './wd-picker-view/wd-picker-view.vue'
 import Popover from './wd-popover/wd-popover.vue'
-import Popup from './wd-popup/wd-popup.vue'
 import Progress from './wd-progress/wd-progress.vue'
 import PullRefresh from './wd-pull-refresh/wd-pull-refresh.vue'
 import QrCode from './wd-qr-code/wd-qr-code.vue'
@@ -73,7 +64,6 @@ import Radio from './wd-radio/wd-radio.vue'
 import RadioGroup from './wd-radio-group/wd-radio-group.vue'
 import Rate from './wd-rate/wd-rate.vue'
 import Resize from './wd-resize/wd-resize.vue'
-import RootPortal from './wd-root-portal/wd-root-portal.vue'
 import Row from './wd-row/wd-row.vue'
 import Search from './wd-search/wd-search.vue'
 import Segmented from './wd-segmented/wd-segmented.vue'
@@ -103,11 +93,9 @@ import TableColumn from './wd-table-column/wd-table-column.vue'
 import Tabs from './wd-tabs/wd-tabs.vue'
 import Tag from './wd-tag/wd-tag.vue'
 import Text from './wd-text/wd-text.vue'
-import Textarea from './wd-textarea/wd-textarea.vue'
 import Toast from './wd-toast/wd-toast.vue'
 import Tooltip from './wd-tooltip/wd-tooltip.vue'
 import Tour from './wd-tour/wd-tour.vue'
-import Transition from './wd-transition/wd-transition.vue'
 import Upload from './wd-upload/wd-upload.vue'
 import VideoPreview from './wd-video-preview/wd-video-preview.vue'
 import Watermark from './wd-watermark/wd-watermark.vue'
@@ -118,14 +106,11 @@ export {
   Avatar,
   AvatarGroup,
   Backtop,
-  Badge,
   BarCode,
-  Button,
   Calendar,
   CalendarView,
   Card,
   Cascader,
-  Cell,
   CellGroup,
   Checkbox,
   CheckboxGroup,
@@ -152,28 +137,22 @@ export {
   Gap,
   Grid,
   GridItem,
-  Icon,
   ImagePreview,
-  Img,
   ImgCropper,
   IndexAnchor,
   IndexBar,
-  Input,
   InputNumber,
   Keyboard,
-  Loading,
   Loadmore,
   Navbar,
   NavbarCapsule,
   NoticeBar,
   Notify,
-  Overlay,
   Pagination,
   PasswordInput,
   Picker,
   PickerView,
   Popover,
-  Popup,
   Progress,
   PullRefresh,
   QrCode,
@@ -181,7 +160,6 @@ export {
   RadioGroup,
   Rate,
   Resize,
-  RootPortal,
   Row,
   Search,
   Segmented,
@@ -211,11 +189,9 @@ export {
   Tabs,
   Tag,
   Text,
-  Textarea,
   Toast,
   Tooltip,
   Tour,
-  Transition,
   Upload,
   VideoPreview,
   Watermark,
@@ -226,14 +202,11 @@ export type { AddressEditProps } from './wd-address-edit/types'
 export type { AvatarProps } from './wd-avatar/types'
 export type { AvatarGroupProps } from './wd-avatar-group/types'
 export type { BacktopProps } from './wd-backtop/types'
-export type { BadgeProps } from './wd-badge/types'
 export type { BarCodeProps } from './wd-bar-code/types'
-export type { ButtonProps } from './wd-button/types'
 export type { CalendarProps } from './wd-calendar/types'
 export type { CalendarViewProps } from './wd-calendar-view/types'
 export type { CardProps } from './wd-card/types'
 export type { CascaderProps } from './wd-cascader/types'
-export type { CellProps } from './wd-cell/types'
 export type { CellGroupProps } from './wd-cell-group/types'
 export type { CheckboxProps } from './wd-checkbox/types'
 export type { CheckboxGroupProps } from './wd-checkbox-group/types'
@@ -260,28 +233,22 @@ export type { FormItemProps } from './wd-form-item/types'
 export type { GapProps } from './wd-gap/types'
 export type { GridProps } from './wd-grid/types'
 export type { GridItemProps } from './wd-grid-item/types'
-export type { IconProps } from './wd-icon/types'
 export type { ImagePreviewProps } from './wd-image-preview/types'
-export type { ImgProps } from './wd-img/types'
 export type { ImgCropperProps } from './wd-img-cropper/types'
 export type { IndexAnchorProps } from './wd-index-anchor/types'
 export type { IndexBarProps } from './wd-index-bar/types'
-export type { InputProps } from './wd-input/types'
 export type { InputNumberProps } from './wd-input-number/types'
 export type { KeyboardProps } from './wd-keyboard/types'
-export type { LoadingProps } from './wd-loading/types'
 export type { LoadmoreProps } from './wd-loadmore/types'
 export type { NavbarProps } from './wd-navbar/types'
 export type { NavbarCapsuleProps } from './wd-navbar-capsule/types'
 export type { NoticeBarProps } from './wd-notice-bar/types'
 export type { NotifyProps } from './wd-notify/types'
-export type { OverlayProps } from './wd-overlay/types'
 export type { PaginationProps } from './wd-pagination/types'
 export type { PasswordInputProps } from './wd-password-input/types'
 export type { PickerProps } from './wd-picker/types'
 export type { PickerViewProps } from './wd-picker-view/types'
 export type { PopoverProps } from './wd-popover/types'
-export type { PopupProps } from './wd-popup/types'
 export type { ProgressProps } from './wd-progress/types'
 export type { PullRefreshProps } from './wd-pull-refresh/types'
 export type { QrCodeProps } from './wd-qr-code/types'
@@ -289,7 +256,6 @@ export type { RadioProps } from './wd-radio/types'
 export type { RadioGroupProps } from './wd-radio-group/types'
 export type { RateProps } from './wd-rate/types'
 export type { ResizeProps } from './wd-resize/types'
-export type { RootPortalProps } from './wd-root-portal/types'
 export type { RowProps } from './wd-row/types'
 export type { SearchProps } from './wd-search/types'
 export type { SegmentedProps } from './wd-segmented/types'
@@ -319,30 +285,25 @@ export type { TableColumnProps } from './wd-table-column/types'
 export type { TabsProps } from './wd-tabs/types'
 export type { TagProps } from './wd-tag/types'
 export type { TextProps } from './wd-text/types'
-export type { TextareaProps } from './wd-textarea/types'
 export type { ToastProps } from './wd-toast/types'
 export type { TooltipProps } from './wd-tooltip/types'
 export type { TourProps } from './wd-tour/types'
-export type { TransitionProps } from './wd-transition/types'
 export type { UploadProps } from './wd-upload/types'
 export type { VideoPreviewProps } from './wd-video-preview/types'
 export type { WatermarkProps } from './wd-watermark/types'
 
-/** 全部组件清单（供 createApp().use(wotLynxUI) 全局注册使用） */
+/** L4 业务组件清单（供 createApp().use(wotLynxUI) 全局注册使用） */
 export const allComponents = [
   ActionSheet,
   AddressEdit,
   Avatar,
   AvatarGroup,
   Backtop,
-  Badge,
   BarCode,
-  Button,
   Calendar,
   CalendarView,
   Card,
   Cascader,
-  Cell,
   CellGroup,
   Checkbox,
   CheckboxGroup,
@@ -369,28 +330,22 @@ export const allComponents = [
   Gap,
   Grid,
   GridItem,
-  Icon,
   ImagePreview,
-  Img,
   ImgCropper,
   IndexAnchor,
   IndexBar,
-  Input,
   InputNumber,
   Keyboard,
-  Loading,
   Loadmore,
   Navbar,
   NavbarCapsule,
   NoticeBar,
   Notify,
-  Overlay,
   Pagination,
   PasswordInput,
   Picker,
   PickerView,
   Popover,
-  Popup,
   Progress,
   PullRefresh,
   QrCode,
@@ -398,7 +353,6 @@ export const allComponents = [
   RadioGroup,
   Rate,
   Resize,
-  RootPortal,
   Row,
   Search,
   Segmented,
@@ -428,11 +382,9 @@ export const allComponents = [
   Tabs,
   Tag,
   Text,
-  Textarea,
   Toast,
   Tooltip,
   Tour,
-  Transition,
   Upload,
   VideoPreview,
   Watermark,

@@ -7,8 +7,8 @@
  */
 import { ref } from 'vue'
 import WdKeyboard from 'wot-lynx-ui/components/wd-keyboard/wd-keyboard.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
-import WdInput from 'wot-lynx-ui/components/wd-input/wd-input.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdInput from 'wot-lynx-ui/primitives/wd-input/wd-input.vue'
 
 const defaultVisible = ref(false)
 const customVisible = ref(false)

@@ -20,7 +20,11 @@ function mtsWorkletPlugin() {
     name: 'wot-lynx-mts-worklet-shim',
     enforce: 'post' as const,
     transform(code: string, id: string) {
-      if (!id.includes('/src/components/') || !id.endsWith('.vue')) return null
+      // 覆盖两个组件根：L3.5 基础件（src/primitives）与 L4 业务组件（src/components）。
+      // ⚠️ 新增组件根时必须同步这里，否则该根的 worklet 不会被包装，
+      //    主线程事件 ctx 为 null → applySetWorkletEvent 崩（`_workletType` on null）。
+      //    分层依据见 docs/adr/012-primitives-layer.md。
+      if (!/\/src\/(?:components|primitives)\//.test(id) || !id.endsWith('.vue')) return null
       // SFC 编译器会把指令字符串规范成双引号，两种引号都认
       if (!code.includes("'main thread'") && !code.includes('"main thread"')) return null
 
@@ -120,16 +124,22 @@ const LYNX_NATIVE_TAGS = new Set([
  * 验证的逻辑无关——2026-10 实测 36 个文件 214s，其中 environment 累计 745s。
  */
 const PURE_TESTS = [
+  'test/api-diff.test.ts',
+  'test/codemod.test.ts',
   'test/format-date.test.ts',
   'test/interceptor.test.ts',
   'test/locale-parity.test.ts',
+  'test/meta-generated.test.ts',
   'test/no-main-thread-script.test.ts',
+  'test/png-codec.test.ts',
+  'test/project-coverage.test.ts',
   'test/qr-encoder.test.ts',
   'test/side-effects.test.ts',
   'test/style-funnel.test.ts',
   'test/tag-transform-loader.test.ts',
   'test/theme-token-parity.test.ts',
   'test/util-merge.test.ts',
+  'test/visual-diff.test.ts',
   'test/web-font-plugin.test.ts'
 ]
 
@@ -140,6 +150,27 @@ export default defineConfig({
     __VUE_LYNX_AUTO_PIXEL_UNIT__: 'true'
   },
   test: {
+    /**
+     * 环境复用：一个 worker 连续跑多个测试文件，`test/setup.ts` 只执行一次。
+     *
+     * ⚠️ **必须写在根 `test` 上，写在 project 内部会被静默忽略。**
+     *    2026-10 实测（71 个组件文件 / 8 核）：
+     *      project 内 isolate:false      → 113.88s，environment 累计 274.49s
+     *      根 test.isolate = false       →  30.60s，environment 累计  25.32s（本行）
+     *      仅 CLI --no-isolate           →  30.60s（与上面等价，可作交叉验证）
+     *    差异是「配置看着对、行为没变」：断言配置值发现不了，只有量耗时能发现。
+     *    `test/project-coverage.test.ts` 会断言这一行的位置（根层），并说明原因。
+     *
+     * 收益来源不是「少启动进程」，而是 JSDOM + LynxTestingEnv 每文件重建一次的
+     * ≈3s —— 它比单个文件里真正要验的逻辑（中位数 < 300ms）大一个数量级。
+     * 关掉隔离后这份成本摊到整个 worker。
+     *
+     * ⚠️ 代价：模块级状态不再随文件结束而消失。前提是「测试文件之间没有可变
+     *    全局状态耦合」，这不是靠一次跑绿就能证明的，必须用
+     *    `--sequence.shuffle.files` 多 seed 取证（ADR-021）。新增「测试会写、
+     *    生产不会撤销」的全局注册表时，记得在 setup.ts 的 beforeEach 里复位。
+     */
+    isolate: false,
     projects: [
       {
         extends: true,

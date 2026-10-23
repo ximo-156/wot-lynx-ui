@@ -8,8 +8,8 @@
 import './index.css'
 
 import { computed, getCurrentInstance, inject, nextTick, onBeforeMount, onBeforeUnmount, reactive, ref, watch } from 'vue-lynx'
-import WdOverlay from '../wd-overlay/wd-overlay.vue'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdOverlay from '../../primitives/wd-overlay/wd-overlay.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { closeOther } from '../../common/clickoutside'
 import { type Queue, queueKey } from '../../composables/useQueue'
 import { getRect, getSystemInfo, parseStyle, uuid } from '../../common/util'

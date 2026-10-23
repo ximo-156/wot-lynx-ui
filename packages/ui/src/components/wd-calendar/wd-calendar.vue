@@ -23,10 +23,10 @@
 import './index.css'
 
 import { ref, computed, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import WdCalendarView from '../wd-calendar-view/wd-calendar-view.vue'
 import WdActionSheet from '../wd-action-sheet/wd-action-sheet.vue'
-import WdButton from '../wd-button/wd-button.vue'
+import WdButton from '../../primitives/wd-button/wd-button.vue'
 import WdTabs from '../wd-tabs/wd-tabs.vue'
 import WdTab from '../wd-tab/wd-tab.vue'
 import WdTag from '../wd-tag/wd-tag.vue'

@@ -38,7 +38,7 @@
 import './index.css'
 
 import { ref, watch, nextTick, computed, reactive, onMounted, onActivated, onDeactivated, onBeforeUnmount } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { getRect, isArray, isDef, parseStyle, uuid, type CSSProperties } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { type NoticeBarExpose, noticeBarProps } from './types'

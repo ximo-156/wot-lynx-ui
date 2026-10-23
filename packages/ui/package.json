@@ -16,9 +16,21 @@
       "source": "./src/styles/theme/index.scss",
       "import": "./dist/theme/index.css"
     },
+    "./theme/presets": {
+      "source": "./src/styles/theme/presets/index.scss",
+      "import": "./dist/theme/presets/index.css"
+    },
+    "./theme/presets/*": {
+      "source": "./src/styles/theme/presets/*.scss",
+      "import": "./dist/theme/presets/*.css"
+    },
     "./components/*": {
-      "source": "./src/components/*",
+      "source": "./src/components/*/*.vue",
       "import": "./dist/components/*/index.mjs"
+    },
+    "./primitives/*": {
+      "source": "./src/primitives/*/*.vue",
+      "import": "./dist/primitives/*/index.mjs"
     },
     "./package.json": "./package.json",
     "./plugin": "./plugin/index.js"
@@ -29,7 +41,11 @@
     "plugin",
     "README.md"
   ],
-  "sideEffects": true,
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss",
+    "**/*.ttf"
+  ],
   "scripts": {
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",

@@ -23,7 +23,7 @@
 import './index.css'
 
 import { computed, onMounted, ref, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { searchProps } from './types'
 import { pause, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'

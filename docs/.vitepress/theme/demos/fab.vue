@@ -4,7 +4,7 @@
  */
 import { ref } from 'vue'
 import WdFab from 'wot-lynx-ui/components/wd-fab/wd-fab.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const active = ref(false)
 const activeLeft = ref(false)

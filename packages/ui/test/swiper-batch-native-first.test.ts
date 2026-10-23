@@ -24,16 +24,14 @@
  *    静态契约。
  */
 import { describe, it, expect, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { fireEvent } from './fire-event'
 import { pause } from '../src/common/util'
 import Swiper from '../src/components/wd-swiper/wd-swiper.vue'
 import SwiperNav from '../src/components/wd-swiper-nav/wd-swiper-nav.vue'
+import { compRead } from './helpers/component-roots'
 
-const COMPONENT_DIR = join(__dirname, '..', 'src', 'components')
 
 /** 本批全部组件 */
 const BATCH = [
@@ -71,7 +69,7 @@ const ROOT_DIRECTION: Record<string, 'row' | 'column'> = {
 
 /** 读取组件编译产物 index.css 并按选择器拆成声明表 */
 function cssRules(component: string): Array<{ selector: string; decls: Record<string, string> }> {
-  const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+  const css = compRead(component, 'index.css')
   const rules: Array<{ selector: string; decls: Record<string, string> }> = []
   const re = /([^{}]+)\{([^{}]*)\}/g
   let m: RegExpExecArray | null
@@ -163,22 +161,22 @@ describe('原生优先：flex-direction 必须挂在 display:flex 上（CONVENTI
 
 describe('原生优先：Web 专有声明清零（NATIVE-REWRITE §3.1 / PORTING §4.5）', () => {
   it.each(BATCH)('%s 不含 inline-flex / inline-block', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css).not.toMatch(/display\s*:\s*inline-(?:flex|block)/)
   })
 
   it.each(BATCH)('%s 不含 float / vertical-align / cursor / user-select / outline', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css, `${component} 残留 Web 专有声明`).not.toMatch(/(?:^|[;\s])(?:float|vertical-align|cursor|user-select|outline)\s*:/)
   })
 
   it.each(BATCH)('%s 不含 -webkit-*', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css).not.toMatch(/-webkit-/)
   })
 
   it.each(BATCH)('%s 不含 rpx 单位（Lynx 只认 px）', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css, `${component} 残留小程序专有 rpx 单位`).not.toMatch(/\d+rpx/)
   })
 })
@@ -339,7 +337,7 @@ describe('原生优先：居中成对写全（NATIVE-REWRITE §3.2）', () => {
   })
 
   it('wd-table：居中对齐的单元格文本同步 text-align: center', () => {
-    const css = readFileSync(join(COMPONENT_DIR, 'wd-table', 'index.css'), 'utf8')
+    const css = compRead('wd-table', 'index.css')
     // flex 子项（text）以盒子为单位被 justify-content 对齐；换行 / 省略时
     // 盒子撑满单元格，内部文本需按对齐方式同步 text-align
     expect(css).toMatch(/\.wd-table__cell\.is-center\s+\.wd-table__value\{[^}]*text-align:center/)

@@ -19,7 +19,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import WdIcon from '../../wd-icon/wd-icon.vue'
+import WdIcon from '../../../primitives/wd-icon/wd-icon.vue'
 import { computed, ref, onMounted, watch } from 'vue-lynx'
 import { compareYear, formatYearTitle, getYears } from '../utils'
 import { isArray, isNumber, pause } from '../../../common/util'

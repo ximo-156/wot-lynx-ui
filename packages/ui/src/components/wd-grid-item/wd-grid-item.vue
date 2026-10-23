@@ -31,15 +31,15 @@
 import './index.css'
 
 import { computed } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdBadge from '../wd-badge/wd-badge.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdBadge from '../../primitives/wd-badge/wd-badge.vue'
 import { useParent } from '../../composables/useParent'
 import { GRID_KEY } from '../wd-grid/types'
 import { addUnit, deepAssign, isDef, isString, isUndefined, omitBy, parseStyle, type CSSProperties } from '../../common/util'
 import { defineStyleKeys, resolveStyle, createStyleResolver } from '../../common/style'
 import { gridItemProps } from './types'
 import { uni } from '../../common/uni'
-import type { BadgeProps } from '../wd-badge/types'
+import type { BadgeProps } from '../../primitives/wd-badge/types'
 
 /** GridItem 组件 Props 定义 */
 const props = defineProps(gridItemProps)

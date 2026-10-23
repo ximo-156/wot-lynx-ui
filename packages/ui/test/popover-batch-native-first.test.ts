@@ -35,9 +35,10 @@ import FloatingPanel from '../src/components/wd-floating-panel/wd-floating-panel
 import Tour from '../src/components/wd-tour/wd-tour.vue'
 import ImagePreview from '../src/components/wd-image-preview/wd-image-preview.vue'
 import VideoPreview from '../src/components/wd-video-preview/wd-video-preview.vue'
+import { compRead } from './helpers/component-roots'
 
-const SRC = path.resolve(__dirname, '..', 'src/components')
-const css = (rel: string) => readFileSync(path.join(SRC, rel), 'utf8')
+// 双组件根解析（ADR-012）：rel 形如 'wd-cell/index.css'
+const css = (rel: string) => compRead(...rel.split('/'))
 
 /** 抽取指定选择器的声明体（编译产物为压缩单行，按选择器精确切分） */
 function ruleOf(cssText: string, selector: string): string {

@@ -39,6 +39,26 @@ export function registerIconSet(set: IconSet): void {
   iconSets.set(set.key, set)
 }
 
+/**
+ * 仅供测试：清空运行时注册的集合，回到内置两集合（wot / iconfont）。
+ *
+ * 存在的原因不是「方便」，而是 **环境复用后的正确性前提**：
+ * vitest 组件 project 设了 `isolate: false`（每个 worker 复用同一份环境，
+ * 省掉每文件 ~3s 的 JSDOM + LynxTestingEnv 搭建，实测全量 110s → 34s），
+ * 于是模块级状态不再随文件结束而消失。多个测试文件会调用 registerIconSet
+ * 注册临时集合却无法撤销（Map 没有删除入口），污染后续文件对
+ * listIconSets() / listIcons() 的断言——2026-10 用 `--sequence.shuffle.files`
+ * 复现：seed=7/42 下 icons-registry.test.ts 多失败 2 条。
+ *
+ * 由 test/setup.ts 的 beforeEach 调用。**不要**从 src/index.ts 导出，
+ * 它不属于公开 API（调用方只有测试）。
+ */
+export function __resetIconRegistry(): void {
+  iconSets.clear()
+  registerIconSet(wotIconsSet)
+  registerIconSet(iconfontSet)
+}
+
 /** 归一化 path 数据为数组（渲染侧统一注入 fill） */
 function toPaths(paths: IconPaths): readonly string[] {
   return typeof paths === 'string' ? [paths] : paths

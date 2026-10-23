@@ -2,8 +2,8 @@
 /**
  * Icon 图标 — 文档站 H5 预览演示（手工编写）。
  */
-import WdIcon from 'wot-lynx-ui/components/wd-icon/wd-icon.vue'
-import WdLoading from 'wot-lynx-ui/components/wd-loading/wd-loading.vue'
+import WdIcon from 'wot-lynx-ui/primitives/wd-icon/wd-icon.vue'
+import WdLoading from 'wot-lynx-ui/primitives/wd-loading/wd-loading.vue'
 
 const icons = ['setting', 'picture', 'film', 'file', 'home', 'camera', 'user', 'comment', 'notification', 'delete', 'edit', 'search']
 </script>

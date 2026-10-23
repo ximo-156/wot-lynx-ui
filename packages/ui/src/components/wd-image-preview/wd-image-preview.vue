@@ -6,8 +6,8 @@
 import './index.css'
 
 import { computed, getCurrentInstance, inject, reactive, ref, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdOverlay from '../wd-overlay/wd-overlay.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdOverlay from '../../primitives/wd-overlay/wd-overlay.vue'
 import WdSwiper from '../wd-swiper/wd-swiper.vue'
 import { imagePreviewProps, type ImagePreviewExpose, type ImagePreviewOptions } from './types'
 import { getImagePreviewOptionKey, getImageUrl } from './index'

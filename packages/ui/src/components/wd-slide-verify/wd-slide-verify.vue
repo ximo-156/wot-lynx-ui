@@ -40,7 +40,7 @@
 import './index.css'
 
 import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref, useMainThreadRef } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { slideVerifyProps, type SlideVerifyEmits, type SlideVerifyExpose } from './types'
 import { useTouch } from '../../composables/useTouch'
 import { useTranslate } from '../../composables/useTranslate'

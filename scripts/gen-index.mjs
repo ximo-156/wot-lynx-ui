@@ -2,19 +2,24 @@
 /**
  * gen-index.mjs — 生成组件 barrel，消除「同一份组件清单维护两遍」。
  *
- * 背景（架构文档 §1.5 P0）：
- *   旧 `src/index.ts` 是 435 行手写文件，同一份组件清单出现了两遍 ——
- *   一遍是 `import X from './components/wd-x/wd-x.vue'`，另一遍是插件里
- *   的 `const components = [X, ...]` 数组。101 个组件全靠人工同步，
- *   漏一个就是「按需引入可用、全局注册不可用」的静默缺陷。
+ * ## 背景
  *
- * 现在组件清单只在**文件系统**里定义一次，由本脚本产出
- * `packages/ui/src/components/index.ts`：
- *   - 组件默认导出（导出名 = 去掉 `wd-` 前缀后的 PascalCase）
- *   - `<Pascal>Props` 类型导出（各组件 types.ts 均已提供）
- *   - `allComponents` 清单（供 `createApp().use(wotLynxUI)` 全局注册）
+ * 旧 `src/index.ts` 是 435 行手写文件，同一份组件清单出现了两遍（import 列表 +
+ * 插件里的数组）。101 个组件全靠人工同步，漏一个就是「按需引入可用、全局注册
+ * 不可用」的静默缺陷。
  *
- * 用法：
+ * 现在组件清单只在**文件系统**里定义一次，由本脚本产出两份 barrel：
+ *
+ * | 根 | 产物 | 层 |
+ * |---|---|---|
+ * | `src/primitives/wd-*` | `src/primitives/index.ts` | L3.5 基础件 |
+ * | `src/components/wd-*` | `src/components/index.ts` | L4 业务组件 |
+ *
+ * 每份 barrel 含：组件默认导出、`<Pascal>Props` 类型导出、`all*` 注册清单。
+ * 分层依据见 `docs/adr/012-primitives-layer.md`。
+ *
+ * ## 用法
+ *
  *   node scripts/gen-index.mjs           # 写入文件
  *   node scripts/gen-index.mjs --check   # 只校验（CI 用），不一致则退出码 1
  *
@@ -26,9 +31,16 @@ import { fileURLToPath } from 'node:url'
 import process from 'node:process'
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..')
-const COMPONENTS_DIR = join(ROOT, 'packages/ui/src/components')
-const OUTPUT = join(COMPONENTS_DIR, 'index.ts')
-const REL_OUTPUT = relative(ROOT, OUTPUT)
+const UI_SRC = join(ROOT, 'packages/ui/src')
+
+/**
+ * 两个组件根。顺序即全局注册顺序（基础件在前，业务组件在后）：
+ * 基础件不依赖业务组件，先注册不会产生解析顺序问题。
+ */
+const ROOTS = [
+  { key: 'primitives', dir: join(UI_SRC, 'primitives'), listName: 'allPrimitives', label: 'L3.5 基础件' },
+  { key: 'components', dir: join(UI_SRC, 'components'), listName: 'allComponents', label: 'L4 业务组件' }
+]
 
 const checkOnly = process.argv.includes('--check')
 
@@ -42,10 +54,12 @@ function toPascalCase(name) {
 }
 
 /** 收集组件：目录下必须同时存在 <dir>.vue 与 types.ts */
-function collectComponents() {
-  const entries = readdirSync(COMPONENTS_DIR)
+function collectComponents(dir) {
+  if (!existsSync(dir)) return { components: [], problems: [] }
+
+  const entries = readdirSync(dir)
     .filter((name) => {
-      const full = join(COMPONENTS_DIR, name)
+      const full = join(dir, name)
       return statSync(full).isDirectory() && /^wd-/.test(name)
     })
     .sort()
@@ -54,42 +68,42 @@ function collectComponents() {
   const problems = []
   const seen = new Map()
 
-  for (const dir of entries) {
-    const vueFile = join(COMPONENTS_DIR, dir, `${dir}.vue`)
-    const typesFile = join(COMPONENTS_DIR, dir, 'types.ts')
+  for (const entry of entries) {
+    const vueFile = join(dir, entry, `${entry}.vue`)
+    const typesFile = join(dir, entry, 'types.ts')
     if (!existsSync(vueFile)) {
-      problems.push(`${dir}/ 缺少 ${dir}.vue`)
+      problems.push(`${entry}/ 缺少 ${entry}.vue`)
       continue
     }
     if (!existsSync(typesFile)) {
-      problems.push(`${dir}/ 缺少 types.ts`)
+      problems.push(`${entry}/ 缺少 types.ts`)
       continue
     }
 
-    const pascal = toPascalCase(dir)
+    const pascal = toPascalCase(entry)
     if (seen.has(pascal)) {
-      problems.push(`导出名冲突：${dir} 与 ${seen.get(pascal)} 都映射为 ${pascal}`)
+      problems.push(`导出名冲突：${entry} 与 ${seen.get(pascal)} 都映射为 ${pascal}`)
       continue
     }
-    seen.set(pascal, dir)
+    seen.set(pascal, entry)
 
     const typesSrc = readFileSync(typesFile, 'utf8')
     const propsExport = new RegExp(`export\\s+(?:type|interface|const)\\s+${pascal}Props\\b`).test(typesSrc)
 
-    components.push({ dir, pascal, propsExport })
+    components.push({ dir: entry, pascal, propsExport })
   }
 
   return { components, problems }
 }
 
-function render(components) {
+function render({ components, key, listName, label }) {
   const lines = []
 
   lines.push('/*')
   lines.push(' * ⚠️ 本文件由 scripts/gen-index.mjs 自动生成，请勿手动编辑。')
   lines.push(' *')
+  lines.push(` * ${label}的清单单一来源：src/${key}/ 下的目录（含 <dir>.vue 与 types.ts）。`)
   lines.push(' * 新增 / 删除组件后运行：pnpm gen:index')
-  lines.push(' * 组件清单的单一来源是 src/components/ 下的目录（含 <dir>.vue 与 types.ts）。')
   lines.push(' */')
   lines.push('')
 
@@ -111,8 +125,8 @@ function render(components) {
   }
   lines.push('')
 
-  lines.push('/** 全部组件清单（供 createApp().use(wotLynxUI) 全局注册使用） */')
-  lines.push('export const allComponents = [')
+  lines.push(`/** ${label}清单（供 createApp().use(wotLynxUI) 全局注册使用） */`)
+  lines.push(`export const ${listName} = [`)
   for (const { pascal } of components) {
     lines.push(`  ${pascal},`)
   }
@@ -123,44 +137,68 @@ function render(components) {
 }
 
 function main() {
-  if (!existsSync(COMPONENTS_DIR)) {
-    console.error(`✖ 组件目录不存在：${relative(ROOT, COMPONENTS_DIR)}`)
-    process.exit(1)
+  const results = []
+  const allProblems = []
+
+  for (const root of ROOTS) {
+    const { components, problems } = collectComponents(root.dir)
+    allProblems.push(...problems)
+    results.push({ ...root, components, output: join(root.dir, 'index.ts') })
   }
 
-  const { components, problems } = collectComponents()
-
-  if (problems.length) {
+  if (allProblems.length) {
     console.error('✖ 组件结构校验失败：')
-    for (const p of problems) console.error(`   - ${p}`)
+    for (const p of allProblems) console.error(`   - ${p}`)
     process.exit(1)
   }
 
-  if (components.length === 0) {
+  const total = results.reduce((n, r) => n + r.components.length, 0)
+  if (total === 0) {
     console.error('✖ 未收集到任何组件')
     process.exit(1)
   }
 
-  const next = render(components)
-  const current = existsSync(OUTPUT) ? readFileSync(OUTPUT, 'utf8') : null
+  // 跨根导出名冲突检查（两份 barrel 会被 src/index.ts 同时 export *）
+  const seen = new Map()
+  for (const r of results) {
+    for (const c of r.components) {
+      if (seen.has(c.pascal)) {
+        console.error(`✖ 跨根导出名冲突：${c.dir} 与 ${seen.get(c.pascal)} 都映射为 ${c.pascal}`)
+        process.exit(1)
+      }
+      seen.set(c.pascal, c.dir)
+    }
+  }
+
+  const plans = results.map((r) => ({ ...r, next: render(r) }))
+  const stale = plans.filter((p) => {
+    const current = existsSync(p.output) ? readFileSync(p.output, 'utf8') : null
+    return current !== p.next
+  })
 
   if (checkOnly) {
-    if (current === next) {
-      console.log(`✅ ${REL_OUTPUT} 与组件目录一致（${components.length} 个组件）`)
+    if (stale.length === 0) {
+      const detail = plans.map((p) => `${p.key} ${p.components.length}`).join(' / ')
+      console.log(`✅ barrel 与组件目录一致（${detail}，共 ${total} 个组件）`)
       process.exit(0)
     }
-    console.error(`✖ ${REL_OUTPUT} 与组件目录不一致。`)
+    for (const p of stale) {
+      console.error(`✖ ${relative(ROOT, p.output)} 与组件目录不一致。`)
+    }
     console.error('  可能原因：手改了生成物，或新增/删除了组件但未运行 pnpm gen:index')
     process.exit(1)
   }
 
-  if (current === next) {
-    console.log(`ℹ️  ${REL_OUTPUT} 已是最新（${components.length} 个组件）`)
+  if (stale.length === 0) {
+    const detail = plans.map((p) => `${p.key} ${p.components.length}`).join(' / ')
+    console.log(`ℹ️  barrel 已是最新（${detail}，共 ${total} 个组件）`)
     process.exit(0)
   }
 
-  writeFileSync(OUTPUT, next)
-  console.log(`✅ 已生成 ${REL_OUTPUT}：${components.length} 个组件（${components.filter((c) => c.propsExport).length} 个含 Props 类型导出）`)
+  for (const p of stale) {
+    writeFileSync(p.output, p.next)
+    console.log(`✅ 已生成 ${relative(ROOT, p.output)}：${p.components.length} 个（${p.label}）`)
+  }
 }
 
 main()

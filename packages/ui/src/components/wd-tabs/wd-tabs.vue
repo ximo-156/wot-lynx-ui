@@ -62,8 +62,8 @@
 import './index.css'
 
 import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, reactive, useMainThreadRef, useSlots, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdBadge from '../wd-badge/wd-badge.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdBadge from '../../primitives/wd-badge/wd-badge.vue'
 import WdTab from '../wd-tab/wd-tab.vue'
 import WdSticky from '../wd-sticky/wd-sticky.vue'
 import WdStickyBox from '../wd-sticky-box/wd-sticky-box.vue'

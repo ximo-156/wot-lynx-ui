@@ -19,15 +19,15 @@
 import './index.css'
 
 import { computed, onBeforeMount, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdLoading from '../wd-loading/wd-loading.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdLoading from '../../primitives/wd-loading/wd-loading.vue'
 import { switchProps } from './types'
 import { callInterceptor } from '../../common/interceptor'
 import { addUnit, isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useAlive } from '../../composables/useAlive'
-import type { LoadingProps } from '../wd-loading/types'
+import type { LoadingProps } from '../../primitives/wd-loading/types'
 
 const props = defineProps(switchProps)
 const emit = defineEmits(['change', 'update:modelValue', 'tap'])

@@ -10,7 +10,7 @@
 import './index.css'
 
 import { getCurrentInstance, onBeforeMount, onMounted, ref, watch } from 'vue-lynx'
-import WdPopup from '../wd-popup/wd-popup.vue'
+import WdPopup from '../../primitives/wd-popup/wd-popup.vue'
 import WdPickerView from '../wd-picker-view/wd-picker-view.vue'
 import { deepClone, parseStyle } from '../../common/util'
 import { useAlive } from '../../composables/useAlive'

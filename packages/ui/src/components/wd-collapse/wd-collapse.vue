@@ -31,7 +31,7 @@ const ViewmoreContent = defineComponent({
     return () => (slots.default?.() || []).map(clamp)
   }
 })
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { COLLAPSE_KEY, collapseProps, type CollapseExpose, type CollapseToggleAllOptions, type CollapseValue } from './types'
 import { useChildren } from '../../composables/useChildren'
 import { isArray, isBoolean, isDef, parseStyle } from '../../common/util'

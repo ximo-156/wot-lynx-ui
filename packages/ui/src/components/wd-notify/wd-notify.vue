@@ -7,8 +7,8 @@
 import './index.css'
 
 import { computed, inject, onUnmounted, ref, watch } from 'vue-lynx'
-import WdPopup from '../wd-popup/wd-popup.vue'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdPopup from '../../primitives/wd-popup/wd-popup.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { notifyProps, type NotifyType, type NotifyProps } from './types'
 import { getNotifyOptionKey, useNotify } from '.'
 import { addUnit, isDef, isFunction, isString, parseStyle } from '../../common/util'

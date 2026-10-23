@@ -23,8 +23,6 @@
  *    next）保持可用。
  */
 import { describe, it, expect, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { pause } from '../src/common/util'
@@ -35,9 +33,10 @@ import Skeleton from '../src/components/wd-skeleton/wd-skeleton.vue'
 import Loadmore from '../src/components/wd-loadmore/wd-loadmore.vue'
 import NoticeBar from '../src/components/wd-notice-bar/wd-notice-bar.vue'
 import Watermark from '../src/components/wd-watermark/wd-watermark.vue'
+import { compRead } from './helpers/component-roots'
 
-const SRC = path.resolve(__dirname, '..', 'src/components')
-const css = (rel: string) => readFileSync(path.join(SRC, rel), 'utf8')
+// 双组件根解析（ADR-012）：rel 形如 'wd-cell/index.css'
+const css = (rel: string) => compRead(...rel.split('/'))
 
 const styleOf = (el: Element | null): string => (el ? el.getAttribute('style') || '' : '')
 

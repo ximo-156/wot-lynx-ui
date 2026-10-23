@@ -10,8 +10,8 @@
 import './index.css'
 
 import { computed, getCurrentInstance, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, useMainThreadRef } from 'vue-lynx'
-import WdButton from '../wd-button/wd-button.vue'
-import WdTransition from '../wd-transition/wd-transition.vue'
+import WdButton from '../../primitives/wd-button/wd-button.vue'
+import WdTransition from '../../primitives/wd-transition/wd-transition.vue'
 import { fabProps, type FabExpose } from './types'
 import { getRect, getSystemInfo, parseStyle, uuid } from '../../common/util'
 import { useRaf } from '../../composables/useRaf'

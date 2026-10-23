@@ -73,14 +73,37 @@ function compile(scssPath, cssPath) {
   }
 }
 
+/**
+ * 主题入口清单（仅在无参数的全量构建时编译）。
+ *
+ * 主主题与预设主题是**独立入口**：预设是覆盖层，不进主包（ADR-016）。
+ * 因此这里逐个列出，而不是只编译 `theme/index.scss`。
+ *
+ * ⚠️ 新增预设主题必须加进本清单，否则 `wot-lynx-ui/theme/presets/<name>`
+ *    的 import 目标不存在（`scripts/check-exports.mjs --built` 会拦住）。
+ */
+const THEME_ENTRIES = [
+  'styles/theme/index.scss',
+  'styles/theme/presets/index.scss',
+  'styles/theme/presets/brand-a.scss',
+  'styles/theme/presets/compact.scss',
+  'styles/theme/presets/high-contrast.scss'
+]
+
 // 1. 主题（仅在全量构建时）
 if (only.length === 0) {
-  compile(path.join(uiSrc, 'styles/theme/index.scss'), path.join(uiSrc, 'styles/theme/index.css'))
+  for (const rel of THEME_ENTRIES) {
+    const scss = path.join(uiSrc, rel)
+    compile(scss, scss.replace(/\.scss$/, '.css'))
+  }
 }
 
 // 2. 组件（含子目录，如 wd-calendar-view/year、wd-keyboard/key）
-// 重写期间 components 目录可能不存在或只有部分组件，容错跳过
-const componentsDir = path.join(uiSrc, 'components')
+// 两个组件根：L3.5 基础件（primitives）+ L4 业务组件（components）。
+// ⚠️ 新增组件根必须加进 COMPONENT_ROOTS，否则该根下的 index.css 不会生成，
+//    组件的 `import './index.css'` 会静默丢失样式（ADR-012）。
+// 重写期间目录可能不存在或只有部分组件，容错跳过
+const COMPONENT_ROOTS = [path.join(uiSrc, 'primitives'), path.join(uiSrc, 'components')]
 const scssFiles = []
 const collectScss = (dir) => {
   if (!existsSync(dir)) return
@@ -93,12 +116,13 @@ const collectScss = (dir) => {
     }
   }
 }
-collectScss(componentsDir)
+for (const root of COMPONENT_ROOTS) collectScss(root)
 
 for (const scss of scssFiles) {
   if (only.length) {
     // 指定组件时，匹配目录名（支持 wd-xxx 或其任意子目录）
-    const rel = path.relative(componentsDir, scss)
+    const base = COMPONENT_ROOTS.find((root) => scss.startsWith(root + path.sep)) || COMPONENT_ROOTS[0]
+    const rel = path.relative(base, scss)
     const top = rel.split(path.sep)[0]
     const sub = rel.split(path.sep)[1] || ''
     if (!only.some((o) => top === o || sub === o)) continue

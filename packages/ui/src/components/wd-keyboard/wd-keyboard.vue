@@ -26,7 +26,7 @@
 import './index.css'
 
 import { computed, ref, watch, useSlots } from 'vue-lynx'
-import WdPopup from '../wd-popup/wd-popup.vue'
+import WdPopup from '../../primitives/wd-popup/wd-popup.vue'
 import WdKey from './key/index.vue'
 import { keyboardProps, type CarKeyboardLang, type Key } from './types'
 import type { NumberKeyType } from './key/types'

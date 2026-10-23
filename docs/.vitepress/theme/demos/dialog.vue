@@ -4,7 +4,7 @@
  */
 import { ref } from 'vue'
 import WdDialog from 'wot-lynx-ui/components/wd-dialog/wd-dialog.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const dialogRef = ref<any>(null)
 

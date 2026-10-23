@@ -19,8 +19,8 @@
 import './index.css'
 
 import { computed, ref, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdPopup from '../wd-popup/wd-popup.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdPopup from '../../primitives/wd-popup/wd-popup.vue'
 import { curtainProps } from './types'
 import { addUnit } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'

@@ -21,14 +21,14 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { useAlive } from '../../composables/useAlive'
-import WdBadge from '../wd-badge/wd-badge.vue'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdBadge from '../../primitives/wd-badge/wd-badge.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { deepAssign, isDef, isString, isUndefined, omitBy, parseStyle } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { useParent } from '../../composables/useParent'
 import { TABBAR_KEY } from '../wd-tabbar/types'
 import { tabbarItemProps } from './types'
-import type { BadgeProps } from '../wd-badge/types'
+import type { BadgeProps } from '../../primitives/wd-badge/types'
 
 const props = defineProps(tabbarItemProps)
 const isAlive = useAlive()

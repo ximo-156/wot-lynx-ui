@@ -4,8 +4,8 @@
  */
 import { ref } from 'vue'
 import WdSwipeAction from 'wot-lynx-ui/components/wd-swipe-action/wd-swipe-action.vue'
-import WdCell from 'wot-lynx-ui/components/wd-cell/wd-cell.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdCell from 'wot-lynx-ui/primitives/wd-cell/wd-cell.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const cells = ref([
   { title: '单元格一', status: 'close' },

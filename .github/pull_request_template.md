@@ -109,7 +109,8 @@ pnpm build:demo
 
 ## 视觉 / 真机验证
 
-- [ ] 涉及布局改动，已用 `__web_preview` 截图核对
+- [ ] 涉及布局或样式改动，已运行 `pnpm visual:check`（首次在新平台需先 `pnpm visual:baseline`）
+- [ ] 若 `visual:check` 报差异，已附差异图并说明是有意的改动（更新基线）还是回归（修代码）
 - [ ] L3 改动已附**真机**验证截图或录屏
 
 &lt;!-- 截图/录屏 --&gt;

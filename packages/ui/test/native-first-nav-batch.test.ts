@@ -23,8 +23,6 @@
  *    （NATIVE-REWRITE §2）；行为细节由 test/tabs-mts.test.ts 覆盖。
  */
 import { describe, it, expect, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import Navbar from '../src/components/wd-navbar/wd-navbar.vue'
@@ -34,8 +32,8 @@ import Tab from '../src/components/wd-tab/wd-tab.vue'
 import IndexBar from '../src/components/wd-index-bar/wd-index-bar.vue'
 import IndexAnchor from '../src/components/wd-index-anchor/wd-index-anchor.vue'
 import Pagination from '../src/components/wd-pagination/wd-pagination.vue'
+import { compRead } from './helpers/component-roots'
 
-const COMPONENT_DIR = join(__dirname, '..', 'src', 'components')
 
 /** 本批全部组件 */
 const BATCH = [
@@ -61,7 +59,7 @@ const ROOT_DIRECTION: Record<string, 'row' | 'column'> = {
 
 /** 读取组件编译产物 index.css 并按选择器拆成声明表 */
 function cssRules(component: string): Array<{ selector: string; decls: Record<string, string> }> {
-  const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+  const css = compRead(component, 'index.css')
   const rules: Array<{ selector: string; decls: Record<string, string> }> = []
   const re = /([^{}]+)\{([^{}]*)\}/g
   let m: RegExpExecArray | null
@@ -154,17 +152,17 @@ describe('原生优先：flex-direction 必须挂在 display:flex 上（CONVENTI
 
 describe('原生优先：Web 专有声明清零（NATIVE-REWRITE §3.1 / PORTING §4.5）', () => {
   it.each(BATCH)('%s 不含 inline-flex / inline-block', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css).not.toMatch(/display\s*:\s*inline-(?:flex|block)/)
   })
 
   it.each(BATCH.filter((c) => c !== 'wd-tabs'))('%s 不含 float / vertical-align / cursor / user-select / outline', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css, `${component} 残留 Web 专有声明`).not.toMatch(/(?:^|[;\s])(?:float|vertical-align|cursor|user-select|outline)\s*:/)
   })
 
   it('wd-tabs 仅豁免共享 buttonClear mixin 的 outline:none（参考源同源）', () => {
-    const css = readFileSync(join(COMPONENT_DIR, 'wd-tabs', 'index.css'), 'utf8')
+    const css = compRead('wd-tabs', 'index.css')
     expect(css).not.toMatch(/(?:^|[;\s])(?:float|vertical-align|cursor|user-select)\s*:/)
     // outline 只允许以 `outline:none` 形式来自 buttonClear（按钮样式重置）
     const outlines = css.match(/(?:^|[;\s])outline\s*:\s*[^;}]+/g) || []
@@ -172,7 +170,7 @@ describe('原生优先：Web 专有声明清零（NATIVE-REWRITE §3.1 / PORTING
   })
 
   it.each(BATCH)('%s 不含 -webkit-*', (component) => {
-    const css = readFileSync(join(COMPONENT_DIR, component, 'index.css'), 'utf8')
+    const css = compRead(component, 'index.css')
     expect(css).not.toMatch(/-webkit-/)
   })
 })

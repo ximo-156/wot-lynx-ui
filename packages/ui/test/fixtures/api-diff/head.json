@@ -1,0 +1,40 @@
+{
+  "wd-alpha": {
+    "name": "wd-alpha",
+    "layer": "primitives",
+    "family": null,
+    "modelValue": false,
+    "events": ["input", "update:modelValue"],
+    "slots": ["header"],
+    "props": [
+      {"name":"value","type":"number | string","default":"0","description":"值（支持字符串）"},
+      {"name":"mode","type":"string","default":"'a'","options":"'a'","description":"模式"},
+      {"name":"modern","type":"number","default":"1","description":"新名字"},
+      {"name":"strict","type":"boolean","default":"false","required":true,"description":"严格"}
+    ]
+  },
+  "wd-beta": {
+    "name": "wd-beta",
+    "layer": "primitives",
+    "family": null,
+    "modelValue": false,
+    "events": ["click"],
+    "slots": [],
+    "props": [
+      {"name":"title","type":"string","description":"标题"},
+      {"name":"size","type":"string","default":"'medium'","description":"尺寸"},
+      {"name":"count","type":"string","description":"数量"},
+      {"name":"items","type":"array","required":true,"description":"条目"},
+      {"name":"hint","type":"string","description":"提示"}
+    ]
+  },
+  "wd-delta": {
+    "name": "wd-delta",
+    "layer": "components",
+    "family": null,
+    "modelValue": false,
+    "events": [],
+    "slots": [],
+    "props": []
+  }
+}

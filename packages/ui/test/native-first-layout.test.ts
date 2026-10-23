@@ -22,8 +22,6 @@
  * 表现为「一行一个、方向错、间距丢」；CSS 断言能在真机截图前拦住同类回归。
  */
 import { describe, it, expect, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { pause } from '../src/common/util'
@@ -31,9 +29,10 @@ import PasswordInput from '../src/components/wd-password-input/wd-password-input
 import Keyboard from '../src/components/wd-keyboard/wd-keyboard.vue'
 import Calendar from '../src/components/wd-calendar/wd-calendar.vue'
 import CalendarView from '../src/components/wd-calendar-view/wd-calendar-view.vue'
+import { compRead } from './helpers/component-roots'
 
-const SRC = path.resolve(__dirname, '..', 'src/components')
-const css = (rel: string) => readFileSync(path.join(SRC, rel), 'utf8')
+// 双组件根解析（ADR-012）：rel 形如 'wd-cell/index.css'
+const css = (rel: string) => compRead(...rel.split('/'))
 
 /** 抽取指定选择器的声明体（编译产物为压缩单行，按选择器精确切分） */
 function ruleOf(cssText: string, selector: string): string {

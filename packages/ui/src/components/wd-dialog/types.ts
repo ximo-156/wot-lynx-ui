@@ -1,8 +1,8 @@
 import { baseProps, makeStringProp, makeBooleanProp, makeNumberProp } from '../../common/props'
-import type { ButtonProps } from '../wd-button/types'
-import { type IconProps } from '../wd-icon/types'
-import { type InputType, type InputProps } from '../wd-input/types'
-import { type TextareaProps } from '../wd-textarea/types'
+import type { ButtonProps } from '../../primitives/wd-button/types'
+import { type IconProps } from '../../primitives/wd-icon/types'
+import { type InputType, type InputProps } from '../../primitives/wd-input/types'
+import { type TextareaProps } from '../../primitives/wd-textarea/types'
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 
 export type DialogType = 'alert' | 'confirm' | 'prompt'

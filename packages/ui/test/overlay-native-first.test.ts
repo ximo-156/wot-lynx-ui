@@ -32,15 +32,16 @@ import { h, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { pause } from '../src/common/util'
 import { fireEvent } from './fire-event'
-import Popup from '../src/components/wd-popup/wd-popup.vue'
+import Popup from '../src/primitives/wd-popup/wd-popup.vue'
 import ActionSheet from '../src/components/wd-action-sheet/wd-action-sheet.vue'
 import Dialog from '../src/components/wd-dialog/wd-dialog.vue'
 import Toast from '../src/components/wd-toast/wd-toast.vue'
 import Notify from '../src/components/wd-notify/wd-notify.vue'
 import { useToast } from '../src/components/wd-toast'
+import { compRead } from './helpers/component-roots'
 
-const SRC = path.resolve(__dirname, '..', 'src/components')
-const css = (rel: string) => readFileSync(path.join(SRC, rel), 'utf8')
+// 双组件根解析（ADR-012）：rel 形如 'wd-cell/index.css'，跨 primitives/components 定位
+const css = (rel: string) => compRead(...rel.split('/'))
 
 /** 抽取指定选择器的声明体（编译产物为压缩单行，按选择器精确切分） */
 function ruleOf(cssText: string, selector: string): string {

@@ -29,11 +29,12 @@
 import './index.css'
 
 import { computed } from 'vue-lynx'
-import WdTransition from '../wd-transition/wd-transition.vue'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdTransition from '../../primitives/wd-transition/wd-transition.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { backtopProps } from './types'
 import { addUnit, parseStyle } from '../../common/util'
-import { hasUniAdapter, uni } from '../../common/uni'
+import { uni } from '../../common/uni'
+import { getPlatform } from '../../common/platform'
 
 const props = defineProps(backtopProps)
 const emit = defineEmits(['click', 'tap'])
@@ -63,10 +64,10 @@ const iconStyle = computed(() => parseStyle(props.iconStyle))
 function handleBacktop(event: any) {
   emit('tap', event)
   if (!show.value) return
-  // Lynx 页面滚动由宿主 scroll-view 承载：宿主注入了 pageScrollTo 时走原生
+  // Lynx 页面滚动由宿主 scroll-view 承载：平台具备 pageScroll 能力时走原生
   // 滚动（与 wot-ui 的 uni.pageScrollTo 语义一致，duration 生效），否则仅抛
   // 事件由消费方自行滚动（scroll-view 的 scroll-top 绑定）。
-  if (hasUniAdapter('pageScrollTo')) {
+  if (getPlatform().capabilities.pageScroll) {
     uni.pageScrollTo({ scrollTop: 0, duration: props.duration })
   }
   emit('click')
