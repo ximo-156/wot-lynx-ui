@@ -60,7 +60,7 @@ $sort-button-sort-spacing: var(--wot-sort-button-sort-spacing, $spacing-ultra-ti
         transform: translate(-50%, 0);
         background: $sort-button-line-color;
         border-radius: calc($sort-button-line-height / 2);
-        transition: opacity 0.15s;
+        transition: opacity $motion-fast;
         opacity: 0;
       }
     }
@@ -119,7 +119,7 @@ $sort-button-sort-spacing: var(--wot-sort-button-sort-spacing, $spacing-ultra-ti
   .wd-sort-button__icon-down {
     font-size: $sort-button-arrow-icon-size;
     color: $sort-button-icon-color;
-    transition: color 0.15s;
+    transition: color $motion-fast;
   }
 
   @include edeep(icon-up) {

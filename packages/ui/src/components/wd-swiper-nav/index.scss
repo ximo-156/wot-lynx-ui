@@ -118,7 +118,7 @@ $swiper-nav-btn-border-radius: var(--wot-swiper-nav-btn-border-radius, $radius-f
       background: $swiper-nav-dot-color;
       border-radius: $swiper-nav-dot-border-radius;
       margin: 0 $swiper-nav-dot-margin;
-      transition: all 0.4s ease-in;
+      transition: width $motion-slow $easing-standard, background-color $motion-slow $easing-standard;
 
       @include when(vertical) {
         margin: $swiper-nav-dot-margin 0;

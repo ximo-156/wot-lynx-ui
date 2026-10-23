@@ -32,7 +32,7 @@ $resize-wrapper-z-index: var(--wot-resize-wrapper-z-index, -9999) !default; // w
     visibility: hidden;
 
     @include m(placeholder) {
-      transition: 0s;
+      transition: none;
       animation: none;
     }
   }

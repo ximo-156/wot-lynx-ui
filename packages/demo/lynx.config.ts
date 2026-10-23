@@ -38,8 +38,20 @@ export default defineConfig({
       optionsApi: false,
       enableCSSInlineVariables: true,
       enableCSSInheritance: true,
-      enableElementTemplates: false
-      // 组件库不使用 Main Thread Script（见 CONVENTIONS.md §9），无需 includeWorkletPackages 白名单
+      enableElementTemplates: false,
+      // 组件库**用了** Main Thread Script：12 个组件里有 31 处 `'main thread'` worklet
+      // （slider / tabs / rate / picker-view / pull-refresh / floating-panel /
+      // signature / img-cropper / slide-verify / swipe-action / fab / button 的 hover）。
+      //
+      // worklet loader 默认**丢弃解析进 node_modules 的 import**，而 demo 是经 pnpm 链接
+      // 从 `node_modules/wot-lynx-ui` 解析到 packages/ui 的 —— 不加这个白名单，组件库的
+      // worklet 根本不会被编译进主线程包，`_workletMap` 里没有对应 id。
+      // 运行时症状：一碰手势就抛
+      //   `main-thread.js exception: TypeError: cannot read property 'bind' of undefined`
+      // （Web 端同源：`Cannot read properties of undefined (reading 'bind')`，
+      //   栈落在 web-core 事件分发的 `runWorklet?.(s.value, [d])`）。
+      // 真实消费方（非 workspace 链接）同样需要这一项，见 README 的接入说明。
+      includeWorkletPackages: []
     })
   ],
   server: {

@@ -59,7 +59,7 @@ $slide-verify-success-icon-size: var(--wot-slide-verify-success-icon-size, $n-20
     line-height: $slide-verify-text-line-height;
     // 文本居中：容器 flex 居中之外，text 元素显式声明（§3.2）
     text-align: center;
-    transition: color 0.3s ease;
+    transition: color $motion-slow $easing-standard;
   }
 
   @include e(track) {

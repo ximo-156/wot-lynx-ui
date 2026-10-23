@@ -74,7 +74,7 @@ $collapse-more-text-margin-right: var(--wot-collapse-more-text-margin-right, $sp
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    transition: transform 0.1s;
+    transition: transform $motion-fast;
     font-size: $collapse-arrow-size;
     height: $collapse-arrow-size;
     line-height: $collapse-arrow-size;

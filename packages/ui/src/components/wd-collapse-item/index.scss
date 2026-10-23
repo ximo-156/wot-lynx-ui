@@ -74,7 +74,7 @@ $collapse-item-body-padding: var(--wot-collapse-item-body-padding, $padding-loos
     justify-content: center;
     font-size: $collapse-item-arrow-size;
     color: $collapse-item-arrow-color;
-    transition: transform 0.3s;
+    transition: transform $motion-slow;
 
     @include when(retract) {
       transform: rotate(-180deg);

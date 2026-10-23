@@ -1,0 +1,12 @@
+:root,
+page,
+.wd-root-portal {
+  /* 动效
+     三档时长 + 两条曲线。此前组件里散落 0.1/0.15/0.2/0.3/0.4s 五种时长与
+     ease / ease-in / ease-in-out / cubic-bezier 四种曲线，节奏无法统一。 */
+  --wot-motion-fast: 120ms;
+  --wot-motion-base: 200ms;
+  --wot-motion-slow: 300ms;
+  --wot-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --wot-easing-exit: cubic-bezier(0.4, 0, 1, 1);
+}

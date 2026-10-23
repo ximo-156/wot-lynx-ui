@@ -122,25 +122,29 @@ const LYNX_NATIVE_TAGS = new Set([
  * **每个测试文件**新建 JSDOM + LynxTestingEnv，单文件环境开销约 20s；而这类用例
  * 本身只有几毫秒。混在一起时，套件时长由「环境搭建 × 文件数」决定，与真正要
  * 验证的逻辑无关——2026-10 实测 36 个文件 214s，其中 environment 累计 745s。
+ *
+ * 2026-10-23 起这批用例**物理隔离**在 `test/unit/`：目录即 project，下面这份
+ * 清单是「哪些文件走 node 环境」的唯一事实来源（`test/unit/project-coverage.test.ts`
+ * 会双向校验清单与目录，见该文件）。新增纯函数用例请放进 `test/unit/` 并登记。
  */
 const PURE_TESTS = [
-  'test/api-diff.test.ts',
-  'test/codemod.test.ts',
-  'test/format-date.test.ts',
-  'test/interceptor.test.ts',
-  'test/locale-parity.test.ts',
-  'test/meta-generated.test.ts',
-  'test/no-main-thread-script.test.ts',
-  'test/png-codec.test.ts',
-  'test/project-coverage.test.ts',
-  'test/qr-encoder.test.ts',
-  'test/side-effects.test.ts',
-  'test/style-funnel.test.ts',
-  'test/tag-transform-loader.test.ts',
-  'test/theme-token-parity.test.ts',
-  'test/util-merge.test.ts',
-  'test/visual-diff.test.ts',
-  'test/web-font-plugin.test.ts'
+  'test/unit/api-diff.test.ts',
+  'test/unit/codemod.test.ts',
+  'test/unit/format-date.test.ts',
+  'test/unit/interceptor.test.ts',
+  'test/unit/locale-parity.test.ts',
+  'test/unit/meta-generated.test.ts',
+  'test/unit/no-main-thread-script.test.ts',
+  'test/unit/png-codec.test.ts',
+  'test/unit/project-coverage.test.ts',
+  'test/unit/qr-encoder.test.ts',
+  'test/unit/side-effects.test.ts',
+  'test/unit/style-funnel.test.ts',
+  'test/unit/tag-transform-loader.test.ts',
+  'test/unit/theme-token-parity.test.ts',
+  'test/unit/util-merge.test.ts',
+  'test/unit/visual-diff.test.ts',
+  'test/unit/web-font-plugin.test.ts'
 ]
 
 export default defineConfig({

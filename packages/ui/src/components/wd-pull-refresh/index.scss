@@ -1,6 +1,10 @@
 @use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 文案字号：13px 不在字阶上（11/12/14/16…），直接贴到 12 或 14 会改变换行，
+// 收敛成组件令牌，待视觉确认后再并入字阶。
+$pull-refresh-text-font-size: var(--wot-pull-refresh-text-font-size, 13px) !default;
+
 @include b(pull-refresh) {
   display: flex;
   flex-direction: column;
@@ -33,11 +37,11 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: $spacing-tight;
   }
 
   @include e(text) {
-    font-size: 13px;
+    font-size: $pull-refresh-text-font-size;
     color: var(--wot-text-secondary, var(--wot-brand-text-secondary));
   }
 

@@ -3,6 +3,9 @@
 
 // 签名区域背景色
 $signature-bg: var(--wot-signature-bg, $filled-oppo) !default;
+// 画布引导高度：view 无 canvas 内在高度，度量前需要一个非零高度。
+// 200px 不在刻度上（取 $n-248 会让签名区变高），收敛成组件令牌。
+$signature-guide-height: var(--wot-signature-guide-height, 200px) !default;
 // 签名区域圆角
 $signature-radius: var(--wot-signature-radius, $radius-main) !default;
 // 签名区域边框
@@ -33,7 +36,7 @@ $signature-button-margin-left: var(--wot-signature-button-margin-left, $spacing-
     width: 100%;
     // Lynx 适配：view 元素无 canvas 的内在高度，度量（getRect）前需要
     // 一个引导高度，否则零高度节点无法度量（度量不可用时保留该默认值）
-    height: 200px;
+    height: $signature-guide-height;
     // 线段池（绝对定位的跟手渲染元素）以画布为定位基准
     position: relative;
   }

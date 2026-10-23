@@ -359,6 +359,13 @@ $stroke-light: var(--wot-stroke-light, $n-05) !default; // 轻量边框线宽
 $stroke-main: var(--wot-stroke-main, $n-1) !default; // 默认边框线宽
 $stroke-bold: var(--wot-stroke-bold, $n-2) !default; // 加粗边框线宽
 
+/* 动效系列 */
+$motion-fast: var(--wot-motion-fast, 120ms) !default; // 按压反馈、颜色切换
+$motion-base: var(--wot-motion-base, 200ms) !default; // 展开收起、透明度
+$motion-slow: var(--wot-motion-slow, 300ms) !default; // 位移、面板进出
+$easing-standard: var(--wot-easing-standard, cubic-bezier(0.4, 0, 0.2, 1)) !default; // 默认曲线
+$easing-exit: var(--wot-easing-exit, cubic-bezier(0.4, 0, 1, 1)) !default; // 退出曲线
+
 
 /* 项目品牌系列（原始 blue / coolgrey 刻度不改，便于官方主题定制迁移） */
 $brand-1: var(--wot-brand-1, #F8F6FFFF) !default;

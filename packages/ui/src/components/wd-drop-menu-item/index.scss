@@ -57,7 +57,7 @@ $drop-item-popup-border-top: var(--wot-drop-item-popup-border-top, $stroke-main 
     padding: $drop-item-option-padding;
     justify-content: space-between;
     align-items: center;
-    transition: color .2s;
+    transition: color $motion-base;
 
     @include when(active) {
       .wd-drop-item__title-text {

@@ -40,7 +40,7 @@ $toast-loading-margin-bottom: var(--wot-toast-loading-margin-bottom, $spacing-ex
   background: $toast-bg;
   border-radius: $toast-border-radius;
   color: $toast-color;
-  transition: all 0.2s;
+  transition: opacity $motion-base, transform $motion-base;
   font-size: $toast-font-size;
   box-sizing: border-box;
 

@@ -5,17 +5,17 @@
   display: flex;
   flex-direction: column;
   background: var(--wot-bg-color, var(--wot-filled-oppo));
-  border-radius: 16px 16px 0 0;
-  padding: 16px 0 0;
+  border-radius: $radius-super-large $radius-super-large 0 0;
+  padding: $padding-extra-loose 0 0;
 
   @include e(title) {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 16px 16px;
+    padding: 0 $padding-extra-loose $padding-extra-loose;
 
     &-text {
-      font-size: 16px;
+      font-size: $typography-body-size-extra-large;
       font-weight: $font-weight-500;
       color: var(--wot-text-main, var(--wot-brand-text-main));
     }
@@ -24,7 +24,7 @@
   @include e(options) {
     display: flex;
     flex-wrap: wrap;
-    padding: 0 8px 16px;
+    padding: 0 $padding-tight $padding-extra-loose;
   }
 
   @include e(option) {
@@ -33,10 +33,10 @@
     align-items: center;
     justify-content: center;
     width: 25%;
-    padding: 12px 4px;
+    padding: $padding-loose $padding-super-tight;
 
     &--disabled {
-      opacity: 0.4;
+      opacity: $opacity-disabled;
       pointer-events: none;
     }
 
@@ -44,22 +44,22 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
+      width: $n-48;
+      height: $n-48;
+      border-radius: $radius-full;
       background: var(--wot-filled-content);
-      margin-bottom: 8px;
+      margin-bottom: $spacing-tight;
     }
 
     &-name {
-      font-size: 12px;
+      font-size: $typography-label-size-main;
       color: var(--wot-text-main, var(--wot-brand-text-main));
       text-align: center;
     }
   }
 
   @include e(icon) {
-    font-size: 24px;
+    font-size: $typography-title-size-extra-large;
     color: var(--wot-text-main, var(--wot-brand-text-main));
   }
 
@@ -67,11 +67,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 48px;
+    height: $n-48;
     border-top: 1px solid var(--wot-border-color, var(--wot-border-main));
 
     &-text {
-      font-size: 16px;
+      font-size: $typography-body-size-extra-large;
       color: var(--wot-text-main, var(--wot-brand-text-main));
     }
   }

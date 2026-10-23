@@ -19,7 +19,7 @@
 
     @include m(inactive) {
       height: 0;
-      transition: height 0.3s ease-in-out;
+      transition: height $motion-slow $easing-standard;
     }
   }
 }

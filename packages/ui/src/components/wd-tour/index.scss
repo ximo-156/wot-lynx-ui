@@ -85,7 +85,7 @@ $tour-buttons-margin-top: var(--wot-tour-buttons-margin-top, $spacing-tight) !de
     transform: translateX(-50%);
     max-width: $tour-popover-max-width;
     text-align: center;
-    transition: $tour-animation-duration all;
+    transition: opacity $tour-animation-duration, transform $tour-animation-duration;
     background-color: $tour-popover-bg;
     padding: $tour-popover-padding;
     border-radius: $tour-popover-radius;

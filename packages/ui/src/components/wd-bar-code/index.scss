@@ -12,6 +12,6 @@
 
   @include e(text) {
     margin-top: $spacing-super-tight;
-    letter-spacing: 2px;
+    letter-spacing: $n-2;
   }
 }

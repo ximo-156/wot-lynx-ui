@@ -1,19 +1,23 @@
 @use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 券面左栏固定宽度：100px 不在 4pt 刻度上，收敛成组件令牌而不是硬贴到 $n-98
+// （差 2px 会改变券面留白比例）。要改宽度走 --wot-coupon-left-width。
+$coupon-left-width: var(--wot-coupon-left-width, 100px) !default;
+
 // 本地扩展：仅依赖语义主题令牌，不回退到旧蓝色预设。
 @include b(coupon) {
   display: flex;
   flex-direction: column;
-  padding: 12px 16px;
+  padding: $padding-loose $padding-extra-loose;
   background: var(--wot-bg-color, $filled-oppo);
-  @include e(list) { display: flex; flex-direction: column; gap: 12px; }
+  @include e(list) { display: flex; flex-direction: column; gap: $spacing-loose; }
   @include e(item) {
     display: flex;
     flex-direction: row;
     align-items: stretch;
     background: var(--wot-bg-color, $filled-oppo);
-    border-radius: 8px;
+    border-radius: $radius-large;
     overflow: hidden;
     border: 1px solid var(--wot-border-color, $border-main);
     &--chosen { border-color: var(--wot-primary-6); }
@@ -24,36 +28,36 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 100px;
-    padding: 12px 8px;
+    width: $coupon-left-width;
+    padding: $padding-loose $padding-tight;
     background: linear-gradient(135deg, var(--wot-primary-1), var(--wot-primary-6));
   }
   @include e(value) {
     display: flex;
     flex-direction: row;
     align-items: baseline;
-    &-prefix { font-size: 14px; color: $filled-oppo; font-weight: $font-weight-500; }
-    &-num { font-size: 24px; color: $filled-oppo; font-weight: $font-weight-medium; }
-    &-suffix { font-size: 14px; color: $filled-oppo; font-weight: $font-weight-500; }
+    &-prefix { font-size: $typography-body-size-main; color: $filled-oppo; font-weight: $font-weight-500; }
+    &-num { font-size: $typography-title-size-extra-large; color: $filled-oppo; font-weight: $font-weight-medium; }
+    &-suffix { font-size: $typography-body-size-main; color: $filled-oppo; font-weight: $font-weight-500; }
   }
-  @include e(condition) { font-size: 11px; color: $filled-oppo; opacity: 0.8; margin-top: 4px; }
+  @include e(condition) { font-size: $typography-label-size-small; color: $filled-oppo; opacity: 0.8; margin-top: $spacing-super-tight; }
   @include e(divider) { width: 0; border-left: 1px dashed var(--wot-border-color, $border-main); }
-  @include e(right) { display: flex; flex-direction: column; flex: 1; justify-content: center; padding: 12px; gap: 4px; }
-  @include e(name) { font-size: 14px; font-weight: $font-weight-500; color: $text-main; }
-  @include e(reason) { font-size: 12px; color: $text-secondary; }
+  @include e(right) { display: flex; flex-direction: column; flex: 1; justify-content: center; padding: $padding-loose; gap: $spacing-super-tight; }
+  @include e(name) { font-size: $typography-body-size-main; font-weight: $font-weight-500; color: $text-main; }
+  @include e(reason) { font-size: $typography-label-size-main; color: $text-secondary; }
   @include e(chosen-tag) {
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    padding: 2px 8px;
+    padding: $padding-ultra-tight $padding-tight;
     background: var(--wot-primary-6);
-    border-radius: 4px;
+    border-radius: $radius-main;
     align-self: flex-start;
-    margin-top: 4px;
+    margin-top: $spacing-super-tight;
   }
-  @include e(chosen-text) { font-size: 11px; color: $filled-oppo; }
-  @include e(exchange) { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 12px; }
+  @include e(chosen-text) { font-size: $typography-label-size-small; color: $filled-oppo; }
+  @include e(exchange) { display: flex; flex-direction: row; align-items: center; gap: $spacing-tight; margin-top: $spacing-loose; }
   @include e(exchange-input) { flex: 1; }
   @include e(exchange-btn) { flex-shrink: 0; }
 }

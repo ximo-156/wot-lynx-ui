@@ -180,6 +180,28 @@ for (const file of files) {
   for (const m of raw.matchAll(/(--wot-[a-z0-9_-]+)\s*:/g)) localTokens.add(m[1])
   for (const m of raw.matchAll(/\$[\w-]+:\s*var\(\s*(--wot-[a-z0-9_-]+)/g)) localTokens.add(m[1])
 
+  /**
+   * 标记「位于 `$x: var(...)` 令牌声明内部」的行。
+   *
+   * 单行声明靠 isTokenDecl 就能豁免，但多行声明（典型是三层阴影：
+   * `$tabbar-round-shadow: var(` 换行写偏移与模糊半径）每一行都不以 `$` 开头，
+   * 会被当成规则体里的硬编码尺寸。令牌声明的回退值本来就是合法兜底，
+   * 所以按括号深度把整段标记出来。
+   */
+  const inTokenDecl = new Array(lines.length).fill(false)
+  let declDepth = 0
+  for (let i = 0; i < lines.length; i++) {
+    const code = stripComments(lines[i])
+    if (declDepth > 0) inTokenDecl[i] = true
+    const opens = (code.match(/\(/g) || []).length
+    const closes = (code.match(/\)/g) || []).length
+    if (declDepth > 0) declDepth = Math.max(0, declDepth + opens - closes)
+    else if (/^\s*\$[\w-]+:\s*var\(/.test(code)) {
+      declDepth = Math.max(0, opens - closes)
+      if (declDepth > 0) inTokenDecl[i] = true
+    }
+  }
+
   lines.forEach((line, idx) => {
     const code = stripComments(line)
     if (!code.trim()) return
@@ -195,7 +217,7 @@ for (const file of files) {
     // 令牌声明行本身不参与硬编码检查（回退值是合法兜底）
     const isTokenDecl = /^\s*\$[\w-]+:\s*var\(/.test(code)
     const usesToken = /var\(\s*--wot-/.test(code)
-    if (isTokenDecl || usesToken) return
+    if (isTokenDecl || usesToken || inTokenDecl[idx]) return
 
     // D002 硬编码颜色
     for (const m of code.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) add('D002', file, ln, m[0], code.trim())
