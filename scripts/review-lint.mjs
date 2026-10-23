@@ -105,7 +105,6 @@ review-lint — wot-lynx-ui 规范静态检查
   -h, --help           显示本帮助
 
 规则来源：CONVENTIONS.md
-检查清单：contributing/code-review/03-组件库专项检查清单.md
 `)
 }
 
@@ -781,7 +780,7 @@ function main() {
     console.log('✅ 未发现规范问题')
   } else {
     console.log(`${errors > 0 ? '\x1b[31m✖' : '\x1b[33m⚠'} ${errors} errors, ${warns} warnings\x1b[0m`)
-    console.log('   规则出处见 CONVENTIONS.md；检查清单见 contributing/code-review/03-组件库专项检查清单.md')
+    console.log('   规则出处见 CONVENTIONS.md')
   }
 
   process.exit(errors > 0 ? 1 : 0)

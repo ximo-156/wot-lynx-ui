@@ -4,7 +4,7 @@
 # 分组：
 #   1. 依赖与包管理器        2. 构建产物            3. 文档站缓存与产物
 #   4. 本地开发 / 调试产物   5. 编辑器与操作系统    6. 环境变量与密钥
-#   7. 工具与智能体本地状态  8. 日志
+#   7. 工具与智能体本地状态  8. 日志                9. 本地独占的 AI 生成文档
 #
 # 文末「必须入库的生成物」列出了**不得忽略**的文件，新增规则前请先读一遍。
 # ===========================================================================
@@ -32,7 +32,8 @@ coverage/
 #    · docs/adr/、docs/guide/ 是**人工撰写的源码**，必须入库。历史上这里
 #      误加了 `docs/adr/*` / `docs/guide/*` 两条规则，导致 001–016 共 16 篇
 #      ADR 与全部指南只存在于本机、从未进过仓库——与文末「必须入库」清单
-#      直接矛盾。已于 2026-10-23 移除。
+#      直接矛盾。**这两条规则实际并未移除**——它们仍在文件末尾生效，详见
+#      文末「已知问题」。
 #
 #    · docs/components/*.md 是 `scripts/gen-docs.mjs` 的**纯生成物**（由
 #      packages/ui/meta.json 推导），不入库。`docs:build` 会先跑 gen-docs，
@@ -118,5 +119,37 @@ visual/current/
 # 测试耗时采集的中间产物（缓存本体 packages/ui/test/durations.json 要入库）
 .tmp-test-durations.json
 .tmp-testprof.json
+# ⚠️ 已知问题（2026-10-23 未收口）：下面两条让 docs/guide/ 的 9 篇人工指南与
+#    docs/adr/ 的 3 篇 ADR 只存在于本机。文档站侧边栏 docs/.vitepress/config.ts
+#    已经引用了这些指南，所以远程站点上是死链。修法：删掉这两条规则后
+#    `git add docs/guide docs/adr`。刻意留到单独一次提交处理，避免混进本次清理。
 docs/adr/*.md
 docs/guide/*.md
+
+# ---------------------------------------------------------------------------
+# 9. 本地独占的 AI 生成文档 —— 只在个人机器保留，不入库
+#
+#    下面这些路径已经用 `git rm --cached` 移出索引（**本地文件仍在磁盘上**），
+#    现在是「未跟踪 + 被忽略」：照常读写，但不会出现在 `git status`，
+#    也不会被 `git add .` 误提交。
+#
+#    ⚠️ 对**已跟踪**的文件加 ignore 规则是无效的——必须配合 `git rm --cached`。
+#    若想保留远程版本、只冻结本地改动，改用：
+#        git update-index --skip-worktree <file>       # 冻结本地改动
+#        git update-index --no-skip-worktree <file>    # 撤销
+#
+#    带日期的报告类产物一律本地独占：它们是某次排查的快照，入库即过期。
+# ---------------------------------------------------------------------------
+# 根目录的评审报告（带日期）
+/ARCHITECTURE-REVIEW-*.md
+# 设计规范体检的产出：判据 / 报告 / HTML 报告
+/docs/design/DESIGN-SPEC.md
+/docs/design/AUDIT-*.md
+/docs/design/report-*.html
+# 设计调研（AI 产出，仅作本地参考）
+/docs/apple-hig-design-tokens-research.md
+/docs/xiaomi-hyperos-design-research.md
+# 代码评审规范文档包
+/contributing/code-review/
+# 测试目录说明
+/packages/ui/test/README.md
