@@ -142,7 +142,8 @@ describe('meta.json 解析完整性（防静默失效）', () => {
       if (missing.length) failures.push(`${name}: 缺 ${missing.join(', ')}`)
     }
     expect(failures, '解析器漏掉了这些 emit 调用').toEqual([])
-  })
+    // 逐组件读 .vue 源码：空载 3–4s，并行高负载实测 8.1s
+  }, 30_000)
 
   it('源码里有 <slot> 的组件，slots 必须非空', () => {
     const failures: string[] = []
@@ -154,7 +155,7 @@ describe('meta.json 解析完整性（防静默失效）', () => {
       if (missing.length) failures.push(`${name}: 缺 ${missing.join(', ')}`)
     }
     expect(failures, '解析器漏掉了这些插槽').toEqual([])
-  })
+  }, 30_000)
 
   it('源码里定义的 prop 必须出现在 props 里', () => {
     // 反向缺口：上面几条只查「meta 里的值对不对」，查不出「源码有、meta 没有」。
@@ -177,7 +178,7 @@ describe('meta.json 解析完整性（防静默失效）', () => {
       if (missing.length) failures.push(`${name}: 缺 ${missing.join(', ')}`)
     }
     expect(failures, '解析器漏掉了这些 prop').toEqual([])
-  })
+  }, 30_000)
 
   it('每个 prop 都有类型与描述', () => {
     const noType: string[] = []

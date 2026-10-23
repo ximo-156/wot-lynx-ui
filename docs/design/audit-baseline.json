@@ -1,4 +1,7 @@
 {
+  "D008|components/wd-collapse/index.scss|transform 0.1s": true,
+  "D008|components/wd-drop-menu-item/index.scss|color .2s": true,
+  "D008|components/wd-tab/index.scss|height 0.3s ease-in-out": true,
   "D011|primitives/wd-button/index.scss|--wot-button-height-mini = 28px": true,
   "D011|primitives/wd-button/index.scss|--wot-button-height-small = 32px": true,
   "D011|primitives/wd-button/index.scss|--wot-button-height-medium = 40px": true,

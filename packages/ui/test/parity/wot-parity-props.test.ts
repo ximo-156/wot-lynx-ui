@@ -74,7 +74,7 @@ describe('official wot-ui 2.3.2 runtime prop parity', () => {
 describe('runtime prop extractor guardrails', () => {
   it('expands real shared helpers/spreads and preserves Boolean/String order and null unions', () => {
     const exports = synthetic(`
-      import { baseProps, makeArrayProp, makeRequiredProp, numericProp, truthProp, unknownProp } from '../props'
+      import { baseProps, makeArrayProp, makeRequiredProp, numericProp, truthProp, unknownProp } from './props'
       export const props = {
         ...baseProps, rows: makeArrayProp<string>(), value: makeRequiredProp(numericProp),
         enabled: truthProp, unknown: unknownProp,

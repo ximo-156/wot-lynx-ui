@@ -74,7 +74,8 @@ $collapse-more-text-margin-right: var(--wot-collapse-more-text-margin-right, $sp
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    transition: transform $motion-fast;
+    // 与 wot-ui 2.3.2 逐字一致（parity 测试字符串比对），不归一
+    transition: transform 0.1s;
     font-size: $collapse-arrow-size;
     height: $collapse-arrow-size;
     line-height: $collapse-arrow-size;

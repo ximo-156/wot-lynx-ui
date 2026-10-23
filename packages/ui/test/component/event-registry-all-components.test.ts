@@ -90,7 +90,7 @@ function compName(path: string): string {
   return m ? m[1] : path
 }
 
-const modules = import.meta.glob('../../src/components/wd-*/wd-*.vue', { eager: true })
+const modules = import.meta.glob('/src/components/wd-*/wd-*.vue', { eager: true })
 const entries = Object.entries(modules).filter(([path]) => !path.includes('/key/') && !path.includes('/year/'))
 
 /** registry TypeError 的特征（合并数组被 publishEvent 调用） */

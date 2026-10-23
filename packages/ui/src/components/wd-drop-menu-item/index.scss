@@ -57,7 +57,8 @@ $drop-item-popup-border-top: var(--wot-drop-item-popup-border-top, $stroke-main 
     padding: $drop-item-option-padding;
     justify-content: space-between;
     align-items: center;
-    transition: color $motion-base;
+    // 与 wot-ui 2.3.2 逐字一致（parity 测试字符串比对），不归一
+    transition: color .2s;
 
     @include when(active) {
       .wd-drop-item__title-text {

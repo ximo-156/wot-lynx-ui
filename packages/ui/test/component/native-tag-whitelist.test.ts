@@ -176,7 +176,8 @@ describe('Lynx 模板标签白名单', () => {
     }
 
     expect(violations, `以下标签会在真机触发 603 "Can't find ui tag"：\n${violations.join('\n')}`).toEqual([])
-  })
+    // 全库模板扫描（~110 文件 × 解析）：空载 2–5s，并行高负载实测 19s
+  }, 30_000)
 
   it('demo 模板只使用 Lynx 内置元素', () => {
     const violations: string[] = []
@@ -191,7 +192,8 @@ describe('Lynx 模板标签白名单', () => {
     }
 
     expect(violations, `以下标签会在真机触发 603 "Can't find ui tag"：\n${violations.join('\n')}`).toEqual([])
-  })
+    // 全库模板扫描（~110 文件 × 解析）：空载 2–5s，并行高负载实测 19s
+  }, 30_000)
 
   it('组件库内每个 wd-* 标签都有同名 PascalCase 导入', () => {
     const violations: string[] = []
@@ -224,7 +226,7 @@ describe('Lynx 模板标签白名单', () => {
       }
     }
     expect(violations, `库内 kebab-case 组件会被原生编译器当作 Lynx 元素：\n${violations.join('\n')}`).toEqual([])
-  })
+  }, 30_000)
 
   it('demo / 文档演示中的 wd-* 标签都能对应到真实组件目录', () => {
     const dirs = componentDirs()
@@ -240,7 +242,7 @@ describe('Lynx 模板标签白名单', () => {
     }
 
     expect(violations, `拼错的组件标签会退化为原生元素并触发 603：\n${violations.join('\n')}`).toEqual([])
-  })
+  }, 30_000)
 })
 
 describe('wd-select-picker 渲染不再产生未知原生标签', () => {

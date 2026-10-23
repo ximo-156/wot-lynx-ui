@@ -39,19 +39,22 @@ export default defineConfig({
       enableCSSInlineVariables: true,
       enableCSSInheritance: true,
       enableElementTemplates: false,
-      // 组件库**用了** Main Thread Script：12 个组件里有 31 处 `'main thread'` worklet
-      // （slider / tabs / rate / picker-view / pull-refresh / floating-panel /
-      // signature / img-cropper / slide-verify / swipe-action / fab / button 的 hover）。
+      // 组件库**用了** Main Thread Script：12 个组件、31 处 `'main thread'` worklet。
       //
-      // worklet loader 默认**丢弃解析进 node_modules 的 import**，而 demo 是经 pnpm 链接
-      // 从 `node_modules/wot-lynx-ui` 解析到 packages/ui 的 —— 不加这个白名单，组件库的
-      // worklet 根本不会被编译进主线程包，`_workletMap` 里没有对应 id。
-      // 运行时症状：一碰手势就抛
+      // 实测（2026-10-23）：这 31 个 worklet 只出现在后台包的描述符里
+      //   `{ _c: {...}, _wkltId: "2c90:c730a:1" }`
+      // 主线程包里**没有任何一个** `registerWorkletInternal("main-thread", "<id>", fn)`，
+      // 所以运行时 `_workletMap[id]` 是 undefined，一碰手势就抛
       //   `main-thread.js exception: TypeError: cannot read property 'bind' of undefined`
       // （Web 端同源：`Cannot read properties of undefined (reading 'bind')`，
       //   栈落在 web-core 事件分发的 `runWorklet?.(s.value, [d])`）。
-      // 真实消费方（非 workspace 链接）同样需要这一项，见 README 的接入说明。
-      includeWorkletPackages: []
+      //
+      // 对照：`src/worklet-repro/App.vue` 里**项目源码**的两个 worklet 正常注册
+      // （2/2），库里的 31 个是 0/31 —— 差异就是「项目源码 vs 经 node_modules 解析的包」。
+      //
+      // 下面这行是按 vue-lynx 文档给的开关，**实测未生效**（加上后仍是 0/31），
+      // 保留是因为语义正确、上游修好后自动受益；在此之前消费方会踩同一个坑。
+      includeWorkletPackages: ['wot-lynx-ui']
     })
   ],
   server: {

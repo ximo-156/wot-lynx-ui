@@ -73,7 +73,8 @@ const blockName = name.replace(/^wd-/, '')
 const cssVar = blockName
 
 const compDir = join(SRC, root, name)
-const testFile = join(TEST_DIR, `${name}.test.ts`)
+// 新组件的冒烟测试放进 test/component/（目录按用途分层：unit / component / parity / mts / …）
+const testFile = join(TEST_DIR, 'component', `${name}.test.ts`)
 
 if (existsSync(compDir)) {
   console.error(`✖ 目录已存在：${relative(ROOT, compDir)}\n  脚手架只负责创建，不覆盖已有组件。`)
@@ -210,10 +211,10 @@ const testFile_ = `/**
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { render, cleanup } from './render'
-import ${pascal} from '../src/${root}/${name}/${name}.vue'
+import { render, cleanup } from '../render'
+import ${pascal} from '../../src/${root}/${name}/${name}.vue'
 
-const COMPONENT_DIR = join(__dirname, '..', 'src', '${root}', '${name}')
+const COMPONENT_DIR = join(__dirname, '../..', 'src', '${root}', '${name}')
 
 describe('${name}', () => {
   it('渲染冒烟：挂载后根节点存在', () => {

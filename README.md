@@ -20,7 +20,7 @@
 
 仅有两项明确豁免：`customStyle` 从官方 `String` 扩展为 `[String, Object]`，以及 `WdCircle.color` 默认值从 `#1C64FD` 改为品牌色 `#755FFE`。守卫检查 prop 名称、运行时构造器、required、默认值/工厂与 validator；**不证明 TypeScript 泛型、类型别名或联合类型全部一致，也不证明全部交互或真机行为一致**。6 个本地扩展（AddressEdit、BarCode、Coupon、PullRefresh、ShareSheet、SubmitBar）在该官方离线包中没有对应定义，明确不计入官方覆盖。
 
-运行时守卫见 [check-wot-props.mjs](<scripts/check-wot-props.mjs>)、[官方 props fixture](<packages/ui/test/fixtures/wot-ui-2.3.2-props.json>) 与 [props 回归测试](<packages/ui/test/wot-parity-props.test.ts>)。
+运行时守卫见 [check-wot-props.mjs](<scripts/check-wot-props.mjs>)、[官方 props fixture](<packages/ui/test/fixtures/wot-ui-2.3.2-props.json>) 与 [props 回归测试](<packages/ui/test/parity/wot-parity-props.test.ts>)。
 
 ## 快速开始
 
