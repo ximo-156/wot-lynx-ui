@@ -3,7 +3,7 @@
  * Card 卡片 — 文档站 H5 预览演示（手工编写）。
  */
 import WdCard from 'wot-lynx-ui/components/wd-card/wd-card.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 </script>
 
 <template>

@@ -1,31 +1,39 @@
 /**
- * 预设主题索引
+ * 预设主题索引 —— **按需引入，不进主包**（ADR-016）。
  *
- * 使用方式：
+ * 主主题（`wot-lynx-ui/theme`）只含 base 刻度 + light/dark 语义令牌。
+ * 预设主题是**覆盖层**：`brand-a` 会把 `--wot-primary-*` 整体改成紫色品牌色，
+ * 默认发给所有消费者等于替他们做品牌决策；`compact` / `high-contrast` 同理
+ * 只是少数场景需要。
+ *
+ * ## 用法
+ *
  * ```ts
- * // 方式一：CSS 类名（经 wot-lynx-ui/theme 引入后自动生效）
- * <view class="wot-theme-brand-a">...</view>
+ * // 只要某一个预设（推荐，体积最小）
+ * import 'wot-lynx-ui/theme/presets/brand-a'
  *
- * // 方式二：ConfigProvider
+ * // 或者全部预设
+ * import 'wot-lynx-ui/theme/presets'
+ * ```
+ *
+ * 引入后两种方式都能用：
+ *
+ * ```html
+ * <view class="wot-theme-brand-a">...</view>
  * <WdConfigProvider theme="brand-a">...</WdConfigProvider>
  * ```
+ *
+ * ⚠️ **未引入对应 CSS 时不会报错**：`--wot-*` 会回落到 light 主题的值，
+ * 表现为「主题没生效」而不是「报错」。这是 CSS 自定义属性的固有行为，
+ * 排查时先确认预设 CSS 是否已引入。
+ *
+ * ## 为什么类名写在各预设文件里
+ *
+ * 本文件只做聚合。若类名集中在这里，单独编译 `brand-a.scss` 会得到空 CSS，
+ * 就必须为每个预设再造一个入口文件。现在 `@use` 任一预设文件即可产出
+ * 完整规则，聚合入口与单文件入口天然一致。
  */
 
-@use './brand-a.scss' as *;
-@use './compact.scss' as *;
-@use './high-contrast.scss' as *;
-
-/* 预设主题类名 mixin（供 theme/index.scss 引入） */
-@mixin preset-theme-classes {
-  .wot-theme-brand-a {
-    @include brand-a-theme-vars;
-  }
-
-  .wot-theme-compact {
-    @include compact-theme-vars;
-  }
-
-  .wot-theme-high-contrast {
-    @include high-contrast-theme-vars;
-  }
-}
+@use './brand-a.scss';
+@use './compact.scss';
+@use './high-contrast.scss';

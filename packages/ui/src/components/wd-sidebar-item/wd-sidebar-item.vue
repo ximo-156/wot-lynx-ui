@@ -26,13 +26,13 @@ import './index.css'
 
 import { computed } from 'vue-lynx'
 import { useAlive } from '../../composables/useAlive'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdBadge from '../wd-badge/wd-badge.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdBadge from '../../primitives/wd-badge/wd-badge.vue'
 import { sidebarItemProps } from './types'
 import { useParent } from '../../composables/useParent'
 import { SIDEBAR_KEY } from '../wd-sidebar/types'
 import { deepAssign, isDef, isString, isUndefined, omitBy, parseStyle } from '../../common/util'
-import type { BadgeProps } from '../wd-badge/types'
+import type { BadgeProps } from '../../primitives/wd-badge/types'
 
 const props = defineProps(sidebarItemProps)
 const isAlive = useAlive()

@@ -28,8 +28,8 @@
 import './index.css'
 
 import { computed, useSlots } from 'vue-lynx'
-import WdImg from '../wd-img/wd-img.vue'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdImg from '../../primitives/wd-img/wd-img.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { avatarProps, type AvatarShape, type AvatarSize } from './types'
 import { useParent } from '../../composables/useParent'
 import { AVATAR_GROUP_KEY } from '../wd-avatar-group/types'

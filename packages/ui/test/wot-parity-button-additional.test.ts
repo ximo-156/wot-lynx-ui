@@ -5,7 +5,7 @@ import path from 'node:path'
 import { cleanup, render } from './render'
 import { fireEvent } from './fire-event'
 import { configureUniAdapter } from '../src/common/uni'
-import Button from '../src/components/wd-button/wd-button.vue'
+import Button from '../src/primitives/wd-button/wd-button.vue'
 import ConfigProvider from '../src/components/wd-config-provider/wd-config-provider.vue'
 
 const restores: Array<() => void> = []
@@ -20,7 +20,7 @@ function mount(initial: Record<string, any> = {}, slots?: any) {
   const mounted = render({ setup: () => () => h('view', { class: 'button-test-host' }, [h(Button, props.value, slots)]) } as any)
   return { ...mounted, props, button: () => mounted.container.querySelector('.wd-button') as HTMLElement }
 }
-const css = () => readFileSync(path.resolve(__dirname, '../src/components/wd-button/index.css'), 'utf8')
+const css = () => readFileSync(path.resolve(__dirname, '../src/primitives/wd-button/index.css'), 'utf8')
 function rule(selector: string) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = css().match(new RegExp(`(?:^|[,}])${escaped}\\{([^{}]*)\\}`))

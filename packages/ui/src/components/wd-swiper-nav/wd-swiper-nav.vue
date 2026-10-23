@@ -15,7 +15,7 @@
 import './index.css'
 
 import { parseStyle } from '../../common/util'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { swiperNavprops } from './types'
 
 defineProps(swiperNavprops)

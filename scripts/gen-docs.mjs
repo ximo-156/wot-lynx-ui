@@ -1,27 +1,66 @@
 #!/usr/bin/env node
 /**
- * 从组件的 types.ts 重新生成 VitePress 组件文档（API 表格部分）。
+ * 从 `packages/ui/meta.json` 生成 VitePress 组件文档与文档站侧边栏。
  *
- * 重写版规范：
- * - 组件导入名 PascalCase（WdButton），模板标签 <WdButton>；
- * - 设计令牌为 --wot-* 体系（与 wot-ui 2.3.2 同源，见 CONVENTIONS.md §3）；
- * - props 表格从 types.ts 的 JSDoc 注释提取。
+ * ## 为什么改成读 meta（P3.2，ADR-017）
  *
- * 用法：node scripts/gen-docs.mjs [组件名...]
- * 不带参数时生成全部。
+ * 旧版用正则**反解析** `types.ts`，为此打了三个补丁：
+ *
+ *   1. tempered token（`(?:(?!\*\/)[\s\S])*?`）避免贪婪吞掉多个注释块；
+ *   2. `<` / `>` 转义成 HTML 实体（markdown 会把 `Partial<X>` 当标签）；
+ *   3. 对象默认值包 code span（`{ top: 16 }` 会被 markdown 当属性语法）。
+ *
+ * 三个补丁都只在「解析时」生效，于是**转义后的字符串被存进了中间产物**，
+ * 而真正该转义的是「渲染时」。现在 meta 存干净的原文，转义集中在 `cell()`
+ * 与 `code()` 两个函数里，解析与渲染分层。
+ *
+ * 旧版还有三处硬编码，全部改为从 meta 推导：
+ *
+ *   - `customStyle` / `customClass` 手写（且 `unshift` 两次导致顺序反了）
+ *     → meta 里已由 `...baseProps` 展开带入，顺序正确。
+ *   - Events 表格写死两行假数据（`update:modelValue` / `click · change · confirm 等`），
+ *     106 个组件完全一样，与真实事件无关 → 改为 meta.events。
+ *   - 完全没有 Slots 表格 → 改为 meta.slots。
+ *
+ * ## 事件说明为什么是空的
+ *
+ * 事件描述只存在于 `types.ts` 的 `XxxEmits` 类型 JSDoc 里，而全仓只有 6 个
+ * 组件这样定义（其中 4 个写了 JSDoc）。其余组件的 `defineEmits` 只有事件名
+ * 与参数类型，**代码里没有描述**。按 ADR-006「猜出来的比没有更糟」，这里
+ * 只填两个协议级说明（`update:modelValue` / `update:current` 的 v-model 语义），
+ * 业务含义一律留 `-`。
+ *
+ * ## 产物
+ *
+ *   docs/components/*.md                  （gitignore，docs:build 前自动生成）
+ *   docs/.vitepress/components-sidebar.ts （入库，被 config.ts 引用）
+ *
+ * 侧边栏入库是因为 `config.ts` 直接 import 它；md 不入库是因为它是纯生成物，
+ * 且 `docs:build` / `docs:dev` 的 pre 脚本会保证它存在。
+ *
+ * 用法：
+ *   node scripts/gen-docs.mjs            生成全部
+ *   node scripts/gen-docs.mjs wd-button  只生成指定组件（侧边栏仍全量）
+ *   node scripts/gen-docs.mjs --check    只校验入库产物（侧边栏）是否最新
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const uiSrc = path.join(root, 'packages/ui/src')
-const componentsDir = path.join(uiSrc, 'components')
-const docsDir = path.join(root, 'docs/components')
+const META_PATH = path.join(root, 'packages/ui/meta.json')
+const DOCS_DIR = path.join(root, 'docs/components')
+const SIDEBAR_PATH = path.join(root, 'docs/.vitepress/components-sidebar.ts')
 
-/** 组件中文名 */
+/**
+ * 组件中文名（人工语义，代码里没有，因此是**唯一**需要人工维护的部分）。
+ *
+ * 必须覆盖 meta 里的每个组件：`gen-docs` 会断言覆盖完整，缺一个就退出 1，
+ * 避免标题悄悄退化成裸 PascalCase。
+ */
 const NAMES = {
   'wd-action-sheet': 'ActionSheet 动作面板',
+  'wd-address-edit': 'AddressEdit 地址编辑',
   'wd-avatar': 'Avatar 头像',
   'wd-avatar-group': 'AvatarGroup 头像组',
   'wd-backtop': 'Backtop 回到顶部',
@@ -41,6 +80,7 @@ const NAMES = {
   'wd-collapse': 'Collapse 折叠面板',
   'wd-collapse-item': 'CollapseItem 折叠面板项',
   'wd-config-provider': 'ConfigProvider 全局配置',
+  'wd-coupon': 'Coupon 优惠券',
   'wd-count-down': 'CountDown 倒计时',
   'wd-count-to': 'CountTo 数字滚动',
   'wd-curtain': 'Curtain 幕帘',
@@ -81,6 +121,7 @@ const NAMES = {
   'wd-popover': 'Popover 气泡弹出',
   'wd-popup': 'Popup 弹出层',
   'wd-progress': 'Progress 进度条',
+  'wd-pull-refresh': 'PullRefresh 下拉刷新',
   'wd-qr-code': 'QRCode 二维码',
   'wd-radio': 'Radio 单选框',
   'wd-radio-group': 'RadioGroup 单选框组',
@@ -91,7 +132,9 @@ const NAMES = {
   'wd-search': 'Search 搜索框',
   'wd-segmented': 'Segmented 分段器',
   'wd-select-picker': 'SelectPicker 下拉选择',
-  'wd-shide-verify': 'SlideVerify 滑动验证',
+  'wd-share-sheet': 'ShareSheet 分享面板',
+  'wd-sidebar': 'Sidebar 侧边导航',
+  'wd-sidebar-item': 'SidebarItem 侧边导航项',
   'wd-signature': 'Signature 签名',
   'wd-skeleton': 'Skeleton 骨架屏',
   'wd-slide-verify': 'SlideVerify 滑动验证',
@@ -101,6 +144,7 @@ const NAMES = {
   'wd-steps': 'Steps 步骤条',
   'wd-sticky': 'Sticky 粘性布局',
   'wd-sticky-box': 'StickyBox 粘性容器',
+  'wd-submit-bar': 'SubmitBar 提交订单栏',
   'wd-swipe-action': 'SwipeAction 滑动操作',
   'wd-swiper': 'Swiper 轮播图',
   'wd-swiper-nav': 'SwiperNav 轮播导航',
@@ -123,86 +167,234 @@ const NAMES = {
   'wd-watermark': 'Watermark 水印'
 }
 
-const pascal = (name) => name.replace('wd-', '').split('-').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join('')
-
-/** 解析 props 定义与 JSDoc 注释 */
-function parseProps(typesPath) {
-  const t = readFileSync(typesPath, 'utf8')
-  const props = []
-  // 注释体不得跨越下一个 *\/（types.ts 中类型声明与 props 注释交错时，
-  // 贪婪/非贪婪的 .*? 都会把多个注释块吞成一个；用 tempered token 锁定单块）
-  const pattern = /\/\*\*((?:(?!\*\/)[\s\S])*?)\*\/[ \t]*\r?\n[ \t]*(\w+):[ \t]*[^,\n]*/g
-  let m
-  while ((m = pattern.exec(t)) !== null) {
-    const comment = m[1]
-      .split('\n')
-      .map((x) => x.trim().replace(/^\*\s?/, '').trim())
-      .filter(Boolean)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      // JSDoc 里的泛型写法（Partial<LoadingProps> 等）必须转义：
-      // markdown 会把 <X> 当 HTML 标签解析，未闭合即 Vue SFC 编译错误
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      // 对象字面量默认值（{ top: 16, ... }）会被 markdown 的属性语法
-      // （{.class #id}）吞成 HTML 属性，包进 code span 规避
-      .replace(/(默认值:\s*)(\{[^{}]*\})/g, '$1`$2`')
-    props.push({ name: m[2], comment })
-  }
-  if (t.includes('...baseProps')) {
-    props.unshift({ name: 'customStyle', comment: '自定义根节点样式' })
-    props.unshift({ name: 'customClass', comment: '自定义根节点样式类' })
-  }
-  return props
+/** `update:*` 的说明是 Vue 的 v-model 协议语义，不是业务猜测 */
+const EVENT_NOTES = {
+  'update:modelValue': 'v-model 双向绑定的值更新',
+  'update:current': '`v-model:current` 绑定的当前项更新'
 }
 
-function genDoc(name) {
-  const typesPath = path.join(componentsDir, name, 'types.ts')
-  const title = NAMES[name] || `${pascal(name)}`
-  const lines = [`# ${title}`, '']
-  lines.push(`组件导入名：\`${pascal(name)}\`，模板中使用 \`<${pascal(name)}>\`。`)
-  lines.push('')
-  lines.push('## 介绍')
-  lines.push('')
-  lines.push(`${title.split(' ').slice(1).join(' ') || title}组件，API 与 wot-ui 对齐；样式基于与 wot-ui 2.3.2 同源的 \`--wot-*\` 设计令牌。`)
-  lines.push('')
+const pascal = (name) =>
+  name
+    .replace(/^wd-/, '')
+    .split('-')
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join('')
 
-  if (existsSync(typesPath)) {
-    const props = parseProps(typesPath)
-    if (props.length > 0) {
-      lines.push('## API')
-      lines.push('')
-      lines.push('### Props')
-      lines.push('')
-      lines.push('| 参数 | 说明 |')
-      lines.push('| --- | --- |')
-      for (const p of props) {
-        lines.push(`| \`${p.name}\` | ${p.comment || '-'} |`)
+// ---------------------------------------------------------------------------
+// 渲染（转义集中在这里，不污染 meta）
+// ---------------------------------------------------------------------------
+
+/** 普通单元格：`|` 断列、`<`/`>` 被当 HTML 标签、换行断行，全部要处理 */
+function cell(text) {
+  return String(text ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** 行内代码单元格：GFM 表格里 code span 内的 `|` 仍需转义，否则断列 */
+function code(value) {
+  return `\`${String(value).replace(/`/g, "'").replace(/\|/g, '\\|')}\``
+}
+
+/** 按**未转义**的 `|` 切分表格行（`\|` 是字面竖线） */
+function splitRow(row) {
+  const cells = []
+  let cur = ''
+  let escaped = false
+  for (const ch of row) {
+    if (escaped) {
+      cur += ch
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      cur += ch
+      escaped = true
+      continue
+    }
+    if (ch === '|') {
+      cells.push(cur)
+      cur = ''
+      continue
+    }
+    cur += ch
+  }
+  cells.push(cur)
+  return cells.slice(1, -1)
+}
+
+/**
+ * 生成后自检：每个表格的每一行列数必须等于表头列数。
+ *
+ * 旧版有个真实 bug——`可选值: 'primary' | 'success' | …` 被直接拼进单元格，
+ * 竖线被 markdown 当成列分隔符，`wd-button` 的 type 行裂成 8 列，整张表错位。
+ * 那版没有自检，错误一路进到文档站。这里让非法产物**无法落地**。
+ */
+function assertTableShape(fileName, md) {
+  const lines = md.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith('|')) continue
+    const expected = splitRow(lines[i]).length
+    for (let j = i + 1; j < lines.length && lines[j].startsWith('|'); j++) {
+      const actual = splitRow(lines[j]).length
+      if (actual !== expected) {
+        throw new Error(
+          `${fileName} 第 ${j + 1} 行表格列数 ${actual} ≠ 表头 ${expected}：${lines[j].slice(0, 100)}`
+        )
       }
-      lines.push('')
     }
   }
+}
 
-  lines.push('### Events')
+/** 说明列 = 描述 + （可选值） */
+function describe(prop) {
+  const desc = (prop.description ?? '').trim()
+  if (!prop.options) return desc
+  const sep = desc && !/[。.；;]$/.test(desc) ? '。' : ''
+  return `${desc}${sep}可选值：${prop.options}`
+}
+
+function renderProps(props) {
+  const lines = ['| 参数 | 说明 | 类型 | 默认值 |', '| --- | --- | --- | --- |']
+  for (const p of props) {
+    const def = p.default === undefined ? '-' : code(p.default)
+    lines.push(`| ${code(p.name)} | ${cell(describe(p)) || '-'} | ${cell(p.type ?? '-')} | ${def} |`)
+  }
+  return lines
+}
+
+function renderEvents(events) {
+  const lines = ['| 事件名 | 说明 |', '| --- | --- |']
+  for (const e of events) lines.push(`| ${code(e)} | ${cell(EVENT_NOTES[e] ?? '-')} |`)
+  return lines
+}
+
+function renderSlots(slots) {
+  const lines = ['| 插槽名 | 说明 |', '| --- | --- |']
+  for (const s of slots) {
+    const note = s === 'default' ? '默认插槽' : '-'
+    lines.push(`| ${code(s)} | ${note} |`)
+  }
+  return lines
+}
+
+function genDoc(name, comp) {
+  const full = NAMES[name] ?? pascal(name)
+  const cn = full.split(' ').slice(1).join(' ') || pascal(name)
+  const lines = [`# ${full}`, '']
+
+  lines.push(`组件导入名：\`${pascal(name)}\`，模板中使用 \`<${pascal(name)}>\`。`, '')
+  lines.push('## 介绍', '')
+  lines.push(
+    `${cn}组件，API 与 wot-ui 对齐；样式基于与 wot-ui 2.3.2 同源的 \`--wot-*\` 设计令牌。`
+  )
   lines.push('')
-  lines.push('| 事件名 | 说明 |')
-  lines.push('| --- | --- |')
-  lines.push('| `update:modelValue` | 受控值更新（支持 v-model 时） |')
-  lines.push('| `click` / `change` / `confirm` 等 | 与 wot-ui 一致 |')
-  lines.push('')
+
+  const hasProps = comp.props.length > 0
+  if (hasProps || comp.events.length > 0 || comp.slots.length > 0) {
+    lines.push('## API', '')
+  }
+  if (hasProps) {
+    lines.push('### Props', '', ...renderProps(comp.props), '')
+  }
+  if (comp.events.length > 0) {
+    lines.push('### Events', '', ...renderEvents(comp.events), '')
+  }
+  if (comp.slots.length > 0) {
+    lines.push('### Slots', '', ...renderSlots(comp.slots), '')
+  }
   return lines.join('\n')
 }
 
-const only = process.argv.slice(2)
-mkdirSync(docsDir, { recursive: true })
-let count = 0
-for (const entry of readdirSync(componentsDir)) {
-  if (!statSync(path.join(componentsDir, entry)).isDirectory()) continue
-  if (entry === 'wot-ui') continue
-  if (only.length > 0 && !only.includes(entry)) continue
-  const doc = genDoc(entry)
-  writeFileSync(path.join(docsDir, `${entry.replace('wd-', '')}.md`), doc)
-  count++
+/**
+ * 侧边栏。这是组件清单的**第三份拷贝**（另两份是 meta 与 barrel），
+ * 手写必然漂移——改动前它写着「全部组件（101 个）」，而 meta 已有 106 个，
+ * 且缺 5 个组件的条目（点进去 404）。改为生成。
+ */
+function renderSidebar(names) {
+  const lines = [
+    '// 由 scripts/gen-docs.mjs 生成，勿手改。',
+    '// 数据源：packages/ui/meta.json（组件清单）+ scripts/gen-docs.mjs 的 NAMES（中文名）。',
+    '',
+    'export interface ComponentSidebarGroup {',
+    '  text: string',
+    '  collapsed: boolean',
+    '  items: { text: string; link: string }[]',
+    '}',
+    '',
+    'export const componentsSidebar: ComponentSidebarGroup = {',
+    `  text: '全部组件（${names.length} 个）',`,
+    '  collapsed: false,',
+    '  items: ['
+  ]
+  for (const name of names) {
+    const text = (NAMES[name] ?? pascal(name)).replace(/'/g, "\\'")
+    lines.push(`    { text: '${text}', link: '/components/${name.replace(/^wd-/, '')}' },`)
+  }
+  lines.push('  ]', '}', '')
+  return lines.join('\n')
 }
-console.log(`generated ${count} component docs`)
+
+// ---------------------------------------------------------------------------
+// 主流程
+// ---------------------------------------------------------------------------
+if (!existsSync(META_PATH)) {
+  console.error('✖ packages/ui/meta.json 不存在。先运行 pnpm gen:meta 生成组件契约。')
+  process.exit(1)
+}
+const meta = JSON.parse(readFileSync(META_PATH, 'utf8'))
+const allNames = Object.keys(meta).sort()
+
+// NAMES 必须全覆盖：缺一个就退出，避免标题悄悄退化成裸 PascalCase
+const missingNames = allNames.filter((n) => !NAMES[n])
+const staleNames = Object.keys(NAMES).filter((n) => !meta[n])
+if (missingNames.length > 0 || staleNames.length > 0) {
+  if (missingNames.length > 0) {
+    console.error(`✖ NAMES 缺少 ${missingNames.length} 个组件的中文名：${missingNames.join(', ')}`)
+  }
+  if (staleNames.length > 0) {
+    console.error(`✖ NAMES 里有 ${staleNames.length} 个组件在 meta 中不存在：${staleNames.join(', ')}`)
+  }
+  process.exit(1)
+}
+
+const argv = process.argv.slice(2)
+const checkMode = argv.includes('--check')
+const only = argv.filter((a) => !a.startsWith('--'))
+const targets = only.length > 0 ? allNames.filter((n) => only.includes(n)) : allNames
+
+// 侧边栏永远全量生成（即使只重生成部分文档）
+const sidebar = renderSidebar(allNames)
+
+if (checkMode) {
+  // 只有侧边栏入库，md 是纯生成物（见文件头）。所以 --check 只校验侧边栏。
+  const current = existsSync(SIDEBAR_PATH) ? readFileSync(SIDEBAR_PATH, 'utf8') : null
+  if (current !== sidebar) {
+    console.error(
+      '✖ docs/.vitepress/components-sidebar.ts 与 meta 不一致。\n' +
+        '  运行 node scripts/gen-docs.mjs 重新生成后提交。'
+    )
+    process.exit(1)
+  }
+  console.log(`✅ 组件文档侧边栏与 meta 一致（${allNames.length} 项）`)
+} else {
+  mkdirSync(DOCS_DIR, { recursive: true })
+  for (const name of targets) {
+    const fileName = `${name.replace(/^wd-/, '')}.md`
+    const md = genDoc(name, meta[name])
+    assertTableShape(fileName, md)
+    writeFileSync(path.join(DOCS_DIR, fileName), md)
+  }
+
+  writeFileSync(SIDEBAR_PATH, sidebar)
+
+  const propCount = allNames.reduce((n, name) => n + meta[name].props.length, 0)
+  console.log(
+    `generated ${targets.length} component docs（${propCount} 个 prop）+ 侧边栏（${allNames.length} 项）`
+  )
+}

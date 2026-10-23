@@ -1,6 +1,6 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeStringProp, numericProp } from '../../common/props'
-import type { LoadingProps } from '../wd-loading/types'
+import type { LoadingProps } from '../../primitives/wd-loading/types'
 
 export type SwitchShape = 'round' | 'square'
 

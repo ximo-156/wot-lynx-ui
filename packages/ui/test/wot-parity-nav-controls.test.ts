@@ -41,6 +41,7 @@ import { collapseItemProps as officialCollapseItem } from '../../../.wot-ref/src
 import { dropMenuProps as officialDropMenu } from '../../../.wot-ref/src-2.3.2/components/wd-drop-menu/types'
 import { dorpMenuItemProps as officialDropItem } from '../../../.wot-ref/src-2.3.2/components/wd-drop-menu-item/types'
 import { sortButtonProps as officialSort } from '../../../.wot-ref/src-2.3.2/components/wd-sort-button/types'
+import { compRead } from './helpers/component-roots'
 
 // Compare the actual reference, not an API fixture or theme preset. Numeric tab
 // names and reactive pagination totals intentionally retain established fixes.
@@ -535,7 +536,7 @@ function cssRules(component: string, official: boolean) {
   const key = `${component}:${official}`
   if (cssCache.has(key)) return cssCache.get(key)!
   const root = resolve(__dirname, '../../..')
-  const css = official ? compile(resolve(root, `.wot-ref/src-2.3.2/components/${component}/index.scss`), { style: 'expanded', logger: { warn() {}, debug() {} } }).css : readFileSync(resolve(root, `packages/ui/src/components/${component}/index.css`), 'utf8')
+  const css = official ? compile(resolve(root, `.wot-ref/src-2.3.2/components/${component}/index.scss`), { style: 'expanded', logger: { warn() {}, debug() {} } }).css : compRead(component, 'index.css')
   const rules = new Map<string, Record<string, string>>()
   postcss.parse(css).walkRules((rule) => {
     if (rule.parent?.type === 'atrule' && /keyframes$/.test((rule.parent as any).name)) return

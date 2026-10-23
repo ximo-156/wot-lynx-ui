@@ -30,9 +30,10 @@ import CheckboxGroup from '../src/components/wd-checkbox-group/wd-checkbox-group
 import Switch from '../src/components/wd-switch/wd-switch.vue'
 import Rate from '../src/components/wd-rate/wd-rate.vue'
 import Segmented from '../src/components/wd-segmented/wd-segmented.vue'
+import { compRead } from './helpers/component-roots'
 
-const SRC = path.resolve(__dirname, '..', 'src/components')
-const css = (rel: string) => readFileSync(path.join(SRC, rel), 'utf8')
+// 双组件根解析（ADR-012）：rel 形如 'wd-cell/index.css'
+const css = (rel: string) => compRead(...rel.split('/'))
 
 /** 抽取指定选择器的全部声明体（同一选择器可拆成多条规则，按层叠顺序合并） */
 function ruleOf(cssText: string, selector: string): string {

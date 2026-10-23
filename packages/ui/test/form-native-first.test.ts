@@ -25,8 +25,9 @@ import { fireEvent } from './fire-event'
 import { pause } from '../src/common/util'
 import Form from '../src/components/wd-form/wd-form.vue'
 import FormItem from '../src/components/wd-form-item/wd-form-item.vue'
-import Input from '../src/components/wd-input/wd-input.vue'
+import Input from '../src/primitives/wd-input/wd-input.vue'
 import InputNumber from '../src/components/wd-input-number/wd-input-number.vue'
+import { compRead } from './helpers/component-roots'
 
 /** 从 cwd 向上找 monorepo 根（vitest 的 cwd 为 packages/ui） */
 function findRepoRoot(start: string): string {
@@ -41,11 +42,9 @@ function findRepoRoot(start: string): string {
 }
 
 const REPO_ROOT = findRepoRoot(process.cwd())
-const COMPONENTS_DIR = join(REPO_ROOT, 'packages/ui/src/components')
-
-/** 读取组件编译产物 index.css */
+/** 读取组件编译产物 index.css（双根解析，ADR-012） */
 function readCss(dir: string): string {
-  return readFileSync(join(COMPONENTS_DIR, dir, 'index.css'), 'utf8')
+  return compRead(dir, 'index.css')
 }
 
 /** 取某个选择器的声明块文本（编译产物为压缩 CSS，按选择器前缀切片） */

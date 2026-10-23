@@ -2,8 +2,8 @@
 /**
  * Loading 加载 — 文档站 H5 预览演示（手工编写）。
  */
-import WdLoading from 'wot-lynx-ui/components/wd-loading/wd-loading.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdLoading from 'wot-lynx-ui/primitives/wd-loading/wd-loading.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 import { ref } from 'vue'
 
 const loading = ref(false)

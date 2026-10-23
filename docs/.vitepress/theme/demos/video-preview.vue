@@ -4,7 +4,7 @@
  */
 import { ref } from 'vue'
 import WdVideoPreview from 'wot-lynx-ui/components/wd-video-preview/wd-video-preview.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const previewRef = ref<any>(null)
 

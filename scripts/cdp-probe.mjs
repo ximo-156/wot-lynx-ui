@@ -7,13 +7,14 @@ import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { resolveChrome } from './lib/chrome.mjs'
 
 const URL_TARGET = process.argv[2] || 'http://localhost:5173/components/slide-verify.html'
 const SCENARIO = process.argv[3] || 'slide-verify'
 const CHOOSER_FILE = process.argv[4] || ''
 
 const profileDir = mkdtempSync(join(tmpdir(), 'cdp-probe-'))
-const chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
+const chrome = spawn(resolveChrome(), [
   '--headless=new',
   `--user-data-dir=${profileDir}`,
   '--remote-debugging-port=9222',

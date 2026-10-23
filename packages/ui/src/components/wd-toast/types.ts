@@ -1,6 +1,6 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeStringProp } from '../../common/props'
-import type { LoadingType } from '../wd-loading/types'
+import type { LoadingType } from '../../primitives/wd-loading/types'
 
 export type ToastIconType = 'success' | 'error' | 'warning' | 'loading' | 'info' // 图标类型
 

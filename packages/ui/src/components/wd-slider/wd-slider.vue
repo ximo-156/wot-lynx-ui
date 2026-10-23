@@ -33,7 +33,7 @@
 import './index.css'
 
 import { computed, onMounted, ref, watch, useMainThreadRef } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { sliderProps, type SliderEmits, type SliderExpose, type SliderMarks, type SliderPopoverVisible, type SliderValue } from './types'
 import { deepClone, filterStyle, getRect, isArray, isDef, isEqual, parseStyle, uuid } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'

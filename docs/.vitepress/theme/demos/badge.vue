@@ -2,9 +2,9 @@
 /**
  * Badge 徽标 — 文档站 H5 预览演示（手工编写）。
  */
-import WdBadge from 'wot-lynx-ui/components/wd-badge/wd-badge.vue'
+import WdBadge from 'wot-lynx-ui/primitives/wd-badge/wd-badge.vue'
 import WdAvatar from 'wot-lynx-ui/components/wd-avatar/wd-avatar.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 </script>
 
 <template>

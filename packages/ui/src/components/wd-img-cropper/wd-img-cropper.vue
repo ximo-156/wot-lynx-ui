@@ -51,11 +51,12 @@
 import './index.css'
 
 import { computed, getCurrentInstance, onBeforeUnmount, ref, useMainThreadRef, watch } from 'vue-lynx'
-import WdButton from '../wd-button/wd-button.vue'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdButton from '../../primitives/wd-button/wd-button.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { imgCropperProps, type ImgCropperEmits, type ImgCropperExpose } from './types'
 import { useTranslate } from '../../composables/useTranslate'
 import { uni, hasUniAdapter } from '../../common/uni'
+import { getPlatform } from '../../common/platform'
 import { createCanvasContext, canvasToTempFilePath } from '../../common/canvasHelper'
 import { useAlive } from '../../composables/useAlive'
 import { addUnit, getSystemInfo, uuid, parseStyle } from '../../common/util'
@@ -653,7 +654,8 @@ function handleConfirm() {
 function draw() {
   if (!isAlive() || !props.modelValue || !props.imgSrc || exporting.value) return
   const src = props.imgSrc
-  if (!hasUniAdapter('createCanvasContext') || !hasUniAdapter('canvasToTempFilePath')) {
+  if (!getPlatform().capabilities.canvas2d) {
+    // 文案保持原样：errMsg 是消费者可能匹配的对外契约，能力重构不该顺带改它。
     emit('imgloaderror', { src, errMsg: 'img-cropper:fail createCanvasContext and canvasToTempFilePath host adapters are required' })
     return
   }

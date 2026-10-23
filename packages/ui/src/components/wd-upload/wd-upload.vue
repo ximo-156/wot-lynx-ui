@@ -36,8 +36,8 @@
 import './index.css'
 
 import { computed, onUnmounted, ref, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
-import WdLoading from '../wd-loading/wd-loading.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
+import WdLoading from '../../primitives/wd-loading/wd-loading.vue'
 import WdVideoPreview from '../wd-video-preview/wd-video-preview.vue'
 import { context, deepClone, isDef, isEqual, isImageUrl, isPromise, isVideoUrl, parseStyle, uuid } from '../../common/util'
 import { callInterceptor } from '../../common/interceptor'

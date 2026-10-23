@@ -7,7 +7,7 @@
 import './index.css'
 
 import { computed } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { emptyProps } from './types'
 import { addUnit, parseStyle } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'

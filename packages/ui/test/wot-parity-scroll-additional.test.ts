@@ -20,11 +20,11 @@ import StickyBox from '../src/components/wd-sticky-box/wd-sticky-box.vue'
 import IndexBar from '../src/components/wd-index-bar/wd-index-bar.vue'
 import IndexAnchor from '../src/components/wd-index-anchor/wd-index-anchor.vue'
 import Backtop from '../src/components/wd-backtop/wd-backtop.vue'
+import { compRead } from './helpers/component-roots'
 
 /** These tests use the production dual-thread renderer and Lynx tap/scroll events, not DOM clicks. */
 const images = ['one.png', 'two.png', 'three.png', 'four.png']
 const restoreFns: Array<() => void> = []
-const sourceDir = join(__dirname, '..', 'src', 'components')
 const officialDir = join(__dirname, '..', '..', '..', '.wot-ref', 'src-2.3.2', 'components')
 async function frames(count = 2) { for (let index = 0; index < count; index++) await pause() }
 function rect(width = 0, height = 0, top = 0, left = 0) { return { width, height, top, left, right: left + width, bottom: top + height } }
@@ -64,7 +64,7 @@ function nativeEvent(element: Element, name: string, detail?: any) {
 }
 function cssRule(component: string, selector: string): Record<string, string> {
   const result: Record<string, string> = {}
-  const css = readFileSync(join(sourceDir, component, 'index.css'), 'utf8')
+  const css = compRead(component, 'index.css')
   for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     if (!match[1].split(',').map((part) => part.trim()).includes(selector)) continue
     for (const declaration of match[2].split(';')) {
@@ -701,7 +701,7 @@ describe('wot 2.3.2 scroll additional parity: backtop and generated geometry', (
   it('SCSS/generated CSS retains official non-theme sizes, spacing and direct text rules', () => {
     for (const component of ['wd-swiper', 'wd-swiper-nav', 'wd-index-bar', 'wd-index-anchor', 'wd-backtop']) {
       const original = readFileSync(join(officialDir, component, 'index.scss'), 'utf8')
-      const local = readFileSync(join(sourceDir, component, 'index.scss'), 'utf8')
+      const local = compRead(component, 'index.scss')
       const tokens = [...original.matchAll(/\$(\w[\w-]*):\s*([^;]+);/g)]
       for (const token of tokens) expect(local, `${component}.${token[1]}`).toContain(`$${token[1]}: ${token[2]};`)
     }
@@ -720,7 +720,7 @@ describe('wot 2.3.2 scroll additional parity: backtop and generated geometry', (
     expect(cssRule('wd-backtop', '.wd-backtop .wd-backtop__backicon .wd-icon__glyph')['font-size']).toBeDefined()
   })
   it('does not disguise unsupported native animation timing, circular gestures or platform factories as real parity', () => {
-    const source = readFileSync(join(sourceDir, 'wd-swiper', 'wd-swiper.vue'), 'utf8')
+    const source = compRead('wd-swiper', 'wd-swiper.vue')
     expect(source).not.toMatch(/:scroll-with-animation/)
     expect(source).toContain('scrollViewTo(')
     const declaration = readFileSync(join(__dirname, '..', '..', '..', 'node_modules', '.pnpm', '@lynx-js+web-elements@0.12.0_tslib@2.8.1', 'node_modules', '@lynx-js', 'web-elements', 'dist', 'elements', 'ScrollView', 'ScrollView.d.ts'), 'utf8')

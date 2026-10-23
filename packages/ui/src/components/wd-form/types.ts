@@ -1,6 +1,6 @@
 import type { ComponentPublicInstance, ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeRequiredProp, numericProp } from '../../common/props'
-import type { CellAsteriskPosition, CellLayout, CellSize, CellValueAlign } from '../wd-cell/types'
+import type { CellAsteriskPosition, CellLayout, CellSize, CellValueAlign } from '../../primitives/wd-cell/types'
 import { FORM_KEY, type FormProvide } from '../../composables/useFormDisabled'
 import type { FormValidateEvent } from '../../composables/useFormItemValidate'
 

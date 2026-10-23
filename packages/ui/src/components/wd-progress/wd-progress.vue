@@ -24,7 +24,7 @@
 import './index.css'
 
 import { computed, onBeforeUnmount, ref, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { isArray, isDef, isObj, isString, parseStyle, pause } from '../../common/util'
 import { createStyleResolver } from '../../common/style'
 import { progressProps, type ProgressColor } from './types'

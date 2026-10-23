@@ -2,7 +2,7 @@
 /**
  * Img 图片 — 文档站 H5 预览演示（手工编写）。
  */
-import WdImg from 'wot-lynx-ui/components/wd-img/wd-img.vue'
+import WdImg from 'wot-lynx-ui/primitives/wd-img/wd-img.vue'
 
 // 内联 SVG 占位图（离线可渲染）
 const placeholder =

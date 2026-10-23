@@ -33,3 +33,8 @@
   /* 警告色对比度增强 */
   --wot-warning-main: #cc6600;
 }
+
+/** 预设类名（可单独编译，见 brand-a.scss 同款说明） */
+.wot-theme-high-contrast {
+  @include high-contrast-theme-vars;
+}

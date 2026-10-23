@@ -65,9 +65,6 @@ export function runWorklet(ctx: any, args: any[]): any {
   return fn(...args)
 }
 
-/** 元素注册表：uiSign → jsdom 元素（与 testing-environment 的 elementTree 对齐） */
-const elementBySign = new Map<number, any>()
-
 /**
  * 事件对象 → 绑定元素（currentTarget）的桥接键。
  *
@@ -79,10 +76,6 @@ const elementBySign = new Map<number, any>()
  * 本模块的 runWorklet 再将其还原为 worklet 事件上的 currentTarget。
  */
 export const WD_EVENT_TARGET_EL = Symbol('wdEventTargetEl')
-
-export function trackElement(sign: number, el: any): void {
-  elementBySign.set(sign, el)
-}
 
 /** 元素 → 主线程元素桩（每元素单例，保证引用 identity 与 refMap 一致） */
 const elementWrapperCache = new WeakMap<any, WorkletElement>()
@@ -184,7 +177,6 @@ export function installWorkletGlobals(mainThreadGlobal: any): void {
   mainThreadGlobal.lynxWorkletImpl = lynxWorkletImpl
 }
 
-export function resetWorkletRegistry(): void {
-  registry.clear()
-  elementBySign.clear()
-}
+// 这里曾有 resetWorkletRegistry()，从未被调用，已删除：registry 由
+// mtsWorkletPlugin 在 SFC 模块求值时填充（不是按用例），清空会让同 worker
+// 内后续文件的 worklet 上下文全部失效。需要看注册表内容请直接读 registry。

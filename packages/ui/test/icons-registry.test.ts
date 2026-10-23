@@ -9,7 +9,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { render, cleanup } from './render'
-import Icon from '../src/components/wd-icon/wd-icon.vue'
+import Icon from '../src/primitives/wd-icon/wd-icon.vue'
 import {
   hasIcon,
   listIcons,

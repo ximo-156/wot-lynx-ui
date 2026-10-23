@@ -26,6 +26,7 @@ import { dirname, join, relative } from 'node:path'
 import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from './render'
 import { captureConsole } from './capture-console'
+import { listComponents } from './helpers/component-roots'
 import SelectPicker from '../src/components/wd-select-picker/wd-select-picker.vue'
 
 /** 从 cwd 向上找 monorepo 根（vitest 的 cwd 为 packages/ui） */
@@ -143,12 +144,8 @@ function pascal(tag: string): string {
 }
 
 function componentDirs(): Set<string> {
-  const base = join(REPO_ROOT, 'packages/ui/src/components')
-  return new Set(
-    readdirSync(base, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && entry.name.startsWith('wd-'))
-      .map((entry) => entry.name)
-  )
+  // 双组件根（ADR-012）：primitives（基础件）+ components（业务组件）
+  return new Set(listComponents())
 }
 
 function importBindings(source: string): Set<string> {
@@ -235,7 +232,7 @@ describe('Lynx 模板标签白名单', () => {
       const template = stripComments(templateOf(readFileSync(file, 'utf8')))
       for (const tag of new Set(tagsOf(template).filter((tag) => tag.startsWith('wd-')))) {
         if (!dirs.has(tag)) {
-          violations.push(`${relative(REPO_ROOT, file)}: <${tag}> 没有对应的 src/components/${tag}/`)
+          violations.push(`${relative(REPO_ROOT, file)}: <${tag}> 没有对应的 src/{primitives,components}/${tag}/`)
         }
       }
     }

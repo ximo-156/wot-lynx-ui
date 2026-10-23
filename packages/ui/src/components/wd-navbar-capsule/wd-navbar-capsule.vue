@@ -17,7 +17,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { navbarCapsuleProps } from './types'
 import { parseStyle } from '../../common/util'
 

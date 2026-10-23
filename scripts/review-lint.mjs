@@ -21,7 +21,7 @@
  */
 
 import { readFileSync, readdirSync, statSync, writeFileSync, existsSync } from 'node:fs'
-import { join, relative, extname } from 'node:path'
+import { join, relative, extname, sep } from 'node:path'
 import { createHash } from 'node:crypto'
 import { execSync } from 'node:child_process'
 import process from 'node:process'
@@ -35,6 +35,32 @@ const SCAN_DIRS = ['packages/ui/src', 'packages/demo/src', 'packages/ui/test']
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.rspeedy', 'coverage', '.vitepress', '.preview'])
 const SKIP_FILE_RE = /(^|\/)index\.css$/ // 生成物，不检查
 const BASELINE_FILE = 'review-lint.baseline.json'
+
+/**
+ * 组件族（父子组件对 = 不可分割的原子单元）。
+ *
+ * 单一来源是 `docs/architecture/families.json`（声明式，每条必须写 reason）。
+ * 这里只读取、不维护，避免两处清单不一致（P1 单一来源）。
+ * 文件缺失时退化为空表 —— 所有横向依赖都会被判违规，属于安全侧失败。
+ */
+const FAMILIES_FILE = 'docs/architecture/families.json'
+
+function loadFamilies() {
+  const familyOf = new Map()
+  try {
+    const raw = readFileSync(join(ROOT, FAMILIES_FILE), 'utf8')
+    for (const family of JSON.parse(raw).families || []) {
+      const members = family.members || []
+      const key = family.id || members.join('+')
+      for (const m of members) familyOf.set(m, key)
+    }
+  } catch {
+    /* 无声明：不豁免任何族（安全侧失败） */
+  }
+  return familyOf
+}
+
+const FAMILY_OF = loadFamilies()
 
 /** Lynx 原生标签（小写标签名视为原生元素） */
 const LYNX_NATIVE_TAGS = new Set([
@@ -493,10 +519,96 @@ function parseTags(content) {
 // 检查执行
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// 横向依赖检查（ADR-012）
+//
+// 为什么单独实现、不走 RULES 的逐行正则：
+//   判定需要「当前文件属于哪个组件 / 目标属于哪一层 / 两者是否同一组件族」，
+//   这是跨行的结构化判断，不是单行模式匹配能表达的。
+//
+// 三条规则：
+//   dep/primitives-purity   基础件（src/primitives）不得依赖业务组件
+//   dep/lateral-component   业务组件不得引用其他业务组件的 .vue（族内除外）
+//   dep/lateral-contract    业务组件不得借用其他组件的 types/utils（族内除外）
+// ---------------------------------------------------------------------------
+
+const COMPONENT_PATH_RE = /^packages[\\/]ui[\\/]src[\\/](primitives|components)[\\/](wd-[a-z0-9-]+)[\\/]/
+const REL_IMPORT_RE = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g
+
+function checkLateralDeps(rel, codeLines) {
+  const self = rel.match(COMPONENT_PATH_RE)
+  if (!self) return []
+
+  const selfRoot = self[1]
+  const selfName = self[2]
+  const selfLayer = selfRoot === 'primitives' ? 'core' : 'business'
+  const findings = []
+
+  codeLines.forEach((text, idx) => {
+    REL_IMPORT_RE.lastIndex = 0
+    let m
+    while ((m = REL_IMPORT_RE.exec(text)) !== null) {
+      const spec = m[1]
+      if (!spec.startsWith('.')) continue // 包名导入不构成组件间耦合
+
+      const seg = spec.match(/(?:^|\/)(wd-[a-z0-9-]+)\//)
+      if (!seg) continue
+      const target = seg[1]
+      if (target === selfName) continue
+
+      // 目标层：显式跨根路径优先；`../wd-x/` 是兄弟写法，视为同层
+      let targetLayer = selfLayer
+      if (spec.includes('primitives/')) targetLayer = 'core'
+      else if (spec.includes('components/')) targetLayer = 'business'
+
+      const push = (ruleId, message) =>
+        findings.push({
+          ruleId,
+          ref: '§7',
+          severity: 'error',
+          message,
+          file: rel,
+          line: idx + 1,
+          snippet: text.trim().slice(0, 120)
+        })
+
+      if (selfLayer === 'core' && targetLayer === 'business') {
+        push('dep/primitives-purity', `基础件不得依赖业务组件（${target}）—— 基础件只能依赖 L3/L2/L0`)
+        continue
+      }
+
+      if (selfLayer === 'business' && targetLayer === 'business') {
+        // 父子组件对是原子单元，其互引（父引子 .vue / 子引父 KEY）是 Vue 契约的固有形态
+        const sameFamily =
+          FAMILY_OF.get(selfName) !== undefined && FAMILY_OF.get(selfName) === FAMILY_OF.get(target)
+        if (sameFamily) continue
+        if (/\.vue['"]?\s*$/.test(spec) || /\.vue['"]/.test(text)) {
+          push(
+            'dep/lateral-component',
+            `业务组件不得引用其他业务组件的实现（${target}）。两条合法出路：` +
+              `① 若 ${target} 是被多个组件复用的叶子件，把它提升到 src/primitives/（ADR-012）；` +
+              `② 若两者是不可分割的父子单元，在 docs/architecture/families.json 声明同族并写明 reason`
+          )
+        } else {
+          push(
+            'dep/lateral-contract',
+            `业务组件不得借用其他组件的契约（${target}）—— 共享类型下沉 common 或基础件 types`
+          )
+        }
+      }
+    }
+  })
+
+  return findings
+}
+
 function checkFile(file, raw) {
   const findings = []
   const ext = extname(file)
-  const rel = relative(ROOT, file)
+  // 统一为正斜杠：规则里的 dirs / notDirs 是 POSIX 写法，
+  // 若保留 Windows 的 `\`，这些过滤会**静默失效**（Windows 本地通过、Linux CI 红灯，
+  // 或反之）。可移植性问题的根因，必须在这一处归一。
+  const rel = relative(ROOT, file).split(sep).join('/')
   const code = stripComments(raw, ext)
   const rawLines = raw.split('\n')
 
@@ -558,7 +670,8 @@ function checkFile(file, raw) {
     }
   }
 
-  return findings
+  // 横向依赖（跨组件契约/实现引用）需要结构化判定，单独走一遍
+  return [...findings, ...checkLateralDeps(rel, code.split('\n'))]
 }
 
 function hashFinding(f) {

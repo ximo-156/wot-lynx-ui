@@ -3,7 +3,7 @@
 import './index.css'
 
 import { computed } from 'vue-lynx'
-import WdButton from '../wd-button/wd-button.vue'
+import WdButton from '../../primitives/wd-button/wd-button.vue'
 import { submitBarProps } from './types'
 import { addUnit, parseStyle } from '../../common/util'
 

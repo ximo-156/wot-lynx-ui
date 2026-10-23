@@ -46,7 +46,7 @@ import './index.css'
 
 import { computed, getCurrentInstance, onMounted, ref, watch, useMainThreadRef } from 'vue-lynx'
 import type { MainThreadRef } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { rateProps } from './types'
 import { addUnit, getRect, isDef, parseStyle, uuid } from '../../common/util'
 import { resolveIcon } from '../../icons/registry'

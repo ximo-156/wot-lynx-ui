@@ -12,8 +12,8 @@ import type {
   UploadSourceType,
   UploadSuccessStatus
 } from '../../composables/useUpload'
-import type { LoadingType } from '../wd-loading/types'
-import type { ImageMode } from '../wd-img/types'
+import type { LoadingType } from '../../primitives/wd-loading/types'
+import type { ImageMode } from '../../primitives/wd-img/types'
 
 // 兼容历史从 wd-upload/types 深度导入的用法
 export type {

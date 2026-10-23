@@ -46,11 +46,11 @@
 import './index.css'
 
 import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref, useMainThreadRef, watch } from 'vue-lynx'
-import WdButton from '../wd-button/wd-button.vue'
+import WdButton from '../../primitives/wd-button/wd-button.vue'
 import { signatureProps, type SignatureEmits, type SignatureExpose, type SignatureResult, type Point, type Line } from './types'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
-import { hasUniAdapter } from '../../common/uni'
+import { getPlatform } from '../../common/platform'
 import { createCanvasContext, canvasToTempFilePath } from '../../common/canvasHelper'
 import { getRect, uuid, isDef, addUnit, sanitizeSvgContent, filterStyle, parseStyle, type CSSProperties } from '../../common/util'
 
@@ -296,7 +296,7 @@ const confirmSignature = () => {
   const exportScale = props.exportScale
   const snapshot = lines.value.map((line) => ({ ...line, points: line.points.map((point) => ({ ...point })) }))
   const base = { width: width * exportScale, height: height * exportScale }
-  if (!hasUniAdapter('createCanvasContext') || !hasUniAdapter('canvasToTempFilePath')) {
+  if (!getPlatform().capabilities.canvas2d) {
     // A real SVG URI, explicitly not the PNG/JPG requested by fileType.
     emit('confirm', { ...base, tempFilePath: 'data:image/svg+xml;utf8,' + encodeURIComponent(buildSvgMarkup(snapshot, exportScale)), success: true })
     return

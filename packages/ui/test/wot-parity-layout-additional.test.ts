@@ -10,7 +10,7 @@ import Grid from '../src/components/wd-grid/wd-grid.vue'
 import GridItem from '../src/components/wd-grid-item/wd-grid-item.vue'
 import Row from '../src/components/wd-row/wd-row.vue'
 import Col from '../src/components/wd-col/wd-col.vue'
-import Cell from '../src/components/wd-cell/wd-cell.vue'
+import Cell from '../src/primitives/wd-cell/wd-cell.vue'
 import CellGroup from '../src/components/wd-cell-group/wd-cell-group.vue'
 import Card from '../src/components/wd-card/wd-card.vue'
 import Table from '../src/components/wd-table/wd-table.vue'
@@ -23,11 +23,12 @@ import ShareSheet from '../src/components/wd-share-sheet/wd-share-sheet.vue'
 import Coupon from '../src/components/wd-coupon/wd-coupon.vue'
 import WotUi from '../src/components/wot-ui/wot-ui.vue'
 import { normalizeTableSpan, resolveTableRows } from '../src/components/wd-table/layout'
+import { compRead } from './helpers/component-roots'
 
 async function frames(count = 3) { for (let i = 0; i < count; i++) await pause() }
 const text = (value: string, className?: string) => h('text', { class: className }, value)
 const element = (root: Element, selector: string) => root.querySelector(selector)! as HTMLElement
-const css = (name: string) => readFileSync(resolve(__dirname, `../src/components/${name}/index.css`), 'utf8')
+const css = (name: string) => compRead(name, 'index.css')
 // Testing PAPI uses Object.assign(CSSStyleDeclaration), storing CSS variables as own keys;
 // native PAPI receives the same object. Do not patch the runtime or pretend computed CSS.
 const inlineVariable = (node: HTMLElement, name: string) => (node.style as any)[name] ?? node.style.getPropertyValue(name)

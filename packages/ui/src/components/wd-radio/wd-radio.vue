@@ -15,7 +15,7 @@
 import './index.css'
 
 import { computed, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { radioProps, type RadioType } from './types'
 import { RADIO_GROUP_KEY, useRadioGroup } from '../../composables/useRadioGroup'
 import { useFormDisabled } from '../../composables/useFormDisabled'

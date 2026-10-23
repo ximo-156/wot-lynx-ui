@@ -22,7 +22,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import WdIcon from '../../wd-icon/wd-icon.vue'
+import WdIcon from '../../../primitives/wd-icon/wd-icon.vue'
 import WdDatetimePickerView from '../../wd-datetime-picker-view/wd-datetime-picker-view.vue'
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue-lynx'
 import { isArray, isEqual, isNumber, pause, padZero, addUnit } from '../../../common/util'

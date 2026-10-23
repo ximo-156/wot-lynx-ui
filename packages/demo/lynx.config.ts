@@ -49,18 +49,24 @@ export default defineConfig({
   },
   tools: {
     rspack: (config) => {
-      // demo 直接消费组件库源码，而不是 dist：
-      // - dist 只是源码桥接层（scripts/build-dist.mjs），未预构建时整个 demo 编译不过
-      //   （Can't resolve 'wot-lynx-ui'）；
-      // - 主题指向已编译的 index.css，因为 Rspeedy 未启用 @rsbuild/plugin-sass，
-      //   直接解析 index.scss 会报 "To enable support for Sass, use plugin-sass"。
+      // demo 走组件库**真实的 exports 契约**，不用别名抄近路：
+      // 别名会把 package.json 的 exports 映射整个绕开，导致子路径声明错了
+      // 也照样构建通过（2026-10-23 就踩过：`./components/*` 的 source 目标
+      // 指向目录，真实消费时 ERR_UNSUPPORTED_DIR_IMPORT，而 demo 一直绿灯）。
+      //
+      // 需要 'source' 条件才会命中 exports 里的 `source` 分支（rspack 默认
+      // conditionNames 不含它）。命中后 demo 直接编译 src，无需先 build:ui。
+      //
+      // 唯一保留的别名是 theme：`./theme` 的 source 目标是 index.scss，
+      // 而 Rspeedy 未启用 @rsbuild/plugin-sass，解析 .scss 会直接报错，
+      // 因此指向已编译的 index.css（该文件由 build:css 生成并入库）。
       const alias = (config.resolve?.alias ?? {}) as Record<string, unknown>
       config.resolve = {
         ...config.resolve,
+        conditionNames: [...(config.resolve?.conditionNames ?? []), 'source'],
         alias: {
           ...alias,
-          'wot-lynx-ui/theme$': uiSrc('styles/theme/index.css'),
-          'wot-lynx-ui$': uiSrc('index.ts')
+          'wot-lynx-ui/theme$': uiSrc('styles/theme/index.css')
         }
       }
     }

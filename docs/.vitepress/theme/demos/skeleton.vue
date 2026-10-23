@@ -4,7 +4,7 @@
  */
 import { ref } from 'vue'
 import WdSkeleton from 'wot-lynx-ui/components/wd-skeleton/wd-skeleton.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const loading = ref(true)
 const rowCol = ref<Array<number | Record<string, string>>>([{ width: '40%' }, 3, { width: '96px', height: '96px' }])

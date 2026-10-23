@@ -5,7 +5,7 @@
  * 演示按钮 / 标签的全局默认值经 theme-vars 与组件级默认配置下发。
  */
 import WdConfigProvider from 'wot-lynx-ui/components/wd-config-provider/wd-config-provider.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 import WdTag from 'wot-lynx-ui/components/wd-tag/wd-tag.vue'
 </script>
 

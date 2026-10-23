@@ -32,13 +32,14 @@ import { fireEvent } from './fire-event'
 import { pause } from '../src/common/util'
 import Avatar from '../src/components/wd-avatar/wd-avatar.vue'
 import AvatarGroup from '../src/components/wd-avatar-group/wd-avatar-group.vue'
-import Badge from '../src/components/wd-badge/wd-badge.vue'
+import Badge from '../src/primitives/wd-badge/wd-badge.vue'
 import Tag from '../src/components/wd-tag/wd-tag.vue'
 import Progress from '../src/components/wd-progress/wd-progress.vue'
 import Circle from '../src/components/wd-circle/wd-circle.vue'
+import { compRead } from './helpers/component-roots'
 
-const SRC = path.resolve(__dirname, '..', 'src/components')
-const css = (rel: string) => readFileSync(path.join(SRC, rel), 'utf8')
+// 双组件根解析（ADR-012）：rel 形如 'wd-cell/index.css'，跨 primitives/components 定位
+const css = (rel: string) => compRead(...rel.split('/'))
 
 /** 抽取指定选择器的声明体（编译产物为压缩单行，按选择器精确切分） */
 function ruleOf(cssText: string, selector: string): string {

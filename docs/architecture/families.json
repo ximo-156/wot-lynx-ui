@@ -1,0 +1,103 @@
+{
+  "$comment": [
+    "组件族（原子单元）声明 —— 依赖边规则与环判据的单一事实来源。",
+    "",
+    "为什么需要「族」：父子组件对（wd-tab + wd-tabs）通过 provide/inject 互引，",
+    "子组件必须 import 父组件 types 里的注入 KEY 才能拿到上下文。这类边不是设计缺陷，",
+    "而是 Vue 组合契约的固有形态；把它当违规会逼人做无意义的「KEY 下沉」重构。",
+    "",
+    "判据（两条满足其一）：",
+    "  1. 存在双向依赖（父子互引）；",
+    "  2. 子组件 import 父组件 types 中名为 *_KEY / *InjectionKey 的**值**（provide/inject 契约）。",
+    "",
+    "族的约束：族内互引允许，跨族互引是违规；拆包必须按族拆，永不拆族内。",
+    "新增族必须写明 reason —— 「为什么这两个组件不能独立演进」，否则评审不通过。",
+    "",
+    "本文件由 scripts/analyze-deps.mjs 校验：成员必须真实存在、族内必须真有边、",
+    "双向依赖对必须被某个族覆盖（不允许用沉默掩盖耦合）。"
+  ],
+  "families": [
+    {
+      "id": "avatar",
+      "members": ["wd-avatar", "wd-avatar-group"],
+      "reason": "avatar-group 通过 AVATAR_GROUP_KEY 向 avatar 注入排列上下文（层叠/偏移/最大数），两者共享同一套布局契约。"
+    },
+    {
+      "id": "swiper",
+      "members": ["wd-swiper", "wd-swiper-nav"],
+      "reason": "swiper-nav 通过 SWIPER_KEY 订阅 current/total 与切换方法，是 swiper 的指示器子组件，无独立使用场景。"
+    },
+    {
+      "id": "tabs",
+      "members": ["wd-tab", "wd-tabs"],
+      "reason": "tab 通过 TABS_KEY 读取 active/name 并注册自身，tabs 负责激活态与下划线动画，二者是同一个 tab 控件的两半。"
+    },
+    {
+      "id": "tabbar",
+      "members": ["wd-tabbar", "wd-tabbar-item"],
+      "reason": "tabbar-item 通过 TABBAR_KEY 读取 active 与注册索引，与 tabbar 共同实现路由式底栏。"
+    },
+    {
+      "id": "table",
+      "members": ["wd-table", "wd-table-column"],
+      "reason": "table-column 通过 TABLE_KEY 注册列定义，table 负责渲染与固定列计算，列的声明式 API 依赖 table 的 provide。"
+    },
+    {
+      "id": "row",
+      "members": ["wd-col", "wd-row"],
+      "reason": "col 通过 ROW_KEY 读取 gutter 与换行策略，脱离 row 后 gutter 语义失效。"
+    },
+    {
+      "id": "steps",
+      "members": ["wd-step", "wd-steps"],
+      "reason": "step 通过 STEPS_KEY 读取 active 与方向，单独存在无法确定步骤状态。"
+    },
+    {
+      "id": "collapse",
+      "members": ["wd-collapse", "wd-collapse-item"],
+      "reason": "collapse-item 通过 COLLAPSE_KEY 读取展开态并注册面板，手风琴行为由 collapse 统一裁决。"
+    },
+    {
+      "id": "form",
+      "members": ["wd-form", "wd-form-item"],
+      "reason": "form-item 通过 FORM_KEY 注册校验规则与读取 label 布局，脱离 form 后校验链路完全失效。"
+    },
+    {
+      "id": "grid",
+      "members": ["wd-grid", "wd-grid-item"],
+      "reason": "grid-item 通过 GRID_KEY 读取列数与边框策略，列宽计算必须由 grid 统一分配。"
+    },
+    {
+      "id": "sidebar",
+      "members": ["wd-sidebar", "wd-sidebar-item"],
+      "reason": "sidebar-item 通过 SIDEBAR_KEY 读取 active 与注册索引，选中态由 sidebar 统一管理。"
+    },
+    {
+      "id": "drop-menu",
+      "members": ["wd-drop-menu", "wd-drop-menu-item"],
+      "reason": "drop-menu-item 通过 DROP_MENU_KEY 读取展开项与关闭时机，与 drop-menu 共同管理互斥展开。"
+    },
+    {
+      "id": "index-bar",
+      "members": ["wd-index-bar", "wd-index-anchor"],
+      "reason": "index-anchor 通过 indexBarInjectionKey 读取当前激活索引并上报位置，滚动联动必须成对存在。"
+    },
+    {
+      "id": "sticky",
+      "members": ["wd-sticky", "wd-sticky-box"],
+      "reason": "sticky 通过 STICKY_BOX_KEY 读取容器边界与偏移，脱离 sticky-box 后吸附边界无法确定。"
+    },
+    {
+      "id": "picker",
+      "members": [
+        "wd-picker",
+        "wd-picker-view",
+        "wd-datetime-picker",
+        "wd-datetime-picker-view",
+        "wd-calendar",
+        "wd-calendar-view"
+      ],
+      "reason": "wrapper → view 的原子链：picker 是 picker-view 的弹层包装，datetime-picker 复用 datetime-picker-view，calendar-view 由 datetime-picker-view 派生，calendar 包装 calendar-view。三组 wrapper 共享同一套「列定义 / formatter / 取值」契约（PickerViewExpose、DatetimePickerViewFormatter、getPickerValue），拆开任何一环都会留下悬空类型。"
+    }
+  ]
+}

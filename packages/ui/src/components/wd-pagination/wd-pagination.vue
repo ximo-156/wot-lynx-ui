@@ -16,7 +16,7 @@
 import './index.css'
 
 import { computed } from 'vue-lynx'
-import WdButton from '../wd-button/wd-button.vue'
+import WdButton from '../../primitives/wd-button/wd-button.vue'
 import { paginationProps } from './types'
 import { useTranslate } from '../../composables/useTranslate'
 import { parseStyle } from '../../common/util'

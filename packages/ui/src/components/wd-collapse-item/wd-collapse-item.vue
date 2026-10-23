@@ -16,7 +16,7 @@
 import './index.css'
 
 import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { addUnit, getRect, isArray, isDef, isString, parseStyle, pause, uuid } from '../../common/util'
 import { callInterceptor } from '../../common/interceptor'
 import { useParent } from '../../composables/useParent'

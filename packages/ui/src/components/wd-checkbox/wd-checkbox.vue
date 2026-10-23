@@ -14,7 +14,7 @@
 import './index.css'
 
 import { computed, getCurrentInstance, onBeforeMount, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { checkboxProps, type CheckboxDirection, type CheckboxExpose, type CheckboxPlacement, type CheckboxType } from './types'
 import { useCheckboxGroup } from '../../composables/useCheckboxGroup'
 import { useFormDisabled } from '../../composables/useFormDisabled'

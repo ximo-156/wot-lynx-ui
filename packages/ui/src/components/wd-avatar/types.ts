@@ -1,6 +1,6 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeStringProp } from '../../common/props'
-import type { ImageMode } from '../wd-img/types'
+import type { ImageMode } from '../../primitives/wd-img/types'
 
 /**
  * 头像尺寸类型

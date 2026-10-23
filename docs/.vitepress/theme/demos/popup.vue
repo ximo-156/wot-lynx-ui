@@ -3,8 +3,8 @@
  * Popup 弹出层 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdPopup from 'wot-lynx-ui/components/wd-popup/wd-popup.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdPopup from 'wot-lynx-ui/primitives/wd-popup/wd-popup.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const visible = ref(false)
 const position = ref<'center' | 'top' | 'bottom' | 'left' | 'right'>('center')

@@ -25,7 +25,7 @@
 import './index.css'
 
 import { computed, getCurrentInstance, nextTick, onMounted, ref, watch } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { navbarProps } from './types'
 import { addUnit, getRect, isDef, parseStyle, uuid } from '../../common/util'
 import { useDeviceInfo } from '../../composables/useDeviceInfo'

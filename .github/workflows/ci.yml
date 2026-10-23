@@ -21,26 +21,6 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # 0. 前置检查 —— scripts/build-css.mjs 目前尚未入库（体检 P0-1）
-  #    缺失时优雅跳过依赖它的 job，避免门禁上线第一天就红灯
-  # ---------------------------------------------------------------------------
-  precheck:
-    name: 前置检查
-    runs-on: ubuntu-latest
-    outputs:
-      has-build-css: ${{ steps.check.outputs.ready }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: check
-        run: |
-          if [ -f scripts/build-css.mjs ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=前置脚本缺失::scripts/build-css.mjs 尚未入库，生成物一致性与构建校验将被跳过。请参见 contributing/code-review/README.md 第 1 步。"
-          fi
-
-  # ---------------------------------------------------------------------------
   # 1. 规范检查 —— 把 CONVENTIONS.md 的硬规则自动化
   #    PR：只查改动文件（存量不阻塞）；main：全量 + baseline 豁免
   # ---------------------------------------------------------------------------
@@ -90,11 +70,25 @@ jobs:
       - run: pnpm --filter wot-lynx-ui run typecheck
 
   # ---------------------------------------------------------------------------
-  # 3. 测试（含 11 份回归网）
+  # 3. 测试（分片矩阵）
+  #
+  #    墙钟由**最慢分片**决定，所以分片必须按耗时均衡而不是按文件个数。
+  #    内建 `vitest --shard=i/N` 是「收集顺序上取 i % N」的按个数均分：87 个
+  #    文件里 1 个 20s 的矩阵用例和一堆 <1s 的纯函数混在一起时，实测 4 片为
+  #    45.6 / 35.1 / 37.1 / 69.7s —— 最慢片比理想值高 49%。
+  #    `scripts/test-shard.mjs` 用 LPT 装箱，同一份数据得到 46.9s × 4（偏差 0%）。
+  #
+  #    正确性不依赖耗时缓存：分片清单由脚本现场扫描 test/ 得到，缓存只影响
+  #    均衡度。`test/project-coverage.test.ts` 会独立验证「任意分片数下都不漏
+  #    文件、不重复」，所以新增测试文件不可能被静默跳过。
   # ---------------------------------------------------------------------------
   test:
-    name: 测试
+    name: 测试（分片 ${{ matrix.shard }}/4）
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # 一个分片失败时其余继续跑完，一次看到全部问题
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -105,16 +99,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter wot-lynx-ui run test
+      - run: pnpm test:shard --index=${{ matrix.shard }} --count=4
 
   # ---------------------------------------------------------------------------
-  # 4. 生成物一致性 —— 拦住「手改 index.css」与「忘记重新生成」
-  #    本仓库有 104 个已入库的 index.css，均不得手动编辑（CONVENTIONS §2）
+  # 4. 生成物与契约一致性 —— 拦住「手改 index.css」「忘记重新生成」
+  #    「新增根目录组件漏出样式」与「依赖图劣化」
+  #    index.css 均不得手动编辑（CONVENTIONS §2）；覆盖两个组件根：
+  #    L3.5 基础件（src/primitives）与 L4 业务组件（src/components）。
   # ---------------------------------------------------------------------------
   generated:
-    name: 生成物一致性
-    needs: precheck
-    if: needs.precheck.outputs.has-build-css == 'true'
+    name: 生成物与契约一致性
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -132,9 +126,9 @@ jobs:
 
       - name: 校验与源码一致
         run: |
-          if ! git diff --exit-code -- 'packages/ui/src/components/**/index.css'; then
+          if ! git diff --exit-code -- 'packages/ui/src/*/**/index.css'; then
             echo "::error::index.css 与 index.scss 不一致。可能原因：手改了生成物，或改了 scss 但未运行 pnpm build:css"
-            git diff --stat -- 'packages/ui/src/components/**/index.css'
+            git diff --stat -- 'packages/ui/src/*/**/index.css'
             exit 1
           fi
 
@@ -144,13 +138,88 @@ jobs:
       - name: 校验组件 barrel 与目录一致
         run: pnpm check:index
 
+      # 依赖图基线：业务↔业务边数不得增长、不得出现跨族循环依赖（ADR-012）
+      - name: 校验横向依赖未劣化
+        run: pnpm check:deps
+
+      # 架构快照：文档（ARCHITECTURE.md / SNAPSHOT.md）与代码一致
+      - name: 校验架构快照与代码一致
+        run: pnpm check:snapshot
+
+      # 组件契约：packages/ui/meta.json 由源码推导（ADR-017）。手改 meta.json
+      # 或改了 props/events 却没重新生成，都会在这里红灯。meta 的 diff 就是
+      # API 变更清单，所以它必须严格由代码决定。
+      - name: 校验组件契约 meta 与源码一致
+        run: pnpm check:meta
+
+      # 文档站侧边栏由 gen-docs 从 meta 生成（ADR-018）。它曾是一份手写的
+      # 组件清单，写着「101 个」而实际有 106 个、缺 5 个条目（点进去 404）。
+      # components/*.md 是纯生成物不入库，因此这里只校验入库的侧边栏。
+      - name: 校验文档侧边栏与 meta 一致
+        run: pnpm check:docs
+
+      # 分发契约：exports 每个目标真实存在，files 白名单无遗漏
+      - name: 校验 exports 契约
+        run: pnpm check:exports
+
   # ---------------------------------------------------------------------------
-  # 5. 双端构建校验
+  # 5. API 变更清单（仅 PR）
+  #
+  #    meta.json 是源码的函数（ADR-017），两个 commit 的 meta 之差就是公开 API
+  #    之差。这里把差渲染成 PR 摘要 + 产物，让破坏性变更无法「悄悄」通过。
+  #
+  #    刻意不设阻塞：破坏性变更是产品决策，不是缺陷。`--fail-on major` 留给
+  #    发布分支的收口检查，PR 阶段只负责让人看见（ADR-019）。
+  # ---------------------------------------------------------------------------
+  api-diff:
+    name: API 变更清单
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # checkout 的 PR 检出只保证当前 ref 的历史，基准分支要显式取
+      - name: 取基准分支
+        run: git fetch --no-tags origin "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+
+      - name: 生成 API 变更清单
+        run: |
+          node scripts/api-diff.mjs \
+            --base "origin/${{ github.base_ref }}" \
+            --md api-changes.md \
+            --json api-changes.json \
+            --plan codemod-plan.json
+
+      - name: 写入 PR 摘要
+        run: cat api-changes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-changes
+          path: |
+            api-changes.md
+            api-changes.json
+            codemod-plan.json
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # 6. 双端构建校验
   # ---------------------------------------------------------------------------
   build:
     name: 构建校验
-    needs: precheck
-    if: needs.precheck.outputs.has-build-css == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -163,10 +232,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:css
+      - run: pnpm build:ui
       - run: pnpm build:demo
+      # dist 产物生成后再校验一次 exports（此时 dist/* 目标必须真实存在）
+      - name: 校验 exports 契约（含预构建产物）
+        run: node scripts/check-exports.mjs --built
 
   # ---------------------------------------------------------------------------
-  # 6. 依赖安全审计（不阻塞合并，但需关注）
+  # 7. 依赖安全审计（不阻塞合并，但需关注）
   # ---------------------------------------------------------------------------
   audit:
     name: 依赖审计

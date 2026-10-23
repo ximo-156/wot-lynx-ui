@@ -10,7 +10,8 @@ import './index.css'
 
 import { getCurrentInstance, nextTick, onBeforeUnmount, onMounted, reactive, watch } from 'vue-lynx'
 import { getRect, parseStyle, uuid } from '../../common/util'
-import { hasUniAdapter, uni } from '../../common/uni'
+import { uni } from '../../common/uni'
+import { getPlatform } from '../../common/platform'
 import { useChildren } from '../../composables/useChildren'
 import { useAlive } from '../../composables/useAlive'
 import { STICKY_BOX_KEY, stickyBoxProps } from './types'
@@ -63,7 +64,7 @@ function observerForChild(child: any) {
   const exposed = exposedOf(child)
   if (uid === undefined) return
   removeObserver(uid)
-  if (!hasUniAdapter('createIntersectionObserver') || !exposed?.stickyState || boxStyle.height <= 0 || exposed.stickyState.height <= 0) return
+  if (!getPlatform().capabilities.intersectionObserver || !exposed?.stickyState || boxStyle.height <= 0 || exposed.stickyState.height <= 0) return
   updateChildPosition(child)
   const observer = uni.createIntersectionObserver(instance.proxy, { thresholds: [0, 0.5] })
   if (!observer) return

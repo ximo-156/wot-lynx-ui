@@ -3,8 +3,8 @@
  * Input 输入框 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdInput from 'wot-lynx-ui/components/wd-input/wd-input.vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdInput from 'wot-lynx-ui/primitives/wd-input/wd-input.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const value = ref('')
 const disabledValue = ref('禁用状态')

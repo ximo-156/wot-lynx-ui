@@ -3,8 +3,8 @@
 import './index.css'
 
 import { ref, watch } from 'vue-lynx'
-import WdPopup from '../wd-popup/wd-popup.vue'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdPopup from '../../primitives/wd-popup/wd-popup.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { shareSheetProps, type ShareOption } from './types'
 import { parseStyle } from '../../common/util'
 

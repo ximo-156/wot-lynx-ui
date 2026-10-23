@@ -4,7 +4,7 @@
  */
 import WdGrid from 'wot-lynx-ui/components/wd-grid/wd-grid.vue'
 import WdGridItem from 'wot-lynx-ui/components/wd-grid-item/wd-grid-item.vue'
-import WdBadge from 'wot-lynx-ui/components/wd-badge/wd-badge.vue'
+import WdBadge from 'wot-lynx-ui/primitives/wd-badge/wd-badge.vue'
 </script>
 
 <template>

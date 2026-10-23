@@ -28,7 +28,7 @@
 import './index.css'
 
 import { computed } from 'vue-lynx'
-import WdIcon from '../wd-icon/wd-icon.vue'
+import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { isDef, parseStyle } from '../../common/util'
 import { useParent } from '../../composables/useParent'
 import { useTranslate } from '../../composables/useTranslate'

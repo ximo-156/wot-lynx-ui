@@ -6,7 +6,7 @@
  * 在 demos/ 下新建 <slug>.vue，demo-registry 自动发现。
  */
 import { ref } from 'vue'
-import WdButton from 'wot-lynx-ui/components/wd-button/wd-button.vue'
+import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
 
 const count = ref(0)
 const loading = ref(false)

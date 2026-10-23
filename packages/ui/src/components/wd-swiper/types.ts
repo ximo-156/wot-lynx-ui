@@ -1,7 +1,7 @@
 import type { ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeBooleanProp, makeNumberProp, makeNumericProp, makeStringProp, numericProp } from '../../common/props'
 import type { SwiperNavProps } from '../wd-swiper-nav/types'
-import type { ImageMode } from '../wd-img/types'
+import type { ImageMode } from '../../primitives/wd-img/types'
 
 /**
  * 轮播滑动方向

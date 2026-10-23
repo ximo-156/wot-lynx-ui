@@ -1,6 +1,6 @@
 import type { ComponentPublicInstance, ExtractPropTypes, PropType } from 'vue-lynx'
 import { baseProps, makeArrayProp, makeBooleanProp, makeNumberProp, makeStringProp, numericProp } from '../../common/props'
-import { type TabsLineTheme } from '../wd-tabs/types'
+import type { TabsLineTheme } from '../../common/types'
 
 /**
  * 级联选项数据结构

@@ -7,7 +7,9 @@
  */
 import { JSDOM } from 'jsdom'
 import { LynxTestingEnv } from '@lynx-js/testing-environment'
-import { installWorkletGlobals, resetWorkletRegistry } from './mts-worklet-shim'
+import { beforeEach } from 'vitest'
+import { installWorkletGlobals } from './mts-worklet-shim'
+import { __resetIconRegistry } from '../src/icons/registry'
 
 // url 必须给 http(s) origin：about:blank 是不透明 origin，jsdom 的
 // localStorage getter 会抛 SecurityError；断言失败时 vitest 序列化 DOM
@@ -148,3 +150,21 @@ console.warn = (...args: any[]) => {
   }
   originalWarn(...args)
 }
+
+// ---------------------------------------------------------------------------
+// 跨用例的模块级状态复位
+//
+// 组件 project 关闭了 vitest 的文件隔离（`isolate: false`，见 vitest.config.ts）：
+// 一个 worker 会连续跑多个测试文件，模块级单例不再随文件结束而消失。
+// 凡是「测试会写、生产不会撤销」的注册表，都必须在这里显式复位，否则结果
+// 依赖文件执行顺序——`--sequence.shuffle.files` 的 seed=7/42 就是这么暴露的。
+//
+// ⚠️ worklet 注册表**故意不在此复位**：registerMainThreadFn 在 SFC 模块求值
+//    时调用（mtsWorkletPlugin 把 `'main thread'` 函数包成 __wdWl(fn)），
+//    一旦清空，同一 worker 内后续文件的 worklet 上下文全部失效（ctx 为 null
+//    → applySetWorkletEvent 崩）。它按模块注册、不按用例注册，天然不需要复位。
+// ---------------------------------------------------------------------------
+beforeEach(() => {
+  __resetIconRegistry()
+})
+
