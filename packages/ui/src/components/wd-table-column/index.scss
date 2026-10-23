@@ -34,8 +34,8 @@
   .wd-table__shadow {
     position: absolute;
     top: 0;
-    right: calc(-1 * var(--wot-table-shadow-width, 30px));
-    width: var(--wot-table-shadow-width, 30px);
+    right: calc(-1 * $table-shadow-width);
+    width: $table-shadow-width;
     height: 100%;
     background: $table-shadow-gradient;
     pointer-events: none;

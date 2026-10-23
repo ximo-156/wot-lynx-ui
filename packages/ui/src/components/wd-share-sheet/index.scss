@@ -16,8 +16,8 @@
 
     &-text {
       font-size: 16px;
-      font-weight: 500;
-      color: var(--wot-text-main, var(--wot-n-900));
+      font-weight: $font-weight-500;
+      color: var(--wot-text-main, var(--wot-brand-text-main));
     }
   }
 
@@ -47,20 +47,20 @@
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      background: var(--wot-fill-color, var(--wot-n-100));
+      background: var(--wot-filled-content);
       margin-bottom: 8px;
     }
 
     &-name {
       font-size: 12px;
-      color: var(--wot-text-main, var(--wot-n-900));
+      color: var(--wot-text-main, var(--wot-brand-text-main));
       text-align: center;
     }
   }
 
   @include e(icon) {
     font-size: 24px;
-    color: var(--wot-text-main, var(--wot-n-900));
+    color: var(--wot-text-main, var(--wot-brand-text-main));
   }
 
   @include e(cancel) {
@@ -68,11 +68,11 @@
     align-items: center;
     justify-content: center;
     height: 48px;
-    border-top: 1px solid var(--wot-border-color, var(--wot-n-200));
+    border-top: 1px solid var(--wot-border-color, var(--wot-border-main));
 
     &-text {
       font-size: 16px;
-      color: var(--wot-text-main, var(--wot-n-900));
+      color: var(--wot-text-main, var(--wot-brand-text-main));
     }
   }
 }

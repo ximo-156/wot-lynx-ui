@@ -330,10 +330,16 @@ describe('原生优先：居中成对写全（NATIVE-REWRITE §3.2）', () => {
     expect(column['flex-shrink'], '.wd-table-column 需要 flex-shrink: 0（防被表体压缩）').toBe('0')
 
     // 固定列阴影：px 单位（参考源 30rpx 为小程序专有单位，Lynx 不识别）；
-    // 保留 --wot-table-shadow-width 主题变量，只要求回退值为 px
+    // 保留 --wot-table-shadow-width 主题变量，只要求回退值为 px。
+    // 2026-10-23：回退值从裸 30px 收敛为 $n-32 令牌；build-css 会把 width 收成
+    // --csslib-width-N 间接变量，故断言「令牌仍在 + 回退是 px」而不锁具体形状。
     const shadow = ruleOf('wd-table-column', '.wd-table-column .wd-table__shadow')
-    expect(shadow.width, '阴影宽度回退值应为 px').toBe('var(--wot-table-shadow-width, 30px)')
-    expect(shadow.right, '阴影偏移回退值应为 px').toBe('calc(-1*var(--wot-table-shadow-width, 30px))')
+    const shadowVar = Object.entries(shadow).find(([k]) => k.startsWith('--csslib-width'))?.[1] ?? ''
+    expect(shadowVar, '阴影宽度必须保留 --wot-table-shadow-width 且回退为 px').toMatch(
+      /^var\(--wot-table-shadow-width,\s*var\(--wot-n-\d+,\s*\d+px\)\)$/
+    )
+    expect(shadow.width, '宽度应引用该变量').toMatch(/^var\(--csslib-width-\d+\)$/)
+    expect(shadow.right, '偏移应取负').toMatch(/^calc\(-1\*var\(--wot-table-shadow-width,.*\d+px\)\)\)$/)
   })
 
   it('wd-table：居中对齐的单元格文本同步 text-align: center', () => {

@@ -261,6 +261,7 @@ $font-weight-ultra-light: var(--wot-font-weight-ultra-light, 100) !default; // u
 $font-weight-thin: var(--wot-font-weight-thin, 200) !default; // thin字重
 $font-weight-light: var(--wot-font-weight-light, 300) !default; // 轻量字重
 $font-weight-regular: var(--wot-font-weight-regular, 400) !default; // regular字重
+$font-weight-500: var(--wot-font-weight-500, 500) !default; // 500字重（原表缺失，组件此前只能写字面量）
 $font-weight-medium: var(--wot-font-weight-medium, 600) !default; // medium字重
 $font-weight-semibold: var(--wot-font-weight-semibold, 700) !default; // semibold字重
 $font-weight-bold: var(--wot-font-weight-bold, 700) !default; // 加粗字重
@@ -411,7 +412,7 @@ $warning-surface: var(--wot-warning-surface, $orange-1) !default; // 警告色�
 
 /* 文字色系列 */
 $text-main: var(--wot-text-main, var(--wot-brand-text-main, #2D273DFF)) !default; // 主要文字颜色
-$text-secondary: var(--wot-text-secondary, var(--wot-brand-text-secondary, #979797FF)) !default; // 次要文字颜色
+$text-secondary: var(--wot-text-secondary, var(--wot-brand-text-secondary, #6B7085FF)) !default; // 次要文字颜色
 $text-auxiliary: var(--wot-text-auxiliary, $coolgrey-6) !default; // 辅助文字颜色
 $text-disabled: var(--wot-text-disabled, $coolgrey-4) !default; // 禁用文字颜色
 $text-placeholder: var(--wot-text-placeholder, $coolgrey-5) !default; // 占位文字颜色
@@ -420,7 +421,7 @@ $text-white: var(--wot-text-white, $base-white) !default; // 白色文字颜色
 /* 图标色系列 */
 /* 图标 */
 $icon-main: var(--wot-icon-main, var(--wot-brand-text-main, #2D273DFF)) !default; // 主要图标颜色
-$icon-secondary: var(--wot-icon-secondary, var(--wot-brand-text-secondary, #979797FF)) !default; // 次要图标颜色
+$icon-secondary: var(--wot-icon-secondary, var(--wot-brand-text-secondary, #6B7085FF)) !default; // 次要图标颜色
 $icon-auxiliary: var(--wot-icon-auxiliary, $coolgrey-6) !default; // 辅助图标颜色
 $icon-disabled: var(--wot-icon-disabled, $coolgrey-4) !default; // 禁用图标颜色
 $icon-placeholder: var(--wot-icon-placeholder, $coolgrey-5) !default; // 占位图标颜色

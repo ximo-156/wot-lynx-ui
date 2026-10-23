@@ -3,11 +3,11 @@ import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import {
-import { compDir } from './helpers/component-roots'
   CLOCK, FIXTURE, LOCAL, REFERENCE,
   EXCEPTIONS, auditProps, buildOfficialFixture, canonicalFunction,
   compareProps, componentContract, createScopedLoader, formatDifference, snapshotProps
 } from '../../../scripts/check-wot-props.mjs'
+import { compDir } from './helpers/component-roots'
 
 // No source reference is required in CI: expected values are pinned from the
 // official archive, never inferred from the implementation being tested.

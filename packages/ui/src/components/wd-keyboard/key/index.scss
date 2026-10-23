@@ -18,7 +18,7 @@ $keyboard-key-font-weight: var(--wot-keyboard-key-font-weight, $font-weight-medi
 // 按键背景色
 $keyboard-key-bg: var(--wot-keyboard-key-bg, $filled-oppo) !default;
 // 按键圆角
-$keyboard-key-radius: var(--wot-keyboard-key-radius, $radius-main) !default;
+$keyboard-key-radius: var(--wot-keyboard-key-radius, $radius-large) !default;
 // 按键激活背景色
 $keyboard-key-bg-active: var(--wot-keyboard-key-bg-active, $filled-strong) !default;
 // 删除键字号
@@ -35,11 +35,18 @@ $keyboard-key-primary-bg: var(--wot-keyboard-key-primary-bg, $primary-6) !defaul
 $keyboard-key-primary-bg-active: var(--wot-keyboard-key-primary-bg-active, $primary-7) !default;
 // 按键图标尺寸
 $keyboard-key-icon-size: var(--wot-keyboard-key-icon-size, $n-22) !default;
+// 车牌键圆角（键宽仅 28.7px，4px 已是比例合适的圆角，不宜跟随数字键放大）
+$keyboard-key-car-radius: var(--wot-keyboard-key-car-radius, $radius-main) !default;
 
 .wd-key-wrapper {
   position: relative;
-  flex: 1;
+  // flex-grow 必须为 0：末行不足一整行时（车牌英数模式 34 键 → 末行 8 格），
+  // grow:1 会把末行键拉宽到 40.9px，与上方 28.7px 形成锯齿。
+  flex: 0 1 auto;
   flex-basis: 33%;
+  // min-width:auto 会让 flex 项以 min-content 为下限，十列网格直接塌成三列；
+  // 显式归零，网格才按 flex-basis 排布。
+  min-width: 0;
   box-sizing: border-box;
   padding: 0 $keyboard-key-padding $keyboard-key-padding 0;
 
@@ -69,6 +76,7 @@ $keyboard-key-icon-size: var(--wot-keyboard-key-icon-size, $n-22) !default;
   @include when(car) {
     font-size: $keyboard-key-car-font-size;
     line-height: $keyboard-key-car-line-height;
+    border-radius: $keyboard-key-car-radius;
   }
 
   @include m(large) {

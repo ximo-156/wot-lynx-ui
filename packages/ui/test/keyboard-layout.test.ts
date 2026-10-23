@@ -111,6 +111,15 @@ describe('WdKeyboard 键盘布局与交互', () => {
     // wrapper 基准在 key/index.css（按键自身样式文件）
     expect(KEY_CSS).toMatch(/\.wd-key-wrapper\{[^}]*flex-basis:33%/)
     expect(KEY_CSS).toMatch(/\.wd-key-wrapper--wider\{flex-basis:66%/)
+
+    // 2026-10-23 实测回归：百分比基准正确也可能排不出网格。
+    // - 少了 min-width:0，flex 项下限取 min-content（实测 92.7px），
+    //   十列网格塌成三列、单键 122.3px；
+    // - 写成 flex:1（grow:1），英数末行只占 8 格时剩余宽度会把键拉宽到 40.9px，
+    //   同一块键盘出现两种键宽。
+    // 这两条在 DOM 断言里完全无感，只能锁 CSS 产物。
+    expect(KEY_CSS, '缺少 min-width:0 会让十列网格塌成三列').toMatch(/\.wd-key-wrapper\{[^}]*min-width:0/)
+    expect(KEY_CSS, 'wrapper 不得 flex-grow（末行键会被拉宽）').toMatch(/\.wd-key-wrapper\{[^}]*flex:0 1 auto/)
   })
 
   it('按键触摸交互 emit update:modelValue，删除键回删', async () => {

@@ -270,6 +270,30 @@ function directories(path) {
   return readdirSync(path, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
 }
 
+/**
+ * 本地组件根（ADR-012 双根）。
+ *
+ * L3.5 基础件 `src/primitives` 与 L4 业务组件 `src/components` 是两个**平级**根。
+ * 这里曾硬编码 `join(local, 'components', name)`：primitives 迁移后 12 个基础件
+ * 一律「找不到运行时 prop 定义」，被 catch 吞进 unverified，覆盖率从 101 静默掉到 89。
+ * 之所以长期没人发现——承载它的测试文件 import 语法坏了，整个文件从未执行。
+ *
+ * 与 `packages/ui/test/helpers/component-roots.ts` 同一约定；那边是 .ts、本脚本是
+ * .mjs 且需零依赖运行，故各自维护一份，新增组件根时**两处都要改**。
+ */
+function componentRoots(local) {
+  return [join(local, 'primitives'), join(local, 'components')]
+}
+
+/** 按组件名定位本地目录；找不到时返回 components 路径，让 componentContract 抛原始错误 */
+function resolveComponentDir(local, name) {
+  for (const root of componentRoots(local)) {
+    const dir = join(root, name)
+    if (existsSync(dir)) return dir
+  }
+  return join(local, 'components', name)
+}
+
 export function buildOfficialFixture({ reference = REFERENCE, clock = CLOCK } = {}) {
   const loader = createScopedLoader(reference, { clock })
   const components = {}
@@ -339,7 +363,7 @@ export function auditProps(expected, { local = LOCAL } = {}) {
   for (const [kind, contracts] of [['components', expected.components], ['internals', expected.internals]]) {
     for (const [component, official] of Object.entries(contracts)) {
       try {
-        const actual = componentContract(join(local, 'components', component), loader)
+        const actual = componentContract(resolveComponentDir(local, component), loader)
         const result = compareProps(component, official.props, actual.props)
         differences.push(...result.differences)
         if (result.additions.length) additions.push({ component, props: result.additions })
@@ -348,7 +372,8 @@ export function auditProps(expected, { local = LOCAL } = {}) {
       } catch (error) { unverified.push({ component, reason: error.message }) }
     }
   }
-  const localOnly = directories(join(local, 'components')).filter((name) => !own(expected.components, name) && !expected.unverified.some((item) => item.component === name))
+  const localNames = [...new Set(componentRoots(local).filter((root) => existsSync(root)).flatMap(directories))]
+  const localOnly = localNames.filter((name) => !own(expected.components, name) && !expected.unverified.some((item) => item.component === name))
   return { version: expected.version, coverage: expected.coverage, verifiedComponents, verifiedInternals, differences, additions, unverified, localOnly: localOnly.map((component) => ({ component, reason: 'No component in the offline official 2.3.2 archive; official props unverified.' })), exceptions: EXCEPTIONS }
 }
 

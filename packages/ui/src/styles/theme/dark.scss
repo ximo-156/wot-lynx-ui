@@ -84,6 +84,12 @@
   /* Picker View Mask */
   --wot-picker-view-mask-start-color: var(--wot-opac-10_85);
   --wot-picker-view-mask-end-color: var(--wot-opac-5_20);
+  /* 表面 / 边框别名（与 light.scss 同源，见该处说明） */
+  --wot-bg-color: var(--wot-filled-oppo);
+  --wot-bg-color-secondary: var(--wot-filled-bottom);
+  --wot-bg-color-disabled: var(--wot-filled-strong);
+  --wot-border-color: var(--wot-border-main);
+  --wot-border-color-light: var(--wot-border-light);
   /* 分类色 */
   /* 黄色 */
   --wot-classifyapplication-yellow-background: var(--wot-yellow-10);

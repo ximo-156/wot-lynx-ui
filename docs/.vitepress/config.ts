@@ -76,7 +76,16 @@ export default defineConfig({
           ]
         }
       ],
-      '/components/': [componentsSidebar]
+      '/components/': [componentsSidebar],
+      '/design/': [
+        {
+          text: '设计规范',
+          items: [
+            { text: '规范总览', link: '/design/DESIGN-SPEC' },
+            { text: '体检报告 2026-10-23', link: '/design/AUDIT-2026-10-23' }
+          ]
+        }
+      ]
     },
     socialLinks: [{ icon: 'github', link: 'https://github.com/wot-lynx-ui/wot-lynx-ui' }],
     footer: {

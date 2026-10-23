@@ -67,11 +67,11 @@ function onTouchEnd() {
       <WdLoading custom-class="wd-key__loading-icon" v-if="loading" />
       <template v-if="type === 'delete'">
         <text v-if="text">{{ text }}</text>
-        <WdIcon v-else custom-class="wd-key__icon" name="del" size="22px" />
+        <WdIcon v-else custom-class="wd-key__icon" name="del" />
       </template>
       <template v-else-if="type === 'extra'">
         <text v-if="text">{{ text }}</text>
-        <WdIcon v-else custom-class="wd-key__icon" name="keyboard" size="22px" />
+        <WdIcon v-else custom-class="wd-key__icon" name="keyboard" />
       </template>
       <text v-else>{{ text }}</text>
     </view>

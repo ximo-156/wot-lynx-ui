@@ -83,7 +83,12 @@ describe('theme.ts 色板镜像与 theme/base/color.scss 一致', () => {
   it('语义色镜像与品牌主色、主次文字及暗色可读性一致', () => {
     expect(normalizeHex(theme.PRIMARY_COLOR)).toBe('#755FFE')
     expect(normalizeHex(theme.SECONDARY_COLOR)).toBe('#9A89FF')
-    expect(normalizeHex(theme.TEXT_SECONDARY_COLOR)).toBe('#979797')
+    // 次文字直接与 color.scss 对齐（不写死字面量）：此前钉的是 #979797，
+    // 反而让「JS 侧与 SCSS 侧同源」这条守护失效。值已因 AA 对比度改为
+    // coolgrey-7（白底 4.90:1，原 #979797 仅 2.92:1）。
+    expect(normalizeHex(theme.TEXT_SECONDARY_COLOR)).toBe(
+      normalizeHex(resolveToken('brand-text-secondary', tokens))
+    )
     expect(normalizeHex(theme.THEME_ICON_COLOR.light)).toBe(
       normalizeHex(resolveToken('brand-text-main', tokens))
     )

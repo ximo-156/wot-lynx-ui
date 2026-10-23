@@ -20,7 +20,9 @@ page,
   --wot-brand-secondary: #9A89FFFF;
   --wot-brand-opac: #755FFE14;
   --wot-brand-text-main: #2D273DFF;
-  --wot-brand-text-secondary: #979797FF;
+  // 次文字：原 #979797 对白底仅 2.92:1（AA 要求 4.5:1），改用 coolgrey-7 档位
+  // （白底 4.90:1 / 页面底 4.62:1）。仍高于 disabled/placeholder，层级关系不变。
+  --wot-brand-text-secondary: #6B7085FF;
 
   // 蓝色
   --wot-blue-1: #F5F8FFFF;

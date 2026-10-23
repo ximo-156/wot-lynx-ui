@@ -16,8 +16,8 @@
     border-radius: 8px;
     overflow: hidden;
     border: 1px solid var(--wot-border-color, $border-main);
-    &--chosen { border-color: var(--wot-primary, $primary-6); }
-    &--disabled { opacity: 0.5; pointer-events: none; }
+    &--chosen { border-color: var(--wot-primary-6); }
+    &--disabled { opacity: $opacity-disabled; pointer-events: none; }
   }
   @include e(left) {
     display: flex;
@@ -26,20 +26,20 @@
     justify-content: center;
     width: 100px;
     padding: 12px 8px;
-    background: linear-gradient(135deg, var(--wot-primary-light, $primary-1), var(--wot-primary, $primary-6));
+    background: linear-gradient(135deg, var(--wot-primary-1), var(--wot-primary-6));
   }
   @include e(value) {
     display: flex;
     flex-direction: row;
     align-items: baseline;
-    &-prefix { font-size: 14px; color: $filled-oppo; font-weight: 500; }
-    &-num { font-size: 24px; color: $filled-oppo; font-weight: 600; }
-    &-suffix { font-size: 14px; color: $filled-oppo; font-weight: 500; }
+    &-prefix { font-size: 14px; color: $filled-oppo; font-weight: $font-weight-500; }
+    &-num { font-size: 24px; color: $filled-oppo; font-weight: $font-weight-medium; }
+    &-suffix { font-size: 14px; color: $filled-oppo; font-weight: $font-weight-500; }
   }
   @include e(condition) { font-size: 11px; color: $filled-oppo; opacity: 0.8; margin-top: 4px; }
   @include e(divider) { width: 0; border-left: 1px dashed var(--wot-border-color, $border-main); }
   @include e(right) { display: flex; flex-direction: column; flex: 1; justify-content: center; padding: 12px; gap: 4px; }
-  @include e(name) { font-size: 14px; font-weight: 500; color: $text-main; }
+  @include e(name) { font-size: 14px; font-weight: $font-weight-500; color: $text-main; }
   @include e(reason) { font-size: 12px; color: $text-secondary; }
   @include e(chosen-tag) {
     display: flex;
@@ -47,7 +47,7 @@
     align-items: center;
     justify-content: center;
     padding: 2px 8px;
-    background: var(--wot-primary, $primary-6);
+    background: var(--wot-primary-6);
     border-radius: 4px;
     align-self: flex-start;
     margin-top: 4px;

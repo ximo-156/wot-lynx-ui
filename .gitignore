@@ -118,3 +118,5 @@ visual/current/
 # 测试耗时采集的中间产物（缓存本体 packages/ui/test/durations.json 要入库）
 .tmp-test-durations.json
 .tmp-testprof.json
+docs/adr/*.md
+docs/guide/*.md

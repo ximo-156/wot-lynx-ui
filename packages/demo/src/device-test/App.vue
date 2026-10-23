@@ -4,6 +4,7 @@ import { useToast } from 'wot-lynx-ui'
 
 import { testSections, totalItems, type TestItem } from './checklist'
 import ChecklistBox from './ChecklistBox.vue'
+import { demoImage } from '../assets/demo-images'
 
 // ---------- 设备信息 ----------
 const sysInfo = (globalThis as any).SystemInfo || {}
@@ -102,8 +103,8 @@ const longList = computed(() => Array.from({ length: 30 }, (_, i) => i + 1))
 // ---------- 7. 展示组件 ----------
 const tabValue = ref(0)
 const swiperList = ref([
-  { url: 'https://temp.img1.lynxjs.org/close.png', text: '1' },
-  { url: 'https://temp.img1.lynxjs.org/close.png', text: '2' }
+  { url: demoImage, text: '1' },
+  { url: demoImage, text: '2' }
 ])
 
 // ---------- 8. 主题与适配 ----------

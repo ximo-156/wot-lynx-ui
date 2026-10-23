@@ -1,0 +1,20 @@
+/**
+ * demo 用的占位图。
+ *
+ * 原来引用的是 Lynx 官方临时图床 `https://temp.img1.lynxjs.org/close.png`，
+ * 该域名已不可达（TLS 握手直接断开），预览里所有 <wd-img> / <wd-avatar> 都是破图，
+ * 控制台还会刷一片 `ERR_CONNECTION_CLOSED` 和随之而来的 `[demo] img error`。
+ *
+ * 这里改成内联 data URI：不依赖网络、不经过资源管线，Lynx 与 Web 两个环境行为一致。
+ * 图形为 96×96 圆角方块 + 白色叉（4x 超采样抗锯齿），1454 字节。
+ */
+export const demoImage =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAFdUlEQVR42u3d+1dUVRQH8PMf8CfcP2H+mUqR7Gaazx7IG9SmfFJaNxHtYTY/ZSGSPbR8VJOADO8RSFsrWk0CAfZYw1r1+25vB2xYMjD33Hv2Ock+a31mHV3cc/b+7iXgT1epiGv/2TEP+ShA6SLwmCnuLVjs2VM21r73b3soiXII1rncYhYeV/ApCb2klJFBtLyXrUABAlEWyqoirvATKCuhhkaZJaKF/+6oj/IIhBbKztcKvxkfRCBi4YcMfwTDHwERq/KG0PTOSALlEYhYUaaJtcKvQFkJyxjKtvRvR01nhgMEwqhgxfAbzwx7CASLR/+z1nh6KIVAsEgtC7/h9JCHQLD6719BQ/tgEoFglXw4gPr2wRwCwSpXCP/UgIdAWOHRAHwJwhpf1Z3qDxAIKwJV19afRiCsSKvatkwagbACB3ASB3AS/yBsSKsa3Ah7VM3bfSDskQHYHsDe4BZwOXRuGAbv3IfJ6QWY+f0fGP/5L2jvnADOGorR3VQD1UI1UW1UI2cNbAM4f+0nKLUGsHHu8OnOUotqZRtAddALph08NwRrLQqEoxayWvhLi2rmqEVVv4UbwwZ+mIdyFn3deqqF4AB6wLTJqQUodxUaN1NHueHTopo5slEvv9kDps3c/xvCLAoq7hrChE+LaubIBgfQDaaNT/4JYVdhCPHcHzZ8WlQzRzbqpRPdYFpbxxjorH4MLurd/Rrh06KaObLBAdwEDv0Tc3pDmJiPcOe85p1zwJWLevH4TeCiP4Q5p++KgnUAXMH8X8IvDOCN74FbpIAsnm2CegE/bMhECKrUmbrhZ1Y50zQcQBpsyUQKzNxZnNSe19NgU2ZcMzh8Ls4zbMEBfAe2ZcZnNQOcjfSsC72rPa24cYBukNrhO9K32t36LbiCYwh0h0s9q93HcOMQk0N4EL5j/apdx74B1/QZGAKd6WKvatdR3Diob+y3+MLHs1ztU+3ED1fFMQQ6w+UecQA3wGVRhlAI3+3+1M4juHFY5AE43p/aceQ6uCqub0Eu96h2HMaNg+L+Iexqn2r74Wvgmlu3Z2L/NZTOdLFXtf0QbhxiIvxlQ3CsXxzAVXCFyfCXD8GdntXzB6+CCzjCLx6CK33jAL4G23TDp+eiPOtC72obftikG2AvPrd0Rm+EIdjuX2177SuwpTerGX52eoWzpjXPmgGbGait+GGDfmDTrGeapra+ihtmkYKyeLYJOIArwClaQO7cERf1XPIKcIkSjMt3RYEDuAwc9AOZinDnVIQh8OSitrxyGUxr/bBPK4ie0anId9MZOotq5sgGB/AlmDZyd04z/Hju1xkC1cyRjdpyADeG3ZtdCB9+zDWEHQLVzJGNevbAF2Daj7/8ESp8U3WEGQLVzJENywDKbdxk+C7W8mAA/v7PwbTaEzfWbnjkHnDUQuiutRbVzFGL4mr6bNeoE+GXMwSqlasO9cy+z4BLzfHr0I2N38Xvr7/iD7nhO7Nw9INe4KyhGN1NNVAtVBPVRjVy1qBsNS+WBtCCG2GN2txyCYQ9anPzpTQCYUVaPd38aRqBsEIGYH8ATV0BAmFFoKqaunwEwgpfVTV2eVWNF0HY0FV4i8amxos5BIJV7uEbNDY1dCYRCFbJ4gF4lfiXgg9lvuxNSpX1nSkEgkXqkfeIVdZf8BAIFiu/dXtj3YUAgTAqKPkuyY11HRUoi0AYQdmu/qpz/ILEhrqOPAIRqzxlW9Y7hTfUfuIjELEK91ZtGYLF8JfWUzUf+yiPQGih7PTCLxpCAmUlzNAos4SKY+FBFU/uPR8gEGUJKDMV98KDPZSSgEuibDxlei0OIvlE9Uc5BOtcjrJgCX6lhQV4yEcBShd53IIu7i1Y7Dly6P8CX58BjFh0JZIAAAAASUVORK5CYII='
+
+/**
+ * 故意不可解析的地址。
+ *
+ * `wd-img` 的 error 分支要留一个演示：`.invalid` 是 RFC 2606 保留的顶级域，
+ * 保证解析不到，也不会像原来那样对着真实域名反复发起连接。
+ */
+export const demoBrokenImage = 'https://example.invalid/not-found.png'

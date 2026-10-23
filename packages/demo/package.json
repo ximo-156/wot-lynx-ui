@@ -7,7 +7,8 @@
     "build": "rspeedy build",
     "preview": "rspeedy preview",
     "dev:device-test": "rspeedy dev -c lynx.config.device-test.ts",
-    "build:device-test": "rspeedy build -c lynx.config.device-test.ts"
+    "build:device-test": "rspeedy build -c lynx.config.device-test.ts",
+    "dev:worklet-repro": "rspeedy dev -c lynx.config.worklet-repro.ts"
   },
   "dependencies": {
     "vue": "^3.5.30",
