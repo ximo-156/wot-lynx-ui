@@ -99,6 +99,9 @@ const customLoadingProps = computed<Partial<LoadingProps>>(() => {
 })
 
 function switchValue(event: any) {
+  // §14：tap 是根 view 原生事件的转发，必须无条件执行——
+  // disabled/loading/beforeChange 拒绝只拦「切换」，不拦事件上报（radio 同款）。
+  emit('tap', event)
   if (isDisabled.value || props.loading) return
   const oldVal = props.modelValue
   const request = ++changeRequest
@@ -109,7 +112,6 @@ function switchValue(event: any) {
     emit('change', {
       value: newVal
     })
-    emit('tap', event)
   }
 
   callInterceptor(props.beforeChange, {

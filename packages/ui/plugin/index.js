@@ -27,3 +27,4 @@ export function pluginWotLynxTags(options = {}) {
 export default pluginWotLynxTags
 
 export { pluginWotLynxWebFonts } from './web-fonts.js'
+export { pluginWotLynxAutoImport } from './auto-import.js'

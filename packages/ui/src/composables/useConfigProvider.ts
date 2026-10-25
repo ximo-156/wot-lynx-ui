@@ -11,8 +11,13 @@ export type { ConfigProviderProvide }
 export const USE_CONFIG_PROVIDER_KEY = '__CONFIG_PROVIDER__'
 export const kebabCase = (str: string): string => {
   str = str.replace(str.charAt(0), str.charAt(0).toLocaleLowerCase())
-  return str.replace(/([a-z])([A-Z])/g, (_, p1, p2) => p1 + '-' + p2.toLowerCase())
+  // 连续大写（如 zIndex → z-index）必须按「大写+大写小写」边界断开，
+  // 否则 backtopZIndex 只产出 --wot-backtop-zIndex，组件消费的
+  // --wot-backtop-z-index 永远收不到值（CSS 变量名大小写敏感）。
+  return str.replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/([a-zA-Z])(\d)/g, '$1-$2').replace(/(\d)([a-zA-Z])/g, '$1-$2')
+    .toLowerCase()
 }
 export const mapThemeVarsToCSSVars = (themeVars: Record<string, string>) => {
   if (!themeVars) return

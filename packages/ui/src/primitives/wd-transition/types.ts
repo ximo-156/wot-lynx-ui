@@ -54,7 +54,8 @@ export const transitionProps = {
    * 类型: boolean
    * 默认值: true
    *
-   * true：leave 落地后子视图卸载（v-if 语义）；
+   * true 且 lazyRender=true：随 show 以 v-if 挂载，leave 落地后卸载；
+   * true 且 lazyRender=false（默认组合）：v-if 不成立，子视图常驻、仅显隐切换；
    * false：子视图常驻，leave 落地后经 v-show 置 display:none。
    */
   destroy: makeBooleanProp(true),

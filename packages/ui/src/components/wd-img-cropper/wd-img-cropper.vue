@@ -844,6 +844,11 @@ const onGestureMoveMt = (event: any) => {
   if (!g || !img || img.getAttribute('gesture-active') !== 'true' || g.version !== img.getAttribute('gesture-version')) return
   const touches = event.touches
   if (!touches || !touches.length) return
+  // 双指但 startDist 未采样（第二指落在非图片区域，touchstart 未记录起距）
+  // 时直接退出：否则 hypotenuse（像素距离）会当除数把 scale 钳到 maxScale，
+  // 图片瞬间爆大、松手又被后台落定跳回（与后台 handleImgTouchMove 的
+  // fingerDistance > 0 守卫对称）。
+  if (touches.length > 1 && !(Number(g.startDist) > 0)) return
 
   let left = 0
   let top = 0
@@ -977,10 +982,10 @@ const onGestureEndMt = () => {
       <WdIcon custom-class="wd-img-cropper__rotate" v-if="!disabledRotate" name="refresh" @tap="handleRotate"></WdIcon>
       <view class="wd-img-cropper__footer-btn">
         <WdButton custom-class="wd-img-cropper__cancel" size="large" type="info" variant="text" @tap="handleCancel">
-          {{ cancelButtonText || translate('cancel') }}
+          <text>{{ cancelButtonText || translate('cancel') }}</text>
         </WdButton>
 
-        <WdButton size="large" @tap="handleConfirm">{{ confirmButtonText || translate('confirm') }}</WdButton>
+        <WdButton size="large" @tap="handleConfirm"><text>{{ confirmButtonText || translate('confirm') }}</text></WdButton>
       </view>
     </view>
   </view>

@@ -31,7 +31,8 @@
     "test:shard:update": "node scripts/test-shard.mjs --update",
     "docs:dev": "pnpm --filter wot-lynx-ui-docs run dev",
     "docs:build": "pnpm --filter wot-lynx-ui-docs run build",
-    "verify": "pnpm check:index && pnpm check:exports && pnpm check:deps && pnpm check:snapshot && pnpm check:meta && pnpm check:docs && pnpm build:css && pnpm typecheck && pnpm test && pnpm build:demo"
+    "check:worklets": "node scripts/check-worklets.mjs",
+    "verify": "pnpm check:index && pnpm check:exports && pnpm check:deps && pnpm check:snapshot && pnpm check:meta && pnpm check:docs && pnpm build:css && pnpm typecheck && pnpm test && pnpm build:demo && pnpm check:worklets"
   },
   "packageManager": "pnpm@10.24.0",
   "engines": {

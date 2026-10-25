@@ -153,14 +153,14 @@ export const signatureProps = {
   },
 
   /**
-   * 撤销按钮文本
+   * 撤销按钮文本（revokeText 的兼容别名，revokeText 优先）
    * 类型: string
    * 默认值: 内置翻译 '撤销'
    */
   undoText: String,
 
   /**
-   * 恢复按钮文本
+   * 恢复按钮文本（restoreText 的兼容别名，restoreText 优先）
    * 类型: string
    * 默认值: 内置翻译 '恢复'
    */

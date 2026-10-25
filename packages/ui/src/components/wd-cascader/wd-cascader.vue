@@ -294,7 +294,9 @@ watch(
   (val) => {
     if (val) {
       open()
-    } else {
+    } else if (pickerShow.value) {
+      // 仅在「当前确实开着」时走关闭分支：受控用法挂载时 visible=false，
+      // 不应向消费方 emit('close')（wd-select-picker 同款守卫）。
       close()
     }
   },

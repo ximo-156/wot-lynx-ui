@@ -143,9 +143,15 @@ const tiles = computed(() => {
   return result
 })
 
-/** 水印图层样式：opacity 由 prop 覆盖 SCSS 默认值（参考源的两级结构） */
+/** 水印图层样式（Style Funnel，§20：键集每帧完整）。
+ *  - opacity 由有值转无值时必须显式写中性值 ''，省略键会让旧透明度残留；
+ *  - z-index 直接下发到图层：全屏态图层是真正 fixed 的节点（提升到页面根），
+ *    打在根 view 上的 props.zIndex 够不到它，此前该 prop 在全屏模式失效。 */
 const layerStyle = computed(() => {
-  return filterStyle({ opacity: isDef(props.opacity) ? `${props.opacity}` : '' })
+  return {
+    opacity: isDef(props.opacity) ? `${props.opacity}` : '',
+    'z-index': String(props.zIndex)
+  }
 })
 
 /** 图片水印样式（原生 image 元素，尺寸取 imageWidth / imageHeight） */

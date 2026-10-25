@@ -7,9 +7,6 @@ hero:
   tagline: 原生性能 · 样式一致 · API 兼容
   actions:
     - theme: brand
-      text: 快速开始
-      link: /guide/quick-start
-    - theme: alt
       text: 查看组件
       link: /components/button
 

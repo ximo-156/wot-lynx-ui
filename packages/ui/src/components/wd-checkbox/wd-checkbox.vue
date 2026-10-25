@@ -183,7 +183,10 @@ function checkName() {
 /**
  * 点击checkbox的Event handle
  */
-function toggle() {
+function toggle(event?: any) {
+  // §14：tap 是根 view 原生事件的转发，必须无条件执行——
+  // disabled/readonly 只拦「切换」，不拦事件上报（radio 同款）。
+  emit('tap', event)
   if (disabledValue.value || readonlyValue.value) return
   // 复选框单独使用时点击反选，并且在checkbox上触发change事件
   if (checkboxGroup.value) {
@@ -195,8 +198,6 @@ function toggle() {
       value: newVal
     })
   }
-  // Lynx 适配：根 view 的 @tap 需在 emits 声明并转发（CONVENTIONS §14）
-  emit('tap')
 }
 </script>
 

@@ -11,9 +11,9 @@
  *   status prop 优先；
  * - 默认标题/描述文案经 useTranslate('steps') 走 locale（zh-CN：未开始/
  *   已完成/进行中/失败）；
- * - 内部图标按 CONVENTIONS §8 从内置 180 图标集选取：参考源 finished 态
- *   的 check 不在内置集中，取配对的 check-item（与 close 同批码点，
- *   形态为对勾）；
+ * - 内部图标按 CONVENTIONS §8 选取：finished 态实际用 name="check"
+ *   （wot-icons 官方集 e726，命中渲染正常），早期注释称「内置集无此
+ *   字形」已过时；
  * - 模板结构与参考源逐节点对齐（header/indicator/circle|dot|icon/line/content），
  *   文本均在 text 元素中；icon/title/description 三个插槽保留；
  * - 原生优先重写（NATIVE-REWRITE §3）：根节点由 inline-block 适配值 linear 改

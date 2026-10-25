@@ -33,6 +33,14 @@ $collapse-item-body-padding: var(--wot-collapse-item-body-padding, $padding-loos
   @include when(border) {
     @include halfPixelBorder('top');
 
+    // 首项抑制顶部细线（wot-ui 语义：折叠面板第一项不画上边线）。
+    // 半线 border 在根节点上，抑制类必须由模板按 isFirst 推到根
+    // （挂在 header 子元素上够不到）；同特异性靠源码顺序覆盖上面的
+    // border-top-width。
+    @include when(first) {
+      border-top-width: 0;
+    }
+
     .#{$B}__header {
       @include when(expanded) {
         @include halfPixelBorder('bottom');

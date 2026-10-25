@@ -175,12 +175,16 @@ const inactiveColor = computed(() => pickInactiveColor())
 let rectRequest = 0
 let interactionRequest = 0
 let gestureMoved = false
+// touchend/cancel 已按坐标提交过值时吞掉引擎补发的同一次 tap（否则 change
+// 双发）；下一次 touchstart 复位，无触摸环境下 tap 路径不受影响（兜底）。
+let tapCommittedByGesture = false
 const rateId = `wd-rate-${uuid()}`
 let pendingRects: Promise<void> | undefined
 function onRootTouchStart(event: any) {
   emit('touchstart', event)
   interactionRequest++
   gestureMoved = false
+  tapCommittedByGesture = false
   refreshRects(true)
 }
 watch([() => props.modelValue, () => props.readonly, isDisabled, () => props.allowHalf, () => props.num], () => { interactionRequest++ }, { flush: 'sync' })
@@ -297,6 +301,12 @@ function refreshRects(force = false): Promise<void> {
 }
 
 function handleClick(index: number, isHalf: boolean) {
+  // 干净点按的事件序列是 touchstart → touchend → tap：touchend 已按同一
+  // 坐标公式提交过值，这里吞掉补发的 tap，避免 change/update 双发。
+  if (tapCommittedByGesture) {
+    tapCommittedByGesture = false
+    return
+  }
   interactionRequest++
   const { readonly, clearable, allowHalf, modelValue } = props
   if (readonly || isDisabled.value) return
@@ -360,7 +370,7 @@ async function onTouchMove(event: any) {
  */
 async function onTouchEnd(event: any) {
   emit('touchend', event)
-  if (!gestureMoved) await commitFromEvent(event)
+  if (!gestureMoved) tapCommittedByGesture = await commitFromEvent(event)
   gestureMoved = false
 }
 
@@ -374,23 +384,26 @@ async function onTouchEnd(event: any) {
  */
 async function onTouchCancel(event: any) {
   emit('touchcancel', event)
-  if (!gestureMoved) await commitFromEvent(event)
+  if (!gestureMoved) tapCommittedByGesture = await commitFromEvent(event)
   gestureMoved = false
 }
 
-/** 触摸落定：同一包含域公式由 changedTouches 坐标重算终值并 commit */
-async function commitFromEvent(event: any) {
-  if (props.readonly || isDisabled.value) return
+/** 触摸落定：同一包含域公式由 changedTouches 坐标重算终值并 commit。
+ *  @returns 是否真的提交过值（供 tap 抑制判断） */
+async function commitFromEvent(event: any): Promise<boolean> {
+  if (props.readonly || isDisabled.value) return false
   const request = ++interactionRequest
   const clientX = Number(event.changedTouches?.[0]?.clientX ?? event.touches?.[0]?.clientX ?? event.detail?.x ?? 0)
   if (!itemRects.value.length) {
     await refreshRects()
   }
-  if (!isAlive() || props.readonly || isDisabled.value || request !== interactionRequest || !Number.isFinite(clientX)) return
+  if (!isAlive() || props.readonly || isDisabled.value || request !== interactionRequest || !Number.isFinite(clientX)) return false
   const value = valueFromRects(clientX, itemRects.value)
   if (value !== null) {
     updateValue(value)
+    return true
   }
+  return false
 }
 
 // ---------- 主线程 worklet（跟手，零线程跨越） ----------

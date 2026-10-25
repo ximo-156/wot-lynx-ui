@@ -604,7 +604,9 @@ const onBodyTouchMove = (event: any) => {
                     :class="`wd-tabs__nav-item  ${state.activeIndex === index ? 'is-active' : ''} ${item.disabled ? 'is-disabled' : ''}`"
                     :style="getTabItemStyle(index)"
                   >
-                    <WdBadge v-if="item.badgeProps" v-bind="item.badgeProps">
+                    <!-- 与非吸顶分支同款 custom-class：缺了会丢失徽标的 flex
+                         居中与 max-width/min-width 约束（长徽标溢出导航项） -->
+                    <WdBadge custom-class="wd-tabs__nav-item-badge" v-if="item.badgeProps" v-bind="item.badgeProps">
                       <text class="wd-tabs__nav-item-text">{{ item.title }}</text>
                     </WdBadge>
                     <text v-else class="wd-tabs__nav-item-text">{{ item.title }}</text>

@@ -26,6 +26,9 @@ $rate-item-space: var(--wot-rate-item-space, $spacing-extra-tight) !default;
     flex-direction: row;
     align-items: center;
     justify-content: center;
+    // 定宽星星项不容器压缩：容器偏窄（num 较大/窄列）时按比例压缩会让
+    // 星形裁切、半星 50% 定位错位
+    flex-shrink: 0;
   }
 
   @include edeep(item-star) {

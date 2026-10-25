@@ -38,7 +38,7 @@
 
   @include e(text) {
     font-size: 13px;
-    color: var(--wot-text-secondary, var(--wot-n-600));
+    color: var(--wot-text-secondary, $text-secondary);
   }
 
   @include e(scroll) {

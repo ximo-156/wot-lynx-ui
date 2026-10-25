@@ -184,7 +184,10 @@ defineExpose<PopoverExpose>({
         </view>
         <view v-if="!slots.content && mode === 'menu' && typeof content === 'object'" class="wd-popover__menu">
           <view v-for="(item, index) in content" :key="index" class="wd-popover__menu-inner" @tap="menuClick(index)">
-            <WdIcon v-if="item.iconClass" :name="item.iconClass" custom-class="wd-popover__icon" />
+            <!-- 隐藏度量副本必须与可见副本同类名：__icon 无样式定义，
+                 实际样式在 __menu-icon（18px + margin-right），类名错配会让
+                 show 时测得的气泡宽度偏小、首帧定位偏差 -->
+            <WdIcon v-if="item.iconClass" :name="item.iconClass" custom-class="wd-popover__menu-icon" />
             <text>{{ item.content }}</text>
           </view>
         </view>

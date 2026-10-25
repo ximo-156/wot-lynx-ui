@@ -89,6 +89,25 @@ $sidebar-item-icon-margin-right: var(--wot-sidebar-item-icon-margin-right, $padd
     // Lynx 适配：参考源的 cursor: not-allowed 为 Web 专有属性，删除
   }
 
+  // 按压缩态（CONVENTIONS §17）：可点击导航项必须有 :active 反馈，
+  // $sidebar-item-bg-hover 是文件头已声明的定制点（此前定义未消费）。
+  // 同特异性靠源码顺序压过上面的背景声明；激活/禁用态不响应按压。
+  &:active {
+    background: $sidebar-item-bg-hover;
+  }
+
+  @include m(active) {
+    &:active {
+      background: $sidebar-item-bg-active;
+    }
+  }
+
+  @include m(disabled) {
+    &:active {
+      background: $sidebar-item-bg;
+    }
+  }
+
   @include edeep(badge) {
     z-index: 2;
     word-break: break-all;

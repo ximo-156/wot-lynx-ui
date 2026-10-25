@@ -59,6 +59,9 @@ const emit = defineEmits(['change', 'pickstart', 'pickend', 'update:modelValue']
 const isAlive = useAlive()
 const bgDragStart: Array<{ y: number; offset: number } | undefined> = []
 const dragging: boolean[] = []
+// 每列 pickstart 是否已发出且 pickend 未落定：连续快速滑动时新手势接续
+// 旧手势的 settle，必须视为同一段选择，pickstart/pickend 才能配对
+const picking: boolean[] = []
 const offsets = ref<number[]>([])
 const settleTimers: Array<ReturnType<typeof setTimeout> | undefined> = []
 let changeRequest = 0
@@ -67,6 +70,7 @@ function cancelGestures() {
   changeRequest++
   dataVersion.value++
   dragging.fill(false)
+  picking.fill(false)
   bgDragStart.fill(undefined)
   settleTimers.forEach((timer) => { if (timer !== undefined) clearTimeout(timer) })
   settleTimers.fill(undefined)
@@ -275,9 +279,14 @@ function onTouchStart(event: any, colIndex: number) {
   if (!formatColumns.value[colIndex]?.length || props.itemHeight <= 0) return
   changeRequest++
   if (settleTimers[colIndex] !== undefined) clearTimeout(settleTimers[colIndex])
+  // pickstart/pickend 配对：上一手势 settle 未落定（pickend 未发）就再次
+  // 触摸时不再重复发 pickstart，否则消费方按配对计数会失配
+  if (!picking[colIndex]) {
+    picking[colIndex] = true
+    emit('pickstart')
+  }
   dragging[colIndex] = true
   bgDragStart[colIndex] = { y: pointerY(event), offset: offsets.value[colIndex] || 0 }
-  emit('pickstart')
 }
 
 /**
@@ -314,9 +323,13 @@ function onTouchEnd(event: any, colIndex: number) {
   if (props.immediateChange) emitChange(columnIndex)
   settleTimers[colIndex] = setTimeout(() => {
     settleTimers[colIndex] = undefined
-    if (!isAlive() || request !== changeRequest || dragging[colIndex]) return
-    if (!props.immediateChange) emitChange(columnIndex)
-    nextTick(() => { if (isAlive() && request === changeRequest) emit('pickend') })
+    if (!isAlive()) return
+    if (dragging[colIndex]) return
+    if (request === changeRequest && !props.immediateChange) emitChange(columnIndex)
+    // pickend 无条件配对发出（即便代次已被外部更新失效），
+    // 消费方按 pickstart/pickend 配对消费才能闭环
+    picking[colIndex] = false
+    nextTick(() => { if (isAlive()) emit('pickend') })
   }, 200)
 }
 

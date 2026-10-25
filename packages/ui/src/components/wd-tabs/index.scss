@@ -254,7 +254,8 @@ $tabs-map-body-bg: var(--wot-tabs-map-body-bg, $filled-oppo) !default;
   }
 
   @include e(map-arrow) {
-    display: block;
+    // 引擎只认 flex / none / linear（§15），display: block 被静默丢弃，
+    // 不写等价于默认 linear——删掉以免误导
     transition: transform $tabs-duration;
 
     @include when(open) {

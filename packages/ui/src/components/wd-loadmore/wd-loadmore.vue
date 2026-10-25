@@ -56,7 +56,9 @@ function reload(event: any) {
 <template>
   <view :class="['wd-loadmore', customClass]" :style="rootStyle" @tap="reload">
     <slot v-if="state === 'finished'" name="finished">
-      <WdDivider custom-class="wd-loadmore__divider">{{ finishedText || translate('finished') }}</WdDivider>
+      <!-- 文本必须包 <text>（§4）：组件自产的 {{ }} 作为默认插槽进入
+           divider 的 view 会渲染成裸 #text，丢失 divider 文案的字号/颜色规则 -->
+      <WdDivider custom-class="wd-loadmore__divider"><text>{{ finishedText || translate('finished') }}</text></WdDivider>
     </slot>
     <slot v-else-if="state === 'error'" name="error">
       <text class="wd-loadmore__text">{{ errorText || translate('error') }}</text>

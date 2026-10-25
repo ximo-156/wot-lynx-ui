@@ -4,7 +4,9 @@
 @include b(address-edit) {
   display: flex;
   flex-direction: column;
-  background: var(--wot-bg-color, var(--wot-filled-oppo));
+  // 令牌引用必须是本库真实语义键：--wot-bg-color / --wot-border-color /
+  // --wot-n-* 均不存在，var() 链整体解析失败会让整条声明按 invalid 丢弃
+  background: var(--wot-filled-oppo, $filled-oppo);
 
   @include e(fields) {
     display: flex;
@@ -12,7 +14,7 @@
   }
 
   @include e(field) {
-    border-bottom: 1px solid var(--wot-border-color, var(--wot-n-200));
+    border-bottom: 1px solid var(--wot-border-light, $border-light);
   }
 
   @include e(default) {
@@ -21,12 +23,12 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--wot-border-color, var(--wot-n-200));
+    border-bottom: 1px solid var(--wot-border-light, $border-light);
   }
 
   @include e(default-label) {
     font-size: 14px;
-    color: var(--wot-text-main, var(--wot-n-900));
+    color: var(--wot-text-main, $text-main);
   }
 
   @include e(actions) {

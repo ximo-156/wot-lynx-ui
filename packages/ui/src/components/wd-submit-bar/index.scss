@@ -8,8 +8,11 @@
   justify-content: space-between;
   width: 100%;
   padding: 8px 16px;
-  background: var(--wot-bg-color, var(--wot-filled-oppo));
-  border-top: 1px solid var(--wot-border-color, var(--wot-n-200));
+  // 令牌引用必须是本库真实语义键：--wot-bg-color / --wot-border-color /
+  // --wot-n-* / --wot-danger 均不存在，var() 链整体解析失败会让整条声明
+  // 按 invalid 丢弃（分割线/底色静默消失）
+  background: var(--wot-filled-oppo, $filled-oppo);
+  border-top: 1px solid var(--wot-border-light, $border-light);
 
   @include e(left) {
     display: flex;
@@ -23,7 +26,7 @@
 
     &-text {
       font-size: 12px;
-      color: var(--wot-text-secondary, var(--wot-n-600));
+      color: var(--wot-text-secondary, $text-secondary);
     }
   }
 
@@ -33,22 +36,22 @@
     align-items: baseline;
 
     &-prefix {
-      color: var(--wot-danger, var(--wot-red-6));
+      color: var(--wot-danger-main, $danger-main);
       font-weight: 500;
     }
 
     &-integer {
-      color: var(--wot-danger, var(--wot-red-6));
+      color: var(--wot-danger-main, $danger-main);
       font-weight: 600;
     }
 
     &-decimal {
-      color: var(--wot-danger, var(--wot-red-6));
+      color: var(--wot-danger-main, $danger-main);
       font-weight: 500;
     }
 
     &-suffix {
-      color: var(--wot-text-secondary, var(--wot-n-600));
+      color: var(--wot-text-secondary, $text-secondary);
     }
   }
 

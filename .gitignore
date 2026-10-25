@@ -4,7 +4,7 @@
 # 分组：
 #   1. 依赖与包管理器        2. 构建产物            3. 文档站缓存与产物
 #   4. 本地开发 / 调试产物   5. 编辑器与操作系统    6. 环境变量与密钥
-#   7. 工具与智能体本地状态  8. 日志
+#   7. 工具与智能体本地状态  8. 日志      9. AI 工作产物（本机留档）
 #
 # 文末「必须入库的生成物」列出了**不得忽略**的文件，新增规则前请先读一遍。
 # ===========================================================================
@@ -86,6 +86,20 @@ Thumbs.db
 # ---------------------------------------------------------------------------
 *.log
 
+# ---------------------------------------------------------------------------
+# 9. AI 工作产物（一次性评审/调研报告，本机留档，不入库）
+#
+#    这些文档的结论已沉淀进仓库内的长期载体，原文只是取值依据/过程留档：
+#
+#    · ARCHITECTURE-REVIEW-2026-10-22.md  一次性架构评审，结论已进
+#      ARCHITECTURE.md v2.0、ADR-012~021 与 docs/architecture/{SNAPSHOT,DEPS}.md
+#    · docs/apple-hig-design-tokens-research.md / xiaomi-hyperos-design-research.md
+#      设计令牌取值时的外部调研，无文档站页面与代码引用
+# ---------------------------------------------------------------------------
+ARCHITECTURE-REVIEW-*.md
+docs/apple-hig-design-tokens-research.md
+docs/xiaomi-hyperos-design-research.md
+
 # ===========================================================================
 # 必须入库的生成物 —— 不要为它们添加忽略规则
 #
@@ -95,6 +109,7 @@ Thumbs.db
 #   review-lint.baseline.json                 规范检查的存量豁免清单
 #   packages/ui/test/durations.json           测试耗时缓存，CI 分片均衡的依据
 #   docs/**/*.md                              文档站内容（侧边栏与 README 均引用）
+#                                             例外见第 3、9 组：docs/components/* 与两份设计调研报告
 #
 # 这些文件由 CI 的 `generated` 与 `conventions` job 校验：
 # 与源码不一致、或缺失，会直接让流水线失败。
@@ -112,8 +127,12 @@ api-changes.md
 api-changes.json
 codemod-plan.json
 
-# 视觉回归的当次截图与差异图（基线与它们不同：基线入库，这里不入库）
+# 视觉回归的当次截图、差异图与基线均不入库（2026-10-25 起基线也移出跟踪）：
+# 基线是工具在本机生成的截图，且按平台绑定（win32 字体光栅化），ADR-020 决策 8
+# 已定位视觉回归为「开发机上的机器检查」，不进 CI——入库对远程没有价值。
+# 新环境先跑 `pnpm visual:baseline` 重新生成本地基线；manifest（targets.json）入库。
 visual/current/
+visual/baseline/
 
 # 测试耗时采集的中间产物（缓存本体 packages/ui/test/durations.json 要入库）
 .tmp-test-durations.json

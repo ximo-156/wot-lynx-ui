@@ -33,7 +33,7 @@ import { FORM_ITEM_VALIDATE_KEY } from '../../composables/useFormItemValidate'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(textareaProps)
-const emit = defineEmits(['update:modelValue', 'clear', 'blur', 'focus', 'input', 'keyboardheightchange', 'confirm', 'linechange', 'click'])
+const emit = defineEmits(['update:modelValue', 'clear', 'blur', 'focus', 'input', 'keyboardheightchange', 'confirm', 'linechange', 'click', 'tap'])
 
 const { translate } = useTranslate('textarea')
 const { parent: formItemValidate } = useParent(FORM_ITEM_VALIDATE_KEY)
@@ -197,10 +197,16 @@ function handleConfirm({ detail }: any) {
 function handleLineChange({ detail }: any) {
   emit('linechange', detail)
 }
+// 根 view 绑 @tap 并声明 'tap' 转发（CONVENTIONS §14）：消费方在组件上
+// 绑 @tap/@click 时作为组件事件消费，不与内部绑定合并成数组。
+function handleClick(event: any) {
+  emit('click', event)
+  emit('tap', event)
+}
 </script>
 
 <template>
-  <view :class="rootClass" :style="parseStyle(customStyle)">
+  <view :class="rootClass" :style="parseStyle(customStyle)" @tap="handleClick">
     <view :class="['wd-textarea__body', customTextareaContainerClass]">
       <WdIcon
         v-if="hasPrefixIcon"

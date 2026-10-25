@@ -6,7 +6,7 @@
 
 ## 特性
 
-- **🎨 同源令牌，独立品牌** — 主色 `#755FFE`、次主题色 `#9A89FF`、亮色主文字 `#2D273D`、次文字 `#979797`；原始 `--wot-blue-*` 色阶保持官方值，成功 / 危险 / 警告语义不改色（见[主题与设计令牌](<docs/guide/theme.md>)）
+- **🎨 同源令牌，独立品牌** — 主色 `#755FFE`、次主题色 `#9A89FF`、亮色主文字 `#2D273D`、次文字 `#979797`；原始 `--wot-blue-*` 色阶保持官方值，成功 / 危险 / 警告语义不改色
 - **⚡ 原生性能** — Lynx 双线程架构：Vue 运行在后台线程，渲染在主线程；拖动/滑动等高频交互使用声明式 Main Thread Script，跟手时段禁用 CSS transition、落位时恢复；细线边框使用 `1ppx` 物理像素；图标使用原生字体渲染
 - **🧩 API 兼容** — 主入口公开 106 个组件：100 个有实际功能的官方对应组件 + 6 个本地扩展；官方空占位 `wot-ui` 不作为主入口公开组件计数
 - **📦 开箱即用** — 发布预编译 CSS，消费者无需安装 Sass 工具链；组件以源码分发，由 Rspeedy 直接编译，天然支持 Tree-shaking
@@ -105,7 +105,7 @@ createApp(App).use(wotLynxUI)
 > export default defineConfig({ plugins: [pluginWotLynxTags()] })
 > ```
 >
-> props / events / slots / 样式类名以 wot-ui 2.3.2 为兼容参考；已验证范围与适配说明见上文及[与 wot-ui 的差异](<docs/guide/differences.md>)。
+> props / events / slots / 样式类名以 wot-ui 2.3.2 为兼容参考；已验证范围与适配说明见上文及[「与 wot-ui 的差异」](#与-wot-ui-的差异)一节。
 
 > **关于 CSS 压缩告警**：设计令牌采用多级 `var()` 回退链（组件令牌 → 刻度令牌 →
 > 基础令牌 → 默认值），令牌出现在 `calc()` 内时会形成三层嵌套 `var()`
@@ -129,14 +129,6 @@ createApp(App).use(wotLynxUI)
 ## 文档
 
 - [组件文档](<docs/components/>)（VitePress，按组件说明 API 与适配范围）
-- 指南：
-  [快速开始](./docs/guide/quick-start.md) ·
-  [主题与设计令牌](./docs/guide/theme.md) ·
-  [内置图标](./docs/guide/icons.md) ·
-  [高性能实践](./docs/guide/performance.md) ·
-  [与 wot-ui 的差异](./docs/guide/differences.md) ·
-  [真机测试指南](./docs/guide/device-testing.md) ·
-  [设计美学研究](./docs/guide/design-research.md)
 - [Demo 应用](<packages/demo/>)（`pnpm dev:demo`，包含组件演示与真机验收入口）
 - [重写规范](./CONVENTIONS.md)（为 Lynx 重写的完整约定）
 
@@ -149,7 +141,6 @@ pnpm dev:device-test   # 启动后扫描终端中的 device-test 二维码
 ```
 
 测试页按清单逐项验证：按钮按压缩态、Slider/SwipeAction 拖动跟手、弹层、表单键盘、长列表滚动、亮暗主题等，勾选后顶部实时显示完成进度。
-详见[真机测试指南](./docs/guide/device-testing.md)。
 
 ## 开发
 
@@ -219,7 +210,7 @@ pnpm visual:check     # 与基线比较，有差异会指出区域并生成差�
 pnpm visual:baseline  # 差异是有意的 → 更新基线；换平台后也要先跑一次
 ```
 
-基线按平台隔离（字体光栅化不同），位于 `visual/baseline/<platform>/`。首次在新平台
+基线按平台隔离（字体光栅化不同），位于 `visual/baseline/<platform>/`，为工具生成的本机留档、不入库——新克隆先跑 `pnpm visual:baseline` 生成。首次在新平台
 运行 `visual:check` 会提示「缺基线」而不是判失败。详见 [ADR-020](./docs/adr/020-visual-regression.md)。
 
 ## 目录结构
@@ -239,7 +230,7 @@ wot-lynx-ui/
 │   │   ├── test/                 # 运行时契约守卫 / 纯函数与双线程回归（vitest）
 │   │   └── vitest.config.ts
 │   └── demo/                     # Vue Lynx Demo 应用（Rspeedy，双端构建，含 device-test 真机测试入口）
-├── docs/                         # VitePress 文档站（指南与组件说明）
+├── docs/                         # VitePress 文档站（组件说明，由 meta 生成）
 ├── scripts/                      # CSS 编译 / 图标生成 / 文档生成
 ├── CONVENTIONS.md                # Lynx 重写规范
 └── README.md

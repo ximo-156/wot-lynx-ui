@@ -7,6 +7,12 @@
  * - 根节点三件套：display: flex + flex-direction: column；
  * - Style Funnel：rootStyle 经 defineStyleKeys + resolveStyle 输出完整键集；
  * - 按钮点击 @click → @tap（CONVENTIONS §6）。
+ *
+ * ⚠️ 降级标注：**内置省市区选择面板未实现**。点击「地区」只 emit
+ * 'change-area'，由消费方自行弹出选择器并回填 addressInfo；areaList /
+ * searchPlaceholder / showSearchResult / areaColumns 四个 props 仅为
+ * wot-ui API 对齐保留、当前不生效（wot-ui 的内置面板依赖地区数据集，
+ * 见 CONVENTIONS §12 降级清单）。
  */
 <script lang="ts" setup>
 import './index.css'

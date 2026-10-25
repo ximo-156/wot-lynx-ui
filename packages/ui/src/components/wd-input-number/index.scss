@@ -217,12 +217,15 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
   // --------------------------------------------------------------------------
 
   // 圆角模式
+  // 注意不能用 me()：when() 上下文里 me() 生成粘连选择器 `.is-round__sub`，
+  // DOM 中不存在该类（is-round 在根、__sub 在子按钮），整组圆角会静默丢失
+  // （§5.5）；必须写裸后代选择器。
   @include when(round) {
-    @include me(sub) {
+    .wd-input-number__sub {
       border-radius: $input-number-action-border-radius-full 0 0 $input-number-action-border-radius-full;
     }
 
-    @include me(add) {
+    .wd-input-number__add {
       border-radius: 0 $input-number-action-border-radius-full $input-number-action-border-radius-full 0;
     }
   }

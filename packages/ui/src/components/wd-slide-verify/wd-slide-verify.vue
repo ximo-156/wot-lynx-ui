@@ -88,17 +88,18 @@ const rootStyle = computed(() => {
 })
 
 const trackStyle = computed(() => {
+  // Style Funnel（§20）：background 任何一帧都必须显式输出。归零时写
+  // 'transparent'，滑走后若省略该键，transparent 会按 SET_STYLE 逐属性
+  // 合并语义永久残留——默认用法（不传 activeBackgroundColor）的滑过填充
+  // 色将永不显示。'' 为中性值：清除内联后回落类样式 $slide-verify-track-bg。
   const style: CSSProperties = {
     width: `${currentPosition.value + containerHeight.value}px`,
-    transition: isResetting.value ? 'all 0.3s ease' : 'none'
+    transition: isResetting.value ? 'all 0.3s ease' : 'none',
+    background: currentPosition.value === 0
+      ? 'transparent'
+      : (isDef(props.activeBackgroundColor) ? (props.activeBackgroundColor as string) : '')
   }
-  if (isDef(props.activeBackgroundColor)) {
-    style.background = props.activeBackgroundColor
-  }
-  if (currentPosition.value === 0) {
-    style.background = 'transparent'
-  }
-  return filterStyle(style)
+  return style
 })
 
 const containerWidth = ref<number>(0)

@@ -738,15 +738,15 @@ const onDrawEndMt = () => {
       >
         <template v-if="enableHistory">
           <WdButton custom-class="wd-signature__button" size="small" plain @tap="revoke" :disabled="lines.length <= 0">
-            {{ revokeText || translate('revokeText') }}
+            <text>{{ revokeText || undoText || translate('revokeText') }}</text>
           </WdButton>
           <WdButton custom-class="wd-signature__button" size="small" plain @tap="restore" :disabled="redoLines.length <= 0">
-            {{ restoreText || translate('restoreText') }}
+            <text>{{ restoreText || redoText || translate('restoreText') }}</text>
           </WdButton>
         </template>
-        <WdButton custom-class="wd-signature__button" size="small" plain @tap="clear">{{ clearText || translate('clearText') }}</WdButton>
+        <WdButton custom-class="wd-signature__button" size="small" plain @tap="clear"><text>{{ clearText || translate('clearText') }}</text></WdButton>
         <WdButton custom-class="wd-signature__button" size="small" @tap="confirmSignature">
-          {{ confirmText || translate('confirmText') }}
+          <text>{{ confirmText || translate('confirmText') }}</text>
         </WdButton>
       </slot>
     </view>

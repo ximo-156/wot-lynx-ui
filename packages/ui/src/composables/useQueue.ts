@@ -18,22 +18,28 @@ export function useQueue() {
   }
 
   function removeFromQueue(comp: any) {
+    // 判空与 clickoutside.removeFromQueue 同源：异常路径下实例可能为空，
+    // 裸取 $.uid 会抛 TypeError 并中断卸载流程。
+    const uid = comp?.$?.uid
+    if (uid === undefined) return
     queue.value = queue.value.filter((item) => {
-      return item.$.uid !== comp.$.uid
+      return item?.$?.uid !== uid
     })
   }
 
   function closeOther(comp: any) {
+    const uid = comp?.$?.uid
+    if (uid === undefined) return
     queue.value.forEach((item) => {
-      if (item.$.uid !== comp.$.uid) {
-        item.$.exposed.close()
+      if (item?.$?.uid !== uid) {
+        item.$.exposed?.close?.()
       }
     })
   }
 
   function closeOutside() {
     queue.value.forEach((item) => {
-      item.$.exposed.close()
+      item.$.exposed?.close?.()
     })
   }
 

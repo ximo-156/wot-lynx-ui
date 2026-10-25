@@ -75,7 +75,7 @@ $datetime-picker-range-separator-height: var(--wot-datetime-picker-range-separat
 
   @include e(wraper) {
     position: relative;
-    padding-bottom: var(--window-bottom);
+    padding-bottom: var(--window-bottom, 0px);
   }
 
   @include e(title) {

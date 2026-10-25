@@ -286,9 +286,22 @@ const onTouchMove = (e: any) => {
 4. 跟手期间禁用 CSS `transition`（`transition: none`），落位时恢复或用主线程
    `requestAnimationFrame` 做吸附动画；
 5. 度量（轨道宽度等）仍遵守 §16：挂载后 `getRect` 一次性获取并缓存；
-6. 消费方无需 `includeWorkletPackages` 白名单：worklet 位于本包源码，
-   经 Rspeedy 的 SWC worklet 转换自动处理（workspace 链接不走 node_modules
-   排除路径）。
+6. **消费方必须配置 worklet 构建契约（两道闸门，缺一真机白屏 fatal 1101）**：
+   BG 线程把 worklet 序列化成 `{ _wkltId }` 对象随元素属性下发，主线程在
+   `lynxWorkletImpl._workletMap` 查注册，查不到即抛
+   `TypeError: cannot read property 'bind' of undefined`（2026-10-25 真机）。
+   - **闸门一（loader 剔除）**：worklet-loader-mt 会把解析后落在 node_modules
+     里的 import 从 MT 依赖图中剔除——workspace 源码直连不受影响，**npm 实装
+     消费者必须** `pluginVueLynx({ includeWorkletPackages: ['wot-lynx-ui'] })`；
+   - **闸门二（tree-shaking 剪树，主因）**：MT 桩里组件依赖只剩 bare import，
+     而 wot-lynx-ui 的 `sideEffects` 白名单只有 css/scss/ttf（BG 按需体积的
+     正确声明），rspack 会把「无被消费导出」的 bare import 连同组件子树整树
+     剪掉。rule 级 `{ issuerLayer: 'vue:main-thread', sideEffects: false }`
+     在 rspack 1.7.12 被无视（false 视同未设置），只能对 lynx/web 环境
+     `optimization.sideEffects: false`（dev 实测 BG +~600KB，usedExports +
+     压缩仍剪未用代码）。参照 `packages/demo/lynx.config.ts` 的 tools.rspack；
+   - **守护**：`pnpm check:worklets`（verify 末位）对 build:demo 的中间产物
+     断言「BG 序列化的 worklet id ⊆ MT 注册的 id」，任何一侧配置漂移直接红灯。
 
 守卫：`test/no-main-thread-script.test.ts`（禁命令式、放行声明式、防半吊子用法）。
 测试环境经 `test/mts-worklet-shim.ts` 模拟 worklet 派发与主线程元素桩，

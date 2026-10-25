@@ -156,6 +156,25 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     cleanup()
   })
 
+  it('themeVars 连续大写键（*ZIndex）映射为全 kebab 变量名', () => {
+    // 回归：本地 kebabCase 曾只处理「小写+大写」边界，backtopZIndex 产出
+    // --wot-backtop-zIndex，而组件消费 --wot-backtop-z-index（CSS 变量名
+    // 大小写敏感），19 个 z-index 定制点全部静默失效。
+    const vars = mapThemeVarsToCSSVars({
+      backtopZIndex: '999',
+      navbarZIndex: '888',
+      imgCropperCanvasZIndex: '77',
+      // 数字边界行为不回归（blue1 → blue-1）
+      primaryColor: '#123456'
+    })
+    expect(vars).toEqual({
+      '--wot-backtop-z-index': '999',
+      '--wot-navbar-z-index': '888',
+      '--wot-img-cropper-canvas-z-index': '77',
+      '--wot-primary-color': '#123456'
+    })
+  })
+
   it('WdConfigProvider customStyle 合并进根节点对象样式', () => {
     const { container } = render(ConfigProvider, {
       theme: 'light',

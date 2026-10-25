@@ -77,8 +77,10 @@ const windowHeight = ref<number>(0)
 const commitTick = ref(0)
 
 const boundary = computed(() => ({
-  min: props.anchors[0] ? props.anchors[0] : 100,
-  max: props.anchors[props.anchors.length - 1] ? props.anchors[props.anchors.length - 1] : Math.round(windowHeight.value * 0.6)
+  // 锚点值本身参与边界（wot-ui/vant 语义）：0 是合法锚点（面板可完全收起），
+  // 不能用真值判断——anchors=[0, 300] 时 min 会被误回退成 100
+  min: props.anchors.length ? props.anchors[0] : 100,
+  max: props.anchors.length ? props.anchors[props.anchors.length - 1] : Math.round(windowHeight.value * 0.6)
 }))
 
 const anchors = computed(() => (props.anchors.length >= 2 ? props.anchors : [boundary.value.min, boundary.value.max]))
@@ -214,6 +216,17 @@ const panelRef = useMainThreadRef<MtElement | null>(null)
 /** 手势起点 { startY, startH }（worklet 内 .current 活值，每次主线程 touchstart 刷新） */
 const dragRef = useMainThreadRef<{ startY: number; startH: number; epoch: string | null; content: boolean } | null>(null)
 
+/**
+ * MT 桥接属性：worklet 经 getAttribute 实时读取的三个状态必须真的下发到
+ * 根 view（fab / swipe-action / pull-refresh 同款）——缺发时 gesture-epoch
+ * 恒 undefined，代次作废与 content/blocked 门控全部空转。
+ */
+const panelBoundAttrs = computed(() => ({
+  'gesture-epoch': String(gestureEpoch.value),
+  'gesture-source': gestureSource.value,
+  'content-draggable': String(props.contentDraggable)
+}))
+
 /** worklet 捕获的静态配置快照（setup 期常量，实例内不变） */
 const cfgDamp = DAMP
 
@@ -289,27 +302,32 @@ const onTouchMoveMt = (event: any) => {
     :cur-height="String(heightValue)"
     :min-bound="String(boundary.min)"
     :max-bound="String(boundary.max)"
+    v-bind="panelBoundAttrs"
     :main-thread-bindtouchstart="onTouchStartMt"
     :main-thread-bindtouchmove="onTouchMoveMt"
     @touchend="handleTouchEnd"
-    @touchcancel="handleTouchEnd"
+    @touchcancel="handleTouchCancel"
+    @layoutchange="handleLayoutChange"
   >
-    <view :class="`wd-floating-panel__header`" @touchstart="handleTouchStart">
+    <view :class="`wd-floating-panel__header`" gesture-source="header" @touchstart="handleTouchStart">
       <view :class="`wd-floating-panel__header-bar`"></view>
     </view>
 
     <!-- 内容区：可拖拽时不拦截（触摸冒泡到根 view 主线程 worklet 跟手）；
          不可拖拽时以 catch 语义拦截（不冒泡、不跟手、不原生滚动）。
          两分支类名 / 层级一致，仅事件绑定不同（同名事件禁双绑，跟手与
-         滚动接管无法挂在同一元素的同一事件上，CONVENTIONS §10） -->
+         滚动接管无法挂在同一元素的同一事件上，CONVENTIONS §10）。
+         gesture-source 静态标注在触摸源元素上，供主线程 worklet 读
+         event.target 判定手势来源 -->
     <template v-if="contentDraggable">
-      <scroll-view :class="`wd-floating-panel__content`" :show-scrollbar="showScrollbar" scroll-y @touchstart="recordGestureStart">
+      <scroll-view :class="`wd-floating-panel__content`" gesture-source="content" :show-scrollbar="showScrollbar" scroll-y @touchstart="recordGestureStart">
         <slot />
       </scroll-view>
     </template>
     <template v-else>
       <scroll-view
         :class="`wd-floating-panel__content`"
+        gesture-source="blocked"
         :show-scrollbar="showScrollbar"
         scroll-y
         @touchstart="handleBlockedContentTouchStart"

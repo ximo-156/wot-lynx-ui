@@ -64,7 +64,7 @@ const popup = (container: Element) => container.querySelector('.wd-popup.wd-tran
 
 /** Independent behavioral contracts, not a declaration-only parity audit. */
 describe('wot 2.3.2 overlays — additional behavior', () => {
-  it('overlay emits click with no payload, native tap once, and ordered transition lifecycle', async () => {
+  it('overlay emits click with the same payload as tap, native tap once, and ordered transition lifecycle', async () => {
     const click = vi.fn(), tap = vi.fn()
     const lifecycle: string[] = []
     const events = Object.fromEntries(['BeforeEnter', 'Enter', 'AfterEnter', 'BeforeLeave', 'Leave', 'AfterLeave'].map((name) => [`on${name}`, () => lifecycle.push(name)]))
@@ -77,7 +77,10 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
     expect(mask.getAttribute('style')).toContain('padding-top: 9px')
     expect(mask.textContent).toContain('mask slot')
     fireEvent.tap(mask, { detail: { source: 'native' } })
-    expect(click.mock.calls).toEqual([[]])
+    // click 与 tap 同源同载荷：wot-ui 的 @click 消费方常读事件对象，
+    // click 丢载荷（曾断言 toEqual([[]])）会让两条轨行为不对称
+    expect(click).toHaveBeenCalledOnce()
+    expect(click.mock.calls[0][0].detail).toEqual({ source: 'native' })
     expect(tap).toHaveBeenCalledOnce()
     expect(tap.mock.calls[0][0].detail).toEqual({ source: 'native' })
     expect(lifecycle).toEqual(['BeforeEnter', 'Enter', 'AfterEnter'])

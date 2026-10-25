@@ -586,15 +586,9 @@ export function objToStyle(styles: Record<string, any> | Record<string, any>[]):
 export function parseStyle(style?: string | Record<string, any> | null): Record<string, any> {
   if (!style) return {}
   if (typeof style !== 'string') return style
-  const result: Record<string, string> = {}
-  style.split(';').forEach((declaration) => {
-    const idx = declaration.indexOf(':')
-    if (idx === -1) return
-    const key = declaration.slice(0, idx).trim()
-    const value = declaration.slice(idx + 1).trim()
-    if (key && value) result[key] = value
-  })
-  return result
+  // 复用 styleToObject 的括号/引号感知切分：盲切分号会把
+  // url(data:image/png;base64,...) 截断成非法声明。
+  return styleToObject(style) as Record<string, any>
 }
 
 /**
@@ -704,7 +698,10 @@ export function deepMerge<T extends Record<string, any>>(target: T, source: Reco
       } else if (isObj(sourceValue) && isObj(targetValue)) {
         result[key] = deepMerge(targetValue as Record<string, any>, sourceValue)
       } else {
-        result[key] = sourceValue
+        // target 缺失键的嵌套对象同样 deepClone，与数组分支对齐：
+        // 直接引用赋值会让合并结果与调用方入参共享引用，命令式弹层
+        // 复用同一 options 对象时状态互相污染。
+        result[key] = isObj(sourceValue) ? deepClone(sourceValue) : sourceValue
       }
     }
   }
@@ -803,18 +800,28 @@ export function debounce<T extends (...args: any[]) => any>(func: T, wait: numbe
 export function throttle<T extends (...args: any[]) => any>(func: T, wait: number): T {
   let timeout: ReturnType<typeof setTimeout> | null = null
   let previous = 0
+  // 窗口内的最后一次调用参数：尾随触发应回放它而不是排程那次的参数
+  // （滚动位置类回调拿到过期坐标），与 debounce 的 lastArgs 语义对齐。
+  let lastArgs: any[] | null = null
 
   const throttled = (...args: any[]) => {
     const now = Date.now()
     if (now - previous > wait) {
       func(...args)
       previous = now
-    } else if (!timeout) {
-      timeout = setTimeout(() => {
-        timeout = null
-        previous = Date.now()
-        func(...args)
-      }, wait)
+      lastArgs = null
+    } else {
+      lastArgs = args
+      if (!timeout) {
+        timeout = setTimeout(() => {
+          timeout = null
+          previous = Date.now()
+          if (lastArgs) {
+            func(...lastArgs)
+            lastArgs = null
+          }
+        }, wait - (now - previous))
+      }
     }
   }
 
@@ -823,6 +830,7 @@ export function throttle<T extends (...args: any[]) => any>(func: T, wait: numbe
       clearTimeout(timeout)
       timeout = null
     }
+    lastArgs = null
   }
 
   return throttled as unknown as T

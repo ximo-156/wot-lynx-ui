@@ -99,7 +99,11 @@ const itemStyle = computed(() => {
   return resolveStyle(ITEM_STYLE, { width: isVertical.value ? '100%' : size, height: isVertical.value ? size : '100%' })
 })
 const mediaStyle = computed(() => ({ height: addUnit(props.height) }))
-const swiperItemClass = computed(() => `wd-swiper__item ${slots.default ? 'wd-swiper__item--slot' : ''}`)
+/** 插槽存在性非响应式：写 computed 会被永久缓存（无依赖可追踪），
+ *  运行时增删默认插槽后 --slot 类不更新；改为渲染期函数，随重渲染求值。 */
+function getSwiperItemClass() {
+  return `wd-swiper__item ${slots.default ? 'wd-swiper__item--slot' : ''}`
+}
 const swiperIndicator = computed<Partial<SwiperNavProps>>(() => {
   const indicator = isObj(props.indicator) ? props.indicator as Partial<SwiperNavProps> : {}
   return {
@@ -311,7 +315,7 @@ function handleLongPress(index: number, item: string | SwiperItem) {
       @scrollend="handleScrollEnd"
     >
       <view class="wd-swiper__track-inner" :style="trackInnerStyle">
-        <view v-for="(item, index) in list" :key="index" :class="swiperItemClass" :style="itemStyle">
+        <view v-for="(item, index) in list" :key="index" :class="getSwiperItemClass()" :style="itemStyle">
           <slot :item="item" :index="index">
             <video
               v-if="isVideo(item)"

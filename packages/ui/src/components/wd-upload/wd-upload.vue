@@ -316,7 +316,15 @@ function onChooseFile(currentIndex?: number) {
             if (!isAlive() || isDisabled.value) return
             file.size = imageInfo.width * imageInfo.height
           }
-          Number(file.size) <= maxSize ? initFile(file, currentIndex) : emit('oversize', { file })
+          // 与参考源语义一致：size > maxSize 才判超限。size 缺失（宿主
+          // 适配层未回填的非图片文件）放行——Number(undefined) 为 NaN，
+          // `NaN <= maxSize` 恒 false 会把缺 size 的文件误判超限丢弃。
+          const size = Number(file.size)
+          if (Number.isFinite(size) && size > maxSize) {
+            emit('oversize', { file })
+          } else {
+            initFile(file, currentIndex)
+          }
         }
       }
 

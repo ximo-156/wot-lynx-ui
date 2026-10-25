@@ -30,7 +30,9 @@ const emit = defineEmits([
 const transitionStyle = computed(() => ({ 'z-index': String(props.zIndex), ...parseStyle(props.customStyle) }))
 
 function handleClick(event?: any) {
-  emit('click')
+  // click 与 tap 同源同载荷：wot-ui 的 @click 消费方常读事件对象，
+  // 丢载荷会让两条轨行为不对称。
+  emit('click', event)
   emit('tap', event)
 }
 </script>

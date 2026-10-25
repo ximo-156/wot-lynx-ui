@@ -119,8 +119,10 @@ function handleSortChange(value: SortDirection, uid: number) {
     <scroll-view :scroll-x="true" :scroll-y="scrollY" :style="scrollStyle" @scroll="handleScrollThrottled">
       <view class="wd-table__content" :style="contentStyle">
         <view v-if="showHeader" :class="['wd-table__header', { 'is-sticky': fixedHeader }]">
+          <!-- 斑马纹按参考源语义只作用于数据行；表头误挂 is-stripe 会让
+               表头永远渲染成斑马纹灰底（stripe 默认 true） -->
           <view v-for="(column, index) in columns" :key="column.uid"
-            :class="['wd-table__cell', 'wd-table__cell--header', { 'is-border': border, 'is-fixed': column.fixed, 'is-stripe': stripe, 'is-shadow': getIsLastFixed(column) && state.scrollLeft, 'is-last': index === columns.length - 1 }, `is-${column.align}`]"
+            :class="['wd-table__cell', 'wd-table__cell--header', { 'is-border': border, 'is-fixed': column.fixed, 'is-shadow': getIsLastFixed(column) && state.scrollLeft, 'is-last': index === columns.length - 1 }, `is-${column.align}`]"
             :style="headerStyle(index)">
             <WdSortButton v-if="column.sortable" :model-value="column.direction.value" allow-reset :line="false" :title="column.label" @change="({ value }) => handleSortChange(value, column.uid)" />
             <text v-else :class="['wd-table__value', { 'is-ellipsis': ellipsis }]" :text-maxline="ellipsis ? 2 : undefined">{{ column.label }}</text>

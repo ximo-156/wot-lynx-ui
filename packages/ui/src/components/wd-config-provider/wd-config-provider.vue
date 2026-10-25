@@ -25,8 +25,14 @@ const { parent } = useParent(CONFIG_PROVIDER_KEY)
 const globalConfig = computed<GlobalConfig>(() => {
   const inherited = parent.value?.globalConfig.value || null
   const base = hook ? mergeConfig(inherited, hook.globalConfig.value) : inherited
+  // theme 继承链：显式传入 > hook 注入 > 父级 ConfigProvider > props 默认值。
+  // 无 hook 时不能直接落 props.theme——默认值 'light' 会把父级 dark 硬覆盖掉
+  // （嵌套 Provider 的子树静默回亮色）。
+  const theme = explicitTheme.value
+    ? props.theme
+    : (hook?.globalConfig.value.theme ?? parent.value?.globalConfig.value.theme ?? props.theme)
   return mergeConfig(base, {
-    theme: hook && !explicitTheme.value ? hook.globalConfig.value.theme : props.theme,
+    theme,
     themeVars: props.themeVars, button: props.button, tag: props.tag
   } as ConfigProviderInput)
 })

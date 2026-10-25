@@ -13,9 +13,9 @@
  * - line 变体的下划线：参考源为 __left 的 ::after 伪元素（opacity 过渡），
  *   Lynx 无伪元素（PORTING §4.4），改为模板真实元素 wd-sort-button__underline
  *   （line 开启时常驻，is-active 控制 opacity，过渡保留）；
- * - 内部图标按 CONVENTIONS §8 从内置 180 图标集选取最接近字形：参考源
- *   caret-up / caret-down 不在内置集中，取 arrow-up-filling / arrow-down-filling
- *   （实心箭头，与 caret 的实心三角形态最接近）。
+ * - 内部图标按 CONVENTIONS §8 选取：caret-up / caret-down 实际取自
+ *   wot-icons 官方集（wot-icons.ts e6ea/e80f，registry 裸名优先命中），
+ *   渲染正常；如改回 arrow-*-filling 反而与现实现不符。
  */
 <script lang="ts" setup>
 import './index.css'

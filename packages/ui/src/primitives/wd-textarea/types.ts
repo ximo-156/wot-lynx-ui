@@ -100,10 +100,6 @@ export const textareaProps = {
   holdKeyboard: makeBooleanProp(false),
   // 非原生属性
   /**
-   * 显示为密码框
-   */
-  showPassword: makeBooleanProp(false),
-  /**
    * 是否显示清空按钮
    */
   clearable: makeBooleanProp(false),

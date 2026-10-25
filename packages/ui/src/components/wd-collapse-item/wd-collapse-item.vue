@@ -162,9 +162,9 @@ defineExpose<CollapseItemExpose>({ getExpanded, updateExpand })
 </script>
 
 <template>
-  <view :class="`wd-collapse-item ${disabled ? 'is-disabled' : ''} ${border ? 'is-border' : ''} ${customClass}`" :style="parseStyle(customStyle)">
+  <view :class="`wd-collapse-item ${disabled ? 'is-disabled' : ''} ${border ? 'is-border' : ''} ${isFirst ? 'is-first' : ''} ${customClass}`" :style="parseStyle(customStyle)">
     <view
-      :class="`wd-collapse-item__header ${expanded ? 'is-expanded' : ''} ${isFirst ? 'wd-collapse-item__header-first' : ''} ${
+      :class="`wd-collapse-item__header ${expanded ? 'is-expanded' : ''} ${
         $slots.title ? 'is-custom' : ''
       }`"
       @tap="handleClick"

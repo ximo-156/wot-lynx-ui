@@ -20,8 +20,12 @@ module.exports = function autoImportLoader(source) {
   const filePath = this.resourcePath
   const relativePath = path.relative(root, filePath)
   const isBusinessCode = dirs.some((dir) => relativePath.startsWith(dir))
+  // 本 loader 的 rule 只匹配 .vue，main.ts 永远到不了这里；
+  // 主题注入的入口实际只有 App.vue，且它不在默认业务目录内，
+  // 必须在业务目录判定之前放行，否则 injectTheme 默认值形同虚设。
+  const isEntry = injectTheme && /App\.vue$/.test(filePath)
 
-  if (!isBusinessCode) {
+  if (!isBusinessCode && !isEntry) {
     return source
   }
 
@@ -75,15 +79,19 @@ module.exports = function autoImportLoader(source) {
     if (scriptSetupMatch) {
       const insertPos = scriptSetupMatch.index + scriptSetupMatch[0].length
       result = result.slice(0, insertPos) + '\n' + importStatement + result.slice(insertPos)
+    } else if (!isEntry) {
+      // 非 <script setup> 的业务 SFC 无法注入 import，构建期退化为原生
+      // 元素（603 白屏），必须让作者听到，不能静默跳过。
+      console.warn(`[wot-lynx-ui] ${relativePath} 使用了 ${[...usedTags].join(', ')} ` +
+        '但未找到 <script setup>，自动导入被跳过；请改用 <script setup> 或手动 import 组件。')
     }
   }
 
   // 注入主题 CSS（仅在入口文件）
-  if (injectTheme) {
-    const isEntry = /App\.vue$|main\.ts$/.test(filePath)
+  if (injectTheme && isEntry) {
     const hasThemeImport = /import\s+['"]wot-lynx-ui\/theme['"]/.test(result)
 
-    if (isEntry && !hasThemeImport) {
+    if (!hasThemeImport) {
       const themeImport = `import 'wot-lynx-ui/theme'\n`
       const scriptSetupMatch = result.match(/<script[^>]*setup[^>]*>/)
       if (scriptSetupMatch) {

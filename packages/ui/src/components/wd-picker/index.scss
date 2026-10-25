@@ -48,7 +48,7 @@ $picker-radius: var(--wot-picker-radius, $radius-large) !default;
   }
 
   @include e(wraper) {
-    padding-bottom: var(--window-bottom);
+    padding-bottom: var(--window-bottom, 0px);
     background: $picker-bg;
   }
 

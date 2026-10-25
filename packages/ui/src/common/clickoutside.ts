@@ -13,10 +13,12 @@ export function removeFromQueue(comp: any) {
 }
 
 export function closeOther(comp: any) {
+  // 判空与 removeFromQueue 同源：异常路径下 comp 实例可能为空，
+  // 裸取 $.uid 会抛 TypeError 并中断整个队列的收起流程。
+  const uid = comp?.$?.uid
+  if (uid === undefined) return
   queue.forEach((item) => {
-    // 判空：exposed 为 null 或实例未暴露 close 时跳过，
-    // 避免一处异常中断整个队列的收起流程（后续行不再收起）
-    if (item.$.uid !== comp.$.uid) {
+    if (item?.$?.uid !== uid) {
       item.$.exposed?.close?.()
     }
   })

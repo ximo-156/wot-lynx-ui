@@ -598,7 +598,8 @@ defineExpose({
         <slot name="image">
           <image v-if="dialogState.headerImage" mode="widthFix" class="wd-dialog__img" :src="dialogState.headerImage" />
         </slot>
-        <slot name="title" :icon="dialogState.icon" :title="dialogState.title" :iconProps="dialogState.iconProps">
+        <!-- icon 取真实图标名（dialogState.icon 从未赋值，名称存于 iconProps.name） -->
+        <slot name="title" :icon="dialogState.iconProps?.name" :title="dialogState.title" :iconProps="dialogState.iconProps">
           <view v-if="dialogState.iconProps?.name || dialogState.title" :class="`wd-dialog__title ${dialogState.headerImage ? 'is-after-image' : ''}`">
             <WdIcon
               v-if="dialogState.iconProps?.name"

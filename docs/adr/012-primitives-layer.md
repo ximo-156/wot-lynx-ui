@@ -2,7 +2,7 @@
 
 - **状态**：**已落地**（2026-10-23 完成，全量测试通过）
 - **日期**：2026-10-22
-- **相关**：ADR-001、ADR-003、`ARCHITECTURE.md §3.2`、`ARCHITECTURE-REVIEW-2026-10-22.md`
+- **相关**：ADR-001、ADR-003、`ARCHITECTURE.md §3.2`
 
 ## 背景
 
