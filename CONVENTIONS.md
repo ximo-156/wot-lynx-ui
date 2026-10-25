@@ -97,7 +97,7 @@ defineProps(xxxProps)
 | options 块 | 不需要 `<script>` options 块 |
 | 条件编译 | 禁止 `// #ifdef` / `// #ifndef` / `// #endif` 等 uni-app 条件编译残留 |
 | 组件标签 | 模板内组件一律 PascalCase（`<WdButton>`）；kebab-case 会被 Lynx 编译器判为原生元素。业务代码若沿用 wot-ui 的 `<wd-button>` 写法，必须启用 `pluginWotLynxTags()`（构建期改写，见 `plugin/tag-transform-loader.cjs`） |
-| 原生元素 | 只允许 Lynx 内置元素（view / text / image / scroll-view / list / list-item / swiper / swiper-item / input / textarea / switch / checkbox / radio / slider / form / label / svg / video / web-view / page）。**禁止 uni-app 的 `<block>`**（用 `<template v-else>` 做无渲染占位）；误用会触发 603 sub_code 60301 "Can't find ui tag" 并白屏。守卫测试：`test/component/native-tag-whitelist.test.ts` |
+| 原生元素 | 只允许 Lynx 内置元素（view / text / image / scroll-view / list / list-item / swiper / swiper-item / input / textarea / switch / checkbox / radio / slider / form / label / svg / video / web-view / page）。**禁止 uni-app 的 `<block>`**（用 `<template v-else>` 做无渲染占位）；误用会触发 603 sub_code 60301 "Can't find ui tag" 并白屏。守卫测试：`test/component/native-tag-whitelist.test.ts`。⚠️ `video` 是 XElement——宿主引擎未注册 video 原生组件时创建节点抛引擎级 990200「No BehaviorController defined for class video」，随后属性更新再抛 60301（2026-10-25 真机实测）；挂载 `<video>` 前必须以 `capabilities.videoContext`（宿主注入 `createVideoContext`）门控，无能力时降级（见 wd-video-preview 的封面占位） |
 | 横向布局 | 依赖横向排列的容器必须显式 `display: flex`（见 §14） |
 
 ## 5. SCSS 规范（index.scss）
@@ -476,6 +476,33 @@ vue-lynx 的 `patchProp`（`runtime/dist/node-ops.js`）对 `style` 只处理
 **字符串值（`` :style="`height: 44px`" ``、`custom-style="color: red"`、
 计算属性拼出的 `"top: 1px; left: 2px"`）被静默替换为 `{}`**——不报错、
 不告警，只是样式全部消失。这与 §5 的类名错配并称「静默丢样式」两大根源。
+
+**纯静态 `style="height: 100%"` 属性同样失效**（2026-10-25 真机巡检）：
+编译器只对「带绑定 / 数组 / 子表达式」的 style prop 包 `normalizeStyle`
+（此时字符串才会被解析成对象），纯字符串字面量原样下发 → 运行时整串
+丢弃。Web 预览不受影响（DOM 自行解析字符串样式），于是「web 绿灯、
+真机塌陷」——demo 页 `style="height: 180px"` 的水印容器就是这样塌掉的。
+静态样式也必须写对象：`:style="{ height: '180px' }"`。
+
+**内联键名必须 kebab-case，且内联 `--*` 自定义属性无效**（2026-10-25
+真机巡检）：Lynx 原生内联样式通道（`Element.setStyleProperty(s)`）要求
+「style names must be in kebab-case」，`zIndex` / `marginLeft` /
+`paddingTop` 等 camelCase 键被静默丢弃（web 端 CSSOM 两种都认，同样是
+「web 绿灯、真机塌陷」）；内联 CSS 自定义属性（`--wot-*`）被原生侧丢弃
+（lynx-family/lynx#8576），跨元素传值不能走这条路——wd-avatar 的层叠
+间距因此改为预设尺寸走样式表变量、自定义尺寸直接内联负边距。兜底位于
+`common/style.ts` 的 `resolveStyle()`（出口统一 `kebabKey` 归一），裸
+`:style` 对象须自行保证 kebab-case。
+
+**内联 `background` 简写按不可用处理**：样式表里的简写可用（按钮等），
+内联通道不保证展开，一律写 `'background-color'`（wd-avatar 的
+bg-color 头像曾因此整组白底白字不可见）。
+
+**带 class 的 `<text>` 不保证继承祖先 view 的 color / font-size**
+（2026-10-25 真机巡检：calendar-view 周表头有显式色号可见、日期文字靠
+继承则整月空白；裸 text 的继承可用）。文字要显式拿到颜色/字号：写在
+直接父 view 或 text 自身（类或内联），状态色同步写到文字节点，不要
+隔着两层以上 view 靠继承。
 
 **已暴露的故障现象**（真机 + Web 预览同现）：
 

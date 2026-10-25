@@ -47,6 +47,36 @@ export type StyleValue = string | number | null | undefined
 export type StyleObject = Record<string, StyleValue>
 
 /**
+ * CSS 键名归一：camelCase → kebab-case。
+ *
+ * Lynx 的内联样式通道要求键名为 kebab-case（官方 Element API 文档：
+ * 「The style names must be in kebab-case」），camelCase 键会被静默丢弃
+ * （真机 2026-10-25 巡检：zIndex / marginLeft / paddingTop 等全数失效）。
+ * vue-lynx 的 normalizeStyle 不做转换，这里在 Style Funnel 出口统一兜住，
+ * 手写 `:style` 对象的组件另用 {@link kebabKeys} 归一。
+ */
+const CAMEL_TEST_RE = /[A-Z]/
+const CAMEL_REPLACE_RE = /[A-Z]/g
+export function kebabKey(key: string): string {
+  // `--wot-*` 自定义属性与已是 kebab 的键原样返回
+  if (key.charCodeAt(0) === 45 /* - */ || !CAMEL_TEST_RE.test(key)) return key
+  return key.replace(CAMEL_REPLACE_RE, (ch) => `-${ch.toLowerCase()}`)
+}
+
+/**
+ * 归一整个样式对象的键名（camelCase → kebab-case）。
+ * 供未走 resolveStyle 的裸样式对象使用。
+ */
+export function kebabKeys(style: StyleObject): StyleObject {
+  const out: StyleObject = {}
+  for (const key in style) {
+    if (!Object.prototype.hasOwnProperty.call(style, key)) continue
+    out[kebabKey(key)] = style[key]
+  }
+  return out
+}
+
+/**
  * 声明一组「可切换样式键」及其中性值。
  *
  * 返回值直接传给 {@link resolveStyle} 的第一个参数。函数本身只做类型收敛，
@@ -75,20 +105,28 @@ export function resolveStyle(
   neutral: Record<string, string>,
   ...sources: Array<StyleObject | null | undefined>
 ): Record<string, string> {
-  const merged: StyleObject = { ...neutral }
+  // 键名统一 kebab-case（Lynx 内联通道要求，见 kebabKey 说明）；neutral 与
+  // 源对象先各自归一，再按原合并规则处理，camelCase 写法不再依赖调用方自律。
+  const base: StyleObject = {}
+  for (const key in neutral) {
+    if (!Object.prototype.hasOwnProperty.call(neutral, key)) continue
+    base[kebabKey(key)] = neutral[key]
+  }
+  const merged: StyleObject = { ...base }
 
   for (const source of sources) {
     if (!source) continue
     for (const key in source) {
       if (!Object.prototype.hasOwnProperty.call(source, key)) continue
       const value = source[key]
+      const targetKey = kebabKey(key)
       if (value === undefined || value === null || value === '') {
         // 显式清除：声明过中性值就回落，否则整个键移除
-        if (Object.prototype.hasOwnProperty.call(neutral, key)) merged[key] = neutral[key]
-        else delete merged[key]
+        if (Object.prototype.hasOwnProperty.call(base, targetKey)) merged[targetKey] = base[targetKey]
+        else delete merged[targetKey]
         continue
       }
-      merged[key] = value
+      merged[targetKey] = value
     }
   }
 
@@ -107,12 +145,17 @@ export function resolveStyle(
  * 它不触发响应式更新、不访问 DOM，不得跨元素共享一个实例。
  */
 export function createStyleResolver(neutral: Record<string, string> = {}) {
-  const knownKeys = { ...neutral }
+  const knownKeys: Record<string, string> = {}
+  for (const key in neutral) {
+    if (!Object.prototype.hasOwnProperty.call(neutral, key)) continue
+    knownKeys[kebabKey(key)] = neutral[key]
+  }
   return (...sources: Array<StyleObject | null | undefined>): Record<string, string> => {
     for (const source of sources) {
       if (!source) continue
       for (const key of Object.keys(source)) {
-        if (!Object.prototype.hasOwnProperty.call(knownKeys, key)) knownKeys[key] = ''
+        const k = kebabKey(key)
+        if (!Object.prototype.hasOwnProperty.call(knownKeys, k)) knownKeys[k] = ''
       }
     }
     return resolveStyle(knownKeys, ...sources)

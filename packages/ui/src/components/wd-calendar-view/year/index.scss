@@ -46,6 +46,8 @@
     align-items: center;
     justify-content: center;
 
+    // Lynx 适配（真机 2026-10-25 巡检）：状态色同时写到 __month-text，
+    // 带 class 的 text 不保证继承祖先 view 的 color。
     @include when(disabled) {
       .wd-year__month-text {
         color: $calendar-view-color-disabled;
@@ -54,10 +56,18 @@
 
     @include when(current) {
       color: $calendar-view-color-active;
+
+      .wd-year__month-text {
+        color: $calendar-view-color-active;
+      }
     }
 
     @include when(selected) {
       color: $calendar-view-color-selected;
+
+      .wd-year__month-text {
+        color: $calendar-view-color-selected;
+      }
 
       .wd-year__month-container {
         border-radius: $calendar-view-border-radius-active;
@@ -68,10 +78,18 @@
     @include when(middle) {
       background: $calendar-view-range-bg;
       color: $calendar-view-range-color;
+
+      .wd-year__month-text {
+        color: $calendar-view-range-color;
+      }
     }
 
     @include when(start) {
       color: $calendar-view-color-selected;
+
+      .wd-year__month-text {
+        color: $calendar-view-color-selected;
+      }
 
       .wd-year__month-container {
         position: relative;
@@ -102,6 +120,10 @@
     @include when(end) {
       color: $calendar-view-color-selected;
 
+      .wd-year__month-text {
+        color: $calendar-view-color-selected;
+      }
+
       .wd-year__month-container {
         position: relative;
         z-index: 1;
@@ -122,6 +144,10 @@
 
     @include when(same) {
       color: $calendar-view-color-selected;
+
+      .wd-year__month-text {
+        color: $calendar-view-color-selected;
+      }
 
       .wd-year__month-container {
         background: $calendar-view-color-active;
@@ -149,6 +175,11 @@
   }
 
   @include e(month-text) {
+   // Lynx 适配（真机 2026-10-25 巡检）：带 class 的 text 不保证继承祖先
+   // view 的 color / font-size，显式下发与 __months 一致的基础色号与字号；
+   // 状态色在下方各 when() 中同步写到 __month-text。
+   color: $calendar-view-day-color;
+   font-size: $calendar-view-day-font-size;
    font-weight: $calendar-view-month-font-weight;
    text-align: center;
   }

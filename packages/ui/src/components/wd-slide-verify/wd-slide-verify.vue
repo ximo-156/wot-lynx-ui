@@ -95,7 +95,7 @@ const trackStyle = computed(() => {
   const style: CSSProperties = {
     width: `${currentPosition.value + containerHeight.value}px`,
     transition: isResetting.value ? 'all 0.3s ease' : 'none',
-    background: currentPosition.value === 0
+    'background-color': currentPosition.value === 0
       ? 'transparent'
       : (isDef(props.activeBackgroundColor) ? (props.activeBackgroundColor as string) : '')
   }

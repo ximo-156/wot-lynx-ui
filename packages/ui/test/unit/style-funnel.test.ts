@@ -63,9 +63,12 @@ describe('resolveStyle', () => {
 
   it('空中性值也必须保留，用于清除内联样式并恢复 CSS 类', () => {
     const keys = defineStyleKeys({ color: '', width: '', fontSize: '' })
-    expect(resolveStyle(keys)).toEqual({ color: '', width: '', fontSize: '' })
+    // camelCase 键在出口归一为 kebab-case：Lynx 内联样式通道只认 kebab-case
+    // （官方 Element API「style names must be in kebab-case」），camelCase
+    // 会被原生侧静默丢弃（真机 2026-10-25 巡检）
+    expect(resolveStyle(keys)).toEqual({ color: '', width: '', 'font-size': '' })
     expect(resolveStyle(keys, { color: null, width: undefined, fontSize: '' })).toEqual({
-      color: '', width: '', fontSize: ''
+      color: '', width: '', 'font-size': ''
     })
   })
 

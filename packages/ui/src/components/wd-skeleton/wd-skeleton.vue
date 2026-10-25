@@ -26,7 +26,7 @@ const rowCols = computed<SkeletonRowCol[]>(() =>
   Array.isArray(props.rowCol) && props.rowCol.length ? props.rowCol : themeMap[props.theme]
 )
 const COL_STYLE_KEYS = defineStyleKeys({
-  width: '', height: '', margin: '', background: '', marginLeft: '', marginRight: '', borderRadius: '', backgroundColor: ''
+  width: '', height: '', margin: '', 'background-color': '', 'margin-left': '', 'margin-right': '', 'border-radius': ''
 })
 
 function getColItemClass(rowCol: SkeletonRowColObj) {
@@ -41,6 +41,9 @@ function getColItemStyle(rowCol: SkeletonRowColObj) {
       if (name === 'size') {
         source.width = px
         source.height = px
+      } else if (name === 'background' || name === 'backgroundColor') {
+        // 内联通道不保证展开 background 简写，统一按 background-color 下发
+        source['background-color'] = px
       } else {
         source[name] = px
       }

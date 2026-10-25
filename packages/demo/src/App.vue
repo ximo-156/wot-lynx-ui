@@ -45,11 +45,6 @@ const tableData = ref([
   { name: '张三', age: 28, city: '北京' },
   { name: '李四', age: 34, city: '上海' }
 ])
-const tableColumns = ref([
-  { prop: 'name', label: '姓名', width: 80 },
-  { prop: 'age', label: '年龄', width: 60 },
-  { prop: 'city', label: '城市', width: 80 }
-])
 const swiperList2 = ref([
   { url: demoImage, text: '1' },
   { url: demoImage, text: '2' }
@@ -292,11 +287,6 @@ const tableColData = ref([
   { name: '李四', status: '已完成', score: 85 },
   { name: '王五', status: '未开始', score: 78 }
 ])
-const tableColColumns = ref([
-  { prop: 'name', label: '姓名', width: 80 },
-  { prop: 'status', label: '状态', width: 90 },
-  { prop: 'score', label: '得分', width: 80 }
-])
 
 // ---- 弹层反馈类组件 Demo 状态（Tier 5 补齐） ----
 // Popup 弹出层（实际 API 为 modelValue / update:modelValue，无 visible prop）
@@ -431,7 +421,7 @@ const portalBarVisible = ref(false)
           <wd-grid :column="5">
             <wd-grid-item v-for="name in pagedIcons" :key="name" :icon="name" :text="name" ellipsis />
           </wd-grid>
-          <view class="demo-row" style="justify-content: center; margin-top: 4px">
+          <view class="demo-row" :style="{ 'justify-content': 'center', 'margin-top': '4px' }">
             <wd-pagination v-model="iconPage" :total-page="iconTotalPage" show-icon />
           </view>
           <text class="demo-panel__label">Loading 加载</text>
@@ -485,23 +475,23 @@ const portalBarVisible = ref(false)
 
           <text class="demo-panel__label">Input / Textarea / InputNumber / Search</text>
           <view class="demo-row">
-            <wd-input v-model="inputValue" placeholder="请输入" clearable style="flex: 1" />
+            <wd-input v-model="inputValue" placeholder="请输入" clearable :style="{ flex: '1' }" />
           </view>
           <view class="demo-row">
-            <wd-textarea v-model="textareaValue" placeholder="多行输入" :show-word-limit="true" :maxlength="50" style="flex: 1" />
+            <wd-textarea v-model="textareaValue" placeholder="多行输入" :show-word-limit="true" :maxlength="50" :style="{ flex: '1' }" />
           </view>
           <view class="demo-row">
             <wd-input-number v-model="numberValue" :min="0" :max="10" />
-            <wd-search v-model="inputValue" placeholder="搜索" style="flex: 1" />
+            <wd-search v-model="inputValue" placeholder="搜索" :style="{ flex: '1' }" />
           </view>
 
           <text class="demo-panel__label">Slider / Rate / Segmented</text>
           <view class="demo-row">
-            <wd-slider v-model="sliderValue" style="flex: 1" />
+            <wd-slider v-model="sliderValue" :style="{ flex: '1' }" />
           </view>
           <view class="demo-row">
             <wd-rate v-model="rateValue" />
-            <wd-segmented v-model="segmentedValue" :options="['日', '周', '月']" style="flex: 1" />
+            <wd-segmented v-model="segmentedValue" :options="['日', '周', '月']" :style="{ flex: '1' }" />
           </view>
 
           <text class="demo-panel__label">Form + FormItem（schema 校验）</text>
@@ -542,7 +532,7 @@ const portalBarVisible = ref(false)
             <wd-slide-verify ref="slideVerifyRef" @success="verifyPassed = true" @fail="verifyPassed = false" />
           </view>
           <view class="demo-row">
-            <wd-signature style="flex: 1" />
+            <wd-signature :style="{ flex: '1' }" />
           </view>
           <view class="demo-row">
             <wd-upload v-model:file-list="uploadFiles" :limit="3" action="" />
@@ -562,7 +552,7 @@ const portalBarVisible = ref(false)
 
           <text class="demo-panel__label">自定义键盘（mode="custom"，extraKey 左侧小数点，右侧删除/关闭）</text>
           <view class="demo-row">
-            <wd-input v-model="customKeyboardValue" placeholder="点右侧按钮弹起自定义键盘" readonly style="flex: 1" />
+            <wd-input v-model="customKeyboardValue" placeholder="点右侧按钮弹起自定义键盘" readonly :style="{ flex: '1' }" />
             <wd-button size="small" @tap="customKeyboardVisible = true">弹起键盘</wd-button>
           </view>
           <view class="demo-row">
@@ -571,7 +561,7 @@ const portalBarVisible = ref(false)
 
           <text class="demo-panel__label">车牌键盘（mode="car"，autoSwitchLang 输入首位后自动切换英文）</text>
           <view class="demo-row">
-            <wd-input v-model="carKeyboardValue" placeholder="点右侧按钮弹起车牌键盘" readonly style="flex: 1" />
+            <wd-input v-model="carKeyboardValue" placeholder="点右侧按钮弹起车牌键盘" readonly :style="{ flex: '1' }" />
             <wd-button size="small" @tap="carKeyboardVisible = true">弹起键盘</wd-button>
           </view>
           <view class="demo-row">
@@ -618,7 +608,7 @@ const portalBarVisible = ref(false)
             <wd-badge :value="8"><wd-avatar size="36" text="A" /></wd-badge>
           </view>
           <view class="demo-row">
-            <wd-progress :percentage="progressValue" style="flex: 1" />
+            <wd-progress :percentage="progressValue" :style="{ flex: '1' }" />
           </view>
 
           <text class="demo-panel__label">Tabs 选项卡</text>
@@ -628,12 +618,12 @@ const portalBarVisible = ref(false)
           </wd-tabs>
 
           <text class="demo-panel__label">Sidebar 侧边导航</text>
-          <view class="demo-row" style="height: 120px">
-            <wd-sidebar v-model="sidebarValue" style="height: 100%">
+          <view class="demo-row" :style="{ height: '120px' }">
+            <wd-sidebar v-model="sidebarValue" :style="{ height: '100%' }">
               <wd-sidebar-item label="选项一" value="a" />
               <wd-sidebar-item label="选项二" value="b" />
             </wd-sidebar>
-            <view style="flex: 1; padding: 12px">
+            <view :style="{ flex: '1', padding: '12px' }">
               <text class="demo-panel__label">当前：{{ sidebarValue }}</text>
             </view>
           </view>
@@ -644,8 +634,8 @@ const portalBarVisible = ref(false)
             <wd-count-down :time="60000" format="mm:ss" />
           </view>
           <wd-notice-bar text="这是一条通知栏提示" prefix="notification" />
-          <wd-card title="卡片标题" style="margin-top: 8px">卡片内容</wd-card>
-          <wd-grid :column="3" style="margin-top: 8px">
+          <wd-card title="卡片标题" :style="{ 'margin-top': '8px' }">卡片内容</wd-card>
+          <wd-grid :column="3" :style="{ 'margin-top': '8px' }">
             <wd-grid-item icon="picture" text="图片" />
             <wd-grid-item icon="film" text="视频" />
             <wd-grid-item icon="file" text="文件" />
@@ -672,14 +662,20 @@ const portalBarVisible = ref(false)
           </view>
 
           <text class="demo-panel__label">Table / Steps / Swiper / Watermark / Collapse</text>
-          <wd-table :data="tableData" :columns="tableColumns" style="margin-bottom: 8px" />
+          <!-- Table 的列是 wd-table-column 子组件（无 columns prop，传了会被
+               当作透传属性静默忽略、整表只剩序号列） -->
+          <wd-table :data="tableData" :custom-style="{ 'margin-bottom': '8px' }">
+            <wd-table-column prop="name" label="姓名" :width="80" />
+            <wd-table-column prop="age" label="年龄" :width="60" />
+            <wd-table-column prop="city" label="城市" :width="80" />
+          </wd-table>
           <wd-steps :active="1">
             <wd-step title="步骤一" />
             <wd-step title="步骤二" />
             <wd-step title="步骤三" />
           </wd-steps>
-          <wd-swiper :list="swiperList2" style="margin-top: 8px" />
-          <wd-collapse v-model="collapseActive" style="margin-top: 8px">
+          <wd-swiper :list="swiperList2" :style="{ 'margin-top': '8px' }" />
+          <wd-collapse v-model="collapseActive" :style="{ 'margin-top': '8px' }">
             <wd-collapse-item name="1" title="折叠面板一">内容一</wd-collapse-item>
             <wd-collapse-item name="2" title="折叠面板二">内容二</wd-collapse-item>
           </wd-collapse>
@@ -801,7 +797,7 @@ const portalBarVisible = ref(false)
             <wd-tabbar-item title="我的" icon="user" />
           </wd-tabbar>
           <text class="demo-panel__label">圆角形状（shape="round"）+ 自定义激活色</text>
-          <wd-tabbar v-model="tabbarRoundValue" shape="round" active-color="#755FFE" style="margin-top: 8px">
+          <wd-tabbar v-model="tabbarRoundValue" shape="round" active-color="#755FFE" :style="{ 'margin-top': '8px' }">
             <wd-tabbar-item title="首页" icon="home" active-icon="home-filling" />
             <wd-tabbar-item title="消息" icon="comment" />
             <wd-tabbar-item title="我的" icon="user" />
@@ -844,7 +840,7 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">IndexAnchor 索引锚点</text>
         <view class="demo-panel">
           <text class="demo-panel__label">index 必填；无插槽内容时回退显示索引字符</text>
-          <view style="height: 300px">
+          <view :style="{ height: '300px' }">
             <wd-index-bar>
               <wd-index-anchor index="A" />
               <wd-index-anchor index="B">
@@ -862,11 +858,11 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">IndexBar 索引栏</text>
         <view class="demo-panel">
           <text class="demo-panel__label">城市列表（外层容器固定 300px，触摸右侧索引条跳转，sticky 吸顶）</text>
-          <view style="height: 300px">
+          <view :style="{ height: '300px' }">
             <wd-index-bar sticky>
               <wd-index-anchor v-for="group in indexBarData" :key="group.index" :index="group.index">
-                <text class="demo-panel__label" style="margin: 0">{{ group.index }}</text>
-                <view v-for="city in group.cities" :key="city" style="padding: 6px 0">
+                <text class="demo-panel__label" :style="{ margin: '0' }">{{ group.index }}</text>
+                <view v-for="city in group.cities" :key="city" :style="{ padding: '6px 0' }">
                   <text class="demo-tag">{{ city }}</text>
                 </view>
               </wd-index-anchor>
@@ -931,9 +927,9 @@ const portalBarVisible = ref(false)
           <text class="demo-panel__label">基础用法</text>
           <wd-empty tip="暂无数据" />
           <text class="demo-panel__label">icon / iconSize 自定义</text>
-          <view class="demo-row" style="align-items: flex-start">
-            <wd-empty icon="delete" :icon-size="56" tip="购物车是空的" style="flex: 1" />
-            <wd-empty icon="setting" :icon-size="56" tip="没有搜索结果" style="flex: 1" />
+          <view class="demo-row" :style="{ 'align-items': 'flex-start' }">
+            <wd-empty icon="delete" :icon-size="56" tip="购物车是空的" :style="{ flex: '1' }" />
+            <wd-empty icon="setting" :icon-size="56" tip="没有搜索结果" :style="{ flex: '1' }" />
           </view>
           <text class="demo-panel__label">底部插槽</text>
           <wd-empty tip="还没有订单" icon="picture" :icon-size="56">
@@ -948,11 +944,11 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">Skeleton 骨架屏</text>
         <view class="demo-panel">
           <text class="demo-panel__label">animation 动画类型</text>
-          <view class="demo-row" style="align-items: flex-start">
-            <wd-skeleton animation="gradient" style="flex: 1" />
-            <wd-skeleton animation="flashing" style="flex: 1" />
-            <wd-skeleton animation="pulse" style="flex: 1" />
-            <wd-skeleton animation="none" style="flex: 1" />
+          <view class="demo-row" :style="{ 'align-items': 'flex-start' }">
+            <wd-skeleton animation="gradient" :style="{ flex: '1' }" />
+            <wd-skeleton animation="flashing" :style="{ flex: '1' }" />
+            <wd-skeleton animation="pulse" :style="{ flex: '1' }" />
+            <wd-skeleton animation="none" :style="{ flex: '1' }" />
           </view>
           <text class="demo-panel__label">rowCol 行列配置 / round</text>
           <wd-skeleton :row-col="skeletonRowCol" animation="flashing" round />
@@ -992,11 +988,11 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">Backtop 回到顶部</text>
         <view class="demo-panel">
           <text class="demo-panel__label">scroll-view 滚动超过 top 阈值显示</text>
-          <scroll-view scroll-orientation="vertical" style="height: 220px" :scroll-top="backtopScrollTop" @scroll="onBacktopScroll">
-            <view style="padding: 12px">
+          <scroll-view scroll-orientation="vertical" :style="{ height: '220px' }" :scroll-top="backtopScrollTop" @scroll="onBacktopScroll">
+            <view :style="{ padding: '12px' }">
               <wd-backtop :scroll-top="backtopScrollTop" :top="60" text="顶部" shape="square" :bottom="24" :right="24" @tap="onBacktopTap" />
               <text class="demo-panel__label">scrollTop: {{ backtopScrollTop }}（阈值 60）</text>
-              <view v-for="item in 12" :key="item" style="padding: 10px 0">
+              <view v-for="item in 12" :key="item" :style="{ padding: '10px 0' }">
                 <text class="demo-tag">滚动内容 {{ item }}</text>
               </view>
             </view>
@@ -1012,21 +1008,21 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">Col 列布局</text>
         <view class="demo-panel">
           <text class="demo-panel__label">span 占据数（24 制）</text>
-          <wd-row style="margin-bottom: 8px">
-            <wd-col :span="24" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">span 24</text></wd-col>
+          <wd-row :style="{ 'margin-bottom': '8px' }">
+            <wd-col :span="24" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">span 24</text></wd-col>
           </wd-row>
-          <wd-row style="margin-bottom: 8px">
-            <wd-col :span="12" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">span 12</text></wd-col>
-            <wd-col :span="12" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">span 12</text></wd-col>
+          <wd-row :style="{ 'margin-bottom': '8px' }">
+            <wd-col :span="12" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">span 12</text></wd-col>
+            <wd-col :span="12" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">span 12</text></wd-col>
           </wd-row>
           <text class="demo-panel__label">offset 左侧偏移</text>
-          <wd-row style="margin-bottom: 8px">
-            <wd-col :span="6" :offset="6" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">offset 6</text></wd-col>
-            <wd-col :span="6" :offset="6" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">offset 6</text></wd-col>
+          <wd-row :style="{ 'margin-bottom': '8px' }">
+            <wd-col :span="6" :offset="6" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">offset 6</text></wd-col>
+            <wd-col :span="6" :offset="6" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">offset 6</text></wd-col>
           </wd-row>
           <wd-row>
-            <wd-col :span="4" :offset="4" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">4</text></wd-col>
-            <wd-col :span="4" :offset="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">4</text></wd-col>
+            <wd-col :span="4" :offset="4" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">4</text></wd-col>
+            <wd-col :span="4" :offset="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">4</text></wd-col>
           </wd-row>
         </view>
       </view>
@@ -1035,23 +1031,23 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">Row 行布局</text>
         <view class="demo-panel">
           <text class="demo-panel__label">gutter 列间距</text>
-          <wd-row :gutter="12" style="margin-bottom: 8px">
-            <wd-col :span="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
-            <wd-col :span="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
-            <wd-col :span="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">8</text></wd-col>
+          <wd-row :gutter="12" :style="{ 'margin-bottom': '8px' }">
+            <wd-col :span="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">8</text></wd-col>
           </wd-row>
           <text class="demo-panel__label">justify 水平排列</text>
-          <wd-row justify="space-between" style="margin-bottom: 8px">
-            <wd-col :span="6" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">6</text></wd-col>
-            <wd-col :span="6" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">6</text></wd-col>
+          <wd-row justify="space-between" :style="{ 'margin-bottom': '8px' }">
+            <wd-col :span="6" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">6</text></wd-col>
+            <wd-col :span="6" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">6</text></wd-col>
           </wd-row>
-          <wd-row justify="center" style="margin-bottom: 8px">
-            <wd-col :span="8" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">居中</text></wd-col>
+          <wd-row justify="center" :style="{ 'margin-bottom': '8px' }">
+            <wd-col :span="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">居中</text></wd-col>
           </wd-row>
           <text class="demo-panel__label">align 垂直对齐</text>
-          <wd-row align="bottom" style="height: 64px; background: #f7f8fa">
-            <wd-col :span="12" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">底部对齐</text></wd-col>
-            <wd-col :span="12" style="background: #EEEBFF; padding: 8px; border-radius: 6px"><text class="demo-tag">align="bottom"</text></wd-col>
+          <wd-row align="bottom" :style="{ height: '64px', background: '#f7f8fa' }">
+            <wd-col :span="12" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">底部对齐</text></wd-col>
+            <wd-col :span="12" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">align="bottom"</text></wd-col>
           </wd-row>
         </view>
       </view>
@@ -1078,21 +1074,21 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">Sticky 粘性布局</text>
         <view class="demo-panel">
           <text class="demo-panel__label">滚动容器内吸顶（zIndex / offsetTop）</text>
-          <scroll-view scroll-orientation="vertical" style="height: 200px">
-            <view style="padding: 12px">
-              <view style="height: 32px; background: #f7f8fa" />
+          <scroll-view scroll-orientation="vertical" :style="{ height: '200px' }">
+            <view :style="{ padding: '12px' }">
+              <view :style="{ height: '32px', background: '#f7f8fa' }" />
               <wd-sticky :offset-top="0" :z-index="10">
-                <view style="background: #755FFE; padding: 10px; border-radius: 8px">
-                  <text style="color: #ffffff; font-size: 13px">吸顶标题 A（offsetTop 0）</text>
+                <view :style="{ background: '#755FFE', padding: '10px', 'border-radius': '8px' }">
+                  <text :style="{ color: '#ffffff', 'font-size': '13px' }">吸顶标题 A（offsetTop 0）</text>
                 </view>
               </wd-sticky>
-              <view style="height: 260px; background: #f7f8fa; padding: 12px"><text class="demo-tag">滚动内容区</text></view>
+              <view :style="{ height: '260px', background: '#f7f8fa', padding: '12px' }"><text class="demo-tag">滚动内容区</text></view>
               <wd-sticky :offset-top="12" :z-index="9">
-                <view style="background: #ff8800; padding: 10px; border-radius: 8px">
-                  <text style="color: #ffffff; font-size: 13px">吸顶标题 B（offsetTop 12）</text>
+                <view :style="{ background: '#ff8800', padding: '10px', 'border-radius': '8px' }">
+                  <text :style="{ color: '#ffffff', 'font-size': '13px' }">吸顶标题 B（offsetTop 12）</text>
                 </view>
               </wd-sticky>
-              <view style="height: 260px; background: #f7f8fa; padding: 12px"><text class="demo-tag">更多内容</text></view>
+              <view :style="{ height: '260px', background: '#f7f8fa', padding: '12px' }"><text class="demo-tag">更多内容</text></view>
             </view>
           </scroll-view>
         </view>
@@ -1102,21 +1098,21 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">StickyBox 粘性容器</text>
         <view class="demo-panel">
           <text class="demo-panel__label">offsetTop 偏移（容器高度由外层样式承担）</text>
-          <wd-sticky-box style="height: 180px">
-            <view style="padding: 12px">
+          <wd-sticky-box :style="{ height: '180px' }">
+            <view :style="{ padding: '12px' }">
               <wd-sticky :offset-top="0" :z-index="10">
-                <view style="background: #755FFE; padding: 10px; border-radius: 8px">
-                  <text style="color: #ffffff; font-size: 13px">offsetTop 0</text>
+                <view :style="{ background: '#755FFE', padding: '10px', 'border-radius': '8px' }">
+                  <text :style="{ color: '#ffffff', 'font-size': '13px' }">offsetTop 0</text>
                 </view>
               </wd-sticky>
-              <view style="height: 24px" />
-              <view style="height: 220px; background: #f7f8fa; padding: 12px"><text class="demo-tag">容器内滚动内容</text></view>
+              <view :style="{ height: '24px' }" />
+              <view :style="{ height: '220px', background: '#f7f8fa', padding: '12px' }"><text class="demo-tag">容器内滚动内容</text></view>
               <wd-sticky :offset-top="8">
-                <view style="background: #ff8800; padding: 10px; border-radius: 8px">
-                  <text style="color: #ffffff; font-size: 13px">offsetTop 8</text>
+                <view :style="{ background: '#ff8800', padding: '10px', 'border-radius': '8px' }">
+                  <text :style="{ color: '#ffffff', 'font-size': '13px' }">offsetTop 8</text>
                 </view>
               </wd-sticky>
-              <view style="height: 220px; background: #f7f8fa; padding: 12px"><text class="demo-tag">继续滚动</text></view>
+              <view :style="{ height: '220px', background: '#f7f8fa', padding: '12px' }"><text class="demo-tag">继续滚动</text></view>
             </view>
           </wd-sticky-box>
         </view>
@@ -1194,7 +1190,7 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">CalendarView 日历视图</text>
         <view class="demo-panel">
           <text class="demo-panel__label">内嵌视图（type="date"，无弹层）</text>
-          <wd-calendar-view v-model="calendarViewValue" style="height: 400px" />
+          <wd-calendar-view v-model="calendarViewValue" :style="{ height: '400px' }" />
           <view class="demo-row">
             <text class="demo-tag">选中：{{ calendarViewValue ? new Date(calendarViewValue).toLocaleDateString() : '未选择' }}</text>
           </view>
@@ -1205,7 +1201,7 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">DateTimePickerView 日期时间视图</text>
         <view class="demo-panel">
           <text class="demo-panel__label">内嵌视图（type="datetime"，无弹层）</text>
-          <view style="height: 280px">
+          <view :style="{ height: '280px' }">
             <wd-datetime-picker-view v-model="datetimePickerViewValue" />
           </view>
           <view class="demo-row">
@@ -1228,17 +1224,15 @@ const portalBarVisible = ref(false)
       <view class="demo-section">
         <text class="demo-section__title">AvatarGroup 头像组</text>
         <view class="demo-panel">
-          <text class="demo-panel__label">层叠叠加（maxCount 折叠，direction="right"）</text>
+          <text class="demo-panel__label">层叠叠加（max-count=3 折叠，cascading 默认 left-up，超出收进折叠头像）</text>
           <view class="demo-row">
-            <wd-avatar-group :max-count="3" :size="40" collapse-text="+5">
-              <wd-avatar :size="40" text="A" bg-color="#755FFE" />
-              <wd-avatar :size="40" text="B" bg-color="#34C759" />
-              <wd-avatar :size="40" text="C" bg-color="#FF9500" />
+            <wd-avatar-group :max-count="3" :size="40" collapse-avatar="+5">
+              <wd-avatar v-for="name in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']" :key="name" :size="40" :text="name" bg-color="#755FFE" />
             </wd-avatar-group>
           </view>
-          <text class="demo-panel__label">方形不层叠（shape="square"，overlap=false）</text>
+          <text class="demo-panel__label">方形层叠（shape="square" 统一形状）</text>
           <view class="demo-row">
-            <wd-avatar-group shape="square" :overlap="false" :size="40">
+            <wd-avatar-group shape="square" :size="40">
               <wd-avatar :size="40" :src="demoImage" />
               <wd-avatar :size="40" :src="demoImage" />
               <wd-avatar :size="40" :src="demoImage" />
@@ -1270,17 +1264,19 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">TableColumn 表格列</text>
         <view class="demo-panel">
           <text class="demo-panel__label">作用域插槽自定义列（status 渲染为标签）</text>
-          <wd-table :data="tableColData" :columns="tableColColumns">
-            <template #default="scope">
-              <text v-if="scope?.column?.prop === 'status'" class="demo-tag">{{ scope?.row?.status }}</text>
-              <template v-else>
-                <wd-table-column :prop="scope?.column?.prop" :label="scope?.column?.label" :width="scope?.column?.width" />
-                <text>{{ scope?.row?.[scope.column.prop] }}</text>
+          <!-- 自定义单元格：在具体列上写 #value 作用域插槽（row 为该行数据）；
+               wd-table 的默认插槽用于摆放列组件，不是带 row/column 参数的作用域插槽 -->
+          <wd-table :data="tableColData">
+            <wd-table-column prop="name" label="姓名" :width="80" />
+            <wd-table-column prop="status" label="状态" :width="90">
+              <template #value="{ row }">
+                <text class="demo-tag">{{ row.status }}</text>
               </template>
-            </template>
+            </wd-table-column>
+            <wd-table-column prop="score" label="得分" :width="80" />
           </wd-table>
           <view class="demo-row">
-            <text class="demo-tag">插槽参数：row / column / rowIndex</text>
+            <text class="demo-tag">插槽参数：row / index</text>
             <text class="demo-tag">TableColumn：prop / label / width</text>
           </view>
         </view>
@@ -1290,9 +1286,11 @@ const portalBarVisible = ref(false)
         <text class="demo-section__title">Watermark 水印</text>
         <view class="demo-panel">
           <text class="demo-panel__label">文字水印（content，固定高度容器）</text>
-          <view style="height: 180px; border-radius: 12px; overflow: hidden">
-            <wd-watermark content="wot-lynx-ui" :font-size="14" :opacity="0.15" :full-screen="false" style="height: 100%">
-              <view style="padding: 12px">
+          <view :style="{ height: '180px', 'border-radius': '12px', overflow: 'hidden' }">
+            <!-- opacity 不传：默认走 --wot-watermark-opacity（0.6）。此前显式传
+               0.15，灰字叠白底在真机上几乎不可见，被误判为「水印不渲染」 -->
+          <wd-watermark content="wot-lynx-ui" :font-size="14" :full-screen="false" :style="{ height: '100%' }">
+              <view :style="{ padding: '12px' }">
                 <text class="demo-panel__label">被水印覆盖的内容区域</text>
               </view>
             </wd-watermark>
@@ -1369,10 +1367,10 @@ const portalBarVisible = ref(false)
             <wd-button size="small" @tap="tourVisible = true">开始引导</wd-button>
           </view>
           <view class="demo-row">
-            <view id="tour-target-1" style="padding: 8px 12px; background-color: #EEEBFF; border-radius: 8px">
+            <view id="tour-target-1" :style="{ padding: '8px 12px', 'background-color': '#EEEBFF', 'border-radius': '8px' }">
               <text class="demo-tag">引导目标 1</text>
             </view>
-            <view id="tour-target-2" style="padding: 8px 12px; background-color: #EEEBFF; border-radius: 8px">
+            <view id="tour-target-2" :style="{ padding: '8px 12px', 'background-color': '#EEEBFF', 'border-radius': '8px' }">
               <text class="demo-tag">引导目标 2</text>
             </view>
           </view>
@@ -1400,9 +1398,9 @@ const portalBarVisible = ref(false)
             <text class="demo-tag">anchors: 120 / 200 / 280</text>
           </view>
           <!-- 固定浮层仅在用户打开此项时挂载，避免常驻遮挡图标画廊和分页。 -->
-          <view v-if="panelVisible" style="border-width: 1px; border-style: solid; border-color: #e4e7ed; border-radius: 12px; overflow: hidden">
+          <view v-if="panelVisible" :style="{ 'border-width': '1px', 'border-style': 'solid', 'border-color': '#e4e7ed', 'border-radius': '12px', overflow: 'hidden' }">
             <wd-floating-panel :height="panelHeight" :anchors="[120, 200, 280]" safe-area-inset-bottom @height-change="onPanelHeightChange">
-              <view style="padding: 12px">
+              <view :style="{ padding: '12px' }">
                 <wd-button size="small" variant="text" @tap="panelVisible = false">关闭面板</wd-button>
                 <text class="demo-panel__label">面板内容区（内容可滚动）</text>
                 <text class="demo-panel__label">当前高度：{{ panelHeight }}px</text>
@@ -1453,6 +1451,11 @@ const portalBarVisible = ref(false)
             <wd-button size="small" @tap="showVideoPreview">播放视频</wd-button>
             <text class="demo-tag">closePosition: right-top</text>
           </view>
+          <!-- <video> 是 Lynx 的 XElement：当前演示宿主未注册 video 原生组件
+               （capabilities.videoContext = false），直接创建节点会抛引擎级
+               990200 / 60301。组件在此类宿主上自动降级为「封面 + 播放图标」，
+               注入了 createVideoContext 的宿主才挂载真正的 <video> -->
+          <text class="demo-panel__label">宿主未注入视频能力时显示封面占位（不创建 video 节点）</text>
         </view>
       </view>
 
@@ -1464,8 +1467,8 @@ const portalBarVisible = ref(false)
             <wd-button size="small" @tap="portalBarVisible = !portalBarVisible">{{ portalBarVisible ? '隐藏' : '显示' }}底部固定条</wd-button>
           </view>
           <wd-root-portal v-if="portalBarVisible">
-            <view style="position: fixed; left: 0; right: 0; bottom: 0; padding: 12px; background-color: #755FFE">
-              <text style="color: #ffffff; font-size: 13px">经 RootPortal 挂载的底部固定条</text>
+            <view :style="{ position: 'fixed', left: '0', right: '0', bottom: '0', padding: '12px', 'background-color': '#755FFE' }">
+              <text :style="{ color: '#ffffff', 'font-size': '13px' }">经 RootPortal 挂载的底部固定条</text>
             </view>
           </wd-root-portal>
         </view>
@@ -1493,7 +1496,7 @@ const portalBarVisible = ref(false)
         @confirm="onCropperConfirm"
       />
       <wd-popup v-model="popupVisible" :position="popupPosition" round closable>
-        <view style="padding: 24px; min-width: 200px">
+        <view :style="{ padding: '24px', 'min-width': '200px' }">
           <text class="demo-panel__label">position = {{ popupPosition }}</text>
           <text class="demo-panel__label">点击遮罩或关闭按钮退出</text>
         </view>

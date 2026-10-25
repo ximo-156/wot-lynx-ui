@@ -39,7 +39,7 @@ const cellConfigs = computed(() => {
     configs.push({
       rowIndex, rowspan: span.rowspan, colspan: span.colspan, value: data[rowIndex]?.[props.prop], shadow,
       class: ['wd-table__cell', { 'is-stripe': parent?.props.stripe && isOdd(rowIndex), 'is-border': parent?.props.border, 'is-fixed': props.fixed, 'is-shadow': shadow, 'is-last': columnIndex.value + span.colspan >= (parent?.children.length || 0), 'is-last-row': rowIndex + span.rowspan >= data.length }, `is-${props.align}`],
-      style: { width: parent?.getSpanWidth?.(columnIndex.value, span.colspan) || addUnit(props.width), top: `${parent?.getRowTop?.(rowIndex) || 0}px`, height: height == null ? 'auto' : `${height}px`, left: '0px', zIndex: span.colspan > 1 ? '1' : 'auto' }
+      style: { width: parent?.getSpanWidth?.(columnIndex.value, span.colspan) || addUnit(props.width), top: `${parent?.getRowTop?.(rowIndex) || 0}px`, height: height == null ? 'auto' : `${height}px`, left: '0px', 'z-index': span.colspan > 1 ? '1' : 'auto' }
     })
   }
   return configs

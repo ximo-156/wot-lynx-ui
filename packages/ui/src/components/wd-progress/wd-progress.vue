@@ -66,7 +66,7 @@ onBeforeUnmount(() => {
  */
 const rootStyle = computed<Record<string, string>>(() => {
   return {
-    background: displayColor.value,
+    'background-color': displayColor.value,
     width: `${displayPercentage.value}%`,
     'transition-duration': `${percentageDiff.value * duration.value * 0.001}s`
   }

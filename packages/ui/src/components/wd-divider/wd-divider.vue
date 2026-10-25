@@ -11,7 +11,6 @@ const slots = useSlots()
 const contentMode = computed(() => !props.vertical && (props.contentPosition !== 'center' || Boolean(slots.default)))
 const rootStyle = computed(() => ({
   color: props.color || '',
-  '--wot-divider-content-color': props.color || '',
   ...parseStyle(props.customStyle)
 }))
 const rootClass = computed(() => ['wd-divider', { 'is-dashed': props.dashed, 'is-hairline': props.hairline },

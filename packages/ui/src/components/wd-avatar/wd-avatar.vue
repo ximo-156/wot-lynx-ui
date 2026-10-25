@@ -20,6 +20,9 @@
  * - 根 view 交互：@click → @tap，并在 emits 声明 'tap' 转发原生事件
  *   （CONVENTIONS §14：消费方在组件上绑 @tap 不会落入合并崩溃）；
  *   wot-ui 的 click 事件按官方文档不带载荷，保持 emit('click')；
+ * - 内联背景色写 background-color（内联通道不保证展开 background 简写）；
+ *   文本节点经 textStyle 显式下发 color / font-size（带 class 的 text 在
+ *   真机上不保证继承祖先 view 的颜色字号）。
  * - Web 专有属性（user-select / vertical-align）按 PORTING §4.5 删除；
  * - alt 为 uni-app 小程序专有 props（参考源亦未在模板消费），保留声明
  *   不生效；mode 取值沿用 uni-app image 的 mode 语义。
@@ -127,10 +130,14 @@ const rootClass = computed(() => {
 
 /**
  * 根节点样式
+ *
+ * 背景色用 background-color 而非 background 简写：Lynx 的内联样式通道
+ * （SET_STYLE）不保证展开简写属性（真机 2026-10-25 巡检：bg-color 头像
+ * 透明 + 白字，白底页面整组不可见），样式表里的简写可用、内联不可用。
  */
 const AVATAR_STYLE = defineStyleKeys({
-  width: '', height: '', 'font-size': '', '--wot-avatar-overlap': '',
-  'z-index': '', color: '', background: ''
+  width: '', height: '', 'font-size': '', 'z-index': '', color: '', 'background-color': '',
+  'margin-left': '', 'margin-top': ''
 })
 const rootStyle = computed(() => {
   const style: Record<string, string> = { ...AVATAR_STYLE }
@@ -138,8 +145,17 @@ const rootStyle = computed(() => {
     style.width = addUnit(sizeValue.value)
     style.height = addUnit(sizeValue.value)
     style['font-size'] = `calc(${addUnit(sizeValue.value)} * 0.45)`
+    // 预设尺寸的层叠间距由样式表按尺寸类的 --wot-avatar-overlap 承担；
+    // 自定义尺寸没有对应类，且 Lynx 原生 setStyleProperties 会丢弃内联
+    // CSS 自定义属性（--*，lynx#8576），这里直接下发负边距（预设尺寸
+    // 走样式表、自定义尺寸走内联，两条路径互不覆盖）。
     if (avatarGroup.value) {
-      style['--wot-avatar-overlap'] = `calc(${addUnit(sizeValue.value)} * -0.25)`
+      const overlap = `calc(${addUnit(sizeValue.value)} * -0.25)`
+      if (avatarGroup.value.props.vertical) {
+        if (index.value > 0) style['margin-top'] = overlap
+      } else if (index.value > 0) {
+        style['margin-left'] = overlap
+      }
     }
   }
 
@@ -169,7 +185,7 @@ const rootStyle = computed(() => {
   }
 
   if (props.bgColor) {
-    style.background = props.bgColor
+    style['background-color'] = props.bgColor
     // 有背景色但无文字色时，默认白色
     if (!props.color) {
       style.color = '#ffffffff'
@@ -177,6 +193,17 @@ const rootStyle = computed(() => {
   }
 
   return resolveStyle(AVATAR_STYLE, style, parseStyle(props.customStyle))
+})
+
+/**
+ * 文本节点显式样式：真机上 <text> 带 class 时不保证继承祖先 view 的
+ * color / font-size（同 wd-month__day-text，真机 2026-10-25 巡检），
+ * 把根节点已算出的颜色与字号同步下发给 text 元素；未设置时保持空串
+ * （Style Funnel 中性值，回落样式表 / 继承链）。
+ */
+const textStyle = computed(() => {
+  const root = rootStyle.value
+  return { color: root.color || '', 'font-size': root['font-size'] || '' }
 })
 
 /**
@@ -203,7 +230,7 @@ const handleClick = (event: any) => {
     <!-- 图片 -->
     <WdImg v-else-if="src" :src="src" :mode="mode" custom-class="wd-avatar__img" @error="handleError" />
     <!-- 文本 -->
-    <text v-else-if="text" class="wd-avatar__text" text-maxline="1">{{ text }}</text>
+    <text v-else-if="text" class="wd-avatar__text" :style="textStyle" text-maxline="1">{{ text }}</text>
     <!-- 图标 -->
     <WdIcon v-else-if="hasIcon" :name="icon" :class-prefix="iconPrefix" :css-icon="cssIcon" custom-class="wd-avatar__icon" />
   </view>

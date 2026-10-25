@@ -64,7 +64,7 @@ watch(
   { deep: true }
 )
 
-const POPUP_STYLE = defineStyleKeys({ background: 'transparent', 'padding-top': '0px', left: '0px', right: '0px', width: 'auto' })
+const POPUP_STYLE = defineStyleKeys({ 'background-color': 'transparent', 'padding-top': '0px', left: '0px', right: '0px', width: 'auto' })
 const popupStyle = computed(() => resolveStyle(POPUP_STYLE, {
   'padding-top': state.value.position === 'top' ? addUnit(state.value.safeHeight || 0) : '',
   left: state.value.variant === 'floating' ? '12px' : '',

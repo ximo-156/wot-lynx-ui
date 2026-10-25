@@ -27,6 +27,7 @@ import path from 'node:path'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { pause } from '../../src/common/util'
+import { configureUniAdapter } from '../../src/common/uni'
 import { fireEvent } from '../fire-event'
 import Popover from '../../src/components/wd-popover/wd-popover.vue'
 import Tooltip from '../../src/components/wd-tooltip/wd-tooltip.vue'
@@ -347,11 +348,33 @@ describe('原生优先重写 · 气泡/浮层/预览布局居中契约（popover
       }
     } as any)
     await pause(50)
-    videoRef.value.open({ url: 'https://example.com/a.mp4', poster: '' })
+    // 未声明视频能力（宿主未注入 createVideoContext，如未注册 video XElement
+    // 的 Lynx 引擎）：不得创建 <video> 节点（真机 990200/60301），降级为封面占位
+    videoRef.value.open({ url: 'https://example.com/a.mp4', poster: 'https://example.com/poster.png', title: '示例视频' })
     await pause(100)
     expect(video.container.querySelector('.wd-video-preview'), '视频预览遮罩应渲染').not.toBeNull()
-    expect(video.container.querySelector('video.wd-video-preview__video-player'), '视频应为原生 video 元素').not.toBeNull()
+    expect(video.container.querySelector('video.wd-video-preview__video-player'), '无能力时不得创建 video 节点').toBeNull()
+    expect(video.container.querySelector('.wd-video-preview__fallback'), '应降级为封面占位').not.toBeNull()
+    expect(video.container.querySelector('.wd-video-preview__fallback-poster'), '封面应渲染').not.toBeNull()
     expect(video.container.querySelector('.wd-video-preview__close'), '关闭按钮应渲染').not.toBeNull()
+    cleanup()
+
+    // 声明能力后（configureUniAdapter 注入 createVideoContext）挂载原生 video
+    configureUniAdapter({ createVideoContext: () => ({}) })
+    const nativeVideoRef = ref<any>(null)
+    const nativeVideo = render({
+      setup() {
+        return () =>
+          h(VideoPreview as any, {
+            ref: nativeVideoRef,
+            selector: 'test-video-preview-native'
+          })
+      }
+    } as any)
+    await pause(50)
+    nativeVideoRef.value.open({ url: 'https://example.com/a.mp4', poster: '' })
+    await pause(100)
+    expect(nativeVideo.container.querySelector('video.wd-video-preview__video-player'), '有能力时应挂载原生 video 元素').not.toBeNull()
     cleanup()
   })
 })

@@ -67,7 +67,7 @@ const monthTitle = computed(() => {
 // Lynx 适配：wot-ui 用 objToStyle 拼字符串，字符串 style 会被 vue-lynx 的
 // patchProp 静默丢弃（CONVENTIONS §19），改为对象语法。
 const firstDayStyle = computed<Record<string, string>>(() => {
-  return { marginLeft: `${(100 / 7) * offset.value}%` }
+  return { 'margin-left': `${(100 / 7) * offset.value}%` }
 })
 
 const isLastRow = (date: number) => {

@@ -30,14 +30,14 @@ const props = defineProps(gapProps)
  * 高度中性值取 prop 默认值（14px）。
  */
 const GAP_STYLE = defineStyleKeys({
-  background: 'transparent',
+  'background-color': 'transparent',
   height: '14px'
 })
 
 const rootStyle = computed<CSSProperties>(() => {
   return {
     ...resolveStyle(GAP_STYLE, {
-      background: isDef(props.bgColor) ? props.bgColor : '',
+      'background-color': isDef(props.bgColor) ? props.bgColor : '',
       height: isDef(props.height) ? addUnit(props.height) : ''
     }),
     ...parseStyle(props.customStyle)

@@ -505,6 +505,9 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
   })
 
   it('video preview close/reopen keeps the latest resource and cancels retained instance calls on unmount', async () => {
+    // videoContext 能力决定是否挂载 <video>（缺失时降级封面占位，见
+    // native-first/popover-batch 的降级用例），此处声明能力以覆盖 video 路径
+    configureUniAdapter({ createVideoContext: () => ({}) })
     const mounted = mount(VideoPreview)
     mounted.exposed.value.open({ url: 'old.mp4' }); await frames(2)
     mounted.exposed.value.close(); await frames(1); mounted.exposed.value.open({ url: 'new.mp4' }); await settled()
@@ -517,6 +520,7 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
   it('preview hooks initialize before children mount, isolate selectors, and ignore retained calls after unmount', async () => {
     let imageApi: ReturnType<typeof useImagePreview>, videoApi: ReturnType<typeof useVideoPreview>, imageOption: any, videoOption: any
     const Consumer = { setup() { imageOption = inject(getImagePreviewOptionKey('image-hook')); videoOption = inject(getVideoPreviewOptionKey('video-hook')); return () => [h(ImagePreview, { selector: 'image-hook' }), h(VideoPreview, { selector: 'video-hook' })] } }
+    configureUniAdapter({ createVideoContext: () => ({}) })
     const mounted = render({ setup() { imageApi = useImagePreview('image-hook'); videoApi = useVideoPreview('video-hook'); imageApi.previewImage(['hook.png']); videoApi.previewVideo({ url: 'hook.mp4' }); return () => h('view', null, [h(Consumer)]) } } as any)
     await frames(3)
     expect(mounted.container.querySelector('.wd-swiper__image')!.getAttribute('src')).toBe('hook.png')

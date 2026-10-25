@@ -48,7 +48,11 @@ $divider-padding-default: var(--wot-divider-padding-default, $spacing-zero) !def
   margin: $divider-margin;
   align-items: center;
   justify-content: center;
-  color: $divider-color-default;
+  // 令牌色挂在根节点并沿继承链到达内容文字（原 --wot-divider-content-color
+  // 经内联 var 下发、由 .wd-divider__content text 消费——Lynx 原生
+  // setStyleProperties 丢弃内联 --*（lynx#8576），真机上 color prop 失效。
+  // 改为根类消费该令牌 + props.color 内联覆盖，继承链两端平台都成立）。
+  color: var(--wot-divider-content-color, $divider-color-default);
   font-size: $divider-font-size-default;
 
   /* Lynx 适配：参考源的 ::before/::after 线段（flex:1 + 上边框）在无伪元素
@@ -70,10 +74,6 @@ $divider-padding-default: var(--wot-divider-padding-default, $spacing-zero) !def
   @include m(center, left, right) {
     .wd-divider__line--first { margin-right: $divider-margin-content-right; }
     .wd-divider__line--last { margin-left: $divider-margin-content-left; }
-  }
-  .wd-divider__content text {
-    color: $divider-content-color;
-    font-size: $divider-font-size-default;
   }
 
   // 令牌厚度保留，hairline 只按官方比例缩放。

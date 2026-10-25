@@ -28,10 +28,10 @@ function onSubmit() {
     <view class="wd-submit-bar__left">
       <view v-if="label" class="wd-submit-bar__label"><text class="wd-submit-bar__label-text">{{ label }}</text></view>
       <view v-if="price !== '' && price != null" class="wd-submit-bar__price">
-        <text v-if="pricePrefix" class="wd-submit-bar__price-prefix" :style="{ fontSize: addUnit(priceSize) }">{{ pricePrefix }}</text>
-        <text class="wd-submit-bar__price-integer" :style="{ fontSize: addUnit(priceIntegerSize) }">{{ priceParts.integer }}</text>
-        <text v-if="priceParts.decimal" class="wd-submit-bar__price-decimal" :style="{ fontSize: addUnit(priceDecimalSize) }">{{ priceParts.decimal }}</text>
-        <text v-if="priceSuffix" class="wd-submit-bar__price-suffix" :style="{ fontSize: addUnit(priceSize) }">{{ priceSuffix }}</text>
+        <text v-if="pricePrefix" class="wd-submit-bar__price-prefix" :style="{ 'font-size': addUnit(priceSize) }">{{ pricePrefix }}</text>
+        <text class="wd-submit-bar__price-integer" :style="{ 'font-size': addUnit(priceIntegerSize) }">{{ priceParts.integer }}</text>
+        <text v-if="priceParts.decimal" class="wd-submit-bar__price-decimal" :style="{ 'font-size': addUnit(priceDecimalSize) }">{{ priceParts.decimal }}</text>
+        <text v-if="priceSuffix" class="wd-submit-bar__price-suffix" :style="{ 'font-size': addUnit(priceSize) }">{{ priceSuffix }}</text>
       </view>
       <slot name="left" />
     </view>

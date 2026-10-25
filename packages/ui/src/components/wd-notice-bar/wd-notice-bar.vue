@@ -81,14 +81,14 @@ const animation = computed(() => {
  */
 const NOTICE_BAR_STYLE = defineStyleKeys({
   color: '',
-  background: ''
+  'background-color': ''
 })
 
 const rootStyle = computed(() => {
   return {
     ...resolveStyle(NOTICE_BAR_STYLE, {
       color: isDef(props.color) ? props.color : '',
-      background: isDef(props.backgroundColor) ? props.backgroundColor : ''
+      'background-color': isDef(props.backgroundColor) ? props.backgroundColor : ''
     }),
     ...parseStyle(props.customStyle)
   }

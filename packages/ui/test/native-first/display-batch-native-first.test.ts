@@ -374,7 +374,8 @@ describe('原生优先重写 · 展示家族 DOM 对齐与交互（count-down / 
     })
     const style = styleOf(container.querySelector('.wd-notice-bar'))
     expect(style).toMatch(/color:\s*rgb\(255, 0, 0\)/)
-    expect(style).toMatch(/background:\s*rgb\(255, 255, 255\)/)
+    // 内联键为 background-color：Lynx 内联通道不保证展开 background 简写
+    expect(style).toMatch(/background-color:\s*rgb\(255, 255, 255\)/)
     expect(style, 'customStyle 经 parseStyle 归一后合并').toMatch(/margin-top:\s*4px/)
     cleanup()
 
@@ -382,7 +383,7 @@ describe('原生优先重写 · 展示家族 DOM 对齐与交互（count-down / 
     const plain = render(NoticeBar as any, { text: '通知' })
     const plainStyle = styleOf(plain.container.querySelector('.wd-notice-bar'))
     expect(plainStyle).not.toMatch(/color:\s*rgb/)
-    expect(plainStyle).not.toMatch(/background:\s*rgb/)
+    expect(plainStyle).not.toMatch(/background(-color)?:\s*rgb/)
   })
 
   it('wd-watermark：文本 / 图片平铺单元 + 全屏类名 + 原生 image 元素', async () => {

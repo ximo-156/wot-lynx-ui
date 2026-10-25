@@ -9,7 +9,12 @@
  *   尺寸一律改为以 `--wot-switch-size` 为基准的 calc() 表达式；`size` prop
  *   命中时经内联 `font-size` + `--wot-switch-size` 下发，未命中时内联
  *   font-size 取 `var(--wot-switch-size, 26px)`（与类声明等价，消费者仍可经
- *   CSS 变量覆盖），二者构成完整键集（CONVENTIONS §20）；
+ *   CSS 变量覆盖），二者构成完整键集（CONVENTIONS §20）。
+ *   ⚠️ 已知降级（真机 2026-10-25 巡检）：Lynx 原生 setStyleProperties 丢弃
+ *   内联 CSS 自定义属性（--*，lynx-family/lynx#8576），自定义 size 下
+ *   子元素的 calc(var(--wot-switch-size, …)) 链在真机回落 26px 默认链，
+ *   仅根节点 font-size 生效；预设场景（默认 26px / 消费者经样式表覆盖
+ *   --wot-switch-size）不受影响；
  * - 操作块位移沿用 wot-ui 的 `left: calc(100% - …)`（激活态贴右），不使用
  *   JS 度量，避免 touch 热路径与尺寸不同步；
  * - 禁用态经 useFormDisabled 贯通 form；beforeChange 拦截器经

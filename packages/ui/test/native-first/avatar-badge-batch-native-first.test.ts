@@ -275,10 +275,11 @@ describe('原生优先重写 · 布局居中契约（avatar / avatar-group / bad
     // left-up：越后面 z-index 越大（1, 2, …）
     expect(avatars[0].getAttribute('style')).toMatch(/z-index:\s*1/)
     expect(avatars[1].getAttribute('style')).toMatch(/z-index:\s*2/)
-    // 折叠头像：+N 文案 + 参考源同源灰底（jsdom 把 8 位十六进制归一为 rgb()）
+    // 折叠头像：+N 文案 + 参考源同源灰底（jsdom 把 8 位十六进制归一为 rgb()）；
+    // 内联键为 background-color——Lynx 内联通道不保证展开 background 简写
     const collapse = avatars[2]
     expect(collapse.textContent).toBe('+1')
-    expect(collapse.getAttribute('style')).toMatch(/background:\s*(?:#ebedf0ff|rgb\(235,\s*237,\s*240\))/)
+    expect(collapse.getAttribute('style')).toMatch(/background-color:\s*(?:#ebedf0ff|rgb\(235,\s*237,\s*240\))/)
     expect(collapse.getAttribute('style')).toMatch(/z-index:\s*3/)
   })
 

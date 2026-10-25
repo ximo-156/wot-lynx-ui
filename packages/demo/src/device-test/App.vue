@@ -183,7 +183,7 @@ const safeAreaText = computed(() => {
         <text class="card__title">{{ testSections[1].title }}</text>
         <text class="card__hint">{{ testSections[1].hint }}</text>
         <view class="row">
-          <wd-slider v-model="sliderValue" style="flex: 1" />
+          <wd-slider v-model="sliderValue" :style="{ flex: '1' }" />
           <text class="tag">当前 {{ sliderValue }}</text>
         </view>
         <view class="row">
@@ -191,11 +191,11 @@ const safeAreaText = computed(() => {
             v-model="sliderStep"
             :step="10"
             :marks="{ 0: '0', 50: '50', 100: '100' }"
-            style="flex: 1"
+            :style="{ flex: '1' }"
           />
         </view>
         <view class="row">
-          <wd-slider v-model="sliderRange" range style="flex: 1" />
+          <wd-slider v-model="sliderRange" range :style="{ flex: '1' }" />
           <text class="tag">{{ sliderRange[0] }} ~ {{ sliderRange[1] }}</text>
         </view>
         <ChecklistBox :items="testSections[1].items" :checked="checked" @toggle="toggle" />
@@ -251,7 +251,7 @@ const safeAreaText = computed(() => {
           <wd-button size="small" @tap="keyboardVisible = true">弹起键盘</wd-button>
         </view>
         <view class="row">
-          <wd-input v-model="inputValue" placeholder="请输入（受控回显）" clearable style="flex: 1" />
+          <wd-input v-model="inputValue" placeholder="请输入（受控回显）" clearable :style="{ flex: '1' }" />
         </view>
         <text class="tag">已输入：{{ inputValue || '（空）' }}</text>
         <view class="row">
@@ -327,10 +327,10 @@ const safeAreaText = computed(() => {
         <wd-divider content-position="left">左对齐</wd-divider>
         <wd-divider dashed />
         <view class="row">
-          <wd-progress :percentage="60" style="flex: 1" />
+          <wd-progress :percentage="60" :style="{ flex: '1' }" />
         </view>
         <wd-notice-bar text="这是一条通知栏提示" prefix="sound" />
-        <wd-swiper :list="swiperList" style="margin-top: 8px" />
+        <wd-swiper :list="swiperList" :style="{ 'margin-top': '8px' }" />
         <wd-tabs v-model="tabValue">
           <wd-tab title="标签一">
             <view class="tab-panel"><text class="tag">标签一内容</text></view>

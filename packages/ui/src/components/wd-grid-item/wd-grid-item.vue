@@ -138,12 +138,16 @@ const rootStyle = computed<CSSProperties>(() => {
  * 内容区默认 height 与 SCSS 一致；right=0 / bottom=auto 对非 square
  * 相对定位无额外位移，square + gutter 则按参考源缩进右边和底边。
  * 完整键集防止 gutter / square 动态切回时残留旧 right、bottom、height。
+ * bgColor 双通道下发：--wot-grid-item-bg 供 Web/主题覆盖消费；内联
+ * background-color 兜底 Lynx（原生 setStyleProperties 丢弃内联 --*，
+ * lynx#8576），未设置时回落 __content 类的 $grid-item-bg。
  */
 const GRID_ITEM_CONTENT_STYLE = defineStyleKeys({
   right: '0px',
   bottom: 'auto',
   height: '100%',
-  '--wot-grid-item-bg': ''
+  '--wot-grid-item-bg': '',
+  'background-color': ''
 })
 
 const contentStyle = computed<CSSProperties>(() => {
@@ -152,7 +156,8 @@ const contentStyle = computed<CSSProperties>(() => {
     right: inset,
     bottom: inset,
     height: inset ? 'auto' : '',
-    '--wot-grid-item-bg': bgColor.value
+    '--wot-grid-item-bg': bgColor.value,
+    'background-color': bgColor.value
   })
 })
 

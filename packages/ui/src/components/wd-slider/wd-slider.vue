@@ -179,7 +179,7 @@ const barClass = computed(() => {
 /**
  * 轨道样式
  */
-const barStyle = computed(() => ({ background: props.inactiveColor || '' }))
+const barStyle = computed(() => ({ 'background-color': props.inactiveColor || '' }))
 
 /**
  * 进度条类名
@@ -195,7 +195,7 @@ const lineClass = computed(() => {
  * 进度条样式（落定后由 Vue 接管；跟手期间由 worklet 直改，值一致）
  */
 const lineStyle = computed(() => {
-  const style: Record<string, string> = { width: props.vertical ? '' : '0%', height: props.vertical ? '0%' : '', left: props.vertical ? '' : '0', top: props.vertical ? '0' : '', background: props.activeColor || '' }
+  const style: Record<string, string> = { width: props.vertical ? '' : '0%', height: props.vertical ? '0%' : '', left: props.vertical ? '' : '0', top: props.vertical ? '0' : '', 'background-color': props.activeColor || '' }
 
   if (scope.value === 0) return style
 

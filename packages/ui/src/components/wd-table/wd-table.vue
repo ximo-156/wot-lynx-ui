@@ -131,7 +131,9 @@ function handleSortChange(value: SortDirection, uid: number) {
         </view>
         <view class="wd-table__body" :style="{ height: `${bodyHeight}px` }">
           <WdTableColumn v-if="showIndex" v-bind="indexColumn">
-            <template #value="{ index }"><text>{{ index + 1 }}</text></template>
+            <!-- 序号文字显式挂 __value 类：带 class 的 text 在真机上不保证
+                 继承 __cell 的 color / font-size（2026-10-25 巡检） -->
+            <template #value="{ index }"><text class="wd-table__value">{{ index + 1 }}</text></template>
           </WdTableColumn>
           <slot />
         </view>

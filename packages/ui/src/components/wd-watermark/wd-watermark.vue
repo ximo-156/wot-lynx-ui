@@ -92,21 +92,22 @@ const rootStyle = computed(() => {
     width *= 2
   }
   const style: Record<string, string> = {
-    backgroundSize: addUnit(width),
-    zIndex: `${props.zIndex}`
+    // Lynx 内联样式键必须 kebab-case（Element API 要求，camelCase 静默丢弃）
+    'background-size': addUnit(width),
+    'z-index': `${props.zIndex}`
   }
   return { ...style, ...parseStyle(props.customStyle) }
 })
 
 /**
  * 平铺单元可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
- * marginLeft 中性值取 0px（视觉上等同于不设置）——layout 由 staggered 切回
+ * margin-left 中性值取 0px（视觉上等同于不设置）——layout 由 staggered 切回
  * grid 时奇数行的右移位移不留残值。
  */
 const TILE_STYLE = defineStyleKeys({
   width: '0px',
   height: '0px',
-  marginLeft: '0px'
+  'margin-left': '0px'
 })
 
 /** 平铺网格：单元占位含 gutter，按图层尺寸算行列数铺满整个图层 */
@@ -135,7 +136,7 @@ const tiles = computed(() => {
         style: resolveStyle(TILE_STYLE, {
           width: `${unitWidth}px`,
           height: `${unitHeight}px`,
-          marginLeft: staggeredOffset
+          'margin-left': staggeredOffset
         })
       })
     }

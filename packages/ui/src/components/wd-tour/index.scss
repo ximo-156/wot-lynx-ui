@@ -108,9 +108,42 @@ $tour-buttons-margin-top: var(--wot-tour-buttons-margin-top, $spacing-tight) !de
   @include e(buttons) {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: flex-end;
     align-items: center;
     margin-top: $tour-buttons-margin-top;
+  }
+
+  // Lynx 适配（真机 2026-10-25 巡检）：按钮包裹容器不允许被 flex 收缩——
+  // 弹层宽度逼近 min-width 时「上一步/跳过/完成」会被压窄、CJK 文本逐字
+  // 折行（截图中按钮文字竖排）。禁止收缩后放不下的按钮整枚换行，
+  // 不再把文字拦腰折断。
+  @include e(prev) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  @include e(skip) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  @include e(next) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  @include e(finish) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
   }
 }
 

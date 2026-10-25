@@ -38,6 +38,9 @@
     margin-bottom: $calendar-view-item-margin-bottom;
     text-align: center;
 
+    // Lynx 适配（真机 2026-10-25 巡检）：状态色同时下发给 __day-container
+    // 与 __day-text——带 class 的 text 不保证继承祖先的 color，只写容器时
+    // 选中态文字会回落到 __day-text 的基础色，紫底深字对比度不足。
     @include when(disabled) {
       .wd-month__day-text {
         color: $calendar-view-color-disabled;
@@ -46,12 +49,20 @@
 
     @include when(current) {
       color: $calendar-view-color-active;
+
+      .wd-month__day-text {
+        color: $calendar-view-color-active;
+      }
     }
 
     @include when(selected, multiple-selected) {
       .wd-month__day-container {
         border-radius: $calendar-view-border-radius-active;
         background: $calendar-view-color-active;
+        color: $calendar-view-color-selected;
+      }
+
+      .wd-month__day-text {
         color: $calendar-view-color-selected;
       }
     }
@@ -61,10 +72,18 @@
         background: $calendar-view-range-bg;
         color: $calendar-view-range-color;
       }
+
+      .wd-month__day-text {
+        color: $calendar-view-range-color;
+      }
     }
     @include when(multiple-middle) {
       .wd-month__day-container {
         background: $calendar-view-color-active;
+        color: $calendar-view-color-selected;
+      }
+
+      .wd-month__day-text {
         color: $calendar-view-color-selected;
       }
     }
@@ -94,6 +113,10 @@
         color: $calendar-view-color-selected;
         border-radius: $calendar-view-border-radius-active 0 0 $calendar-view-border-radius-active;
       }
+
+      .wd-month__day-text {
+        color: $calendar-view-color-selected;
+      }
     }
 
     @include when(end) {
@@ -113,6 +136,10 @@
         color: $calendar-view-color-selected;
         border-radius: 0 $calendar-view-border-radius-active $calendar-view-border-radius-active 0;
       }
+
+      .wd-month__day-text {
+        color: $calendar-view-color-selected;
+      }
     }
 
     @include when(same) {
@@ -120,6 +147,10 @@
         background: $calendar-view-color-active;
         color: $calendar-view-color-selected;
         border-radius: $calendar-view-border-radius-active;
+      }
+
+      .wd-month__day-text {
+        color: $calendar-view-color-selected;
       }
     }
 
@@ -142,6 +173,13 @@
   }
 
   @include e(day-text) {
+    // Lynx 适配（真机 2026-10-25 巡检）：带 class 的 text 不保证继承祖先
+    // view 的 color / font-size（周表头文字有显式色号、日期文字靠继承，
+    // 真机表现为周头可见而整月日期空白），此处显式下发与 __days 一致的
+    // 颜色与字号；selected/middle 等状态色仍由 __day-container 的
+    // color 声明经文本继承覆盖（无 class 的内层元素继承不受影响）。
+    color: $calendar-view-day-color;
+    font-size: $calendar-view-day-font-size;
     font-weight: $calendar-view-day-font-weight;
     text-align: center;
   }
@@ -159,6 +197,7 @@
     justify-content: center;
     line-height: $calendar-view-info-line-height;
     font-size: $calendar-view-info-font-size;
+    color: $calendar-view-day-color;
     text-align: center;
   }
 
@@ -174,6 +213,7 @@
     justify-content: center;
     line-height: $calendar-view-info-line-height;
     font-size: $calendar-view-info-font-size;
+    color: $calendar-view-day-color;
     text-align: center;
   }
 }

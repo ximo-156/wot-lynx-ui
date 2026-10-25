@@ -365,12 +365,13 @@ describe('原生优先：Style Funnel 完整键集（CONVENTIONS §20）', () =>
   it('wd-gap：背景与高度键集完整（bgColor 可回落）', () => {
     const { container } = render(Gap, { height: 20, bgColor: '#f5f5f5' })
     let style = styleOf(container.querySelector('.wd-gap'))
-    expect(style).toMatch(/background:\s*rgb\(245, 245, 245\)/)
+    // 内联键为 background-color：Lynx 内联通道不保证展开 background 简写
+    expect(style).toMatch(/background-color:\s*rgb\(245, 245, 245\)/)
     expect(style).toMatch(/height:\s*20px/)
 
     const plain = render(Gap, {})
     style = styleOf(plain.container.querySelector('.wd-gap'))
-    expect(style).toMatch(/background:\s*transparent/)
+    expect(style).toMatch(/background-color:\s*transparent/)
     expect(style).toMatch(/height:\s*14px/)
     cleanup()
   })

@@ -44,11 +44,11 @@ const formatPanels = ref<Array<Panel[]>>([])
  * 走 Style Funnel（CONVENTIONS §20）：background 键每帧都写全，条件由真转假时
  * 回落中性值，不会残留 transparent。
  */
-const POPUP_STYLE = defineStyleKeys({ background: 'var(--wot-popup-bg, var(--wot-filled-oppo))' })
+const POPUP_STYLE = defineStyleKeys({ 'background-color': 'var(--wot-popup-bg, var(--wot-filled-oppo))' })
 
 const popupStyle = computed<Record<string, string>>(() => {
   const hasContent = Boolean((props.actions && props.actions.length) || (props.panels && props.panels.length))
-  return resolveStyle(POPUP_STYLE, { background: hasContent ? 'transparent' : '' })
+  return resolveStyle(POPUP_STYLE, { 'background-color': hasContent ? 'transparent' : '' })
 })
 
 const showPopup = ref<boolean>(false)

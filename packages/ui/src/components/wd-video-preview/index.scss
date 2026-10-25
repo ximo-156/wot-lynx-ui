@@ -73,4 +73,50 @@ $video-preview-close-z-index: var(--wot-video-preview-close-z-index, 10) !defaul
     line-height: $video-preview-close-size;
     color: $video-preview-close-color;
   }
+
+  // 宿主无视频能力时的降级占位（封面 + 播放图标），结构与 __video 等高
+  @include e(fallback) {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    // Lynx 适配：text 不保证从祖先继承颜色，降级文案与图标显式给色
+    // （CONVENTIONS §5，真机 2026-10-25 巡检）
+    background: var(--wot-video-preview-fallback-bg, $opac-9_75);
+  }
+
+  @include e(fallback-poster) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  @include e(fallback-hint) {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include edeep(fallback-icon) {
+    font-size: var(--wot-video-preview-fallback-icon-size, $n-48);
+    line-height: var(--wot-video-preview-fallback-icon-size, $n-48);
+    color: $video-preview-close-color;
+  }
+
+  @include e(fallback-text) {
+    margin-top: $spacing-tight;
+    font-size: $typography-body-size-main;
+    color: $video-preview-close-color;
+    text-align: center;
+  }
 }

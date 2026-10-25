@@ -178,6 +178,14 @@ watch(
     canvasWidth.value = width
     canvasHeight.value = height
     initImageSize()
+    // 显示尺寸兜底：宿主未注入 getImageInfo、load 事件也不回传宽高时
+    // （真机降级路径，2026-10-25 巡检），图片若停留在 auto 尺寸，Lynx 的
+    // <image> 会以 0×0 渲染（黑屏）。先用裁剪框尺寸撑起显示区域；
+    // load 事件后续带回真实宽高时 computeImgSize 会按原图比例重算。
+    if (!(picWidth.value > 0 && picHeight.value > 0)) {
+      picWidth.value = width
+      picHeight.value = height
+    }
     resetImg()
     loadImg()
   },

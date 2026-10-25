@@ -55,7 +55,7 @@ function onTouchStart(event: any) {
           !gutter && index === 0 ? 'is-first' : '',
           !gutter && index === length - 1 ? 'is-last' : ''
         ]"
-        :style="{ marginLeft: index !== 0 && gutter ? addUnit(gutter) : 0 }"
+        :style="{ 'margin-left': index !== 0 && gutter ? addUnit(gutter) : '0px' }"
       >
         <view v-if="focused && index === value.length" class="wd-password-input__cursor" />
         <view v-else class="wd-password-input__value">
