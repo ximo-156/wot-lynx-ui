@@ -1,14 +1,12 @@
 /**
- * wd-fab MTS 跟手回归（NATIVE-REWRITE §2 / §6）。
+ * wd-fab 拖拽跟手回归（2026-10-25 真机巡检后由 MTS 退回后台跟手）。
  *
- * 拖动交互必须走声明式 MTS：触发器上的 'main thread' worklet 读触点 → 算几何
- * → setStyleProperty 直改 fab 根节点（top / left / transition 全量键集），
- * 零线程跨越；落定（吸附到最近侧边 + 菜单方向翻转）留后台 @touchend，用同一
- * 公式由落定后的元素矩形重算。
+ * 触发器上的 main-thread-bindtouch* worklet 在真机与 tap 合成互扰（展开 /
+ * 收起点击无响应），改为后台 touchmove 状态驱动：根节点 @touchstart 记
+ * 起点（触点 + 当时 left/top）→ @touchmove 触点差量直写 left/top（跟手期
+ * transition 显式 none）→ @touchend 用落定后的元素矩形重算吸附与方向翻转。
  *
- * jsdom 不模拟事件冒泡：真机上触摸在触发器上按下后 touchmove / touchend 目标
- * 固定为触发器并冒泡到根 view，测试中后台处理器直接派发到根元素验证（同
- * slider-mts.test.ts 的冒泡验证方式）。
+ * jsdom 不模拟事件冒泡：触摸事件直接派发到根元素（处理器所在节点）验证。
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
@@ -36,9 +34,8 @@ function rectOf(el: Element | null) {
 }
 
 /**
- * 几何 stub：主线程 __wdRectStub 与后台 createSelectorQuery 同源——
- * 均按根节点当前内联位置返回 fab 矩形（跟手期间根节点被 worklet 直改，
- * 落定时后台度量到的就是跟手末位置）。
+ * 几何 stub：后台 createSelectorQuery 按根节点当前内联位置返回 fab 矩形
+ * （跟手期间根节点位置由状态驱动更新，落定时度量到的就是跟手末位置）。
  */
 function installRects(container: Element) {
   ;(globalThis as any).__wdRectStub = (el: any) => rectOf(el)
@@ -83,34 +80,29 @@ function mountFab(extra: Record<string, any> = {}) {
 describe('wd-fab MTS 跟手', () => {
   afterEach(() => cleanup())
 
-  it('touchmove 经主线程 worklet 直改根节点位置；touchend 后台吸附落定', async () => {
+  it('touchmove 后台跟手写根节点位置；touchend 吸附落定', async () => {
     const holder = mountFab()
     const restore = installRects(holder.container)
     await pause(60)
 
     const root = holder.container.querySelector('.wd-fab')!
-    const trigger = holder.container.querySelector('.wd-fab [class^="wd-fab-trigger-"]')!
-    // 初始位置：right-bottom → maxLeft / maxTop（边界经元素属性下发）
-    expect(root.getAttribute('drag-min-left')).toBe(String(GAP))
-    expect(root.getAttribute('drag-max-left')).toBe(String(MAX_LEFT))
-    expect(root.getAttribute('drag-min-top')).toBe(String(GAP))
-    expect(root.getAttribute('drag-max-top')).toBe(String(MAX_TOP))
+    // 初始位置：right-bottom → maxLeft / maxTop
     expect(styleOf(root)).toMatch(/left:\s*314px/)
     expect(styleOf(root)).toMatch(/top:\s*768px/)
 
     // 手势开始：触发器主线程 touchstart 一次性度量 fab 盒子并算触点偏移
     // （按在 fab 中心：314+30 / 768+30 → 偏移 30）
-    fireEvent.touchstart(trigger, { touches: [{ clientX: 344, clientY: 798 }] })
+    fireEvent.touchstart(root, { touches: [{ clientX: 344, clientY: 798 }] })
     await pause(20)
 
     // 跟手：触点左移 200px → fab 左移 200px（314 - 200 = 114，未触边界）
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 144, clientY: 798 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 144, clientY: 798 }] })
     await pause(20)
-    expect(styleOf(root), 'worklet 应把 left 直改到 114px').toMatch(/left:\s*114px/)
+    expect(styleOf(root), '后台跟手应把 left 写到 114px').toMatch(/left:\s*114px/)
     expect(styleOf(root), '跟手期 transition 必须显式置 none').toMatch(/transition:\s*none/)
 
     // 跟手越界：触点继续左移 → 钳制到 minLeft（gap）
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 5, clientY: 798 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 5, clientY: 798 }] })
     await pause(20)
     expect(styleOf(root)).toMatch(/left:\s*16px/)
 
@@ -132,15 +124,14 @@ describe('wd-fab MTS 跟手', () => {
     await pause(60)
 
     const root = holder.container.querySelector('.wd-fab')!
-    const trigger = holder.container.querySelector('.wd-fab [class^="wd-fab-trigger-"]')!
     // 初始位置：left-top → minLeft / minTop
     expect(styleOf(root)).toMatch(/left:\s*16px/)
 
-    fireEvent.touchstart(trigger, { touches: [{ clientX: 46, clientY: 46 }] })
+    fireEvent.touchstart(root, { touches: [{ clientX: 46, clientY: 46 }] })
     await pause(20)
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 330, clientY: 46 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 330, clientY: 46 }] })
     await pause(20)
-    expect(styleOf(root), 'worklet 跟手到 300px').toMatch(/left:\s*300px/)
+    expect(styleOf(root), '后台跟手到 300px').toMatch(/left:\s*300px/)
 
     fireEvent.touchend(root, { touches: [], changedTouches: [{ clientX: 330, clientY: 46 }] })
     await pause(60)
@@ -156,17 +147,16 @@ describe('wd-fab MTS 跟手', () => {
     await pause(60)
 
     const root = holder.container.querySelector('.wd-fab')!
-    const trigger = holder.container.querySelector('.wd-fab [class^="wd-fab-trigger-"]')!
 
-    fireEvent.touchstart(trigger, { touches: [{ clientX: 344, clientY: 798 }] })
+    fireEvent.touchstart(root, { touches: [{ clientX: 344, clientY: 798 }] })
     await pause(20)
     // 触点下移 100px → fab 下移 100px（768 + 100 = 868 > maxTop 768 → 钳制）
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 344, clientY: 898 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 344, clientY: 898 }] })
     await pause(20)
     expect(styleOf(root), 'top 应钳制到 maxTop').toMatch(/top:\s*768px/)
 
     // 触点上移 600px → fab 上移 600px（768 - 600 = 168，未触边界）
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 344, clientY: 198 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 344, clientY: 198 }] })
     await pause(20)
     expect(styleOf(root), 'top 应跟手到 168px').toMatch(/top:\s*168px/)
 
@@ -185,7 +175,6 @@ describe('wd-fab MTS 跟手', () => {
     await pause(60)
 
     const root = holder.container.querySelector('.wd-fab')!
-    const trigger = holder.container.querySelector('.wd-fab [class^="wd-fab-trigger-"]')!
 
     fireEvent.touchstart(root, { touches: [{ clientX: 100, clientY: 100 }] })
     fireEvent.touchmove(root, { touches: [{ clientX: 110, clientY: 100 }] })
@@ -204,14 +193,13 @@ describe('wd-fab MTS 跟手', () => {
     await pause(60)
 
     const root = holder.container.querySelector('.wd-fab')!
-    const trigger = holder.container.querySelector('.wd-fab [class^="wd-fab-trigger-"]')!
     const before = styleOf(root)
 
-    fireEvent.touchstart(trigger, { touches: [{ clientX: 329, clientY: 766 }] })
+    fireEvent.touchstart(root, { touches: [{ clientX: 329, clientY: 766 }] })
     await pause(20)
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 129, clientY: 766 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 129, clientY: 766 }] })
     await pause(20)
-    expect(styleOf(root), '不可拖动时位置不得被 worklet 直改').toBe(before)
+    expect(styleOf(root), '不可拖动时位置不得被改写').toBe(before)
 
     fireEvent.touchend(root, { touches: [], changedTouches: [{ clientX: 129, clientY: 766 }] })
     await pause(60)

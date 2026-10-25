@@ -101,6 +101,10 @@ $switch-disabled: var(--wot-switch-disabled, $opacity-disabled) !default;
     background: $switch-color-action-bg;
     border-radius: $switch-radius-action-full;
     transition: left $switch-transition-duration;
+    // 真机定位（2026-10-25 巡检）：绝对定位元素缺 top 时，Chrome 按静态位置
+    // （父级 align-items:center 假想盒）纵向居中，Lynx 真机按 top:0 贴顶——
+    // 滑块贴死轨道上缘、无上下空隙。纵向位置显式下发（值 = 上下内边距）。
+    top: $switch-top-bottom-padding;
     left: $switch-top-bottom-padding;
   }
 

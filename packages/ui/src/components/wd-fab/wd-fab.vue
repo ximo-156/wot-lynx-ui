@@ -1,15 +1,18 @@
 /*
  * wd-fab — 悬浮按钮
  *
- * 触发器声明式 MTS 跟手：起点用已提交坐标缓存立即响应，并在 touchstart
- * 度量一次校正；move 仅读缓存与实时属性。结束/取消的后台度量按手势代次
- * 提交，旧起点、旧落定位或卸载后的回调不能污染新手势。gap/布局重新缓存
- * 边界，draggable 实时下发。页面空白关闭仍依赖宿主 useQueue 点击链路。
+ * 拖拽为后台 touchmove 状态驱动（2026-10-25 真机巡检回归）：起点在
+ * touchstart 记录（触点 + 当时 left/top），move 按触点差量直写 left/top
+ * （跟手期 transition 显式 none），结束/取消的后台度量按手势代次提交，
+ * 旧起点、旧落定位或卸载后的回调不能污染新手势。此前版本的
+ * main-thread-bindtouch* worklet 跟手在真机与触发器 tap 合成互扰（展开 /
+ * 收起点击无响应），与 wot-ui 对齐退回纯后台拖拽。gap/布局重新缓存边界，
+ * draggable 实时下发。页面空白关闭仍依赖宿主 useQueue 点击链路。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, useMainThreadRef } from 'vue-lynx'
+import { computed, getCurrentInstance, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue-lynx'
 import WdButton from '../../primitives/wd-button/wd-button.vue'
 import WdTransition from '../../primitives/wd-transition/wd-transition.vue'
 import { fabProps, type FabExpose } from './types'
@@ -134,16 +137,40 @@ const rootStyle = computed(() => {
     ...parseStyle(props.customStyle)
   }
 })
+/** 拖拽起点（触点 + 当时 left/top）：touchstart 写、touchmove 读、touchend 清 */
+const dragStartRef: { current: { x: number; y: number; left: number; top: number } | null } = { current: null }
 function handleTouchStart(event: any) {
   emit('touchstart', event)
   gestureRevision.value++ // 作废上一手势仍在等待的落定查询。
   dragging.value = props.draggable && inited.value
-  // transition 由 worklet 切换；此处不重写旧 top/left，避免跟手回跳。
+  if (dragging.value) {
+    const touch = event.touches && event.touches[0]
+    if (touch) {
+      dragStartRef.current = {
+        x: Number(touch.clientX), y: Number(touch.clientY),
+        left: left.value, top: top.value
+      }
+    }
+  }
 }
-function handleTouchMove(event: any) { emit('touchmove', event) }
+/** 后台跟手：触点差量直写 left/top（transition 由 attractTransition=false 保证为 none） */
+function handleTouchMove(event: any) {
+  emit('touchmove', event)
+  const start = dragStartRef.current
+  if (!dragging.value || !start) return
+  const touch = event.touches && event.touches[0]
+  if (!touch) return
+  const x = Number(touch.clientX)
+  const y = Number(touch.clientY)
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return
+  left.value = Math.min(Math.max(start.left + (x - start.x), bounding.minLeft), bounding.maxLeft)
+  top.value = Math.min(Math.max(start.top + (y - start.y), bounding.minTop), bounding.maxTop)
+  commitTick.value++
+}
 async function finishGesture(event: any, canceled: boolean) {
   emit(canceled ? 'touchcancel' : 'touchend', event)
   dragging.value = false
+  dragStartRef.current = null
   if (!props.draggable || !inited.value) return
   const revision = ++gestureRevision.value
   const epoch = configEpoch.value
@@ -192,70 +219,6 @@ function handleClick() {
 function open() { isActive.value = true; emit('update:active', true) }
 function close() { isActive.value = false; emit('update:active', false) }
 defineExpose<FabExpose>({ open, close })
-
-interface MtElement {
-  setStyleProperty(name: string, value: string): void
-  getAttribute(name: string): string | null
-  invoke(method: string, params?: any): Promise<any>
-}
-const fabRef = useMainThreadRef<MtElement | null>(null)
-const geomRef = useMainThreadRef<{ offsetX: number; offsetY: number; epoch: string | null; moved: boolean } | null>(null)
-const onTriggerTouchStart = (event: any) => {
-  'main thread'
-  geomRef.current = null
-  const fab = fabRef.current
-  const touch = event.touches && event.touches[0]
-  if (!fab || !touch || fab.getAttribute('drag-enabled') !== 'true') return
-  const x = Number(touch.clientX)
-  const y = Number(touch.clientY)
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return
-  const geom = {
-    offsetX: x - Number(fab.getAttribute('origin-left')),
-    offsetY: y - Number(fab.getAttribute('origin-top')),
-    epoch: fab.getAttribute('geometry-epoch'),
-    moved: false
-  }
-  geomRef.current = geom
-  fab.setStyleProperty('transition', 'none')
-  if (typeof fab.invoke !== 'function') return
-  fab.invoke('boundingClientRect').then((rect: any) => {
-    if (fabRef.current !== fab || geomRef.current !== geom || geom.moved || fab.getAttribute('drag-enabled') !== 'true' || geom.epoch !== fab.getAttribute('geometry-epoch')) return
-    const rectLeft = Number(rect?.left)
-    const rectTop = Number(rect?.top)
-    if (Number(rect?.width) > 0 && Number.isFinite(rectLeft) && Number.isFinite(rectTop)) {
-      geom.offsetX = x - rectLeft
-      geom.offsetY = y - rectTop
-    }
-  }, () => {})
-}
-const onTriggerTouchMove = (event: any) => {
-  'main thread'
-  const fab = fabRef.current
-  const geom = geomRef.current
-  const touch = event.touches && event.touches[0]
-  if (!fab || !geom || !touch || fab.getAttribute('drag-enabled') !== 'true' || geom.epoch !== fab.getAttribute('geometry-epoch')) return
-  const minLeft = Number(fab.getAttribute('drag-min-left'))
-  const maxLeft = Number(fab.getAttribute('drag-max-left'))
-  const minTop = Number(fab.getAttribute('drag-min-top'))
-  const maxTop = Number(fab.getAttribute('drag-max-top'))
-  const x = Number(touch.clientX) - geom.offsetX
-  const y = Number(touch.clientY) - geom.offsetY
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(minLeft) || !Number.isFinite(minTop) || maxLeft < minLeft || maxTop < minTop) return
-  geom.moved = true
-  fab.setStyleProperty('transition', 'none')
-  fab.setStyleProperty('left', `${Math.min(Math.max(x, minLeft), maxLeft)}px`)
-  fab.setStyleProperty('top', `${Math.min(Math.max(y, minTop), maxTop)}px`)
-}
-const onTriggerTouchFinish = () => {
-  'main thread'
-  geomRef.current = null
-}
-const dragBoundAttrs = computed(() => ({
-  'drag-min-left': String(bounding.minLeft), 'drag-max-left': String(bounding.maxLeft),
-  'drag-min-top': String(bounding.minTop), 'drag-max-top': String(bounding.maxTop),
-  'origin-left': String(left.value), 'origin-top': String(top.value),
-  'drag-enabled': String(props.draggable && inited.value), 'geometry-epoch': String(configEpoch.value)
-}))
 </script>
 
 <template>
@@ -267,17 +230,11 @@ const dragBoundAttrs = computed(() => ({
     :class="`wd-fab ${customClass}`"
     :style="rootStyle"
     @tap.stop="emit('tap', $event)"
-    :main-thread-ref="fabRef"
-    v-bind="dragBoundAttrs"
   >
     <view
       @tap.stop=""
       :style="{ visibility: inited ? 'visible' : 'hidden' }"
       :class="triggerId"
-      :main-thread-bindtouchstart="onTriggerTouchStart"
-      :main-thread-bindtouchmove="onTriggerTouchMove"
-      :main-thread-bindtouchend="onTriggerTouchFinish"
-      :main-thread-bindtouchcancel="onTriggerTouchFinish"
       @layoutchange="handleLayoutChange"
     >
       <slot name="trigger" :disabled="disabled">

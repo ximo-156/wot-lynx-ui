@@ -149,13 +149,18 @@ describe('wot parity — slider 与尺寸状态', () => {
     expect(update).not.toHaveBeenCalled()
   })
 
-  it('switch size 取消时清除旧的派生尺寸变量', async () => {
+  it('switch size 取消时不再下发派生尺寸变量（自定义属性空值≠缺省）', async () => {
     const mounted = mount(Switch, { modelValue: false, size: 40 })
     // jsdom 的 CSSStyleDeclaration 不序列化自定义变量，断言真正下发的 VNode 样式键。
     expect(mounted.instance().$.subTree.props.style['--wot-switch-size']).toBe('40px')
     mounted.props.value = { modelValue: false }
     await nextTick()
-    expect(mounted.instance().$.subTree.props.style['--wot-switch-size']).toBe('')
+    // 自定义属性只能整体缺省，不能写空值：内联 `--wot-switch-size:;` 会让
+    // Web 端子元素 calc(var(--wot-switch-size, …)) 整条失效（轨道塌成
+    // padding 高；真机因内联 --* 被丢弃而无恙）——2026-10-25 真机巡检修正。
+    const style = mounted.instance().$.subTree.props.style
+    expect(style['--wot-switch-size']).toBeUndefined()
+    expect(style['font-size']).toBe('var(--wot-switch-size, 26px)')
   })
 })
 

@@ -198,9 +198,9 @@ describe('official 2.3.2 fab applied contracts and geometry lifecycle', () => {
     holder.props.value.gap = { top: 30, left: 40, right: 20, bottom: 50 }
     holder.props.value.position = 'right-bottom'
     await pause(35)
-    expect(root.getAttribute('drag-min-left')).toBe('40')
-    expect(root.getAttribute('drag-max-left')).toBe('310')
-    expect(root.getAttribute('drag-max-top')).toBe('734')
+    // 边界随 gap 收敛：maxLeft = 390-60-20 = 310、maxTop = 844-60-50 = 734
+    //（2026-10-25 真机巡检后 MT 边界元素属性已随 worklet 拖拽一并移除，
+    //  以落位坐标断言边界）
     expect(style(root)).toContain('left: 310px')
     expect(style(root)).toContain('top: 734px')
   })
@@ -211,17 +211,16 @@ describe('official 2.3.2 fab applied contracts and geometry lifecycle', () => {
     await pause(80)
     const { root, trigger } = fabParts(holder.container)
     fireEvent.touchstart(trigger, { touches: [{ clientX: 344, clientY: 798 }] })
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 144, clientY: 400 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 144, clientY: 400 }] })
     expect(style(root)).toContain('left: 314px')
     holder.props.value.draggable = true
     await pause(20)
     fireEvent.touchstart(root, { touches: [{ clientX: 344, clientY: 798 }] })
-    fireEvent.touchstart(trigger, { touches: [{ clientX: 344, clientY: 798 }] })
     await pause(10)
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 144, clientY: 400 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 144, clientY: 400 }] })
+    await pause(10)
     expect(style(root)).toContain('left: 114px')
     expect(style(root)).toContain('top: 370px')
-    fireEvent.touchcancel(trigger, { touches: [] })
     fireEvent.touchcancel(root, { touches: [], changedTouches: [{ clientX: 144, clientY: 400 }] })
     await pause(25)
     expect(events).toEqual(['cancel'])
@@ -231,31 +230,36 @@ describe('official 2.3.2 fab applied contracts and geometry lifecycle', () => {
     expect(holder.container.querySelector('.wd-fab__actions--right')).not.toBeNull()
     holder.props.value.draggable = false
     await pause(20)
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 344, clientY: 798 }] })
+    fireEvent.touchstart(root, { touches: [{ clientX: 344, clientY: 798 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 344, clientY: 798 }] })
     expect(style(root)).toContain('left: 16px')
   })
-  it('late start geometry cannot overwrite newer/canceled gesture caches and there are no move queries', async () => {
+  it('background drag follows touch deltas; touchcancel stops tracking and later moves are ignored', async () => {
     const holder = mount(Fab, { draggable: true, position: 'left-top' })
     fabRects(holder)
     await pause(80)
-    const { root, trigger } = fabParts(holder.container)
-    const pending: Array<(value: any) => void> = []
-    let mainQueries = 0
-    installMainRect(() => { mainQueries++; return new Promise((resolve) => pending.push(resolve)) })
-    fireEvent.touchstart(trigger, { touches: [{ clientX: 46, clientY: 46 }] })
-    fireEvent.touchstart(trigger, { touches: [{ clientX: 56, clientY: 56 }] })
-    pending.shift()!(rect(100, 100))
+    const { root } = fabParts(holder.container)
+    // 起点记 (46,46)，跟手到 (100,110)：left = 16+54 = 70、top = 16+64 = 80
+    fireEvent.touchstart(root, { touches: [{ clientX: 46, clientY: 46 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 100, clientY: 110 }] })
     await pause(10)
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 100, clientY: 100 }] })
-    expect(style(root)).toContain('left: 60px')
-    pending.shift()!(rect(200, 200))
+    expect(style(root)).toContain('left: 70px')
+    expect(style(root)).toContain('top: 80px')
+    // 新手势重新以当前落位为起点：起点 (56,56)，跟手到 (110,110) → +54/+54
+    fireEvent.touchstart(root, { touches: [{ clientX: 56, clientY: 56 }] })
+    fireEvent.touchmove(root, { touches: [{ clientX: 110, clientY: 110 }] })
     await pause(10)
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 110, clientY: 110 }] })
-    expect(style(root)).toContain('left: 70px')
-    expect(mainQueries).toBe(2)
-    fireEvent.touchcancel(trigger, { touches: [] })
-    fireEvent.touchmove(trigger, { touches: [{ clientX: 300, clientY: 300 }] })
-    expect(style(root)).toContain('left: 70px')
+    expect(style(root)).toContain('left: 124px')
+    expect(style(root)).toContain('top: 134px')
+    // 取消即落定：吸附最近侧边（中心 154 < 195 → 左侧 16px，纵向保持跟手值），
+    // 之后未再 touchstart 的 touchmove 不得改位置
+    fireEvent.touchcancel(root, { touches: [] })
+    await pause(25)
+    expect(style(root)).toContain('left: 16px')
+    expect(style(root)).toContain('top: 134px')
+    fireEvent.touchmove(root, { touches: [{ clientX: 300, clientY: 300 }] })
+    await pause(10)
+    expect(style(root)).toContain('left: 16px')
   })
   it('late end query is invalidated by newer start/config changes and by unmount', async () => {
     const holder = mount(Fab, { draggable: true, position: 'left-top' })

@@ -117,12 +117,11 @@ $picker-view-roller-border-radius: var(--wot-picker-view-roller-border-radius, $
     justify-content: center;
     width: 100%;
     flex-shrink: 0;
+    // 真机巡检（2026-10-25）：列项 view 不写 line-height / 文本截断——view 与
+    // 内部 text 双层同时带 line-height 时真机疑似双行盒各绘一遍（标签错行
+    // 叠印）；行高/字号/颜色全部由 `__column-label` 文本节点显式承担，
+    // 列项高度由内联 height 定值（CONVENTIONS §8 text 不继承）。
     padding: $picker-view-column-item-padding;
-    color: $picker-view-column-item-color;
-    font-size: $picker-view-column-item-font-size;
-    line-height: $picker-view-column-item-height;
-    text-align: center;
-    @include lineEllipsis;
 
     @include m(disabled) {
       color: $picker-view-column-item-disabled-color;

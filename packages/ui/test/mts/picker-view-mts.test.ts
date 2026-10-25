@@ -1,19 +1,16 @@
 /**
- * wd-picker-view MTS 跟手测试（原生优先重写版，参照 slider-mts.test.ts）。
+ * wd-picker-view 跟手测试（2026-10-25 真机巡检后由 MTS 退回后台跟手）。
  *
- * 覆盖「主线程跟手直改 + 后台落定 commit」的完整链路：
- * 1. **跟手直改**：touchmove 经主线程 worklet 把触点经「起点位移 + 手指位移」
- *    公式换算后 setStyleProperty 直改列内容 transform——零线程跨越；
- * 2. **落定 commit**：touchend 后台用同一公式由 changedTouches 重算终值、
+ * 覆盖「后台 touchmove 状态驱动跟手 + 同公式落定 commit」的完整链路：
+ * 1. **跟手**：touchmove 按起点位移 + 手指位移公式换算后写入 offsets，
+ *    重渲染下发列内容 transform（跟手期 transition 显式 none）；
+ * 2. **落定 commit**：touchend 用同一公式由 changedTouches 重算终值、
  *    对齐到最近列项后 commit（update:modelValue + change），并派发
  *    pickstart / pickend；
- * 3. **事件分工与真机冒泡语义**（jsdom 不模拟冒泡，按冒泡结果分别派发）：
- *      列内容（子）绑后台 touchstart / touchend + 主线程 touchmove；
- *      列（父）绑主线程 touchstart（记跟手起点，几何经元素属性下发）；
- * 4. **边缘阻尼**：越界拖动阻尼后跟手，落定钳制回最近列项；
- * 5. **多列独立**：只拖一列，另一列位移与选中不变；
- * 6. **immediateChange**：true 在松手时提交，false 在吸附结束时提交；
- * 7. **级联**：拖动父列落定后子列重建为新 children。
+ * 3. **边缘阻尼**：越界拖动阻尼后跟手（不钳制），落定钳制回最近列项；
+ * 4. **多列独立**：只拖一列，另一列位移与选中不变；
+ * 5. **immediateChange**：true 在松手时提交，false 在吸附结束时提交；
+ * 6. **级联**：拖动父列落定后子列重建为新 children。
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
@@ -42,34 +39,32 @@ const CASCADE_TREE = [
 ]
 
 /**
- * 一次完整拖动（MTS 分工派发）。
+ * 一次完整拖动（后台跟手 + 落定）。
  *
- * 真机上触摸列内容时：内容的后台 touchstart（目标）→ 列的主线程 touchstart
- * （冒泡）→ 内容的主线程 touchmove（目标，逐帧）→ 内容的后台 touchend（目标）。
- * jsdom 不模拟冒泡，此处按各处理器所在元素分别派发，等价真机冒泡结果。
+ * 真机上触摸列内容时事件目标固定为列内容（touchstart / touchmove /
+ * touchend 均为后台绑定）。jsdom 不模拟冒泡，直接派发到列内容验证。
  */
 function drag(container: Element, colIndex: number, fromY: number, toY: number) {
   const column = container.querySelectorAll('.wd-picker-view__column')[colIndex]
   const content = column.querySelector('.wd-picker-view__column-content')!
   fireEvent.touchstart(content, { touches: [{ clientX: 0, clientY: fromY }] })
-  fireEvent.touchstart(column, { touches: [{ clientX: 0, clientY: fromY }] })
   fireEvent.touchmove(content, { touches: [{ clientX: 0, clientY: toY }] })
   fireEvent.touchend(content, { touches: [], changedTouches: [{ clientX: 0, clientY: toY }] })
 }
 
-/** 仅跟手（不落定）：派发 touchstart + touchmove，验证主线程直改 */
-function followHand(container: Element, colIndex: number, fromY: number, toY: number) {
+/** 仅跟手（不落定）：派发 touchstart + touchmove，等渲染帧后验证跟手位移 */
+async function followHand(container: Element, colIndex: number, fromY: number, toY: number) {
   const column = container.querySelectorAll('.wd-picker-view__column')[colIndex]
   const content = column.querySelector('.wd-picker-view__column-content')!
   fireEvent.touchstart(content, { touches: [{ clientX: 0, clientY: fromY }] })
-  fireEvent.touchstart(column, { touches: [{ clientX: 0, clientY: fromY }] })
   fireEvent.touchmove(content, { touches: [{ clientX: 0, clientY: toY }] })
+  await pause(20)
 }
 
 describe('wd-picker-view MTS 跟手', () => {
   afterEach(() => cleanup())
 
-  it('touchmove 经主线程 worklet 直改列内容；touchend 后台落定 commit', async () => {
+  it('touchmove 后台跟手写位移；touchend 落定 commit', async () => {
     const updates: any[] = []
     const changes: any[] = []
     const picks: string[] = []
@@ -102,8 +97,8 @@ describe('wd-picker-view MTS 跟手', () => {
 
     // 跟手：第 1 列从 clientY 0 拖到 -50 → 位移 50px（未对齐列项）
     // worklet 应把列内容直改为 translateY(-50px)，且显式写 transition: none
-    followHand(container, 0, 0, -50)
-    expect(styleOf(content0), '跟手应直改 transform').toMatch(/translateY\(-50px\)/)
+    await followHand(container, 0, 0, -50)
+    expect(styleOf(content0), '跟手应下发 transform').toMatch(/translateY\(-50px\)/)
     expect(styleOf(content0), '跟手期过渡必须显式为 none').toContain('transition: none')
     // 另一列不受影响
     expect(styleOf(content1)).toMatch(/translateY\(0px\)/)
@@ -146,7 +141,7 @@ describe('wd-picker-view MTS 跟手', () => {
     const content0 = container.querySelectorAll('.wd-picker-view__column-content')[0]
 
     // 起点位移 44（索引 1）；向下拖 100 → 原始位移 -56 → 阻尼 -16.8
-    followHand(container, 0, 0, 100)
+    await followHand(container, 0, 0, 100)
     expect(styleOf(content0)).toMatch(/translateY\(16\.8px\)/)
 
     // 落定：钳制到 [0, max] → 索引 0（a）
@@ -218,15 +213,12 @@ describe('wd-picker-view MTS 跟手', () => {
 
     // 跟手到 60px（超过 1.5 × 44 的一半 → 索引在 1 与 2 之间变化）
     fireEvent.touchstart(content, { touches: [{ clientX: 0, clientY: 0 }] })
-    fireEvent.touchstart(column, { touches: [{ clientX: 0, clientY: 0 }] })
     // 移到 50px：即使 immediateChange=true，touchmove 不提交（官方为松手时提交）
     fireEvent.touchmove(content, { touches: [{ clientX: 0, clientY: -50 }] })
-    fireEvent.touchmove(column, { touches: [{ clientX: 0, clientY: -50 }] })
     await pause(50)
     expect(updates, '手指未松开不得提交').toHaveLength(0)
-    // 继续移到 100px：只跟手直改，到松手才提交最终 c
+    // 继续移到 100px：只跟手，到松手才提交最终 c
     fireEvent.touchmove(content, { touches: [{ clientX: 0, clientY: -100 }] })
-    fireEvent.touchmove(column, { touches: [{ clientX: 0, clientY: -100 }] })
     await pause(50)
     expect(updates, '第二次 move 仍不提交').toHaveLength(0)
     // 跟手位移同步到 Vue 状态（v-model 回写重渲染不得让列内容跳变）：

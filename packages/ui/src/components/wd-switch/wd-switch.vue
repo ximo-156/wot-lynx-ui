@@ -29,7 +29,6 @@ import WdLoading from '../../primitives/wd-loading/wd-loading.vue'
 import { switchProps } from './types'
 import { callInterceptor } from '../../common/interceptor'
 import { addUnit, isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
-import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useAlive } from '../../composables/useAlive'
 import type { LoadingProps } from '../../primitives/wd-loading/types'
@@ -59,19 +58,20 @@ const rootClass = computed(() => {
 })
 
 /**
- * 根节点可切换样式键 + 中性值（CONVENTIONS §20）。
- * font-size 即 wot-ui 的 em 基准；中性值与 index.scss 中 `.wd-switch` 的
- * 类声明完全等价（同样经 var() 解析），因此「未传 size」与「不写该键」
- * 在视觉上不可区分，同时又保证键集完整、无脏值残留。
+ * 根节点样式。
+ *
+ * font-size 即 wot-ui 的 em 基准，未传 size 时取 `var(--wot-switch-size, 26px)`
+ * （与类声明等价，消费者仍可经样式表覆盖）。
+ * `--wot-switch-size` 是**自定义属性**：空值 ≠ 缺省——内联下发空值
+ * （`--wot-switch-size:;`）会让 Web 端子元素 calc(var(...)) 整条失效
+ * （轨道塌成 padding 高）；真机则因内联 `--*` 被丢弃而无恙。故仅在
+ * 显式传 size 时才写该键（Style Funnel §20 的自定义属性例外）。
  */
-const ROOT_STYLE = defineStyleKeys({
-  'font-size': 'var(--wot-switch-size, 26px)',
-  '--wot-switch-size': ''
-})
-
 const rootStyle = computed(() => {
   const size = isDef(props.size) ? addUnit(props.size) : ''
-  return resolveStyle(ROOT_STYLE, { 'font-size': size, '--wot-switch-size': size }, parseStyle(props.customStyle))
+  const style: Record<string, string> = { 'font-size': size || 'var(--wot-switch-size, 26px)' }
+  if (size) style['--wot-switch-size'] = size
+  return { ...style, ...parseStyle(props.customStyle) }
 })
 
 const innerStyle = computed(() => ({ background: (isActive.value ? props.activeColor : props.inactiveColor) || '' }))

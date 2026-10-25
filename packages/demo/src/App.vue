@@ -9,6 +9,10 @@ const switchValue = ref(true)
 const radioValue = ref('a')
 const checkboxValues = ref<string[]>(['a'])
 const inputValue = ref('')
+// search 独立 ref：与 Input 共用同一 ref 时，在 Input 输入后清空会让
+// wd-search 的封面占位与原生 input 同时在场（双占位缺陷，组件侧已加复位，
+// demo 层仍拆开避免歧义）
+const searchValue = ref('')
 const textareaValue = ref('')
 const numberValue = ref(5)
 const sliderValue = ref(50)
@@ -482,7 +486,7 @@ const portalBarVisible = ref(false)
           </view>
           <view class="demo-row">
             <wd-input-number v-model="numberValue" :min="0" :max="10" />
-            <wd-search v-model="inputValue" placeholder="搜索" :style="{ flex: '1' }" />
+            <wd-search v-model="searchValue" placeholder="搜索" :style="{ flex: '1' }" />
           </view>
 
           <text class="demo-panel__label">Slider / Rate / Segmented</text>
@@ -885,7 +889,9 @@ const portalBarVisible = ref(false)
                避免它压住其它章节的内容（需要时点「显示悬浮按钮」） -->
           <text class="demo-panel__label">当前：{{ fabDemoVisible ? '已显示（页面右下 / 左上各一枚）' : '未显示' }}</text>
         </view>
-        <view v-if="fabDemoVisible">
+        <!-- Lynx 定位FAQ：absolute/fixed 元素带 z-index 时，父级需同时 z-index:0，
+             否则真机绘制与命中测试层序不一致（悬浮按钮看得见点不到） -->
+        <view v-if="fabDemoVisible" :style="{ 'z-index': 0 }">
           <wd-fab v-model:active="fabActive" @click="() => console.log('[demo] fab click')">
             <wd-button size="small" @tap="() => console.log('[demo] fab 菜单一')">菜单一</wd-button>
             <wd-button size="small" @tap="() => console.log('[demo] fab 菜单二')">菜单二</wd-button>

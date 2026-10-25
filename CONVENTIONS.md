@@ -537,6 +537,20 @@ bg-color 头像曾因此整组白底白字不可见）。
   **之前**，会连文字一起盖掉。此类元素须排在内容节点**之后**，并保持
   z-index 低于内容（真机按 z-index 绘制，两个平台才都不出问题）。
 
+**真机引擎行为差异清单**（2026-10-25 第二轮真机巡检沉淀；Web 预览全绿、
+真机翻车的四类「静默差异」，写组件前对照）：
+
+| # | 差异 | 真机表现 | 规则 |
+| --- | --- | --- | --- |
+| 1 | view 的 `background-color` 不解析 `currentColor` | wd-loading 圆环小段/圆点/波浪条全型隐形 | CSS 绘制图形的颜色一律 JS 解析成具体色值、内联下发（`resolvedColor` 模式）；CSS 类里的 currentColor 仅作兜底。SVG 同理：fill 逐 path 显式下发，真机不继承 g 元素的展示属性 |
+| 2 | 绝对定位元素缺 `top/bottom` 时真机按 0 锚定 | wd-switch 滑块贴死轨道上缘 | Chrome 用「静态位置」（父级 align-items:center 假想盒）居中是浏览器私货；纵向位置必须显式写 `top`（wd-switch `__action` 教训） |
+| 3 | view 与内部 text 双层同时带 `line-height` | picker 列标签错行叠印（疑似双行盒各绘一遍） | 行高/字号/颜色只写在 `text` 节点上（与 §8 合并理解）；容器 view 用内联 `height` 定高 |
+| 4 | `main-thread-bindtouch*` worklet 绑定与 tap 合成/渲染互扰 | picker 列双份叠印/内嵌空白、fab 展开收起点击失效 | 触发器类元素（需要 tap 的节点子树）不用 MT 触摸绑定，跟手走后台 touchmove 状态驱动（wot 对齐）；wd-picker-view / wd-fab 已退回，slider / tabs / swipe-action 等已真机验证的保留 |
+
+另：Lynx 定位 FAQ——absolute/fixed 元素带 z-index 时，父级需同时
+`z-index: 0`，否则真机绘制与命中测试层序可能不一致（demo 的 fab 包裹层
+已加）。
+
 ## 20. 内联样式出口唯一：Style Funnel（禁止条件写样式）
 
 ### 根因

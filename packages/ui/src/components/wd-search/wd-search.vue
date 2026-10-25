@@ -58,6 +58,13 @@ watch(
     inputValue.value = newValue
     if (newValue) {
       showInput.value = true
+    } else if (!isFocused.value && !clearing.value) {
+      // 外部清空（如消费方复用同一 ref 的其它输入框写入空串）时复位输入框
+      // 显隐：showInput 残留 true 会让封面占位与原生 input 同时在场——
+      // 双份占位文字 + 图标叠印 + 输入块被撑高（真机 2026-10-25 巡检缺陷）。
+      // 组件自身聚焦中或清空重聚焦流程不动（handleBlur / handleClear 各自管理）。
+      showInput.value = false
+      showPlaceHolder.value = true
     }
   },
   { immediate: true }
