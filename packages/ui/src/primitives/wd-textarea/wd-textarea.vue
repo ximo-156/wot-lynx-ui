@@ -183,8 +183,10 @@ function handleFocus({ detail }: any) {
 }
 function handleInput({ detail }: any) {
   if (isDisabled.value || props.readonly) return
+  // detail 容错：事件载荷缺失（宿主/测试环境直接派发）时按空串处理，
+  // 不能让 TypeError 击穿事件注册表派发链
   inputRequest++
-  inputValue.value = formatValue(detail.value)
+  inputValue.value = formatValue(detail?.value ?? '')
   emit('update:modelValue', inputValue.value)
   emit('input', detail)
 }

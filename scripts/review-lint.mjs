@@ -129,6 +129,7 @@ const RULES = [
     severity: 'error',
     ext: ['.vue', '.ts'],
     kind: 'line',
+    stripStrings: true,
     pattern: /from\s+['"]vue['"]/,
     message: "必须从 'vue-lynx' 导入，而非 'vue'（Lynx 运行时不同，会静默失效）"
   },
@@ -635,9 +636,39 @@ function checkFile(file, raw) {
         }
         return ''
       }
+      // 字符串字面量感知：测试文件里存在以代码字符串为载体的用例
+      // （如 wot-parity-props 验证「loader 拒绝 from 'vue'」——该 import 文本
+      // 整体处于模板字面量内）。置 stripStrings 后，仅当 pattern 命中位置
+      // **不在任何字符串字面量区间内**（即真实代码位置）才报。
+      const literalRanges = (text) => {
+        const ranges = []
+        let quote = null
+        let start = -1
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i]
+          if (quote) {
+            if (ch === '\\') { i++; continue }
+            if (ch === quote) { ranges.push([start, i]); quote = null }
+          } else if (ch === '"' || ch === "'" || ch === '`') {
+            quote = ch; start = i
+          }
+        }
+        return ranges
+      }
+      const inLiteral = (ranges, index) => ranges.some(([a, b]) => index > a && index < b)
       codeLines.forEach((text, idx) => {
         rule.pattern.lastIndex = 0
-        if (!rule.pattern.test(text)) return
+        rule.pattern.lastIndex = 0
+        if (rule.stripStrings) {
+          const ranges = literalRanges(text)
+          let m
+          const re = new RegExp(rule.pattern.source, rule.pattern.flags.replace('g', '') + 'g')
+          let hit = false
+          while ((m = re.exec(text)) !== null) {
+            if (!inLiteral(ranges, m.index)) { hit = true; break }
+          }
+          if (!hit) return
+        } else if (!rule.pattern.test(text)) return
         if (rule.lookahead) {
           rule.lookahead.lastIndex = 0
           if (!rule.lookahead.test(nextNonEmpty(idx))) return
