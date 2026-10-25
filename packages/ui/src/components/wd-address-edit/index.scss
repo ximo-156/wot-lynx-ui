@@ -1,6 +1,11 @@
 @use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 操作按钮最小宽度：100 / 80 不在 4pt 刻度上，收敛成组件令牌（不贴到 $n-98 / $n-88，
+// 那会改变按钮宽度）。需要时通过对应 --wot-address-edit-*-min-width 覆盖。
+$address-edit-save-min-width: var(--wot-address-edit-save-min-width, 100px) !default;
+$address-edit-delete-min-width: var(--wot-address-edit-delete-min-width, 80px) !default;
+
 @include b(address-edit) {
   display: flex;
   flex-direction: column;
@@ -36,15 +41,15 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
-    padding: 16px;
+    gap: $spacing-loose;
+    padding: $padding-extra-loose;
   }
 
   @include e(save-btn) {
-    min-width: 100px;
+    min-width: $address-edit-save-min-width;
   }
 
   @include e(delete-btn) {
-    min-width: 80px;
+    min-width: $address-edit-delete-min-width;
   }
 }

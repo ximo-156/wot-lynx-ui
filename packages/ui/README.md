@@ -79,7 +79,7 @@ FloatingPanel 等。6 个本地扩展为 AddressEdit、BarCode、Coupon、PullRe
 
 检查范围是 prop 名称、运行时构造器 / required / 默认值、工厂值及 canonical source、validator source；**TypeScript 泛型、别名与联合类型未由此守卫证明一致**。这也不是全部事件、交互、真机能力或全量测试通过的证明；6 个本地扩展的官方 props 明确未验证。
 
-仓库内守卫：[check-wot-props.mjs](<../../scripts/check-wot-props.mjs>)、[官方 fixture](<test/fixtures/wot-ui-2.3.2-props.json>)、[props 回归测试](<test/wot-parity-props.test.ts>)。
+仓库内守卫：[check-wot-props.mjs](<../../scripts/check-wot-props.mjs>)、[官方 fixture](<test/fixtures/wot-ui-2.3.2-props.json>)、[props 回归测试](<test/parity/wot-parity-props.test.ts>)。主题说明见[主题与设计令牌](<../../docs/guide/theme.md>)。
 
 完整文档见 <https://wot-lynx-ui.github.io>。
 

@@ -61,6 +61,10 @@ export default defineConfig({
     ],
     sidebar: {
       '/components/': [componentsSidebar]
+      // 原 '/design/' 分组已移除：DESIGN-SPEC / AUDIT-2026-10-23 属本地独占的
+      // AI 生成文档（见 .gitignore 第 9 组），留在侧边栏会让 docs:build 死链。
+      // '/guide/' 指南分组同理：docs/guide/ 目录从未入库（见 .gitignore 第 3 组
+      // 注释），2026-10-25 起侧边栏不再引用。
     },
     socialLinks: [{ icon: 'github', link: 'https://github.com/wot-lynx-ui/wot-lynx-ui' }],
     footer: {

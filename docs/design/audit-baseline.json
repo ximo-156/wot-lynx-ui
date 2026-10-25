@@ -1,0 +1,17 @@
+{
+  "D008|components/wd-collapse/index.scss|transform 0.1s": true,
+  "D008|components/wd-drop-menu-item/index.scss|color .2s": true,
+  "D008|components/wd-tab/index.scss|height 0.3s ease-in-out": true,
+  "D011|primitives/wd-button/index.scss|--wot-button-height-mini = 28px": true,
+  "D011|primitives/wd-button/index.scss|--wot-button-height-small = 32px": true,
+  "D011|primitives/wd-button/index.scss|--wot-button-height-medium = 40px": true,
+  "D011|components/wd-search/index.scss|--wot-search-input-height = 36px": true,
+  "D011|components/wd-input-number/index.scss|--wot-input-number-input-height = 28px": true,
+  "D011|components/wd-navbar-capsule/index.scss|--wot-navbar-capsule-height = 32px": true,
+  "D012|styles/theme/light.scss|text-auxiliary / 白 = 3.43:1": true,
+  "D012|styles/theme/light.scss|text-placeholder / 白 = 2.26:1": true,
+  "D012|styles/theme/light.scss|白字 / primary-6 = 4.35:1": true,
+  "D012|styles/theme/light.scss|白字 / danger-main = 3.68:1": true,
+  "D012|styles/theme/light.scss|白字 / success-main = 2.55:1": true,
+  "D012|styles/theme/light.scss|白字 / warning-main = 2.65:1": true
+}

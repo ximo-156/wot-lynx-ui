@@ -59,7 +59,7 @@ packages/ui/src/components/wd-xxx/
 
 **JS 镜像**：需要"用 JS 算颜色"的场景（如 svg content 不继承 currentColor），
 用 `common/theme.ts` 的色板常量，与 `styles/theme/base/color.scss` 保持一致
-（`test/theme-token-parity.test.ts` 机器守护两侧不漂移）。
+（`test/unit/theme-token-parity.test.ts` 机器守护两侧不漂移）。
 
 ## 4. .vue 文件模板
 
@@ -97,7 +97,7 @@ defineProps(xxxProps)
 | options 块 | 不需要 `<script>` options 块 |
 | 条件编译 | 禁止 `// #ifdef` / `// #ifndef` / `// #endif` 等 uni-app 条件编译残留 |
 | 组件标签 | 模板内组件一律 PascalCase（`<WdButton>`）；kebab-case 会被 Lynx 编译器判为原生元素。业务代码若沿用 wot-ui 的 `<wd-button>` 写法，必须启用 `pluginWotLynxTags()`（构建期改写，见 `plugin/tag-transform-loader.cjs`） |
-| 原生元素 | 只允许 Lynx 内置元素（view / text / image / scroll-view / list / list-item / swiper / swiper-item / input / textarea / switch / checkbox / radio / slider / form / label / svg / video / web-view / page）。**禁止 uni-app 的 `<block>`**（用 `<template v-else>` 做无渲染占位）；误用会触发 603 sub_code 60301 "Can't find ui tag" 并白屏。守卫测试：`test/native-tag-whitelist.test.ts` |
+| 原生元素 | 只允许 Lynx 内置元素（view / text / image / scroll-view / list / list-item / swiper / swiper-item / input / textarea / switch / checkbox / radio / slider / form / label / svg / video / web-view / page）。**禁止 uni-app 的 `<block>`**（用 `<template v-else>` 做无渲染占位）；误用会触发 603 sub_code 60301 "Can't find ui tag" 并白屏。守卫测试：`test/component/native-tag-whitelist.test.ts` |
 | 横向布局 | 依赖横向排列的容器必须显式 `display: flex`（见 §14） |
 
 ## 5. SCSS 规范（index.scss）
@@ -201,7 +201,7 @@ composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
   带 `集合键:图标名` 前缀（如 `iconfont:menu`）精确命中指定集合（注册了多套
   集时消歧）。新增一套图标：实现 `IconSet` 接口（`src/icons/types.ts`，
   SVG 集 / 字体集联合类型）并 `registerIconSet()`，wd-icon 无需改动；
-  回归见 `test/icons-registry.test.ts`。
+  回归见 `test/component/icons-registry.test.ts`。
 - `<wd-icon name="close" :size="20" color="#f00" />`：命中内置字体集时渲染
   `<text>` 字形；命中扩展注册的 SVG 集时渲染 `<svg :content>`（多 path 图标
   输出多个 `path`，fill 统一注入）；name 含 `/` 时按图片渲染 `<image>`；
@@ -303,7 +303,7 @@ const onTouchMove = (e: any) => {
    - **守护**：`pnpm check:worklets`（verify 末位）对 build:demo 的中间产物
      断言「BG 序列化的 worklet id ⊆ MT 注册的 id」，任何一侧配置漂移直接红灯。
 
-守卫：`test/no-main-thread-script.test.ts`（禁命令式、放行声明式、防半吊子用法）。
+守卫：`test/unit/no-main-thread-script.test.ts`（禁命令式、放行声明式、防半吊子用法）。
 测试环境经 `test/mts-worklet-shim.ts` 模拟 worklet 派发与主线程元素桩，
 MTS 交互在单测中可真实执行。
 
@@ -403,17 +403,17 @@ Vue 的 `mergeProps` 会把两个同名 `on*` 监听合并成**数组**，数组
   （遮罩常驻关不掉），且 `fire-event.ts` 的 `fireEvent.click` 会在 jsdom
   里合成 `bindEvent:click` 让测试假绿。现行正确写法：根 view 绑 `@tap` +
   emits 声明转发；WdOverlay 再把 tap 重新 emit 为 `click` / `tap` 双轨
-  （`click` 保持 wot-ui API 对齐）。回归：`test/overlay-tap-regression.test.ts`
+  （`click` 保持 wot-ui API 对齐）。回归：`test/regression/overlay-tap-regression.test.ts`
   按真机语义用 `fireEvent.tap` 断言关闭。同理，其余组件里直接绑在裸 view
   上的 `@click`（pagination / fab / form-item / image-preview 关闭按钮 /
   video-preview 关闭按钮 / swipe-action 选项按钮）均为死链接，应改 `@tap`。
 - **回归测试（四份，改事件相关代码必须全绿）**：
-  - `test/event-tap-registry.test.ts` — 各组件父级 @tap 不崩溃且父子均触发；
-  - `test/event-merge-props.test.ts` — 同名监听合并不变量 + touch 事件同类风险；
-  - `test/event-registry-all-components.test.ts` — **全覆盖矩阵**：每个组件
+  - `test/component/event-tap-registry.test.ts` — 各组件父级 @tap 不崩溃且父子均触发；
+  - `test/component/event-merge-props.test.ts` — 同名监听合并不变量 + touch 事件同类风险；
+  - `test/component/event-registry-all-components.test.ts` — **全覆盖矩阵**：每个组件
     × 每个 Lynx 原生事件 × 每个真实元素逐一派发，并对本测试新注册的 sign
     逐一 `publishEvent`（设备路径等价物；注册表残留数组 sign 即失败）。
-  - `test/overlay-tap-regression.test.ts` — 遮罩/弹层 **tap** 关闭（真机
+  - `test/regression/overlay-tap-regression.test.ts` — 遮罩/弹层 **tap** 关闭（真机
     事件语义；`fireEvent.click` 合成事件不构成真机行为，勿用于断言关闭）。
 
 ## 15. Lynx 3.x 新 CSS 引擎：默认 linear 布局，flex 属性必须挂在 `display: flex` 上
@@ -496,7 +496,7 @@ vue-lynx 的 `patchProp`（`runtime/dist/node-ops.js`）对 `style` 只处理
    **`filterStyle()`**，不要再 `objToStyle()` 拼字符串后下发。
 4. 组件内拼接的多段样式（如 `${rootStyle}${customStyle}`）改为
    `{ ...rootStyle, ...parseStyle(customStyle) }`。
-5. **回归测试**：`test/inline-style-regression.test.ts` 经双线程管线 +
+5. **回归测试**：`test/regression/inline-style-regression.test.ts` 经双线程管线 +
    JSDOM 挂载，直接断言关键元素 `style` 属性非空（列高 / translateY /
    指示带 / customStyle / themeVars 映射）。改样式相关代码必须全绿。
 
@@ -571,8 +571,8 @@ const lineStyle = computed(() => {
   同一个键」的安全写法同样会被命中（全库约 5/59 属此类）。按本仓库「宁可漏报
   也不制造噪音」的门禁原则先观察，**待存量组件全部迁移到 Style Funnel 后
   再收紧为 `error`**。
-- 纯函数单测见 `test/style-funnel.test.ts`；渲染层回归见
-  `test/inline-style-regression.test.ts` 与真机验收清单。
+- 纯函数单测见 `test/unit/style-funnel.test.ts`；渲染层回归见
+  `test/regression/inline-style-regression.test.ts` 与真机验收清单。
 
 ### 迁移状态
 
@@ -629,5 +629,5 @@ const handleStart = () => { 'main thread'; step() } // ❌ step 尚未完成初�
 
 4. 该约束由真实 Lynx Web 预览（`#/__web_preview`）中的控制台验证：
    出现 `[wot-lynx-ui] 组件异常已兜底` + `before initialization` 即命中。
-   现有回归：`test/wot-parity-button-additional.test.ts`（hover）、
-   `test/signature-mts.test.ts`（线段池）。
+   现有回归：`test/parity/wot-parity-button-additional.test.ts`（hover）、
+   `test/mts/signature-mts.test.ts`（线段池）。

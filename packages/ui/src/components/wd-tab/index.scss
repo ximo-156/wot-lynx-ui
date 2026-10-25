@@ -19,6 +19,8 @@
 
     @include m(inactive) {
       height: 0;
+      // 与 wot-ui 2.3.2 逐字一致（wot-parity-nav-controls 对 transition 做字符串相等断言），
+      // 不接受动效令牌归一，见 docs/design/AUDIT-2026-10-23.md §3.2
       transition: height 0.3s ease-in-out;
     }
   }

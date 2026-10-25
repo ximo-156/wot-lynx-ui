@@ -71,6 +71,10 @@ export default defineConfig({
       // （wot-lynx-ui 解析到 node_modules 内）不列白名单时组件库全部
       // worklet 都进不了 main-thread.js。这只是两道闸门之一——另一道
       // sideEffects tree-shaking 见 tools.rspack 内注释。
+      // 并行会话 2026-10-23 的实证与此一致：库内 31 个 worklet 曾 0/31 注册
+      // （项目源码 worklet-repro 页 2/2 正常，差异即「源码直连 vs 经 node_modules
+      // 解析的包」）。注意：单加白名单实测仍不够——保住的 import 会被第二道
+      // 闸门（sideEffects tree-shaking）剪掉，见 tools.rspack 内注释。
       includeWorkletPackages: ['wot-lynx-ui']
     })
   ],
@@ -111,7 +115,6 @@ export default defineConfig({
         config.optimization = config.optimization ?? {}
         ;(config.optimization as any).sideEffects = false
       }
-
       // demo 走组件库**真实的 exports 契约**，不用别名抄近路：
       // 别名会把 package.json 的 exports 映射整个绕开，导致子路径声明错了
       // 也照样构建通过（2026-10-23 就踩过：`./components/*` 的 source 目标

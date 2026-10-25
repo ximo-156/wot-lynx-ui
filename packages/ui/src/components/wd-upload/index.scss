@@ -4,7 +4,7 @@
 // 上传项尺寸
 $upload-size: var(--wot-upload-size, $n-88) !default;
 // 上传项圆角
-$upload-radius: var(--wot-upload-radius, var(--wot-upload-border-radius, $radius-main)) !default;
+$upload-radius: var(--wot-upload-radius, $radius-main) !default;
 // 上传项边框颜色
 $upload-border-color: var(--wot-upload-border-color, $border-main) !default;
 // 唤起项的图标大小
@@ -26,7 +26,7 @@ $upload-evoke-icon-color-disabled: var(--wot-upload-evoke-icon-color-disabled, $
 // 关闭按钮内边距
 $upload-close-padding: var(--wot-upload-close-padding, $padding-ultra-tight) !default;
 // 关闭按钮圆角
-$upload-close-radius: var(--wot-upload-close-radius, var(--wot-upload-close-border-radius, $radius-zero $radius-zero $radius-zero $radius-main)) !default;
+$upload-close-radius: var(--wot-upload-close-radius, $radius-zero $radius-zero $radius-zero $radius-main) !default;
 // 关闭按钮背景色
 $upload-close-bg: var(--wot-upload-close-bg, $opacfilled-main-cover) !default;
 // 关闭按钮图标尺寸

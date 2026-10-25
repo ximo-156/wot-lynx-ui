@@ -87,7 +87,7 @@ $fab-trigger-icon-size: var(--wot-fab-trigger-icon-size, $n-32) !default;
   // 参考源的 !important 为 Web 专有写法（Lynx 不支持，PORTING §4.5），删除。
   .wd-fab__transition-enter-active,
   .wd-fab__transition-leave-active {
-    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity $motion-slow $easing-standard, transform $motion-slow $easing-standard;
   }
 
   @include edeep(transition-enter) {

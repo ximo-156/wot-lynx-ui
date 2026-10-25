@@ -3,6 +3,9 @@
 
 // 背景色
 $tooltip-bg: var(--wot-tooltip-bg, $filled-oppo) !default;
+// 气泡最小宽度：138px 是让两行文案不被压断的实测值，不在刻度上
+// （$n-140 不存在、$n-128 会断行），收敛成组件令牌。
+$tooltip-min-width: var(--wot-tooltip-min-width, 138px) !default;
 // 文字颜色
 $tooltip-color: var(--wot-tooltip-color, $text-secondary) !default;
 // 阴影效果
@@ -38,7 +41,7 @@ $tooltip-line-height: var(--wot-tooltip-line-height, $typography-body-line-heigh
   @include edeep(pos) {
     position: absolute;
     box-sizing: border-box;
-    min-width: 138px;
+    min-width: $tooltip-min-width;
     background-clip: padding-box;
     z-index: $tooltip-z-index;
   }

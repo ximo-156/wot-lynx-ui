@@ -3,7 +3,7 @@ name: CI
 # 门禁设计：各检查拆成独立 job 并行执行，失败时能一眼看出是哪类问题。
 # 时长红线 10 分钟 —— 超过则应做测试分片，而不是砍检查项。
 #
-# 规范依据：contributing/code-review/05-自动化门禁与CI配置.md
+# 规范依据：CONVENTIONS.md（scripts/review-lint.mjs 把其中的硬规则自动化）
 
 on:
   pull_request:
@@ -79,7 +79,7 @@ jobs:
   #    `scripts/test-shard.mjs` 用 LPT 装箱，同一份数据得到 46.9s × 4（偏差 0%）。
   #
   #    正确性不依赖耗时缓存：分片清单由脚本现场扫描 test/ 得到，缓存只影响
-  #    均衡度。`test/project-coverage.test.ts` 会独立验证「任意分片数下都不漏
+  #    均衡度。`test/unit/project-coverage.test.ts` 会独立验证「任意分片数下都不漏
   #    文件、不重复」，所以新增测试文件不可能被静默跳过。
   # ---------------------------------------------------------------------------
   test:

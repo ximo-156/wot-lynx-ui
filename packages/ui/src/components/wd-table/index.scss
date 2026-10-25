@@ -19,6 +19,8 @@ $table-cell-line-height: var(--wot-table-cell-line-height, $typography-body-line
 $table-cell-padding: var(--wot-table-cell-padding, $padding-loose $padding-extra-loose) !default;
 // 固定列阴影渐变背景
 $table-shadow-gradient: var(--wot-table-shadow-gradient, linear-gradient(270deg, $base-transparent 0%, $opac-2_04 100%)) !default;
+// 滚动阴影宽度（此前只有 var() 引用、无令牌声明，30px 是裸值）
+$table-shadow-width: var(--wot-table-shadow-width, $n-32) !default;
 // 排序按钮高度
 $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
 
@@ -138,8 +140,8 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
   @include e(shadow) {
     position: absolute;
     top: 0;
-    right: calc(-1 * var(--wot-table-shadow-width, 30px));
-    width: var(--wot-table-shadow-width, 30px);
+    right: calc(-1 * $table-shadow-width);
+    width: $table-shadow-width;
     height: 100%;
     background: $table-shadow-gradient;
     pointer-events: none;

@@ -3,6 +3,8 @@
 
 // 默认文字颜色
 $divider-color-default: var(--wot-divider-color-default, $text-auxiliary) !default;
+// 内容文字颜色（此前只有 var() 引用、无令牌声明）
+$divider-content-color: var(--wot-divider-content-color, $divider-color-default) !default;
 // 分割线颜色
 $divider-color-line: var(--wot-divider-color-line, $border-main) !default;
 // 组件水平内边距
@@ -70,7 +72,7 @@ $divider-padding-default: var(--wot-divider-padding-default, $spacing-zero) !def
     .wd-divider__line--last { margin-left: $divider-margin-content-left; }
   }
   .wd-divider__content text {
-    color: var(--wot-divider-content-color, $divider-color-default);
+    color: $divider-content-color;
     font-size: $divider-font-size-default;
   }
 

@@ -82,7 +82,7 @@ $switch-disabled: var(--wot-switch-disabled, $opacity-disabled) !default;
     align-items: center;
     min-width: $switch-size-inner-min-width;
     height: $switch-size-inner-height;
-    transition: all $switch-transition-duration ease;
+    transition: background-color $switch-transition-duration, padding $switch-transition-duration;
     border-radius: $switch-radius-full;
     padding: $switch-top-bottom-padding $switch-left-right-padding;
   }
@@ -100,7 +100,7 @@ $switch-disabled: var(--wot-switch-disabled, $opacity-disabled) !default;
     height: $switch-size-action-height;
     background: $switch-color-action-bg;
     border-radius: $switch-radius-action-full;
-    transition: all $switch-transition-duration ease;
+    transition: left $switch-transition-duration;
     left: $switch-top-bottom-padding;
   }
 

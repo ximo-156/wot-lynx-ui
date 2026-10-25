@@ -15,5 +15,5 @@
     "lib": ["ES2020", "DOM"],
     "types": []
   },
-  "include": ["src", "lynx.config.ts", "lynx.config.device-test.ts"]
+  "include": ["src", "lynx.config.ts", "lynx.config.device-test.ts", "lynx.config.worklet-repro.ts"]
 }

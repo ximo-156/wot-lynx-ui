@@ -77,3 +77,8 @@
 .wot-theme-compact {
   @include compact-theme-vars;
 }
+
+/** 预设类名（可单独编译，见 brand-a.scss 同款说明） */
+.wot-theme-compact {
+  @include compact-theme-vars;
+}

@@ -24,6 +24,8 @@
     "check:docs": "node scripts/gen-docs.mjs --check",
     "check:exports": "node scripts/check-exports.mjs",
     "lint:conventions": "node scripts/review-lint.mjs",
+    "audit:design": "node scripts/design-audit.mjs",
+    "audit:design:json": "node scripts/design-audit.mjs --json",
     "typecheck": "pnpm --filter wot-lynx-ui run typecheck",
     "test": "pnpm --filter wot-lynx-ui run test",
     "test:shard": "node scripts/test-shard.mjs",

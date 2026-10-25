@@ -98,7 +98,7 @@ $radio-button-icon-left: var(--wot-radio-button-icon-left, $n-4) !default;
     height: $radio-icon-size;
     line-height: $radio-icon-size;
     color: $radio-unchecked-color;
-    transition: all 0.2s;
+    transition: color $motion-base;
   }
 
   @include e(label) {

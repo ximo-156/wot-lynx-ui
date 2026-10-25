@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue-lynx'
 import { listIcons, useToast } from 'wot-lynx-ui'
+import { demoBrokenImage, demoImage } from './assets/demo-images'
 
 // 组件通过 wotLynxUI 插件全局注册（Tier 1：基础组件）
 const count = ref(0)
@@ -50,8 +51,8 @@ const tableColumns = ref([
   { prop: 'city', label: '城市', width: 80 }
 ])
 const swiperList2 = ref([
-  { url: 'https://temp.img1.lynxjs.org/close.png', text: '1' },
-  { url: 'https://temp.img1.lynxjs.org/close.png', text: '2' }
+  { url: demoImage, text: '1' },
+  { url: demoImage, text: '2' }
 ])
 const dialogRef = ref<any>(null)
 const actionSheetRef = ref<any>(null)
@@ -117,9 +118,9 @@ const sortDescValue = ref(0)
 const sortLineValue = ref(1)
 // SwiperNav 数据源（image: url + title；icon: icon + title）
 const swiperNavItems = ref([
-  { url: 'https://temp.img1.lynxjs.org/close.png', title: '图片一' },
-  { url: 'https://temp.img1.lynxjs.org/close.png', title: '图片二' },
-  { url: 'https://temp.img1.lynxjs.org/close.png', title: '图片三' }
+  { url: demoImage, title: '图片一' },
+  { url: demoImage, title: '图片二' },
+  { url: demoImage, title: '图片三' }
 ])
 const swiperNavIconItems = ref([
   { icon: 'home', title: '首页' },
@@ -335,9 +336,9 @@ const toast = useToast('demo-toast')
 // ImagePreview / VideoPreview 命令式 API（ref + selector）
 const imagePreviewRef = ref<any>(null)
 const previewImages = ref([
-  'https://temp.img1.lynxjs.org/close.png',
-  'https://temp.img1.lynxjs.org/close.png',
-  'https://temp.img1.lynxjs.org/close.png'
+  demoImage,
+  demoImage,
+  demoImage
 ])
 function showImagePreview() {
   imagePreviewRef.value?.open({ images: previewImages.value, startPosition: 0 })
@@ -345,7 +346,7 @@ function showImagePreview() {
 const videoPreviewRef = ref<any>(null)
 const demoVideoUrl = 'https://www.w3schools.com/html/mov_bbb.mp4'
 function showVideoPreview() {
-  videoPreviewRef.value?.open({ url: demoVideoUrl, poster: 'https://temp.img1.lynxjs.org/close.png', title: '示例视频' })
+  videoPreviewRef.value?.open({ url: demoVideoUrl, poster: demoImage, title: '示例视频' })
 }
 // RootPortal 根节点容器
 const portalBarVisible = ref(false)
@@ -905,21 +906,21 @@ const portalBarVisible = ref(false)
         <view class="demo-panel">
           <text class="demo-panel__label">mode 裁剪模式</text>
           <view class="demo-row">
-            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="110" height="80" mode="aspectFill" />
-            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="110" height="80" mode="aspectFit" />
-            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="110" height="80" mode="widthFix" />
+            <wd-img :src="demoImage" width="110" height="80" mode="aspectFill" />
+            <wd-img :src="demoImage" width="110" height="80" mode="aspectFit" />
+            <wd-img :src="demoImage" width="110" height="80" mode="widthFix" />
           </view>
           <text class="demo-panel__label">圆形 / 圆角 / 懒加载 / 预览</text>
           <view class="demo-row">
-            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" round />
-            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" radius="8" />
-            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" lazy-load />
-            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" enable-preview show-menu-by-longpress @load="(e: any) => console.log('[demo] img load', e)" />
+            <wd-img :src="demoImage" width="72" height="72" round />
+            <wd-img :src="demoImage" width="72" height="72" radius="8" />
+            <wd-img :src="demoImage" width="72" height="72" lazy-load />
+            <wd-img :src="demoImage" width="72" height="72" enable-preview show-menu-by-longpress @load="(e: any) => console.log('[demo] img load', e)" />
           </view>
           <text class="demo-panel__label">错误态 / 点击</text>
           <view class="demo-row">
-            <wd-img src="https://temp.img1.lynxjs.org/not-found.png" width="72" height="72" @error="(e: any) => console.log('[demo] img error', e)" />
-            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="72" height="72" round @tap="(e: any) => console.log('[demo] img tap', e)" />
+            <wd-img :src="demoBrokenImage" width="72" height="72" @error="(e: any) => console.log('[demo] img error', e)" />
+            <wd-img :src="demoImage" width="72" height="72" round @tap="(e: any) => console.log('[demo] img tap', e)" />
           </view>
         </view>
       </view>
@@ -1238,9 +1239,9 @@ const portalBarVisible = ref(false)
           <text class="demo-panel__label">方形不层叠（shape="square"，overlap=false）</text>
           <view class="demo-row">
             <wd-avatar-group shape="square" :overlap="false" :size="40">
-              <wd-avatar :size="40" src="https://temp.img1.lynxjs.org/close.png" />
-              <wd-avatar :size="40" src="https://temp.img1.lynxjs.org/close.png" />
-              <wd-avatar :size="40" src="https://temp.img1.lynxjs.org/close.png" />
+              <wd-avatar :size="40" :src="demoImage" />
+              <wd-avatar :size="40" :src="demoImage" />
+              <wd-avatar :size="40" :src="demoImage" />
             </wd-avatar-group>
           </view>
         </view>
@@ -1439,7 +1440,7 @@ const portalBarVisible = ref(false)
             <text class="demo-tag">共 {{ previewImages.length }} 张</text>
           </view>
           <view class="demo-row">
-            <wd-img src="https://temp.img1.lynxjs.org/close.png" width="64" height="64" mode="aspectFill" round />
+            <wd-img :src="demoImage" width="64" height="64" mode="aspectFill" round />
           </view>
         </view>
       </view>
@@ -1487,7 +1488,7 @@ const portalBarVisible = ref(false)
       />
       <wd-img-cropper
         v-model="cropperVisible"
-        img-src="https://temp.img1.lynxjs.org/close.png"
+        :img-src="demoImage"
         aspect-ratio="1:1"
         @confirm="onCropperConfirm"
       />
@@ -1510,7 +1511,7 @@ const portalBarVisible = ref(false)
       <wd-tour v-model="tourVisible" :steps="tourSteps" @finish="() => console.log('[demo] tour finish')" />
       <wd-curtain
         v-model="curtainVisible"
-        src="https://temp.img1.lynxjs.org/close.png"
+        :src="demoImage"
         :width="260"
         close-position="bottom"
         to="/pages/demo/index"

@@ -1,6 +1,10 @@
 @use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
+// 结算按钮最小宽度：100px 不在 4pt 刻度上（$n-98 差 2px 会改变按钮宽度），
+// 收敛成组件令牌，需要时通过 --wot-submit-bar-button-min-width 覆盖。
+$submit-bar-button-min-width: var(--wot-submit-bar-button-min-width, 100px) !default;
+
 @include b(submit-bar) {
   display: flex;
   flex-direction: row;
@@ -22,7 +26,7 @@
   }
 
   @include e(label) {
-    margin-bottom: 2px;
+    margin-bottom: $spacing-ultra-tight;
 
     &-text {
       font-size: 12px;
@@ -59,11 +63,11 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
-    margin-left: 12px;
+    gap: $spacing-tight;
+    margin-left: $spacing-loose;
   }
 
   @include e(button) {
-    min-width: 100px;
+    min-width: $submit-bar-button-min-width;
   }
 }

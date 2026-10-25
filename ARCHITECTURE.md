@@ -21,7 +21,7 @@ v1.0 于 2026-10-16 写成。此后仓库发生两次全库级重写（`a00b6b9`
 |---|---|---|---|
 | C1 | **INV-5 / ADR-009：零 MTS**，`src/` 不得出现 worklet | **撤销。** 改为「声明式 MTS 是跟手交互的唯一形态，命令式跨线程 API 禁止」 | `7658d0c`；`CONVENTIONS §10`（2026-10-19 改写）；12 个组件使用 `main-thread-bind*` |
 | C2 | P0-1：`index.ts` 435 行手写 barrel，清单维护两遍 | **已解决。** `scripts/gen-index.mjs` 生成，`src/index.ts` 173 行 + `components/index.ts` 生成物 | `pnpm check:index` |
-| C3 | §3.3 Style Funnel「待引入」（Phase 0.4） | **已落地。** `common/style.ts` 提供 `resolveStyle` / `defineStyleKeys` / `createStyleResolver`，带单测 | `common/style.ts`、`test/style-funnel.test.ts` |
+| C3 | §3.3 Style Funnel「待引入」（Phase 0.4） | **已落地。** `common/style.ts` 提供 `resolveStyle` / `defineStyleKeys` / `createStyleResolver`，带单测 | `common/style.ts`、`test/unit/style-funnel.test.ts` |
 | C4 | §1.1「`docs/` 8 篇指南 + 101 篇组件文档」 | **更正。** `docs/components/` 由 `gen-docs.mjs` 按需生成，不入库 | 目录实测 |
 | C5 | §3.1「组件之间不得互相 import 实现」 | **改写。** 该禁令从未生效（实存 153 条边），且方向错误。改为三条边规则（见 §5） | 依赖图实测 |
 | C6 | §3.2 / ADR-003：拆域包「暂不做」，条件为「单域 > 40 组件」 | **改写。** 拆域包的真实障碍是依赖图有环（5 个）且稠密（153 边），不是版本管理成本。前提条件改为「业务↔业务边 ≤ 60 且环 = 0」 | 依赖图实测 |
@@ -49,6 +49,14 @@ wot-lynx-ui/  (pnpm monorepo, packageManager: pnpm@10.24.0, node>=20)
 │   ├── src/locale/      16 种语言
 │   ├── plugin/          Rspeedy 插件：标签转换 / 自动按需导入 / Web 字体
 │   └── test/            87 个测试文件（node + jsdom 双 project，组件 project 关闭文件隔离）
+│       ├── unit/        17 个纯函数/静态数据用例（node 环境、无 setup）
+│       ├── component/   20 个组件行为与平台约束用例（jsdom 双线程）
+│       ├── parity/      15 个与官方 wot-ui 2.3.2 的 API/CSS 对齐用例
+│       ├── native-first/ 12 个「原生优先」重写回归
+│       ├── mts/         10 个 Main Thread Script 跟手用例
+│       ├── regression/  13 个 bugfix / 崩溃守卫回归
+│       ├── helpers/     测试侧公共解析（双组件根，ADR-012）
+│       └── fixtures/    官方 2.3.2 API / props 快照
 ├── packages/demo/       Rspeedy 双端 Demo + 真机验收清单
 ├── docs/                VitePress 站点（组件文档由脚本生成）
 ├── scripts/             14 个工程脚本（gen-index / gen-docs / build-css / build-dist / review-lint …）
@@ -273,7 +281,7 @@ resolveStyle(neutral, ...sources): Record<string, string>
 createStyleResolver(neutral?) => (...sources) => Record<string, string>  // 动态键（customStyle / themeVars）
 ```
 
-**守护**：`style/conditional-key-write`（warn，存量 baseline）+ `test/style-funnel.test.ts` + `test/inline-style-regression.test.ts`。
+**守护**：`style/conditional-key-write`（warn，存量 baseline）+ `test/unit/style-funnel.test.ts` + `test/regression/inline-style-regression.test.ts`。
 
 **待办**：存量 59 处条件写样式迁移；迁移完成后规则收紧为 `error`。
 
@@ -327,7 +335,7 @@ diff 翻译成 13 类语义变更与四级严重度，避免「改描述」和�
 **门禁**：
 
 - `pnpm check:meta`（CI `generated` job）—— 产物与源码不一致即红灯。
-- `test/meta-generated.test.ts`（11 条断言）—— 管「解析是否完整」，其中 4 条是防
+- `test/unit/meta-generated.test.ts`（11 条断言）—— 管「解析是否完整」，其中 4 条是防
   解析器**静默失效**：源码有 `emit('x')` 则 events 必含 `x`、有 `<slot>` 则 slots
   非空、`types.ts` 定义的 prop 必在 props 里、`default` 不能是人话。
   这些检测逻辑**独立实现**，不 import `gen-meta.mjs` 的函数——复用会让同一个 bug
@@ -472,7 +480,7 @@ import 'wot-lynx-ui/theme/presets/brand-a' // 按需
 ```
 
 ⚠️ 未引入预设 CSS 时**不会报错**：`--wot-*` 回落到 light 主题的值，表现为
-「主题没生效」。这是 CSS 自定义属性的固有行为，`test/theme-presets.test.ts`
+「主题没生效」。这是 CSS 自定义属性的固有行为，`test/component/theme-presets.test.ts`
 锁住了类名同源与主包隔离两条契约。
 
 ### 7.2 国际化
@@ -501,6 +509,13 @@ import 'wot-lynx-ui/theme/presets/brand-a' // 按需
   （中位数 < 300ms）大一个数量级。
 - **LPT 分片**：`scripts/test-shard.mjs` 按实测耗时装箱，CI 4 分片矩阵。
   内建 `--shard` 是按文件个数轮转，实测最慢片超均值 49%；LPT 偏差 0%。
+
+**目录分层**（2026-10-23）：全部测试文件统一在 `packages/ui/test/` 下，按用途分子目录
+（`unit` / `component` / `parity` / `native-first` / `mts` / `regression`，另有 `helpers`、
+`fixtures`）。目录**不驱动** vitest——`component` 的 include 仍是整个 `test/**/*.test.ts`，
+`unit` 走显式 `PURE_TESTS` 清单；两者的双向一致性由 `test/unit/project-coverage.test.ts`
+断言（放错目录不会报错、只会白搭 3s 环境，所以必须机器守）。新增测试请按目录语义放置，
+详见 `packages/ui/test/README.md`。
 
 ⚠️ 关闭隔离的前提是「测试文件之间没有可变全局状态耦合」，这**不能靠一次跑绿证明**，
 必须用 `--sequence.shuffle.files` 多 seed 取证。2026-10 的取证过程抓到两类真实泄漏：
@@ -578,20 +593,20 @@ import 'wot-lynx-ui/theme/presets/brand-a' // 按需
 
 | # | 动作 |
 |---|---|
-| 2.1 | `PlatformAdapter` + `capabilities` + `mockAdapter` → ✅ `common/platform.ts`：4 个能力（各有 2 个消费者）+ `mockPlatform()` 强制降级（压过已注入的宿主能力）；8 处组件字符串键判断改为能力判断；`test/platform.test.ts` 10 例，含「mock 失效则 3 例失败」的负向验证（ADR-015） |
+| 2.1 | `PlatformAdapter` + `capabilities` + `mockAdapter` → ✅ `common/platform.ts`：4 个能力（各有 2 个消费者）+ `mockPlatform()` 强制降级（压过已注入的宿主能力）；8 处组件字符串键判断改为能力判断；`test/component/platform.test.ts` 10 例，含「mock 失效则 3 例失败」的负向验证（ADR-015） |
 | 2.2 | `uniAdapter` 降级为薄封装 → ✅ **反向决策**：`uniAdapter` 保持 17 行注册表原样，`platform` 叠在其上做语义层。方法层（measure/navigate/pickMedia）**不做**——它们只是 `uni.*` 的第二层门面，零消费者（ADR-015） |
-| 2.3 | 预设主题按需（不进主包） → ✅ 主主题从 20103 → 18259 字节；新增 `./theme/presets` 与 `./theme/presets/*` 两个 exports 子路径；类名规则下沉到各预设文件（单独编译即得可用 CSS）；`test/theme-presets.test.ts` 锁住「主包隔离 + 类名同源」（ADR-016） |
+| 2.3 | 预设主题按需（不进主包） → ✅ 主主题从 20103 → 18259 字节；新增 `./theme/presets` 与 `./theme/presets/*` 两个 exports 子路径；类名规则下沉到各预设文件（单独编译即得可用 CSS）；`test/component/theme-presets.test.ts` 锁住「主包隔离 + 类名同源」（ADR-016） |
 | 2.4 | `dist` 真实产出 + 非 Rspeedy 消费者验证 → ✅ **重新定义为「入口桥接层」**（ADR-014）：`build-dist` 构建前清空；`exports` 的 `source` 子路径改为落到文件（原指向目录，主路径实为 `ERR_UNSUPPORTED_DIR_IMPORT`）；demo 去掉 `wot-lynx-ui$` 别名、启用 `source` 条件并加子路径探针；`check-exports` 新增「re-export 目标可解析」「通配符代入后解析到文件」「跨条件条目集合一致」三节，均过负向验证 |
 
 ### P3 — 契约生成与包拆分（4–6 周）
 
 | # | 动作 |
 |---|---|
-| 3.1 | 推导式 meta（`gen-meta`） → ✅ `scripts/gen-meta.mjs` 产出 `packages/ui/meta.json`：106 组件 / 1464 prop / 218.8 KB，type 与 description 覆盖率均 100%；`defineEmits` 五种写法全支持（数组 64 / 内联签名 7 / 键元组 3 / 类型别名 5 / 交叉类型 2）；`check:meta` 进 CI，`test/meta-generated.test.ts` 11 条断言（4 条防静默失效，均过负向验证）（ADR-017） |
+| 3.1 | 推导式 meta（`gen-meta`） → ✅ `scripts/gen-meta.mjs` 产出 `packages/ui/meta.json`：106 组件 / 1464 prop / 218.8 KB，type 与 description 覆盖率均 100%；`defineEmits` 五种写法全支持（数组 64 / 内联签名 7 / 键元组 3 / 类型别名 5 / 交叉类型 2）；`check:meta` 进 CI，`test/unit/meta-generated.test.ts` 11 条断言（4 条防静默失效，均过负向验证）（ADR-017） |
 | 3.2 | `gen-docs` 改读 meta → ✅ 转义从「解析时」下沉到「渲染时」；Props 从 2 列变 4 列（参数/说明/类型/默认值），Events 与 Slots 改从 meta 推导（原 Events 是 106 个组件共用的两行假数据）；侧边栏从 109 行手写数组改为生成（原写「101 个」实际 106 个、缺 5 条 404）；新增 `assertTableShape()` 生成后自检，拦住 `可选值: 'a' \| 'b'` 断列的旧 bug；`check:docs` 进 CI。顺带修掉 `.gitignore` 自相矛盾（`docs/adr/*` 等三条规则让 16 篇 ADR 从未入库）与双组件根迁移遗留的 29 个 demo 导入路径（ADR-018） |
 | 3.3 | meta diff → API 变更检测 + codemod → ✅ `scripts/api-diff.mjs` 按契约单元（组件/prop/event/slot）做语义 diff，13 类变更映射四级严重度，类型按联合成员集合判收窄/放宽；`scripts/codemod.mjs` 只执行能证明等价的 prop 改名（类型+默认值+可选值三者全同才认定，签名有歧义就不猜），只碰模板、跳过 `<script>`/`<style>`、属性名要求边界，默认 dry-run；CI 在 PR 上生成清单进 `$GITHUB_STEP_SUMMARY` 但不阻塞。测试 26 条（16+10）；负向验证抓到两个真实缺陷——首版会静默删掉整个 `<script>` 块，以及测试自己复制 `compileRules` 导致边界断言失效（ADR-019） |
 | 3.4 | 视觉回归 → ✅ `scripts/visual-regression.mjs` 用无头 Chrome + CDP 裁剪文档站右侧栏的 H5 预览（`.wd-h5-phone__screen`），不拍整页——正文由 meta 生成，改一句 JSDoc 会让 106 张基线全红；零依赖 PNG 编解码（`node:zlib`，位深 8 / colorType 2·6 / 滤波 0–4）；基线按平台隔离，缺基线报「跳过」不报「通过」；空白基线与不稳定组件单独报告（16 个组件默认不渲染内容、2 个时间相关组件已取证排除且必须写理由）；全量 106 张 85 秒，复检 104 张全 0.000%，改一处主色 token 后 button 11.94% / tag 3.88% / cell 0%（ADR-020） |
-| 3.5 | 测试分片 → ✅ 根 `test.isolate: false`（环境复用；写在 project 内部会被静默忽略，实测 113.88s vs 33.35s）：87 文件 / 1302 用例全量 **110s → 33s**，`environment` 累计 255s → 24s；`scripts/test-shard.mjs` 按实测耗时 LPT 装箱（内建 `--shard` 按个数轮转，实测最慢片超均值 49%，LPT 偏差 0%），CI 4 分片矩阵；正确性与性能分离——分片清单现场扫描文件系统、`assignShards` 内部断言「不漏不重」，耗时缓存只影响均衡度；`test/project-coverage.test.ts` 9 条断言守住「每个文件恰好归一个 project」（三条前提断言均过负向验证）。取证过程用 `--sequence.shuffle.files` 多 seed 抓到图标注册表跨文件残留（`__resetIconRegistry` 修复），并顺带清掉 `mts-worklet-shim` 里三个零调用点的死符号（ADR-021） |
+| 3.5 | 测试分片 → ✅ 根 `test.isolate: false`（环境复用；写在 project 内部会被静默忽略，实测 113.88s vs 33.35s）：87 文件 / 1302 用例全量 **110s → 33s**，`environment` 累计 255s → 24s；`scripts/test-shard.mjs` 按实测耗时 LPT 装箱（内建 `--shard` 按个数轮转，实测最慢片超均值 49%，LPT 偏差 0%），CI 4 分片矩阵；正确性与性能分离——分片清单现场扫描文件系统、`assignShards` 内部断言「不漏不重」，耗时缓存只影响均衡度；`test/unit/project-coverage.test.ts` 9 条断言守住「每个文件恰好归一个 project」（三条前提断言均过负向验证）。取证过程用 `--sequence.shuffle.files` 多 seed 抓到图标注册表跨文件残留（`__resetIconRegistry` 修复），并顺带清掉 `mts-worklet-shim` 里三个零调用点的死符号（ADR-021） |
 | 3.6 | 基础包拆分（tokens / runtime / composables / primitives / icons） |
 
 ### P4 — 平台化（6–12 个月）

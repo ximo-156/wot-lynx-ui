@@ -440,7 +440,7 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
       @include m(capsule) {
         left: 0;
         width: 100%;
-        height: 2px;
+        height: $n-2;
         transform: translateY(-50%);
       }
     }

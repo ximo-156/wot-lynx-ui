@@ -35,7 +35,7 @@ $video-preview-close-z-index: var(--wot-video-preview-close-z-index, 10) !defaul
     // Lynx 适配：视频容器显式 flex 纵向（承载 video 子元素，CONVENTIONS §3.1）
     display: flex;
     flex-direction: column;
-    transition: all 0.3s ease;
+    transition: height $motion-slow $easing-standard;
 
     @include when(fullscreen) {
       height: 100%;

@@ -6,6 +6,9 @@ page,
   --wot-font-weight-thin: 200;
   --wot-font-weight-light: 300;
   --wot-font-weight-regular: 400;
+  // 500 是真实存在的设计档位（coupon / submit-bar / share-sheet 在用），
+  // 但字重表此前缺这一档，代码只能写字面量 500。补档不改变既有令牌取值。
+  --wot-font-weight-500: 500;
   --wot-font-weight-medium: 600;
   --wot-font-weight-semibold: 700;
   --wot-font-weight-bold: 700;

@@ -24,7 +24,7 @@ export const BRAND = {
 export const PRIMARY_COLOR = BRAND[6]
 export const SECONDARY_COLOR = BRAND[5]
 export const TEXT_MAIN_COLOR = '#2D273DFF'
-export const TEXT_SECONDARY_COLOR = '#979797FF'
+export const TEXT_SECONDARY_COLOR = '#6B7085FF'
 
 /** 蓝色色阶（与 --wot-blue-* 对应） */
 export const BLUE = {

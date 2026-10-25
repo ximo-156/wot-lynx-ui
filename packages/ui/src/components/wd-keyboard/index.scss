@@ -48,7 +48,7 @@ $keyboard-close-padding: var(--wot-keyboard-close-padding, $padding-zero $paddin
     // （内容宽度自适应，语义等价）。
     display: flex;
     flex-direction: row;
-    font-weight: normal;
+    font-weight: $font-weight-regular;
 
     &-left {
       position: absolute;
@@ -80,7 +80,8 @@ $keyboard-close-padding: var(--wot-keyboard-close-padding, $padding-zero $paddin
   @include e(car-keys) {
     display: flex;
     flex-direction: row;
-    flex: 10;
+    // 车牌模式没有 sidebar，flex 比例无参照系；给 1 只为了占满整行。
+    flex: 1;
     flex-wrap: wrap;
 
     .wd-key-wrapper {
@@ -102,7 +103,7 @@ $keyboard-close-padding: var(--wot-keyboard-close-padding, $padding-zero $paddin
     padding: $keyboard-close-padding;
     color: $keyboard-close-color;
     font-size: $keyboard-close-font-size;
-    background-color: transparent;
+    background-color: $filled-zero;
     border: none;
 
     // Lynx 适配：wot-ui 的 hover-class="wd-keyboard__close--hover" 按压态

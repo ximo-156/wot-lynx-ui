@@ -69,7 +69,7 @@ $checkbox-button-icon-left: var(--wot-checkbox-button-icon-left, $n-4) !default;
     height: $checkbox-icon-size;
     line-height: $checkbox-icon-size;
     color: $checkbox-unchecked-color;
-    transition: all 0.2s;
+    transition: color $motion-base;
   }
 
   @include e(label) {
