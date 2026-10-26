@@ -202,7 +202,11 @@ defineExpose<SegmentedExpose>({
     >
       <view class="wd-segmented__item-label">
         <slot v-if="$slots.label" name="label" :option="isObj(option) ? option : { value: option }" />
-        <text v-else>{{ isObj(option) ? option.value : option }}</text>
+        <!-- Lynx 适配（真机 2026-10-26 巡检）：省略号不走 CSS 的
+             overflow:hidden + text-overflow:ellipsis —— 真机上该组合会把
+             文字整段裁空（分段器只剩灰底、无「日/周/月」，图二缺陷），
+             改用 Lynx 原生 text-maxline 单行截断。 -->
+        <text v-else text-maxline="1">{{ isObj(option) ? option.value : option }}</text>
       </view>
     </view>
     <view v-if="theme === 'card'" :class="['wd-segmented__slider', activeDisabled ? 'is-disabled' : '']" :style="state.activeStyle" />

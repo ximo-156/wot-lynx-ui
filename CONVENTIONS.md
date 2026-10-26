@@ -537,8 +537,8 @@ bg-color 头像曾因此整组白底白字不可见）。
   **之前**，会连文字一起盖掉。此类元素须排在内容节点**之后**，并保持
   z-index 低于内容（真机按 z-index 绘制，两个平台才都不出问题）。
 
-**真机引擎行为差异清单**（2026-10-25 第二轮真机巡检沉淀；Web 预览全绿、
-真机翻车的四类「静默差异」，写组件前对照）：
+**真机引擎行为差异清单**（2026-10-25 第二轮 + 2026-10-26 第三轮真机巡检
+沉淀；Web 预览全绿、真机翻车的九类「静默差异」，写组件前对照）：
 
 | # | 差异 | 真机表现 | 规则 |
 | --- | --- | --- | --- |
@@ -546,6 +546,11 @@ bg-color 头像曾因此整组白底白字不可见）。
 | 2 | 绝对定位元素缺 `top/bottom` 时真机按 0 锚定 | wd-switch 滑块贴死轨道上缘 | Chrome 用「静态位置」（父级 align-items:center 假想盒）居中是浏览器私货；纵向位置必须显式写 `top`（wd-switch `__action` 教训） |
 | 3 | view 与内部 text 双层同时带 `line-height` | picker 列标签错行叠印（疑似双行盒各绘一遍） | 行高/字号/颜色只写在 `text` 节点上（与 §8 合并理解）；容器 view 用内联 `height` 定高 |
 | 4 | `main-thread-bindtouch*` worklet 绑定与 tap 合成/渲染互扰 | picker 列双份叠印/内嵌空白、fab 展开收起点击失效 | 触发器类元素（需要 tap 的节点子树）不用 MT 触摸绑定，跟手走后台 touchmove 状态驱动（wot 对齐）；wd-picker-view / wd-fab 已退回，slider / tabs / swipe-action 等已真机验证的保留 |
+| 5 | `visibility: hidden` 不生效 | wd-datetime-picker 的 start/end 两个 picker-view 同时绘制，滚轮列出现两份内容错半行叠印 | 显隐一律 `v-if` 结构级切换（与 R2 的 wd-search 封面同处理）；不要用 visibility / opacity 做互斥 |
+| 6 | 多行 `flex-wrap` 容器的高度只按前两行结算 | wd-calendar-view 下个月的月份标题插进本月日期网格中间 | 多行网格改**显式行结构**（纵向容器 + 每周一个 `flex: 1` 的 row），高度由行数逐行累加；不依赖 wrap 的高度结算 |
+| 7 | flex 子项上的 `display: block` 被丢弃（引擎只认 flex / none / linear） | 工具栏「取消」按钮宽度塌成 padding 宽，文字溢出压住居中的标题 | 横向排列的子项显式 `display: flex` + `flex-direction: row`；居中同时给 `justify-content` + `align-items`（`text-align` 只作 Web 兜底） |
+| 8 | flex 子项的内联 `min-width` 不生效 | wd-switch 轨道宽度塌成 padding 之和，圆角把 30px 高的轨道压成正圆 → 整组渲染成「紫色月牙」 | 宽度确定时内联下发 `width`；只有「有内部文案需要撑开」的场景才用 `min-width`（此时靠内容撑开，失效也不影响可读性） |
+| 9 | 圆角容器上的 `overflow: hidden` 会把内容整段裁空 | wd-segmented 只剩灰底无「日/周/月」；wd-slider 白底圆点上的手柄图标消失（滑块看起来完全没了） | 单行/多行省略走文本节点的原生 `text-maxline`，不要靠 `overflow: hidden` + `text-overflow` 裁剪；图标容器不需要裁剪就不要写 overflow |
 
 另：Lynx 定位 FAQ——absolute/fixed 元素带 z-index 时，父级需同时
 `z-index: 0`，否则真机绘制与命中测试层序可能不一致（demo 的 fab 包裹层

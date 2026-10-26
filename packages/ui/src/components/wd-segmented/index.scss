@@ -142,8 +142,10 @@ $segmented-outline-item-bg-active-disabled: var(--wot-segmented-outline-item-bg-
   }
 
   @include e(item-label) {
-    overflow: hidden;
+    // Lynx 适配（真机 2026-10-26 巡检）：参考源用 overflow:hidden +
+    // white-space:nowrap + text-overflow:ellipsis 做单行省略，真机上该组合
+    // 会把文字整段裁空（分段器只剩灰底）。截断改由文本节点的原生
+    // text-maxline="1" 承担（与 wd-grid-item 同处理），此处只保留不换行。
     white-space: nowrap;
-    text-overflow: ellipsis;
   }
 }

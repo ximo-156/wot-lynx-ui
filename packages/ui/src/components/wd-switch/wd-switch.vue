@@ -74,7 +74,44 @@ const rootStyle = computed(() => {
   return { ...style, ...parseStyle(props.customStyle) }
 })
 
-const innerStyle = computed(() => ({ background: (isActive.value ? props.activeColor : props.inactiveColor) || '' }))
+/**
+ * 真机几何兜底（2026-10-26 R2 复测）：滑块与轨道等高（零空隙）——
+ * `__action` 的 `width/height/top` 经 var() 链下发时真机不生效（同结构
+ * 的 `__inner` height 却生效，链路取舍不可预测）。几何一律 JS 算纯 px
+ * 内联下发（§19 差异清单第 2 条的延伸），样式表声明仅作兜底。
+ *
+ * 轨道宽度（2026-10-26 R3 复测）：R2 下发的是 `min-width`，真机同样不
+ * 生效——`__inner` 宽度塌成 padding 之和，圆角 `$radius-full` 把 30px 高的
+ * 轨道压成正圆，右侧又被白色滑块挖掉一块，整组渲染成「紫色月牙」（图二
+ * 缺陷）。轨道无内部文案时宽度是确定值，改为内联 `width` 下发；有文案时
+ * 保留 `min-width` 语义，由文字内容撑开（此时 flex 子项宽度 auto，
+ * min-width 只作下限，失效也不影响可读性）。
+ */
+const SWITCH_SIZE = 26
+const SWITCH_PAD = 2
+const sizePx = computed(() => {
+  const raw = Number(props.size)
+  return isDef(props.size) && Number.isFinite(raw) && raw > 0 ? raw : SWITCH_SIZE
+})
+const hasInnerText = computed(() => Boolean(props.activeText || props.inactiveText))
+const innerStyle = computed(() => {
+  const style: Record<string, string> = {
+    background: (isActive.value ? props.activeColor : props.inactiveColor) || '',
+    height: `${sizePx.value + SWITCH_PAD * 2}px`
+  }
+  // 取两位小数：1.8 倍宽会产生 50.800000000000004 这类浮点尾数，
+  // 直接下发给原生样式通道既难看又可能与舍入后的布局对不齐。
+  const trackWidth = `${Math.round((sizePx.value * 1.8 + SWITCH_PAD * 2) * 100) / 100}px`
+  if (hasInnerText.value) style['min-width'] = trackWidth
+  else style.width = trackWidth
+  return style
+})
+const actionStyle = computed(() => ({
+  width: `${sizePx.value}px`,
+  height: `${sizePx.value}px`,
+  top: `${SWITCH_PAD}px`,
+  left: isActive.value ? `calc(100% - ${sizePx.value + SWITCH_PAD}px)` : `${SWITCH_PAD}px`
+}))
 
 const innerIcon = computed(() => {
   return isActive.value ? props.activeIcon : props.inactiveIcon
@@ -147,7 +184,7 @@ onBeforeMount(() => {
       />
       <text v-else class="wd-switch__inner-text">{{ isActive ? activeText : inactiveText }}</text>
     </view>
-    <view class="wd-switch__action">
+    <view class="wd-switch__action" :style="actionStyle">
       <WdLoading v-if="loading" v-bind="customLoadingProps" />
       <WdIcon
         v-else-if="actionIcon || actionCssIcon"

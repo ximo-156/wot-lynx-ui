@@ -108,35 +108,45 @@ describe('内联样式：字符串 :style 不得被静默丢弃（CONVENTIONS §
     cleanup()
   })
 
-  it('WdCalendarView 月网格首格按周偏移（对齐 wot-ui：margin-left 百分比）', () => {
-    // wot-ui 2.3.2 结构：月面板 > .wd-month > .wd-month__days > .wd-month__day；
-    // 每月只渲染当月日期（无前/后月补位格），首格经 firstDayStyle 的
-    // margin-left 百分比偏移到正确星期列。2026-10-01 是周四，
-    // firstDayOfWeek=0（周日）→ offset=4 → margin-left = 4/7*100%
+  it('WdCalendarView 月网格首格按周偏移（显式行结构：月初补空位格）', () => {
+    // 结构：月面板 > .wd-month > .wd-month__days > .wd-month__row > .wd-month__day。
+    // 真机 2026-10-26 巡检：`flex-wrap: wrap` 平铺 + 首格 margin-left 百分比
+    // 的写法在 Lynx 上多行容器高度只按前两行结算，下个月的标题被拉进本月
+    // 网格中间（图五缺陷），故恢复显式行结构，月初偏移改由行首空位格承担。
+    // 2026-10-01 是周四，firstDayOfWeek=0（周日）→ 首行前 4 个空位。
     const value = new Date(2026, 9, 15).getTime()
     const { container } = render(CalendarView, { modelValue: value, type: 'date' })
     const panel = Array.from(container.querySelectorAll('.wd-month')).find(
       (m) => m.querySelector('.wd-month__title')?.textContent === '2026年10月'
     )!
     expect(panel, '应渲染 2026年10月 面板').toBeTruthy()
-    const days = [...panel.querySelectorAll('.wd-month__day')]
-    expect(days.length, '10 月共 31 天（无补位格）').toBe(31)
-    expect((days[0].querySelector('.wd-month__day-text')?.textContent || '').trim()).toBe('1')
-    // 首格（10 月 1 日，周四）左偏 4 列（100/7*4 = 57.142857...%）
-    expect(styleOf(days[0])).toMatch(/margin-left:\s*57\.14/)
-    // 其余格无内联偏移
-    expect(styleOf(days[1])).not.toMatch(/margin-left/)
+    const rows = [...panel.querySelectorAll('.wd-month__row')]
+    // 10 月 31 天，前补 4 格 → 35 格 → 5 行
+    expect(rows.length, '10 月按周分 5 行').toBe(5)
+    const firstRowCells = [...rows[0].querySelectorAll('.wd-month__day')]
+    expect(firstRowCells.length, '每行固定 7 格').toBe(7)
+    expect(
+      firstRowCells.slice(0, 4).every((cell) => cell.classList.contains('wd-month__day--empty')),
+      '首行前 4 格为月初空位'
+    ).toBe(true)
+    expect((firstRowCells[4].querySelector('.wd-month__day-text')?.textContent || '').trim()).toBe('1')
     cleanup()
   })
 
-  it('WdCalendarView 月网格按周分行（对齐 wot-ui：flex-wrap 周行结构）', () => {
+  it('WdCalendarView 月网格按周分行（显式行结构，规避真机 flex-wrap 高度结算缺陷）', () => {
     const { container } = render(CalendarView, { modelValue: Date.now(), type: 'date' })
-    // wot-ui 2.3.2：日期格直接在 .wd-month__days 容器内按 flex-wrap 排布，
-    // 无显式 row 包装（旧本地「显式行」结构已按参考源移除）
+    // 参考源（wot-ui 2.3.2）用 flex-wrap 平铺，无显式 row 包装；Lynx 真机上
+    // 该写法使多行容器高度只按前两行结算 → 后续月份标题错位插入本月网格。
+    // 这里刻意偏离参考源 DOM 结构：每周一个 .wd-month__row，高度逐行累加。
     const grid = container.querySelector('.wd-month__days')!
     expect(grid).not.toBeNull()
-    const directDays = grid.querySelectorAll(':scope > .wd-month__day')
-    expect(directDays.length, '首个面板的日期格直接挂在 days 容器下').toBeGreaterThan(28)
+    const rows = [...grid.querySelectorAll(':scope > .wd-month__row')]
+    expect(rows.length, '首月至少 4 行').toBeGreaterThan(3)
+    expect(rows[0].querySelectorAll(':scope > .wd-month__day').length, '每行 7 格').toBe(7)
+    expect(
+      grid.querySelectorAll(':scope > .wd-month__day').length,
+      '日期格不得直接挂在 days 容器下（会退化为 flex-wrap 平铺）'
+    ).toBe(0)
     cleanup()
   })
 

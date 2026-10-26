@@ -138,11 +138,15 @@ describe('原生优先重写 · 布局居中契约（calendar / calendar-view / 
     expectRootFlex(css('wd-calendar-view/year/index.css'), '.wd-year', 'column')
     expectRootFlex(css('wd-calendar-view/monthPanel/index.css'), '.wd-month-panel', 'column')
     expectRootFlex(css('wd-calendar-view/yearPanel/index.css'), '.wd-year-panel', 'column')
-    // 日期格：wrap 网格 + 内容起点对齐 + 文本容器成对居中
+    // 日期格：显式行结构（每周一个 row）+ 内容起点对齐 + 文本容器成对居中
+    // 真机 2026-10-26 巡检：`flex-wrap: wrap` 平铺在 Lynx 上多行容器高度只
+    // 按前两行结算，下个月标题会插进本月网格中间（图五缺陷），故改为
+    // column 容器 + 每周一个 row，容器高度由行数逐行累加。
     const month = css('wd-calendar-view/month/index.css')
-    expectRootFlex(month, '.wd-month__days', 'row')
-    expect(ruleOf(month, '.wd-month__days')).toMatch(/(^|;)flex-wrap:wrap(;|$)/)
-    expect(ruleOf(month, '.wd-month__days')).toMatch(/(^|;)align-content:flex-start(;|$)/)
+    expectRootFlex(month, '.wd-month__days', 'column')
+    expectRootFlex(month, '.wd-month__row', 'row')
+    expect(ruleOf(month, '.wd-month__days')).not.toMatch(/(^|;)flex-wrap:wrap(;|$)/)
+    expect(ruleOf(month, '.wd-month__day')).toMatch(/(^|;)flex:1(;|$)/)
     expectCenterPair(month, '.wd-month__day-container')
     expect(ruleOf(month, '.wd-month__day-text')).toMatch(/(^|;)text-align:center(;|$)/)
     // 月份格：wrap 网格 + 内容盒成对居中
@@ -173,12 +177,14 @@ describe('原生优先重写 · 布局居中契约（calendar / calendar-view / 
     cleanup()
 
     // 日历视图：默认月面板，日期格为 __day > __day-container > (__day-top /
-    // __day-text / __day-bottom) 结构（对齐 wot-ui）
+    // __day-text / __day-bottom) 结构（对齐 wot-ui）。显式行结构下月初有
+    // 空位格（无内容容器），取第一个有日期的格子断言内部结构。
     const view = render(CalendarView as any, { modelValue: Date.now(), type: 'date' })
     await pause(100)
     const days = view.container.querySelectorAll('.wd-month__day')
     expect(days.length).toBeGreaterThanOrEqual(28)
-    const firstDay = days[0]
+    const firstDay = view.container.querySelector('.wd-month__day-container')!.parentElement!
+    expect(firstDay.classList.contains('wd-month__day')).toBe(true)
     expect(firstDay.querySelector('.wd-month__day-container')).not.toBeNull()
     expect(firstDay.querySelector('.wd-month__day-text')).not.toBeNull()
     expect(firstDay.querySelector('.wd-month__day-top')).not.toBeNull()

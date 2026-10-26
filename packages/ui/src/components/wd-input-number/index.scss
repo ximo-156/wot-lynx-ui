@@ -98,7 +98,11 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
     transform: translate(-50%, -50%) scaleY(0.5);
     width: $input-number-icon-size;
     height: $input-number-icon-weight;
-    background: currentColor;
+    // 真机 2026-10-26 巡检：原为 `background: currentColor`，Lynx 的 view
+    // 不解析 currentColor（§19 差异清单第 1 条）→ 减号/加号横竖条整体
+    // 隐形，按钮只剩灰底方块（图二/图三缺陷）。改为具体令牌色；primary /
+    // disabled 等变色场景在下方按状态显式覆盖。
+    background: $input-number-action-color;
 
     &--vertical {
       transform: translate(-50%, -50%) scaleX(0.5);
@@ -115,6 +119,17 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
     .wd-input-number__action-divider {
       right: 0;
     }
+
+    // 图标跟随按钮态显式取色（currentColor 真机不生效，见 action-icon 注释）
+    .wd-input-number__action-icon {
+      background: $input-number-action-color;
+    }
+
+    @include when(disabled) {
+      .wd-input-number__action-icon {
+        background: $input-number-action-disabled-color;
+      }
+    }
   }
 
   @include e(add) {
@@ -124,6 +139,16 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
 
     .wd-input-number__action-divider {
       left: 0;
+    }
+
+    .wd-input-number__action-icon {
+      background: $input-number-action-color;
+    }
+
+    @include when(disabled) {
+      .wd-input-number__action-icon {
+        background: $input-number-action-disabled-color;
+      }
     }
   }
 
@@ -196,12 +221,22 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
     @include me(sub) {
       background: transparent;
       color: $input-number-action-primary-sub-color;
-      border: 1px solid currentColor;
+      // Lynx 适配：参考源 border: 1px solid currentColor，真机不解析
+      // currentColor（§19 差异清单第 1 条）→ 描边隐形，改具体令牌色。
+      border: 1px solid $input-number-action-primary-sub-color;
+
+      .wd-input-number__action-icon {
+        background: $input-number-action-primary-sub-color;
+      }
     }
 
     @include me(add) {
       background: $input-number-action-primary-bg;
       color: $input-number-action-primary-color;
+
+      .wd-input-number__action-icon {
+        background: $input-number-action-primary-color;
+      }
     }
 
     // primary 主题禁用：使用透明度

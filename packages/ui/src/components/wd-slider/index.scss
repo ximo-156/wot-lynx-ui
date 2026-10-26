@@ -187,7 +187,9 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    // 真机 2026-10-26 巡检：圆角容器上的 overflow:hidden 会把内部拖动手柄
+    // 图标整段裁空（白底圆点上无任何图形 → 滑块看起来完全消失，图二
+    // 缺陷）。图标尺寸远小于圆点，本不需要裁剪，直接去掉。
   }
 
   @include e(scale-item) {

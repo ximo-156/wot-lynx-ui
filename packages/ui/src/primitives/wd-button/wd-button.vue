@@ -65,14 +65,46 @@ const OPEN_TYPE_EVENTS: Partial<Record<ButtonOpenType, OpenTypeEvent>> = {
   openSetting: 'opensetting', chooseAvatar: 'chooseavatar', agreePrivacyAuthorization: 'agreeprivacyauthorization'
 }
 
+/**
+ * 加载图标颜色（真机 2026-10-26 巡检）：原实现只给 wd-loading 传
+ * `inheritColor`，而 Lynx 无法在 JS 侧真继承父级 color —— wd-loading 的
+ * `resolvedColor` 回落到主题主色，于是紫色按钮上的 loading 也是紫色，
+ * 整组不可见（图四「加载中」无转圈缺陷）。
+ *
+ * 按钮的文字色由类型 × 变体决定（scss 的 $button-types / $button-variants
+ * 表），JS 侧按同一张表取令牌值：主题未覆盖时用与设计令牌一致的兜底
+ * （实心类型为白字，info 为深字，plain/soft/text 变体为主色字）。
+ */
+const SOLID_TEXT_FALLBACK: Record<string, string> = {
+  primary: '#ffffff', success: '#ffffff', danger: '#ffffff', warning: '#ffffff', info: '#1a1a1a'
+}
+const TEXT_COLOR_TOKEN: Record<string, string> = {
+  primary: 'buttonPrimaryColor', success: 'buttonSuccessColor', danger: 'buttonDangerColor',
+  warning: 'buttonWarningColor', info: 'buttonInfoColor'
+}
+const loadingTextColor = computed(() => {
+  const themeVars = (globalConfig.value.themeVars || {}) as Record<string, string>
+  const type = effectiveType.value
+  const token = TEXT_COLOR_TOKEN[type]
+  const themed = token ? themeVars[token] : undefined
+  if (effectiveVariant.value === 'base') {
+    return themed || SOLID_TEXT_FALLBACK[type] || themeVars.buttonMainColor || '#ffffff'
+  }
+  // 非实心变体的文字是主色系（plain / soft / subtle / dashed / text）
+  return themeVars.buttonPrimaryColor || '#755ffe'
+})
+
 /** 加载配置：默认继承按钮文字色 */
 const customLoadingProps = computed(() => {
   const loading: Partial<LoadingProps> = isDef(props.loadingProps) ? omitBy(props.loadingProps!, isUndefined) : {}
   loading.customSpinnerClass = `${isDef(loading.customSpinnerClass) ? loading.customSpinnerClass : ''} wd-button__loading`
   // 官方 loadingColor 声明但未消费：兼容修正为低优先级别名，不覆盖 loadingProps.color。
   if (!isDef(loading.color) && isDef(props.loadingColor)) loading.color = props.loadingColor
-  // 显式颜色应有意义；调用方仍可用 inheritColor:true 强制继承（默认保持官方继承色）。
-  loading.inheritColor = isDef(loading.inheritColor) ? loading.inheritColor : !isDef(loading.color)
+  // 无显式色时下发按钮自身的文字色（JS 解析成具体值，currentColor 在真机
+  // 不生效，见 loadingTextColor 注释）。
+  if (!isDef(loading.color)) loading.color = loadingTextColor.value
+  // 有了具体色后不再走 inheritColor 的近似回落。
+  loading.inheritColor = isDef(loading.inheritColor) ? loading.inheritColor : false
   return loading
 })
 

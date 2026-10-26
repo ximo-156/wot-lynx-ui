@@ -105,18 +105,22 @@ $search-cancel-color: var(--wot-search-cancel-color, $primary-6) !default;
     @include lineEllipsis;
   }
   @include e(cover) {
-    width: 100%;
-    height: $search-input-height;
-    background-color: $search-cover-bg;
-    line-height: $search-input-height;
-    font-size: $search-input-font-size;
-    border-radius: $search-input-radius;
+    // Lynx 适配（真机 2026-10-26 巡检）：原实现 `width: 100%` 在真机的
+    // flex 子项上不解析，封面宽度塌成内容宽（图标 + 占位文字挤在输入块
+    // 左端）；且 `display: flex` 写在 flex-direction / justify-content
+    // 之后，引擎按声明顺序处理时整组居中声明被丢弃。改为 flex: 1 撑满 +
+    // display 前置，居中与宽度都不再依赖百分比与声明顺序。
+    display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    // Lynx 适配：view 默认 linear 布局，封面图标+文字需显式 flex 横向排列
-    //（参考源依赖小程序 view 默认 flex 与内联 display:flex，此处兜底）
-    display: flex;
+    flex: 1;
+    height: $search-input-height;
+    background-color: $search-cover-bg;
+    // 垂直居中已由 align-items 承担；view 与内部 text 双层 line-height
+    // 会让真机按双行盒各绘一遍（§19 差异清单第 3 条），此处不写行高。
+    font-size: $search-input-font-size;
+    border-radius: $search-input-radius;
   }
   // Lynx 适配：参考源为 @include edeep(...)（:deep 后代选择器），Lynx 无
   // shadow DOM，:deep() 直接写成后代选择器

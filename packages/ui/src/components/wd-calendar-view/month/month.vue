@@ -64,10 +64,27 @@ const monthTitle = computed(() => {
   }
 })
 
-// Lynx 适配：wot-ui 用 objToStyle 拼字符串，字符串 style 会被 vue-lynx 的
-// patchProp 静默丢弃（CONVENTIONS §19），改为对象语法。
-const firstDayStyle = computed<Record<string, string>>(() => {
-  return { 'margin-left': `${(100 / 7) * offset.value}%` }
+// Lynx 适配（真机 2026-10-26 巡检）：参考源用 `flex-wrap: wrap` 平铺 30 个
+// 日期格，靠容器自动换行 + 自动高度。真机上多行 flex-wrap 容器的高度只按
+// 前两行结算，超出的行以溢出方式绘制——后续兄弟节点（下个月的标题）被
+// 拉到「第 2 行之后」的位置，出现「2026年5月」插进 4 月日期网格中间的
+// 错位（图五缺陷）。改为显式行结构：每周一个 flex row，容器高度由行数
+// 逐行累加，不依赖 wrap 的高度结算；月初偏移由行首的空位格承担（替代
+// 原来挂在首格上的 margin-left 百分比）。
+const dayRows = computed(() => {
+  const rows: Array<Array<{ item: CalendarDayItem | null; index: number }>> = []
+  const list = days.value
+  const total = offset.value + list.length
+  const rowCount = Math.ceil(total / 7)
+  for (let row = 0; row < rowCount; row++) {
+    const cells: Array<{ item: CalendarDayItem | null; index: number }> = []
+    for (let col = 0; col < 7; col++) {
+      const index = row * 7 + col - offset.value
+      cells.push(index >= 0 && index < list.length ? { item: list[index], index } : { item: null, index: -1 })
+    }
+    rows.push(cells)
+  }
+  return rows
 })
 
 const isLastRow = (date: number) => {
@@ -370,31 +387,42 @@ function getFormatterDate(date: number, day: string | number, type?: CalendarDay
       <text v-if="showTitle" class="wd-month__title">{{ monthTitle(date) }}</text>
       <view class="wd-month__days">
         <view
-          v-for="(item, index) in days"
-          :key="index"
-          :class="`wd-month__day ${item.disabled ? 'is-disabled' : ''} ${item.isLastRow ? 'is-last-row' : ''} ${
-            item.type ? dayTypeClass(item.type) : ''
-          } ${item.customClass || ''}`"
-          :style="index === 0 ? firstDayStyle : {}"
-          @tap="handleDateClick(index)"
+          v-for="(row, rowIndex) in dayRows"
+          :key="rowIndex"
+          :class="['wd-month__row', rowIndex === dayRows.length - 1 ? 'is-last-row' : '']"
         >
-          <view class="wd-month__day-container">
-            <!-- Lynx 适配：__day-top / __day-bottom 为绝对定位 + flex 居中的
-                 文本容器，沿用「view 承载布局 + 内部 text 放字形」写法
-                 （Lynx 的 text 不保证按 flex 容器布局，同 wd-slide-verify
-                 的 __track-text）；__day-text 仅设字重，直接用 text 元素 -->
-            <view class="wd-month__day-top">
-              <text>{{ item.topInfo }}</text>
-            </view>
-            <text class="wd-month__day-text">
-              {{ item.text }}
-            </text>
-            <view class="wd-month__day-bottom">
-              <text>{{ item.bottomInfo }}</text>
-            </view>
+          <view
+            v-for="(cell, colIndex) in row"
+            :key="colIndex"
+            :class="
+              cell.item
+                ? `wd-month__day ${cell.item.disabled ? 'is-disabled' : ''} ${cell.item.isLastRow ? 'is-last-row' : ''} ${
+                    cell.item.type ? dayTypeClass(cell.item.type) : ''
+                  } ${cell.item.customClass || ''}`
+                : 'wd-month__day wd-month__day--empty'
+            "
+            @tap="cell.item && handleDateClick(cell.index)"
+          >
+            <template v-if="cell.item">
+              <view class="wd-month__day-container">
+                <!-- Lynx 适配：__day-top / __day-bottom 为绝对定位 + flex 居中的
+                     文本容器，沿用「view 承载布局 + 内部 text 放字形」写法
+                     （Lynx 的 text 不保证按 flex 容器布局，同 wd-slide-verify
+                     的 __track-text）；__day-text 仅设字重，直接用 text 元素 -->
+                <view class="wd-month__day-top">
+                  <text>{{ cell.item.topInfo }}</text>
+                </view>
+                <text class="wd-month__day-text">
+                  {{ cell.item.text }}
+                </text>
+                <view class="wd-month__day-bottom">
+                  <text>{{ cell.item.bottomInfo }}</text>
+                </view>
+              </view>
+              <!-- Lynx 适配：wot-ui 用 ::after 绘制范围态背景，此处为真实元素 -->
+              <view v-if="cell.item.type === 'start' || cell.item.type === 'end'" class="wd-month__day-range" />
+            </template>
           </view>
-          <!-- Lynx 适配：wot-ui 用 ::after 绘制范围态背景，此处为真实元素 -->
-          <view v-if="item.type === 'start' || item.type === 'end'" class="wd-month__day-range" />
         </view>
       </view>
     </view>

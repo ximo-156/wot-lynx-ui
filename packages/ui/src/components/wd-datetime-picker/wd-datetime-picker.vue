@@ -421,7 +421,13 @@ defineExpose<DatetimePickerExpose>({
             <text>{{ showTabLabel[1] || translate('end') }}</text>
           </view>
         </view>
-        <view :class="showStart ? 'wd-datetime-picker__show' : 'wd-datetime-picker__hidden'">
+        <!-- 结构级显隐（真机 2026-10-26 巡检）：原实现两个 picker-view 常驻，
+             用 `__hidden { visibility: hidden }` 互斥。Lynx 真机不解析
+             visibility，两个实例同时绘制在同一位置 → 滚轮列出现两份内容
+             错半行叠印（图一「2027 压着 2026」缺陷）。改为 v-if 后非区间
+             模式只挂载一个实例，区间模式切换 tab 时按需重建（选中值由
+             v-model 保证，重建即从 modelValue 恢复列位移）。 -->
+        <view v-if="!region || showStart">
           <WdDatetimePickerView
             :custom-class="customViewClass"
             :type="type"
@@ -448,7 +454,7 @@ defineExpose<DatetimePickerExpose>({
             @pickend="onPickEnd"
           />
         </view>
-        <view :class="showStart ? 'wd-datetime-picker__hidden' : 'wd-datetime-picker__show'">
+        <view v-if="region && !showStart">
           <WdDatetimePickerView
             :custom-class="customViewClass"
             :type="type"

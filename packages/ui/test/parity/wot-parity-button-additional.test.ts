@@ -233,8 +233,14 @@ describe('wot 2.3.2 button — additional contracts', () => {
 
   it('loading without an explicit color inherits the button palette', () => {
     const mounted = mount({ loading: true, type: 'danger' })
-    expect(mounted.container.querySelector('.wd-loading')!.getAttribute('style')).toContain('color: inherit')
-    expect(mounted.container.querySelector('.wd-loading__circular-segment')).not.toBeNull()
+    // Lynx 偏离（真机 2026-10-26 巡检）：view 的 background-color 与 SVG 的
+    // fill 都不解析 currentColor（CONVENTIONS §19 差异清单第 1 条），
+    // `color: inherit` 会让圆环回落成主题主色——紫底紫图整组不可见（图四
+    // 「加载中」无转圈缺陷）。继承语义改由 JS 解析成按钮文字色后内联下发：
+    // danger 实心按钮的文字色是 $button-main-color（白）。
+    const style = mounted.container.querySelector('.wd-loading')!.getAttribute('style') || ''
+    expect(style).toContain('color: rgb(255, 255, 255)')
+    expect(mounted.container.querySelector('.wd-loading__spinner-circular')).not.toBeNull()
   })
 
   it.each([

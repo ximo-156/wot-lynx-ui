@@ -6,11 +6,11 @@
  *   display:flex + flex-direction:row + align-items:center，「输入块」与
  *   「取消按钮」横向排列且交叉轴居中；
  * - 未聚焦时显示「封面」占位（点击封面后才渲染 input 并聚焦，避免键盘
- *   抢焦）；聚焦/失焦/清空驱动封面显隐（showPlaceHolder + showInput）；
+ *   抢焦）；封面与 input 的显隐由单一状态 showInput 互斥驱动，经 v-if
+ *   结构级挂载（真机 2026-10-26 巡检：内联 display 切换在真机静默失效，
+ *   且 showPlaceHolder / showInput 双状态在中间态可同时为真 → 封面残留
+ *   与原生 input 并存，双占位文字 + 图标叠印）；
  * - @click → @tap（CONVENTIONS §6：Lynx view/图标只派发 tap）；
- * - coverStyle 参考源经 objToStyle 拼字符串，改为对象语法直接下发
- *   （CONVENTIONS §19：字符串 :style 会被静默丢弃）；display 键每帧都
- *   输出（'flex' / 'none'），无条件省略（CONVENTIONS §20 Style Funnel）；
  * - 原生 input 用 :value 受控绑定 + @input 回写（vue-lynx 运行时对原生
  *   元素不挂 vModel 指令），语义与参考源 v-model 一致；
  * - customStyle 经 parseStyle() 归一为对象后下发；
@@ -38,7 +38,6 @@ const { translate } = useTranslate('search')
 const isFocused = ref<boolean>(false) // 是否聚焦中
 const showInput = ref<boolean>(false) // 是否显示输入框 用于实现聚焦的hack
 const inputValue = ref<string>('') // 输入框的值
-const showPlaceHolder = ref<boolean>(true)
 const clearing = ref<boolean>(false)
 let inputRequest = 0
 let focusRequest = 0
@@ -64,7 +63,6 @@ watch(
       // 双份占位文字 + 图标叠印 + 输入块被撑高（真机 2026-10-25 巡检缺陷）。
       // 组件自身聚焦中或清空重聚焦流程不动（handleBlur / handleClear 各自管理）。
       showInput.value = false
-      showPlaceHolder.value = true
     }
   },
   { immediate: true }
@@ -92,16 +90,6 @@ const rootClass = computed(() => {
   return `wd-search ${isLight ? 'is-light' : ''} ${isPlain ? 'is-plain' : ''} ${props.hideCancel ? 'is-without-cancel' : ''} ${props.customClass}`
 })
 
-// Lynx 适配：参考源经 objToStyle 拼字符串后绑 :style（字符串样式在
-// vue-lynx 会被静默丢弃），改为对象语法；display 恒输出，避免残留
-const coverStyle = computed<Record<string, string>>(() => {
-  const coverStyle: Record<string, string> = {
-    display: inputValue.value === '' && showPlaceHolder.value ? 'flex' : 'none'
-  }
-
-  return coverStyle
-})
-
 async function hackFocus(focus: boolean) {
   const request = ++focusRequest
   showInput.value = focus
@@ -115,7 +103,6 @@ async function closeCover() {
   const request = ++focusRequest
   await pause(100)
   if (!isAlive() || request !== focusRequest || props.disabled) return
-  showPlaceHolder.value = false
   hackFocus(true)
 }
 
@@ -144,10 +131,8 @@ async function handleClear() {
   if (!isAlive()) return
   if (request !== inputRequest || props.disabled) { clearing.value = false; return }
   if (props.focusWhenClear) {
-    showPlaceHolder.value = false
     hackFocus(true)
   } else {
-    showPlaceHolder.value = true
     hackFocus(false)
   }
   emit('change', { value: '' })
@@ -166,7 +151,6 @@ function handleConfirm({ detail: { value } }: any) {
 function handleFocus() {
   if (props.disabled) return
   blurRequest++
-  showPlaceHolder.value = false
   emit('focus', {
     value: inputValue.value
   })
@@ -182,9 +166,8 @@ async function handleBlur() {
     clearing.value = false
     return
   }
-  // 组件触发blur事件
-  showPlaceHolder.value = !inputValue.value
-  showInput.value = !showPlaceHolder.value
+  // 组件触发blur事件：有值保留输入框，无值退回封面占位（showInput 是唯一真源）
+  showInput.value = !!inputValue.value
   isFocused.value = false
   emit('blur', {
     value: inputValue.value
@@ -210,13 +193,22 @@ function handleClick() {
     <view class="wd-search__block" @tap="handleClick">
       <slot name="prefix"></slot>
       <view class="wd-search__field">
-        <view v-if="!placeholderLeft" :style="coverStyle" class="wd-search__cover" @tap="closeCover">
+        <!-- 封面占位（真机 2026-10-26 R3 复测）：原条件依赖 showPlaceHolder，
+             与 input 的 v-if 条件（showInput || inputValue）在状态切换的中间
+             态下会同时为真 —— 真机上封面与原生 input 并存，出现双份占位文字
+             + 图标叠印（图二缺陷）。改为与 input 严格互补的单一判据：
+             showInput 为唯一显隐真源，两者永不同时挂载。 -->
+        <view
+          v-if="!placeholderLeft && !showInput && !inputValue"
+          class="wd-search__cover"
+          @tap="closeCover"
+        >
           <WdIcon name="search-line" custom-class="wd-search__search-icon"></WdIcon>
           <text :class="`wd-search__placeholder-txt ${placeholderClass}`">{{ placeholder || translate('search') }}</text>
         </view>
-        <WdIcon v-if="showInput || inputValue || placeholderLeft" name="search-line" custom-class="wd-search__search-left-icon"></WdIcon>
+        <WdIcon v-if="placeholderLeft || showInput || inputValue" name="search-line" custom-class="wd-search__search-left-icon"></WdIcon>
         <input
-          v-if="showInput || inputValue || placeholderLeft"
+          v-if="placeholderLeft || showInput || inputValue"
           :placeholder="placeholder || translate('search')"
           :placeholder-class="`wd-search__placeholder-txt ${placeholderClass}`"
           :placeholder-style="placeholderStyle"

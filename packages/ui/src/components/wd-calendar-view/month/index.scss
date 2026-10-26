@@ -18,25 +18,43 @@
   }
 
   @include e(days) {
+    // 真机 2026-10-26 巡检：原为 `flex-wrap: wrap` 平铺 30 个日期格，真机
+    // 对多行 wrap 容器只按前两行结算高度 → 下个月的标题被拉进本月网格中间
+    // （图五缺陷）。改为显式行结构：纵向容器 + 每周一个 flex row，容器高度
+    // 由行数逐行累加，不再依赖 wrap 的高度结算。
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    // Lynx 适配：多行 flex 容器默认 align-content: stretch 会把 flex line
-    // 拉伸（行高从内容高涨到容器高），显式改为 flex-start 保持内容高度。
-    align-content: flex-start;
+    flex-direction: column;
     font-size: $calendar-view-day-font-size;
     color: $calendar-view-day-color;
     padding: $calendar-view-item-padding;
   }
 
+  @include e(row) {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+
+    // 末行不留底部间距。日期格自带 is-last-row 判断，但月初/月末的空位格
+    // 没有 item 数据、拿不到该修饰类，靠行级类统一收敛。
+    &.is-last-row .wd-month__day {
+      margin-bottom: 0;
+    }
+  }
+
   @include e(day) {
     position: relative;
-    width: calc(100% / 7);
+    // 行内 7 等分（替代原 width: calc(100% / 7) + wrap 换行）
+    flex: 1;
     height: $calendar-view-day-height;
     line-height: $calendar-view-day-height;
     font-weight: $calendar-view-day-font-weight;
     margin-bottom: $calendar-view-item-margin-bottom;
     text-align: center;
+
+    // 月初空位（承担原首格 margin-left 的偏移作用），不响应点击
+    &--empty {
+      pointer-events: none;
+    }
 
     // Lynx 适配（真机 2026-10-25 巡检）：状态色同时下发给 __day-container
     // 与 __day-text——带 class 的 text 不保证继承祖先的 color，只写容器时

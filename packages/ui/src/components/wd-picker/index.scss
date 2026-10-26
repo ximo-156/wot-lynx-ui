@@ -62,7 +62,12 @@ $picker-radius: var(--wot-picker-radius, $radius-large) !default;
   }
 
   @include e(action) {
-    display: block;
+    // Lynx 适配（真机 2026-10-26 巡检）：参考源 display: block 不被 Lynx 3.x
+    // 引擎识别（只认 flex / none / linear），flex 子项宽度塌成 padding 宽，
+    // 文字溢出压到相邻标题上（与 wd-datetime-picker__action 同款缺陷）。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     border: none;
     font-size: $picker-action-font-size;
     background: transparent;
@@ -78,8 +83,13 @@ $picker-radius: var(--wot-picker-radius, $radius-large) !default;
   }
 
   @include e(title) {
-    display: block;
     flex: 1;
+    // Lynx 适配：text-align 不保证作用于 text 节点（NATIVE-REWRITE §3.2），
+    // 补 flex 成对居中，text-align 保留作 Web 侧兜底。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     color: $picker-title-color;
     font-size: $picker-title-font-size;

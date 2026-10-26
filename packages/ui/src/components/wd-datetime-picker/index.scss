@@ -89,7 +89,13 @@ $datetime-picker-range-separator-height: var(--wot-datetime-picker-range-separat
   }
 
   @include e(action) {
-    display: block;
+    // Lynx 适配（真机 2026-10-26 巡检）：参考源为 display: block，Lynx 3.x
+    // 引擎只识别 flex / none / linear，block 被静默丢弃 → 作为 flex 子项的
+    // 宽度塌成 0，按钮文字溢出压到相邻标题上（图一「取消」与「日期时间」
+    // 叠印）。改 flex 后宽度由内容撑开，且与工具栏 align-items: center 对齐。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     border: none;
     font-size: $datetime-picker-action-font-size;
     line-height: $datetime-picker-action-line-height;
@@ -98,8 +104,15 @@ $datetime-picker-range-separator-height: var(--wot-datetime-picker-range-separat
   }
 
   @include e(title-text) {
-    display: block;
     flex: 1;
+    // 真机 2026-10-26 巡检：标题需居中（参考源与 wd-picker__title 同源）。
+    // Lynx 的 text-align 不保证作用于 text 节点（NATIVE-REWRITE §3.2），
+    // 用 justify-content 成对居中，text-align 保留作 Web 侧兜底。
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     color: $datetime-picker-title-color;
     font-size: $datetime-picker-title-font-size;
     line-height: $datetime-picker-title-height;
@@ -142,16 +155,7 @@ $datetime-picker-range-separator-height: var(--wot-datetime-picker-range-separat
     background: $datetime-picker-range-separator-color;
   }
 
-  @include e(hidden) {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    visibility: hidden;
-    pointer-events: none;
-  }
-
-  @include e(show) {
-    visibility: visible;
-  }
+  // 区间模式的 start / end 面板显隐已改为模板 v-if 结构级切换（真机
+  // 2026-10-26 巡检：visibility: hidden 在 Lynx 不生效，两个 picker-view
+  // 叠印）。原 __show / __hidden 两个修饰类随之删除。
 }
