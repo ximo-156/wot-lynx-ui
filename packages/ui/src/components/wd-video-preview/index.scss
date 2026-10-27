@@ -15,6 +15,10 @@ $video-preview-video-height: var(--wot-video-preview-video-height, $n-248) !defa
 $video-preview-z-index: var(--wot-video-preview-z-index, 1000) !default;
 // 关闭按钮层级
 $video-preview-close-z-index: var(--wot-video-preview-close-z-index, 10) !default;
+// 宿主无视频能力时的降级占位背景色
+$video-preview-fallback-bg: var(--wot-video-preview-fallback-bg, $opac-9_75) !default;
+// 降级占位播放图标尺寸
+$video-preview-fallback-icon-size: var(--wot-video-preview-fallback-icon-size, $n-48) !default;
 
 @include b(video-preview) {
   position: fixed;
@@ -85,7 +89,7 @@ $video-preview-close-z-index: var(--wot-video-preview-close-z-index, 10) !defaul
     justify-content: center;
     // Lynx 适配：text 不保证从祖先继承颜色，降级文案与图标显式给色
     // （CONVENTIONS §5，真机 2026-10-25 巡检）
-    background: var(--wot-video-preview-fallback-bg, $opac-9_75);
+    background: $video-preview-fallback-bg;
   }
 
   @include e(fallback-poster) {
@@ -108,8 +112,8 @@ $video-preview-close-z-index: var(--wot-video-preview-close-z-index, 10) !defaul
   }
 
   @include edeep(fallback-icon) {
-    font-size: var(--wot-video-preview-fallback-icon-size, $n-48);
-    line-height: var(--wot-video-preview-fallback-icon-size, $n-48);
+    font-size: $video-preview-fallback-icon-size;
+    line-height: $video-preview-fallback-icon-size;
     color: $video-preview-close-color;
   }
 

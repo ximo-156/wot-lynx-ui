@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter wot-lynx-demo run dev",
+    "dev:demo": "pnpm --filter wot-lynx-demo run dev",
     "dev:device-test": "pnpm --filter wot-lynx-demo run dev:device-test",
     "build:demo": "pnpm --filter wot-lynx-demo run build",
     "build:device-test": "pnpm --filter wot-lynx-demo run build:device-test",

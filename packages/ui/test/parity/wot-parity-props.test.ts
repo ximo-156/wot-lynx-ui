@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import {
-import { compDir } from './helpers/component-roots'
   CLOCK, FIXTURE, LOCAL, REFERENCE,
   EXCEPTIONS, auditProps, buildOfficialFixture, canonicalFunction,
   compareProps, componentContract, createScopedLoader, formatDifference, snapshotProps

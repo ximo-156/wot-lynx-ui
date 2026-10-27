@@ -319,8 +319,10 @@ describe('controlled controls, official continuous gestures and instance isolati
     })
     await flush()
     const dot = node(mounted.container, '.wd-slider__dot'), bar = node(mounted.container, '.wd-slider__bar')
+    const line = node(mounted.container, '.wd-slider__line')
     fireEvent.touchstart(dot, { touches: [{ clientX: 45 }] }) // grab slightly off-center: value is still 20
-    fireEvent.touchstart(bar, { touches: [{ clientX: 45 }] })
+    // 几何度量的 MT worklet 挂在 __line（不带 @tap），真机上从滑块冒泡上来
+    fireEvent.touchstart(line, { touches: [{ clientX: 45 }] })
     await flush()
     for (const x of [85, 105]) {
       fireEvent.touchmove(dot, { touches: [{ clientX: x }] })
@@ -344,8 +346,9 @@ describe('controlled controls, official continuous gestures and instance isolati
     await flush()
     update.mockClear()
     const dot = node(mounted.container, '.wd-slider__dot'), bar = node(mounted.container, '.wd-slider__bar')
+    const line = node(mounted.container, '.wd-slider__line')
     fireEvent.touchstart(dot, { touches: [{ clientY: 20 }] })
-    fireEvent.touchstart(bar, { touches: [{ clientY: 20 }] })
+    fireEvent.touchstart(line, { touches: [{ clientY: 20 }] })
     await flush()
     fireEvent.touchmove(dot, { touches: [{ clientY: 60 }] })
     expect(node(mounted.container, '.wd-slider__line').getAttribute('style')).toContain('height: 60%')

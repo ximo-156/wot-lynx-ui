@@ -66,6 +66,11 @@ $keyboard-key-car-radius: var(--wot-keyboard-key-car-radius, $radius-main) !defa
   font-weight: $keyboard-key-font-weight;
   background: $keyboard-key-bg;
   border-radius: $keyboard-key-radius;
+  // 颜色过渡（用户反馈「浅色/暗色切换太生硬」）：按键在常态（filled-oppo）
+  // 与按压态（filled-strong）、亮色与暗色令牌之间都是整块背景色翻转，
+  // 没有过渡时按下去是硬切。走 $motion-fast——令牌注释即「按压反馈、
+  // 颜色切换」，与 switch / checkbox 的颜色过渡同一档。
+  transition: background-color $motion-fast $easing-standard, color $motion-fast $easing-standard;
 
   // Lynx 适配：wot-ui 的按压态由 touch 事件驱动的 wd-key--active 类切换
   // （滑动可取消，无法用 :active 表达），此处保留 m(active) 生成该类名。

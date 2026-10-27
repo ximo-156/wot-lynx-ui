@@ -298,6 +298,7 @@
       {"name":"adjustPosition","type":"boolean","default":"true","description":"键盘弹起时是否自动上推页面"},
       {"name":"disableDefaultPadding","type":"boolean","default":"false","description":"是否去掉iOS下的默认内边距"},
       {"name":"holdKeyboard","type":"boolean","default":"false","description":"focus状态下点击页面时是否不收起键盘"},
+      {"name":"showPassword","type":"boolean","default":"false","description":"显示为密码框（仅 API 对齐，当前无行为）"},
       {"name":"clearable","type":"boolean","default":"false","description":"是否显示清空按钮"},
       {"name":"readonly","type":"boolean","default":"false","description":"输入框只读状态"},
       {"name":"prefixIcon","type":"string","description":"前置图标，icon组件中的图标类名"},

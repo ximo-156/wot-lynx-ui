@@ -1,18 +1,22 @@
 /**
  * WdKeyboard 布局与交互回归测试。
  *
- * 实现现状（对齐 wot-ui 的 verbatim 移植）：按键不再由 JS 切行，而是
- * `wd-keyboard__keys` / `wd-keyboard__car-keys` 容器 `flex-wrap: wrap` +
- * wrapper 的 flex-basis 网格——
- * - default / custom：wrapper `flex-basis: 33%`（wider 66%）三列网格；
- * - car：`__car-keys` 内 wrapper `flex-basis: 10%`（wider 20%）十列网格，
- *   中文 36 省份 = 10+10+10+6，英文 34 键 = 10+10+10+4，末行由
- *   ABC / 省份（wider）+ 删除（wider）补足。
+ * 实现现状（真机 2026-10-27 巡检后）：按键按「行」分组渲染，不再靠
+ * `flex-wrap: wrap` 平铺——
+ * - default / custom：每行 3 槽，wrapper `flex-basis: 33%`（wider 66%），
+ *   12 键 = 4 行 × 3；
+ * - car：每行 10 槽，wrapper `flex-basis: 10%`（wider 20%），中文 36 省份
+ *   = 10+10+10+6，末行由 ABC / 省份（wider）+ 删除（wider）补足到 8 键。
  *
- * 历史包袱（本测试的由来）：早期 wrapper 为 `flex-basis: 0`，所有按键
- * 假设主尺寸为 0、永不换行，12 个键全部挤成一行（用户反馈「一排并列在
- * 下面」）。改为百分比基准后 wrap 才真正生效。本测试锁定按键序列、
- * wider 语义与 CSS 网格契约（防基准被改回 0 / 百分比被改错）。
+ * 历史包袱（本测试的由来）：
+ * 1. 早期 wrapper 为 `flex-basis: 0`，所有按键假设主尺寸为 0、永不换行，
+ *    12 个键全部挤成一行（用户反馈「一排并列在下面」）。改为百分比基准后
+ *    wrap 才真正生效。
+ * 2. wrap 生效后真机仍然只显示两行——引擎对多行 wrap 容器的高度只按前两行
+ *    结算（CONVENTIONS §19 末「真机引擎行为差异清单」#6）。2026-10-27 改为
+ *    显式行结构（纵向容器 + 每行一个 row），高度逐行累加。
+ * 本测试同时锁定按键序列、wider 语义、行分组与 CSS 契约（防基准被改回 0 /
+ * 百分比被改错 / 结构被改回 wrap）。
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -101,11 +105,18 @@ describe('WdKeyboard 键盘布局与交互', () => {
     cleanup()
   })
 
-  it('CSS 网格契约：keys 三列 / car-keys 十列（wrapper 基准百分比）', () => {
-    // 布局完全由 CSS 基准承载，基准被改回 0（不换行→挤一行）或百分比改错
-    // （列数变化）时真机视觉即刻劣化而 DOM 断言无感——在此锁定生成产物。
-    expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__keys\{[^}]*flex-wrap:wrap/)
-    expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__car-keys\{[^}]*flex-wrap:wrap/)
+  it('CSS 行结构契约：显式行容器（不再依赖 flex-wrap 结算高度）', () => {
+    // 真机 2026-10-27 巡检：引擎对多行 wrap 容器的高度只按前两行结算
+    // （CONVENTIONS §19 末「真机引擎行为差异清单」#6）——数字键盘 4 行只
+    // 算出 2 行高，后两行画到屏幕外，用户看到的是「键盘只显示一半」。
+    // 结构已改为「纵向容器 + 每行一个 row」，这里锁定三件事：
+    // ① 键区容器不再 wrap（改回 wrap 就会重新踩高度结算的坑）；
+    // ② 容器是 column、行是 row（方向反了布局全塌）；
+    // ③ 键宽基准百分比仍在（基准改错列数就变）。
+    expect(KEYBOARD_CSS).not.toMatch(/\.wd-keyboard__(keys|car-keys)\{[^}]*flex-wrap:wrap/)
+    expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__keys\{[^}]*flex-direction:column/)
+    expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__car-keys\{[^}]*flex-direction:column/)
+    expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__row\{[^}]*display:flex[^}]*flex-direction:row/)
     expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__car-keys \.wd-key-wrapper\{flex-basis:10%/)
     expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__car-keys \.wd-key-wrapper--wider\{flex-basis:20%/)
     // wrapper 基准在 key/index.css（按键自身样式文件）
@@ -120,6 +131,25 @@ describe('WdKeyboard 键盘布局与交互', () => {
     // 这两条在 DOM 断言里完全无感，只能锁 CSS 产物。
     expect(KEY_CSS, '缺少 min-width:0 会让十列网格塌成三列').toMatch(/\.wd-key-wrapper\{[^}]*min-width:0/)
     expect(KEY_CSS, 'wrapper 不得 flex-grow（末行键会被拉宽）').toMatch(/\.wd-key-wrapper\{[^}]*flex:0 1 auto/)
+  })
+
+  it('按键按行分组：数字 4 行 ×3 槽，车牌 4 行（末行 8 槽）', async () => {
+    // 行数就是真机上「能看见几行」的直接来源：wrap 平铺时行数由引擎自己
+    // 算（只算前两行），改成显式行结构后行数由这里锁死。
+    const { container } = renderKeyboard()
+    await pause(200)
+    const rows = Array.from(container.querySelectorAll('.wd-keyboard__row'))
+    expect(rows.length).toBe(4)
+    expect(rows.map((r) => r.querySelectorAll('.wd-key-wrapper').length)).toEqual([3, 3, 3, 3])
+    cleanup()
+
+    const car = renderKeyboard({ mode: 'car' })
+    await pause(200)
+    const carRows = Array.from(car.container.querySelectorAll('.wd-keyboard__row'))
+    expect(carRows.length).toBe(4)
+    // 前三行满 10 键；末行 = ABC（wider，占 2 槽）+ 6 省份 + 删除（wider，占 2 槽）
+    expect(carRows.map((r) => r.querySelectorAll('.wd-key-wrapper').length)).toEqual([10, 10, 10, 8])
+    cleanup()
   })
 
   it('按键触摸交互 emit update:modelValue，删除键回删', async () => {

@@ -11,10 +11,17 @@
  *   CSS :active 无法表达「滑出按键即取消」，与 wot-ui 语义一致）；
  * - 布局居中（NATIVE-REWRITE §3）：根节点显式 display: flex +
  *   flex-direction: column（纵向「头部 + 键区」）；__header 为
- *   justify-content + align-items 成对的居中行；__body / __keys /
- *   __car-keys 为 flex-direction: row 的按键行（wrap 网格基准见
- *   test/keyboard-layout.test.ts 锁定的 CSS 契约）；__sidebar 为
- *   flex-direction: column 的侧栏列；
+ *   justify-content + align-items 成对的居中行；__keys / __car-keys 为
+ *   flex-direction: column 的行容器，每个 __row 是一行 flex row
+ *   （网格基准见 test/keyboard-layout.test.ts 锁定的 CSS 契约）；
+ *   __sidebar 为 flex-direction: column 的侧栏列；
+ * - 按键**按行分组渲染**（真机 2026-10-27 巡检）：参考源用
+ *   `flex-wrap: wrap` 平铺按键，靠容器自动换行 + 自动高度。真机引擎对
+ *   多行 wrap 容器的高度只按前两行结算（CONVENTIONS §19 末「真机引擎
+ *   行为差异清单」#6），数字键盘 4 行只算出 2 行高度 → 后两行溢出到
+ *   屏幕外，表现为「键盘只显示一半 / 组件没有全部显示出来」。改为显式
+ *   行结构：行数由键位槽数（数字 3 列 / 车牌 10 列，wider 占 2 槽）算出，
+ *   容器高度逐行累加，不再依赖 wrap 的高度结算（同 wd-calendar-view 修法）；
  * - wot-ui 的 hover-class="wd-keyboard__close--hover" 按压态改用 CSS
  *   :active 伪类（CONVENTIONS §17）；
  * - wot-ui 用相邻兄弟选择器 `.wd-keyboard__header + .wd-keyboard__body`
@@ -54,6 +61,39 @@ const carKeyboardLang = computed({
 })
 
 const keys = computed(() => (props.mode !== 'car' ? (props.mode === 'custom' ? genCustomKeys() : genDefaultKeys()) : genCarKeys()))
+
+/**
+ * 每行键位槽数：数字 / 自定义键盘 3 列，车牌键盘 10 列（wider 键占 2 槽）。
+ */
+const columns = computed(() => (props.mode === 'car' ? 10 : 3))
+
+/**
+ * 把扁平按键序列按槽数切成行（显式行结构，替代 `flex-wrap: wrap`）。
+ *
+ * 真机引擎对多行 wrap 容器的高度只按前两行结算，数字键盘 4 行会被算成
+ * 2 行高、后两行画到屏幕外（CONVENTIONS §19 真机差异 #6）。行数在这里
+ * 一次算准，容器高度由「行 × 行高」逐行累加，与 wrap 无关。
+ *
+ * 切行规则与 wot-ui 的 wrap 落位逐键一致：累加槽数超过列数才换行，
+ * wider 键占 2 槽（数字键盘 `0` / 车牌 `ABC`、`省份`、删除键）。
+ */
+const keyRows = computed<Key[][]>(() => {
+  const rows: Key[][] = []
+  let row: Key[] = []
+  let used = 0
+  keys.value.forEach((key) => {
+    const span = key.wider ? 2 : 1
+    if (used + span > columns.value) {
+      rows.push(row)
+      row = []
+      used = 0
+    }
+    row.push(key)
+    used += span
+  })
+  if (row.length) rows.push(row)
+  return rows
+})
 
 const showClose = computed(() => {
   return props.closeText && (props.mode === 'default' || props.mode === 'car')
@@ -229,7 +269,9 @@ const handlePress = (text: string, type: NumberKeyType) => {
       <template v-if="mode !== 'car'">
         <view :class="`wd-keyboard__body ${showHeader ? 'is-with-header' : ''}`">
           <view class="wd-keyboard__keys">
-            <WdKey v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
+            <view v-for="(row, rowIndex) in keyRows" :key="rowIndex" class="wd-keyboard__row">
+              <WdKey v-for="(key, keyIndex) in row" :key="keyIndex" :text="key.text" :type="key.type" :wider="key.wider" @press="handlePress" />
+            </view>
           </view>
           <view v-if="mode === 'custom'" class="wd-keyboard__sidebar">
             <WdKey v-if="showDeleteKey" large :text="deleteText" type="delete" @press="handlePress" />
@@ -240,7 +282,17 @@ const handlePress = (text: string, type: NumberKeyType) => {
       <template v-else>
         <view :class="`wd-keyboard__body ${showHeader ? 'is-with-header' : ''}`">
           <view class="wd-keyboard__car-keys">
-            <WdKey v-for="key in keys" :key="key.text" :text="key.text" :type="key.type" :wider="key.wider" is-car @press="handlePress" />
+            <view v-for="(row, rowIndex) in keyRows" :key="rowIndex" class="wd-keyboard__row">
+              <WdKey
+                v-for="(key, keyIndex) in row"
+                :key="keyIndex"
+                :text="key.text"
+                :type="key.type"
+                :wider="key.wider"
+                is-car
+                @press="handlePress"
+              />
+            </view>
           </view>
         </view>
       </template>

@@ -111,9 +111,13 @@ describe('原生优先重写 · 布局居中契约（calendar / calendar-view / 
     const c = css('wd-keyboard/index.css')
     expectRootFlex(c, '.wd-keyboard', 'column')
     expectCenterPair(c, '.wd-keyboard__header')
-    // 键区 / 侧栏 / 按键的横向流向
+    // 键区 / 侧栏 / 按键的流向：键区是「纵向容器 + 每行一个 row」的显式行
+    // 结构（真机对多行 wrap 容器只按前两行结算高度，CONVENTIONS §19 #6），
+    // 行内才是横向排布。
     expectRootFlex(c, '.wd-keyboard__body', 'row')
-    expectRootFlex(c, '.wd-keyboard__keys', 'row')
+    expectRootFlex(c, '.wd-keyboard__keys', 'column')
+    expectRootFlex(c, '.wd-keyboard__car-keys', 'column')
+    expectRootFlex(c, '.wd-keyboard__row', 'row')
     expectRootFlex(c, '.wd-keyboard__sidebar', 'column')
     const key = css('wd-keyboard/key/index.css')
     expectCenterPair(key, '.wd-key')

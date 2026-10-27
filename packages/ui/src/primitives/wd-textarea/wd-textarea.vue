@@ -17,6 +17,8 @@
  * - pause() 续写前经 useAlive() 判存活，避免卸载后晚到 patch（真机 9902）；
  * - customTextareaContainerClass 参考源已声明但未接线，此处按 JSDoc 语义
  *   接到 body 容器上（改进项，不影响参考行为）；
+ * - showPassword 官方 2.3.2 只声明 prop、模板未使用（无任何行为），本地保持
+ *   「同名同类型、同样不生效」以免迁移后表现不一致（CONVENTIONS §API 对齐）；
  * - enable-native 为支付宝小程序专有属性，保留透传、Lynx 侧不生效。
  */
 <script lang="ts" setup>

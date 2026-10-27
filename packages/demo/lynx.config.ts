@@ -11,6 +11,17 @@ import { pluginWotLynxTags, pluginWotLynxWebFonts } from 'wot-lynx-ui/plugin'
 const uiSrc = (p: string) => fileURLToPath(new URL(`../ui/src/${p}`, import.meta.url))
 
 /**
+ * 仅 dev 启用 rspack 持久化缓存（2026-10-27）：
+ * - dev 从内存 serve，开持久化缓存后走 filesystem 缓存（`node_modules/.cache`），
+ *   Ctrl+C 正常退出后再启动会命中缓存，编译量从 ~3.6s 降到 ~1.5–2.2s，
+ *   整体就绪约 2.5–6s（冷启 ~5s）。日常「启动 demo」基本落在 10s 内。
+ * - build 模式在 rspeedy 0.13.5 下开 `buildCache` 会导致产物不落盘（dist 为空），
+ *   故 **build 完全不注入 performance 配置**（保持与原始一致）。
+ * 用 `process.argv[2]`（rspeedy 子命令位）判断，避免误伤 build。
+ */
+const isDev = process.argv[2] === 'dev'
+
+/**
  * 选取真实局域网 IPv4 作为 dev server 的 host（二维码 / assetPrefix /
  * HMR client 同源使用）。
  *
@@ -137,6 +148,8 @@ export default defineConfig({
       }
     }
   },
+  // 仅 dev 注入持久化缓存；build 不注入，保持与原始行为完全一致（见顶部 isDev 说明）。
+  ...(isDev ? { performance: { buildCache: true } } : {}),
   source: {
     // 多入口：main 为组件总览，device-test 为真机测试清单页（独立二维码）
     entry: {

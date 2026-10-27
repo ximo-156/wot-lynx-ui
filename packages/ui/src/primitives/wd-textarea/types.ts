@@ -100,6 +100,14 @@ export const textareaProps = {
   holdKeyboard: makeBooleanProp(false),
   // 非原生属性
   /**
+   * 显示为密码框（仅 API 对齐，当前无行为）
+   */
+  showPassword: makeBooleanProp(false),
+  // ↑ 官方 wot-ui 2.3.2 只声明了该 prop、模板未接线（0 处引用），实际不产生行为。
+  // 本地按「契约对齐、行为不额外发明」保留同名同类型的空 prop：迁移代码不会因缺
+  // prop 报错，也不会得到与官方不同的表现。需要密文输入请用 wd-input 的
+  // show-password（Lynx 原生 input 支持 password，textarea 不支持）。
+  /**
    * 是否显示清空按钮
    */
   clearable: makeBooleanProp(false),

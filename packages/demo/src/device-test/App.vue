@@ -66,26 +66,39 @@ function onPopupModel(value: boolean) {
 }
 
 function showAlert() {
-  dialogRef.value?.alert({
-    title: '提示',
-    msg: '这是一个对话框',
-    confirm: () => {
-      overlayEvent.value = 'dialog alert: confirm'
-    }
-  })
+  // alert / confirm / prompt 都返回 Promise，**取消路径是 reject**
+  // （与 wot-ui 一致，fail 回调同样会触发）。不接 catch 时点「取消 / 关闭 /
+  // 遮罩」就是一个 unhandled rejection——真机上被 Sentry 记成
+  // USER_RUNTIME_ERROR（错误码 201/20100，message 为
+  // `unhandled rejection: {"action":"cancel"}`），清单页第 4 组因此判红。
+  dialogRef.value
+    ?.alert({
+      title: '提示',
+      msg: '这是一个对话框',
+      confirm: () => {
+        overlayEvent.value = 'dialog alert: confirm'
+      }
+    })
+    ?.catch(() => {
+      // 关闭 / 遮罩取消：本演示只关心确认分支
+    })
 }
 
 function showConfirm() {
-  dialogRef.value?.confirm({
-    title: '确认操作',
-    msg: '确定要执行该操作吗？',
-    confirm: (result: any) => {
-      overlayEvent.value = `dialog confirm: ${result.action}`
-    },
-    cancel: (result: any) => {
-      overlayEvent.value = `dialog cancel: ${result.action}`
-    }
-  })
+  dialogRef.value
+    ?.confirm({
+      title: '确认操作',
+      msg: '确定要执行该操作吗？',
+      confirm: (result: any) => {
+        overlayEvent.value = `dialog confirm: ${result.action}`
+      },
+      cancel: (result: any) => {
+        overlayEvent.value = `dialog cancel: ${result.action}`
+      }
+    })
+    ?.catch(() => {
+      // 回调里已记录取消结果，这里只负责吞掉 Promise 的 reject
+    })
 }
 
 // ---------- 5. 表单 ----------

@@ -26,6 +26,9 @@ $keyboard-close-padding: var(--wot-keyboard-close-padding, $padding-zero $paddin
   width: 100%;
   background: $keyboard-bg;
   color: $keyboard-color;
+  // 亮暗主题切换时键盘底板与文字色平滑过渡（用户反馈「切换太生硬」）。
+  // 面板级用 $motion-base，按键自身的按压/主题色过渡见 key/index.scss。
+  transition: background-color $motion-base $easing-standard, color $motion-base $easing-standard;
   // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
   // 布局，不显式声明 display: flex 时 flex-direction 被静默丢弃；根节点为
   // 「头部 + 键区」的纵向组合，显式补全。
@@ -70,19 +73,21 @@ $keyboard-close-padding: var(--wot-keyboard-close-padding, $padding-zero $paddin
     }
   }
 
+  // 显式行结构（真机 2026-10-27 巡检）：参考源用 `flex-wrap: wrap` 平铺
+  // 按键，真机引擎对多行 wrap 容器的高度只按前两行结算（CONVENTIONS §19
+  // 末「真机引擎行为差异清单」#6）——数字键盘 4 行只算出 2 行高，后两行
+  // 溢出到屏幕外。改为「纵向容器 + 每行一个 flex row」，高度逐行累加。
   @include e(keys) {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     flex: 3;
-    flex-wrap: wrap;
   }
 
   @include e(car-keys) {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     // 车牌模式没有 sidebar，flex 比例无参照系；给 1 只为了占满整行。
     flex: 1;
-    flex-wrap: wrap;
 
     .wd-key-wrapper {
       flex-basis: 10%;
@@ -91,6 +96,13 @@ $keyboard-close-padding: var(--wot-keyboard-close-padding, $padding-zero $paddin
         flex-basis: 20%;
       }
     }
+  }
+
+  // 一行按键：横向排布，键宽由 wrapper 的 flex-basis 百分比切分
+  @include e(row) {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
   }
 
   @include e(close) {

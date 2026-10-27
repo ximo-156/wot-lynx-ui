@@ -14,6 +14,20 @@
  *   逻辑），touchend 用同一套绝对公式由触点坐标重算终值并 commit；
  *   update:modelValue 与 dragmove 经轨道后台 touchmove 连续发出（isDragging
  *   守卫，仅拖动滑块时触发，与 wot-ui 语义一致）；
+ * - **吞掉引擎补发的 tap**（真机 2026-10-27 修复「滑动松手回弹」）：Lynx 在
+ *   touchend 之后还会补发一次 tap（同 wd-rate 的观测），而这次 tap 携带的是
+ *   **按下时**的坐标。轨道的 @tap 是「点轨道跳转」，若不拦，拖动结束会被这次
+ *   tap 按旧坐标重算一次值 —— 表现就是「怎么拖都弹回原位」。手势一旦提交过
+ *   值（连续 dragmove 或 touchend 落定）就记下时间戳，紧跟其后 350ms 内的一次
+ *   tap 直接吞掉（时间窗而非布尔标记：宿主不补发 tap 时不会误吞下一次真实点按）；
+ *   干净点按（未拖动）不受影响，仍由 tap 走跳转；
+ * - **几何兜底**（同轮修复）：后台 trackSize 在 onMounted 一次性测出，真机首帧
+ *   可能量到 0 且此后不再重测，落定路径会因 trackSize<=0 直接 return（同样
+ *   表现为回弹）。现在手势开始强制重测，touchend 落定时若仍无效则补测后再
+ *   commit（与 wd-rate 的 refreshRects 兜底同思路）；
+ * - **MT 触摸绑定不与 tap 同元素**（CONVENTIONS §19 真机差异 #4 / wd-rate 范本）：
+ *   几何度量 worklet 挂在进度条 __line 上，不挂在带 @tap 的轨道 __bar 上，
+ *   避免「需要 tap 的节点子树挂 MT 触摸绑定」引起的 tap 合成互扰；
  * - **范围模式边界**：左右滑块当前值经进度条元素属性 left-bound /
  *   right-bound 下发（Vue 属性绑定随重渲染更新），worklet 跟手时经
  *   `getAttribute` 实时读取，避免两滑块交叉；属性缺失时降级为仅
@@ -78,6 +92,20 @@ const gestureVersion = computed(() => JSON.stringify([props.min, props.max, prop
 let startPointer = 0
 let startValue: SliderValue = deepClone(modelValue.value)
 let dragMoved = false
+/**
+ * 本次手势提交过值的时间戳（0 表示没有待吞的补发 tap）。
+ *
+ * 真机引擎在 touchend 之后会补发一次 tap（见 wd-rate 的同类观测），而 tap 携带
+ * 的是**按下时**的坐标：不拦的话「点轨道跳转」会在松手瞬间按旧坐标把值重算
+ * 一遍，表现就是「怎么拖都弹回原位」。
+ *
+ * 用「时间窗 + 只吞一次」而不是布尔标记：宿主不一定补发 tap（Web 预览 / 测试
+ * 环境），布尔标记会残留到下一次真实点按，把「点轨道跳转」吞掉。补发的 tap
+ * 紧跟在 touchend 之后，350ms 足够覆盖，过期即自动失效。
+ */
+let tapSwallowAt = 0
+/** 补发 tap 的识别窗口（毫秒）：紧跟 touchend，取远大于一帧、远小于人手二次点击 */
+const TAP_SWALLOW_WINDOW = 350
 
 let rectRequest = 0
 let interactionRequest = 0
@@ -336,34 +364,72 @@ function updateValue(value: SliderValue) {
 }
 
 /**
- * 将坐标位置转换为对应的滑块值
+ * 保证轨道尺寸可用：无效时补测一次并返回 Promise（永不 reject）。
+ *
+ * 真机首帧的 onMounted 度量可能拿到 0（布局未完成），而旧实现只在 prop 变化时
+ * 重测 —— trackSize 一旦为 0，dragmove 与落定都会被 `trackSize<=0` 守卫挡掉，
+ * 表现为「跟手正常、松手回弹」。这里在落定前兜底补测（同 wd-rate refreshRects）。
+ */
+function ensureTrackSize(): Promise<number> {
+  if (trackSize.value > 0 && Number.isFinite(trackSize.value)) return Promise.resolve(trackSize.value)
+  const request = ++rectRequest
+  const vertical = props.vertical
+  return getRect(`#${trackId.value}`, false, proxy).then((data) => {
+    if (!isAlive() || request !== rectRequest || vertical !== props.vertical) return trackSize.value
+    const size = Number(vertical ? data.height : data.width)
+    if (Number.isFinite(size) && size > 0) {
+      trackSize.value = size
+      trackStart.value = Number(vertical ? data.top : data.left)
+    }
+    return trackSize.value
+  })
+}
+
+/**
+ * 从触摸 / tap 事件里取触点主坐标（水平 clientX、垂直 clientY）。
+ *
+ * 三种载荷形态都要认：
+ * - 触摸事件：`touches[0]` / `changedTouches[0]`（真机与 Web 同形）；
+ * - Lynx tap：`touches` 为空，坐标在 `detail.x / detail.y`；
+ * - Web 预览的 click（@tap 映射）：`detail` 是点击次数（数字），坐标在 `clientX/clientY`。
+ * 都取不到返回 NaN —— 调用方必须降级，不能默认成 0（0 会被当成「点在轨道最左端」）。
+ */
+function readPointer(event: any): number {
+  const touch = event?.changedTouches?.[0] ?? event?.touches?.[0]
+  const raw = props.vertical
+    ? touch?.clientY ?? event?.detail?.y ?? event?.clientY
+    : touch?.clientX ?? event?.detail?.x ?? event?.clientX
+  const value = Number(raw)
+  return Number.isFinite(value) ? value : NaN
+}
+
+/**
+ * 将「相对轨道起点的像素距离」转换为滑块值（点轨道跳转用）
  * @param {number} position 相对轨道起点的像素距离
  * @returns {number} 转换后的数值
  */
 function positionToValue(position: number): number {
-  if (trackSize.value === 0) return props.min
+  if (trackSize.value <= 0 || !Number.isFinite(trackSize.value)) return props.min
   return (position / trackSize.value) * scope.value + props.min
 }
 
 /**
- * 触点坐标 → 滑块值（绝对定位公式，后台 touchend 用）
- * @param {any} event 触摸事件
+ * 将「触点主坐标」转换为滑块值（拖动 / 落定用：起值 + 位移）
+ * @param {number} pointer 触点 clientX / clientY
  * @param {number} index 滑块索引
+ * @returns {number} 转换后的数值
  */
-function pointerToValue(event: any, index: number): number {
-  if (trackSize.value === 0) return props.min
-  const pointer = props.vertical
-    ? Number(event.changedTouches?.[0]?.clientY ?? event.touches?.[0]?.clientY ?? 0)
-    : Number(event.changedTouches?.[0]?.clientX ?? event.touches?.[0]?.clientX ?? 0)
-  const value = props.range && isArray(startValue) ? startValue[index] : startValue as number
+function pointerToValue(pointer: number, index: number): number {
+  if (trackSize.value <= 0 || !Number.isFinite(trackSize.value) || !Number.isFinite(pointer)) return props.min
+  const value = props.range && isArray(startValue) ? startValue[index] : (startValue as number)
   return value + ((pointer - startPointer) / trackSize.value) * scope.value
 }
 
 /** 范围拖动始终保留另一端；所有 drag 事件与 v-model 使用同一种值形状。 */
-function dragValue(event: any): SliderValue {
-  const value = pointerToValue(event, touchIndex.value)
+function dragValue(pointer: number): SliderValue {
+  const value = pointerToValue(pointer, touchIndex.value)
   if (!props.range) return value
-  const values: [number, number] = [...startValue as [number, number]]
+  const values: [number, number] = [...(startValue as [number, number])]
   values[touchIndex.value] = value
   return values
 }
@@ -431,24 +497,74 @@ function onTouchStart(event: any, index: number) {
 
   touchIndex.value = index
   startValue = deepClone(modelValue.value)
-  startPointer = Number(props.vertical ? event.touches?.[0]?.clientY : event.touches?.[0]?.clientX) || 0
+  const pointer = readPointer(event)
+  startPointer = Number.isFinite(pointer) ? pointer : 0
   dragMoved = false
+  tapSwallowAt = 0
   isDragging.value = true
+  // 几何兜底：真机首帧可能量到 0 且此后不再重测，手势开始强制重测一次
+  // （每个手势一次，不在 touchmove 热路径上，CONVENTIONS §16）
+  initSlider()
   emit('dragstart', { value: modelValue.value })
 }
 
 /**
  * 滑块触摸结束（后台：绝对公式重算终值并 commit）
+ *
+ * 三条路径：
+ * 1. 拖动中已由 dragmove 连续提交 → 只补 dragend/change；
+ * 2. 宿主没派发后台 touchmove（dragMoved 为假）→ 用 touchend 坐标落定；
+ * 3. 几何缺失（trackSize 为 0）→ 补测后再落定，绝不静默丢值。
+ *
+ * 只要本次手势提交过值（或即将提交），就记录 tapSwallowAt，让引擎在 touchend
+ * 后补发的那一次 tap 被 @tap 处理器吞掉——否则「点轨道跳转」会按**按下时**的
+ * 坐标把值重算一遍，表现为松手回弹（真机 2026-10-27 缺陷）。
  */
 function onTouchEnd(event: any) {
   if (!isDragging.value) return
   isDragging.value = false
-  if (isDisabled.value || trackSize.value <= 0 || !Number.isFinite(trackSize.value)) return
+  if (isDisabled.value) return
 
-  // Native moves commit continuously; recover only when a host omitted the background move.
-  if (!dragMoved && (event.changedTouches?.length || event.touches?.length)) updateValue(dragValue(event))
-  emit('dragend', { value: modelValue.value })
-  emit('change', modelValue.value)
+  // 坐标必须同步取出：落定可能异步（补测几何），届时事件对象已被引擎回收
+  const pointer = readPointer(event)
+  const finish = () => {
+    emit('dragend', { value: modelValue.value })
+    emit('change', modelValue.value)
+  }
+
+  if (dragMoved) {
+    tapSwallowAt = Date.now()
+    finish()
+    return
+  }
+  if (!Number.isFinite(pointer)) {
+    finish()
+    return
+  }
+
+  tapSwallowAt = Date.now()
+  if (trackSize.value > 0 && Number.isFinite(trackSize.value)) {
+    updateValue(dragValue(pointer))
+    finish()
+    return
+  }
+  ensureTrackSize().then((size) => {
+    if (!isAlive() || isDisabled.value || size <= 0) return
+    updateValue(dragValue(pointer))
+    finish()
+  })
+}
+
+/**
+ * 轨道触摸开始（后台）：只负责复位「本次手势已提交过值」标记。
+ *
+ * 引擎补发的 tap 紧跟 touchend；但宿主不一定补发（Web 预览 / 测试环境），
+ * 标记一旦残留，会把**下一次真正点轨道跳转**的 tap 吞掉。点按必然先有
+ * touchstart，在这里复位即可（同 wd-rate 的做法）。滑块自身的 touchstart
+ * 会先冒泡到本节点之前执行，两处都置 false，顺序无副作用。
+ */
+function onBarTouchStartBg() {
+  tapSwallowAt = 0
 }
 
 /**
@@ -459,8 +575,10 @@ function onTouchEnd(event: any) {
  */
 function onBarTouchMove(event: any) {
   if (isDisabled.value || !isDragging.value || trackSize.value <= 0 || !Number.isFinite(trackSize.value)) return
+  const pointer = readPointer(event)
+  if (!Number.isFinite(pointer)) return
   dragMoved = true
-  updateValue(dragValue(event))
+  updateValue(dragValue(pointer))
   emit('dragmove', { value: modelValue.value })
 }
 
@@ -469,22 +587,28 @@ function onBarTouchMove(event: any) {
  * @param event 点击事件
  */
 function onBarClick(event: any) {
+  // 引擎在 touchend 之后会补发一次 tap，且坐标是**按下时**的位置：
+  // 本次手势刚提交过值时必须吞掉，否则拖动结果会被拉回起点（回弹）。
+  if (tapSwallowAt && Date.now() - tapSwallowAt < TAP_SWALLOW_WINDOW) {
+    tapSwallowAt = 0
+    return
+  }
+  tapSwallowAt = 0
   if (isDisabled.value) return
 
   const request = ++interactionRequest
   const vertical = props.vertical
+  // 坐标同步取出（异步度量后事件对象可能已被回收），且不能用 0 兜底——
+  // 0 会被当成「点在轨道最左端」，直接把值打到 min
+  const pointer = readPointer(event)
+  if (!Number.isFinite(pointer)) return
   // 基于可滑动有效轨道换算点击位置，避免主题内边距造成偏差
   getRect(`#${trackId.value}`, false, proxy).then((data) => {
     // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive() || isDisabled.value || request !== interactionRequest || vertical !== props.vertical) return
     trackSize.value = Number(props.vertical ? data.height : data.width)
     trackStart.value = Number(props.vertical ? data.top : data.left)
-    const start = trackStart.value
-    const pointer = props.vertical
-      ? Number(event.touches?.[0]?.clientY ?? event.detail?.y ?? 0)
-      : Number(event.touches?.[0]?.clientX ?? event.detail?.x ?? 0)
-    const pos = pointer - start
-    handleBarClickAt(pos)
+    handleBarClickAt(pointer - trackStart.value)
   })
 }
 
@@ -522,11 +646,11 @@ defineExpose<SliderExpose>({
 // ---------- 主线程 worklet（跟手，零线程跨越） ----------
 
 /**
- * 轨道触摸开始（主线程）：一次性度量轨道几何并缓存。
+ * 触摸开始（主线程）：一次性度量轨道几何并缓存。
  *
- * 经轨道元素（而非滑块）绑定：滑块的 touchstart 是后台绑定（发 dragstart），
- * 同名事件不能同时挂主线程与后台两个处理器；轨道触摸滑块与轨道自身都会
- * 经过此处，度量的是同一条轨道，语义正确。
+ * 绑在进度条 __line（而不是带 @tap 的轨道 __bar）：MT 触摸绑定与 tap 同元素
+ * 会互相干扰（CONVENTIONS §19 差异 #4）。滑块是 __line 的后代，touchstart
+ * 冒泡到这里；度量目标仍是 __track，语义不变。
  */
 const onBarTouchStart = (event: any) => {
   'main thread'
@@ -621,9 +745,9 @@ const onDotTouchMove = (event: any) => {
       :id="sliderId"
       :class="barClass"
       :style="barStyle"
-      @tap.stop="onBarClick"
+      @touchstart="onBarTouchStartBg"
       @touchmove="onBarTouchMove"
-      :main-thread-bindtouchstart="onBarTouchStart"
+      @tap.stop="onBarClick"
     >
       <!-- 可滑动有效轨道（用于尺寸测量与 marks 定位） -->
       <view :id="trackId" :main-thread-ref="trackRef" class="wd-slider__track">
@@ -645,11 +769,16 @@ const onDotTouchMove = (event: any) => {
       </view>
 
       <!-- 进度条 + 滑块（main-thread-ref 供 worklet 跟手直改；
-           left-bound / right-bound 属性向主线程下发范围边界） -->
+           left-bound / right-bound 属性向主线程下发范围边界。
+           几何度量的 MT touchstart 挂在本节点：轨道 __bar 上有 @tap（点轨道跳转），
+           而「需要 tap 的节点子树不挂 MT 触摸绑定」是 CONVENTIONS §19 差异 #4
+           的硬规则（wd-picker-view / wd-fab 曾因此回退）。滑块是 __line 的后代，
+           touchstart 会冒泡到这里，度量目标仍是同一条轨道。 -->
       <view
         :main-thread-ref="lineRef"
         :class="lineClass"
         :style="lineStyle"
+        :main-thread-bindtouchstart="onBarTouchStart"
         :gesture-min="String(min)"
         :gesture-max="String(max)"
         :gesture-step="String(validStep)"
