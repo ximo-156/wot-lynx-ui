@@ -1,5 +1,5 @@
 /**
- * P1 原生崩溃修复回归测试（见 docs/guide/native-crash-audit.md）。
+ * P1 原生崩溃修复回归测试（逐组件核实报告为本地留档，未入库）。
  *
  * 锁定三类修复：
  * 1. **A 模式（静态 id 跨实例重复）**：wd-popover / wd-tooltip 模板原为

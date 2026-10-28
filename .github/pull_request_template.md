@@ -1,6 +1,6 @@
 &lt;!--
   提交前请确认：CI 全绿 / 自评风险等级 / 有效 diff ≤ 400 行
-  完整规范见 contributing/code-review/ 目录
+  完整规范见 CONVENTIONS.md（编码规范）与 docs/adr/（架构决策）
 --&gt;
 
 ## 变更说明

@@ -35,8 +35,12 @@ coverage/
 #      （0001 / 0004 / 0009，与 001 / 004 / 009 重复或撞号），非权威版本，
 #      留本机不提交，忽略规则见第 9 组。
 #
-#    · docs/guide/：2026-10-26 起改为**本地独占**（此前从未入库，侧边栏也不再
-#      引用 guide 页面），忽略规则见第 9 组；若将来恢复指南并入库，需移除此规则。
+#    · docs/guide/：6 篇用户指南（quick-start / theme / icons / performance /
+#      differences / device-testing）**必须入库**，`config.ts` 的 nav 与侧边栏
+#      都引用它们。2026-10-26 曾整目录改为本地独占，导致侧边栏只能整组删掉、
+#      文档站没有「指南」入口；2026-10-28 恢复入库。另有 3 篇 AI 审计/调研稿
+#      （native-crash-audit / design-research / onboarding-template）仍留本机，
+#      逐条忽略规则见第 9 组。
 #
 #    · docs/components/*.md 是 `scripts/gen-docs.mjs` 的**纯生成物**（由
 #      packages/ui/meta.json 推导），不入库。`docs:build` 会先跑 gen-docs，
@@ -112,8 +116,12 @@ docs/design/report-*.html
 contributing/code-review/
 # 测试目录说明
 packages/ui/test/README.md
-# 指南文档（2026-10-26 起本地独占；侧边栏已不再引用 guide 页面，此前从未入库）
-docs/guide/
+# 指南文档：6 篇用户指南已入库（见第 3 组），仅下面 3 篇 AI 审计/调研稿留本机。
+# ⚠️ 不要写成 `docs/guide/` —— 整目录忽略会让新增指南被静默忽略，
+#    且侧边栏只能整组删掉（文档站会失去「指南」入口）。
+docs/guide/native-crash-audit.md
+docs/guide/design-research.md
+docs/guide/onboarding-template.md
 # AI 重新生成的 ADR 草稿/冲突副本（与已入库的 3 位编号 001–021 重复或撞号，
 # 非权威版本，留本机不提交；权威 ADR 见 docs/adr/001–021）
 docs/adr/0001-layered-architecture.md
@@ -130,9 +138,11 @@ docs/adr/0009-no-main-thread-script.md
 #   docs/design/audit-baseline.json           设计体检的数据基线
 #   packages/ui/test/durations.json           测试耗时缓存，CI 分片均衡的依据
 #   docs/**/*.md                              文档站内容（侧边栏与 README 均引用）
-#                                             例外见第 3、9 组：docs/components/*、
-#                                             docs/guide/* 与第 9 组列出的本地独占文档
-#                                             （含 3 份 AI 重新生成的 ADR 草稿）
+#                                             例外见第 3、9 组：docs/components/* 与
+#                                             第 9 组列出的本地独占文档
+#   docs/guide/*.md                            6 篇用户指南（quick-start / theme /
+#                                             icons / performance / differences /
+#                                             device-testing），nav 与侧边栏均引用
 #
 # 这些文件由 CI 的 `generated` 与 `conventions` job 校验：
 # 与源码不一致、或缺失，会直接让流水线失败。

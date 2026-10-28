@@ -110,7 +110,7 @@ describe('测试项目覆盖', () => {
     }
   })
 
-  it('组件类用例都在已知分类目录下（新增目录请同步 vitest.config 注释与 test/README.md）', () => {
+  it('组件类用例都在已知分类目录下（新增目录请同步 vitest.config 的 project 注释）', () => {
     const KNOWN = ['test/unit/', 'test/component/', 'test/parity/', 'test/native-first/', 'test/mts/', 'test/regression/']
     for (const file of allFiles) {
       expect(

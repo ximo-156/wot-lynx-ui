@@ -57,14 +57,32 @@ export default defineConfig({
   themeConfig: {
     logo: '/logo.svg',
     nav: [
+      { text: '指南', link: '/guide/quick-start' },
+      { text: '真机测试', link: '/guide/device-testing' },
       { text: '组件', link: '/components/button' }
     ],
     sidebar: {
+      '/guide/': [
+        {
+          text: '指南',
+          items: [
+            { text: '快速开始', link: '/guide/quick-start' },
+            { text: '真机测试指南', link: '/guide/device-testing' },
+            { text: '主题与设计令牌', link: '/guide/theme' },
+            { text: '内置图标', link: '/guide/icons' },
+            { text: '高性能实践', link: '/guide/performance' },
+            { text: '与 wot-ui 的差异', link: '/guide/differences' }
+          ]
+        }
+      ],
       '/components/': [componentsSidebar]
       // 原 '/design/' 分组已移除：DESIGN-SPEC / AUDIT-2026-10-23 属本地独占的
       // AI 生成文档（见 .gitignore 第 9 组），留在侧边栏会让 docs:build 死链。
-      // '/guide/' 指南分组同理：docs/guide/ 目录从未入库（见 .gitignore 第 3 组
-      // 注释），2026-10-25 起侧边栏不再引用。
+      //
+      // 上面 '/guide/' 只有 6 篇**已入库**的用户指南。docs/guide/ 下还有
+      // native-crash-audit / design-research / onboarding-template 三篇 AI
+      // 审计与调研稿，它们本地独占、不入库，**不要**加进这份清单——加了就是
+      // 死链（VitePress 构建期会直接报错）。
     },
     socialLinks: [{ icon: 'github', link: 'https://github.com/wot-lynx-ui/wot-lynx-ui' }],
     footer: {

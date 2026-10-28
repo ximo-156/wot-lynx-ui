@@ -58,9 +58,8 @@ wot-lynx-ui/  (pnpm monorepo, packageManager: pnpm@10.24.0, node>=20)
 │       ├── helpers/     测试侧公共解析（双组件根，ADR-012）
 │       └── fixtures/    官方 2.3.2 API / props 快照
 ├── packages/demo/       Rspeedy 双端 Demo + 真机验收清单
-├── docs/                VitePress 站点（组件文档由脚本生成）
-├── scripts/             14 个工程脚本（gen-index / gen-docs / build-css / build-dist / review-lint …）
-├── contributing/code-review/  7 篇审查标准与流程
+├── docs/                VitePress 站点（6 篇用户指南 + 组件文档由脚本生成）
+├── scripts/             工程脚本（gen-index / gen-docs / build-css / build-dist / review-lint …）
 └── .github/workflows/ci.yml   并行门禁 job
 ```
 
@@ -514,8 +513,7 @@ import 'wot-lynx-ui/theme/presets/brand-a' // 按需
 （`unit` / `component` / `parity` / `native-first` / `mts` / `regression`，另有 `helpers`、
 `fixtures`）。目录**不驱动** vitest——`component` 的 include 仍是整个 `test/**/*.test.ts`，
 `unit` 走显式 `PURE_TESTS` 清单；两者的双向一致性由 `test/unit/project-coverage.test.ts`
-断言（放错目录不会报错、只会白搭 3s 环境，所以必须机器守）。新增测试请按目录语义放置，
-详见 `packages/ui/test/README.md`。
+断言（放错目录不会报错、只会白搭 3s 环境，所以必须机器守）。新增测试请按目录语义放置。
 
 ⚠️ 关闭隔离的前提是「测试文件之间没有可变全局状态耦合」，这**不能靠一次跑绿证明**，
 必须用 `--sequence.shuffle.files` 多 seed 取证。2026-10 的取证过程抓到两类真实泄漏：
