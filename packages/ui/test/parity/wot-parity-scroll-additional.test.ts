@@ -6,6 +6,7 @@ import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { pause } from '../../src/common/util'
 import { configureUniAdapter, hasUniAdapter, uni } from '../../src/common/uni'
+import { hasWotRef } from '../helpers/wot-ref'
 import { swiperProps } from '../../src/components/wd-swiper/types'
 import { swiperNavprops } from '../../src/components/wd-swiper-nav/types'
 import { stickyProps } from '../../src/components/wd-sticky/types'
@@ -104,7 +105,7 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('wot 2.3.2 scroll additional parity: complete public props', () => {
+describe.skipIf(!hasWotRef())('wot 2.3.2 scroll additional parity: complete public props', () => {
   it.each([
     ['wd-swiper', swiperProps, 'types.ts', true],
     ['wd-swiper-nav', swiperNavprops, 'types.ts', true],
@@ -638,7 +639,7 @@ describe('wot 2.3.2 scroll additional parity: indexes', () => {
   })
 })
 
-describe('wot 2.3.2 scroll additional parity: backtop and generated geometry', () => {
+describe.skipIf(!hasWotRef())('wot 2.3.2 scroll additional parity: backtop and generated geometry', () => {
   it('only activates strictly above threshold, calls the host with duration and forwards native tap without listener arrays', async () => {
     const scrollTop = ref(300), duration = ref(245), shape = ref<'circle' | 'square'>('square'), bottom = ref(42), right = ref(17), zIndex = ref(22)
     const pageScroll = vi.fn(), clicks = vi.fn(), taps = vi.fn()

@@ -1,5 +1,9 @@
-#!/usr/bin/env node
 /**
+ * 注意：本文件**不要加 shebang**。它被 test/parity/wot-parity-props.test.ts 直接
+ * import，而 vite/esbuild 的 transform 遇到 `.mjs` 里的 `#!` 会抛
+ * `SyntaxError: Invalid or unexpected token`，整条 suite 在收集阶段就挂掉。
+ * 命令行用法始终是 `node scripts/check-wot-props.mjs`，不依赖 shebang。
+ *
  * Runtime prop parity against the trusted, offline wot-ui 2.3.2 sources.
  *
  * node scripts/check-wot-props.mjs                 # fixture -> local audit

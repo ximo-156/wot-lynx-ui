@@ -9,10 +9,20 @@ import Grid from '../../src/components/wd-grid/wd-grid.vue'
 import GridItem from '../../src/components/wd-grid-item/wd-grid-item.vue'
 import Pagination from '../../src/components/wd-pagination/wd-pagination.vue'
 import { hasIcon, registerIconSet, resolveIcon } from '../../src/icons/registry'
-import { iconProps as officialIcon } from '../../../../.wot-ref/src-2.3.2/components/wd-icon/types'
-import { gridProps as officialGrid } from '../../../../.wot-ref/src-2.3.2/components/wd-grid/types'
-import { gridItemProps as officialGridItem } from '../../../../.wot-ref/src-2.3.2/components/wd-grid-item/types'
-import { paginationProps as officialPagination } from '../../../../.wot-ref/src-2.3.2/components/wd-pagination/types'
+import { hasWotRef } from '../helpers/wot-ref'
+
+// .wot-ref 是 gitignore 掉的本地对照副本，CI 上必然缺失。静态 import 会让整个
+// suite 在**收集阶段**抛 "Failed to resolve import"，skipIf 来不及生效；动态
+// import 同样被 vite 的 import-analysis 提前解析。import.meta.glob 在目标不存在
+// 时返回空映射，是唯一不炸的加载方式（ADR-021）。
+const REF_TYPES = import.meta.glob('../../../../.wot-ref/src-2.3.2/components/*/types.ts', { eager: true }) as Record<string, any>
+const refProp = (component: string, exportName: string): any =>
+  REF_TYPES[`../../../../.wot-ref/src-2.3.2/components/${component}/types.ts`]?.[exportName]
+
+const officialIcon = refProp('wd-icon', 'iconProps')
+const officialGrid = refProp('wd-grid', 'gridProps')
+const officialGridItem = refProp('wd-grid-item', 'gridItemProps')
+const officialPagination = refProp('wd-pagination', 'paginationProps')
 import { wotIconsSet } from '../../src/icons/sets/wot-icons'
 
 async function frames() {
@@ -32,7 +42,7 @@ const contract = (definition: any) => {
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
-describe('icon / grid / pagination independent official 2.3.2 audit', () => {
+describe.skipIf(!hasWotRef())('icon / grid / pagination independent official 2.3.2 audit', () => {
   it.each([
     ['icon', Icon, officialIcon], ['grid', Grid, officialGrid],
     ['grid-item', GridItem, officialGridItem], ['pagination', Pagination, officialPagination]

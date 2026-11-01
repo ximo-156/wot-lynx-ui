@@ -115,6 +115,21 @@ npx vitest run --sequence.shuffle.files --sequence.seed=7
 
 修复后 4 个 seed（1 / 7 / 42 / 99）全部回到基线 5 文件 / 8 用例。
 
+**2026-11-01 更新：基线已归零（0 文件 / 0 用例）。** 上表的「5 文件 / 8 用例」全部来自
+`.wot-ref/src-2.3.2` 缺失——该副本被 `.gitignore` 忽略，**CI 与全新 clone 上必然不存在**。
+4 个 `wot-parity-*.test.ts` 直接静态 `import` 它，缺失时整条 suite 在**收集阶段**抛
+`Failed to resolve import`，`skipIf` 来不及生效，流水线因此永远无法变绿。
+
+修法：判据收敛到 `test/helpers/wot-ref.ts` 的 `hasWotRef()`；用例用
+`describe.skipIf(!hasWotRef())`；静态 `import` 换成
+`import.meta.glob('.../components/*/types.ts', { eager: true })`（目标不存在时返回空映射，
+动态 `await import()` 仍会被 import-analysis 提前解析而报错）。需要官方源码对照时
+恢复该目录，用例自动重新启用。
+
+同批修掉的另一处收集期故障：`scripts/check-wot-props.mjs` 的 shebang 会被 vite/esbuild
+transform 拒绝（`SyntaxError: Invalid or unexpected token`，报错位置指向调用方的 `import`
+语句）。被测试 import 的脚本一律不加 shebang。
+
 ### 3. 用 LPT 装箱分片，而不是 `--shard`
 
 内建 `--shard=i/N` 的算法是「收集顺序上取 `i % N`」，即**按文件个数**均分。测试文件

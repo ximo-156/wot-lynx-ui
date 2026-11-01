@@ -129,6 +129,7 @@ const LYNX_NATIVE_TAGS = new Set([
  */
 const PURE_TESTS = [
   'test/unit/api-diff.test.ts',
+  'test/unit/code128.test.ts',
   'test/unit/codemod.test.ts',
   'test/unit/format-date.test.ts',
   'test/unit/interceptor.test.ts',

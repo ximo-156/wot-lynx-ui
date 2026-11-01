@@ -25,22 +25,32 @@ import CollapseItem from '../../src/components/wd-collapse-item/wd-collapse-item
 import DropMenu from '../../src/components/wd-drop-menu/wd-drop-menu.vue'
 import DropMenuItem from '../../src/components/wd-drop-menu-item/wd-drop-menu-item.vue'
 import SortButton from '../../src/components/wd-sort-button/wd-sort-button.vue'
-import { tabsProps as officialTabs } from '../../../../.wot-ref/src-2.3.2/components/wd-tabs/types'
-import { tabProps as officialTab } from '../../../../.wot-ref/src-2.3.2/components/wd-tab/types'
-import { tabbarProps as officialTabbar } from '../../../../.wot-ref/src-2.3.2/components/wd-tabbar/types'
-import { tabbarItemProps as officialTabbarItem } from '../../../../.wot-ref/src-2.3.2/components/wd-tabbar-item/types'
-import { sidebarProps as officialSidebar } from '../../../../.wot-ref/src-2.3.2/components/wd-sidebar/types'
-import { sidebarItemProps as officialSidebarItem } from '../../../../.wot-ref/src-2.3.2/components/wd-sidebar-item/types'
-import { stepsProps as officialSteps } from '../../../../.wot-ref/src-2.3.2/components/wd-steps/types'
-import { stepProps as officialStep } from '../../../../.wot-ref/src-2.3.2/components/wd-step/types'
-import { navbarProps as officialNavbar } from '../../../../.wot-ref/src-2.3.2/components/wd-navbar/types'
-import { navbarCapsuleProps as officialCapsule } from '../../../../.wot-ref/src-2.3.2/components/wd-navbar-capsule/types'
-import { paginationProps as officialPagination } from '../../../../.wot-ref/src-2.3.2/components/wd-pagination/types'
-import { collapseProps as officialCollapse } from '../../../../.wot-ref/src-2.3.2/components/wd-collapse/types'
-import { collapseItemProps as officialCollapseItem } from '../../../../.wot-ref/src-2.3.2/components/wd-collapse-item/types'
-import { dropMenuProps as officialDropMenu } from '../../../../.wot-ref/src-2.3.2/components/wd-drop-menu/types'
-import { dorpMenuItemProps as officialDropItem } from '../../../../.wot-ref/src-2.3.2/components/wd-drop-menu-item/types'
-import { sortButtonProps as officialSort } from '../../../../.wot-ref/src-2.3.2/components/wd-sort-button/types'
+import { hasWotRef } from '../helpers/wot-ref'
+
+// .wot-ref 是 gitignore 掉的本地对照副本，CI 上必然缺失。静态 import 会让整个
+// suite 在**收集阶段**抛 "Failed to resolve import"，skipIf 来不及生效；动态
+// import 同样被 vite 的 import-analysis 提前解析。import.meta.glob 在目标不存在
+// 时返回空映射，是唯一不炸的加载方式（ADR-021）。
+const REF_TYPES = import.meta.glob('../../../../.wot-ref/src-2.3.2/components/*/types.ts', { eager: true }) as Record<string, any>
+const refProp = (component: string, exportName: string): any =>
+  REF_TYPES[`../../../../.wot-ref/src-2.3.2/components/${component}/types.ts`]?.[exportName]
+
+const officialTabs = refProp('wd-tabs', 'tabsProps')
+const officialTab = refProp('wd-tab', 'tabProps')
+const officialTabbar = refProp('wd-tabbar', 'tabbarProps')
+const officialTabbarItem = refProp('wd-tabbar-item', 'tabbarItemProps')
+const officialSidebar = refProp('wd-sidebar', 'sidebarProps')
+const officialSidebarItem = refProp('wd-sidebar-item', 'sidebarItemProps')
+const officialSteps = refProp('wd-steps', 'stepsProps')
+const officialStep = refProp('wd-step', 'stepProps')
+const officialNavbar = refProp('wd-navbar', 'navbarProps')
+const officialCapsule = refProp('wd-navbar-capsule', 'navbarCapsuleProps')
+const officialPagination = refProp('wd-pagination', 'paginationProps')
+const officialCollapse = refProp('wd-collapse', 'collapseProps')
+const officialCollapseItem = refProp('wd-collapse-item', 'collapseItemProps')
+const officialDropMenu = refProp('wd-drop-menu', 'dropMenuProps')
+const officialDropItem = refProp('wd-drop-menu-item', 'dorpMenuItemProps')
+const officialSort = refProp('wd-sort-button', 'sortButtonProps')
 import { compRead } from '../helpers/component-roots'
 
 // Compare the actual reference, not an API fixture or theme preset. Numeric tab
@@ -94,7 +104,7 @@ function propContract(definition: any) {
   }
 }
 
-describe('navigation controls: official public props', () => {
+describe.skipIf(!hasWotRef())('navigation controls: official public props', () => {
   it.each(COMPONENTS)('%s preserves names, constructors, required flags and defaults', (_, component, official) => {
     const local = (component as any).props
     expect(Object.keys(local).sort()).toEqual(Object.keys(official).sort())
@@ -562,7 +572,7 @@ const GEOMETRY: Array<[string, string, string[]]> = [
   ['wd-drop-menu-item', '.wd-drop-item__option', ['padding', 'transition']], ['wd-drop-menu-item', '.wd-drop-item__tip', ['font-size', 'line-height', 'margin-left']], ['wd-sort-button', '.wd-sort-button', ['height']], ['wd-sort-button', '.wd-sort-button__right', ['width', 'height', 'margin-left']], ['wd-sort-button', '.wd-sort-button .wd-sort-button__icon-up', ['font-size', 'top', 'transform', 'transform-origin']]
 ]
 describe('actual official non-theme CSS geometry and native layout', () => {
-  it.each(GEOMETRY)('%s %s matches official dimension/spacing defaults', (component, selector, properties) => {
+  it.skipIf(!hasWotRef()).each(GEOMETRY)('%s %s matches official dimension/spacing defaults', (component, selector, properties) => {
     const actual = cssRules(component, false).get(selector), expected = cssRules(component, true).get(selector)
     expect(actual, selector).toBeDefined(); expect(expected, selector).toBeDefined()
     for (const property of properties) expect(actual![property], property).toBe(expected![property])

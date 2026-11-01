@@ -6,6 +6,7 @@ import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { addUnit, pause } from '../../src/common/util'
 import { configureUniAdapter } from '../../src/common/uni'
+import { hasWotRef } from '../helpers/wot-ref'
 import Grid from '../../src/components/wd-grid/wd-grid.vue'
 import GridItem from '../../src/components/wd-grid-item/wd-grid-item.vue'
 import Row from '../../src/components/wd-row/wd-row.vue'
@@ -346,7 +347,8 @@ describe('table metadata, sorting, slots and shared row tracks', () => {
 })
 
 describe('local-only extensions (not official wot 2.3.2 parity)', () => {
-  it('classifies four nonofficial components and the official empty wot-ui placeholder', () => {
+  // 参考副本不入库（.gitignore 第 154 行），CI 上必然缺失 → 显式跳过而非 ENOENT
+  it.skipIf(!hasWotRef())('classifies four nonofficial components and the official empty wot-ui placeholder', () => {
     for (const name of ['wd-address-edit', 'wd-submit-bar', 'wd-share-sheet', 'wd-coupon']) {
       expect(existsSync(resolve(__dirname, '..', `../../../.wot-ref/src-2.3.2/components/${name}/${name}.vue`))).toBe(false)
     }
