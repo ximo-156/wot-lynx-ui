@@ -156,12 +156,15 @@ $checkbox-button-icon-left: var(--wot-checkbox-button-icon-left, $n-4) !default;
 
     @include when(checked) {
       color: $checkbox-color-checked;
-      border-color: currentColor;
+      // 真机 2026-10-28 全量巡检：原为 currentColor，Lynx 的 view 不解析
+      // currentColor（§19 差异清单第 1 条）→ 按钮模式的选中形状整块隐形。
+      // 描边与形状底色都改写成同一个具体令牌色。
+      border-color: $checkbox-color-checked;
       background: $checkbox-button-bg-checked;
 
       .wd-checkbox__shape {
         color: $checkbox-color-checked;
-        background: currentColor;
+        background: $checkbox-color-checked;
       }
     }
   }

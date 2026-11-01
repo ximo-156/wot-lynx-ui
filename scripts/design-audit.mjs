@@ -309,7 +309,10 @@ const only = process.argv.includes('--only')
 const filtered = only ? findings.filter((f) => only.includes(f.rule)) : findings
 
 /** 基线指纹：不含行号，见文件头「基线说明」 */
-const fingerprint = (f) => `${f.rule}|${f.file}|${f.message}`
+// 路径分隔符必须归一化成 `/`：`relative()` 在 Windows 上产出反斜杠，
+// 而基线键是正斜杠（CI 在 Linux 上生成），不归一化会让整份基线在
+// Windows 上静默失效——已签核的存量全被报成「新增」，--strict 永远红。
+const fingerprint = (f) => `${f.rule}|${f.file.replace(/\\/g, '/')}|${f.message}`
 
 const baseline = existsSync(BASELINE_FILE) ? new Set(Object.keys(JSON.parse(readFileSync(BASELINE_FILE, 'utf8')))) : new Set()
 

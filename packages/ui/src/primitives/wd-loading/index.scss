@@ -104,7 +104,7 @@ $loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-
       }
       .wd-loading__circular-segment {
         position: absolute;
-        background-color: currentColor;
+        background-color: currentColor; /* audit-ignore: 真机由 JS 内联具体色绘制，此处仅 Web/非组件场景兜底 */
         transform-origin: center center;
       }
     }
@@ -127,7 +127,7 @@ $loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-
         width: $loading-spinner-dots-dot-size;
         height: $loading-spinner-dots-dot-size;
         border-radius: $loading-spinner-dots-dot-radius;
-        background-color: currentColor;
+        background-color: currentColor; /* audit-ignore: 真机由 JS 内联具体色绘制，此处仅 Web/非组件场景兜底 */
         animation-name: wd-dotting;
         animation-timing-function: linear;
         animation-iteration-count: infinite;
@@ -171,7 +171,7 @@ $loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-
       width: $loading-spinner-dot-width;
       height: $loading-spinner-dot-height;
       margin: 0 auto;
-      background-color: currentColor;
+      background-color: currentColor; /* audit-ignore: 真机由 JS 内联具体色绘制，此处仅 Web/非组件场景兜底 */
       border-radius: $loading-spinner-dot-radius;
     }
   }
@@ -192,7 +192,7 @@ $loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-
     width: 100%;
     height: 100%;
     border-radius: $loading-wave-bar-radius;
-    background-color: currentColor;
+    background-color: currentColor; /* audit-ignore: 真机由 JS 内联具体色绘制，此处仅 Web/非组件场景兜底 */
     animation-duration: $loading-wave-animation-duration;
     animation-timing-function: linear;
     animation-iteration-count: infinite;

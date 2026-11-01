@@ -4,10 +4,19 @@
  * 每一项对应 Demo 中的一个可验证交互；id 用于勾选状态持久化。
  * expect 为真机上的预期结果，供测试人员对照。
  *
- * 分组与 docs/guide/device-testing.md「按清单逐项验证」一节保持一致：
- * 8 个分组 / 35 个测试项，覆盖 Tier 1 基础组件 + 手势核心（Slider /
- * SwipeAction）+ 弹层 + 表单 + 主题适配。
+ * 两类分组：
+ * 1. **交互清单**（本文件，8 组 / 35 项）：手势跟手、弹层回调、主题切换
+ *    等「必须动手操作」的场景，只覆盖 28 个组件；
+ * 2. **全量渲染清单**（`component-checks.ts`，6 组 / 106 项）：一个组件
+ *    一条，铺满全部 106 个组件，expect 指向该组件最可能翻车的真机行为。
+ *
+ * 为什么要有第 2 类：此前只有交互清单，78 个组件在真机上从未按项验过，
+ * 缺陷只能等用户截图反馈（2026-10-26 那批 8 类缺陷就是这么来的）。
+ * `pnpm check:device-coverage` 会断言每个组件都同时具备「主 demo 可渲染
+ * 实例」和「检查项」，新增组件漏加会直接红灯。
  */
+
+import { componentSections } from './component-checks'
 
 export interface TestItem {
   id: string
@@ -113,7 +122,9 @@ export const testSections: TestSection[] = [
       { id: 'theme-tokens', name: '令牌无残留', expect: '暗色下无亮色残留（文字/边框/按压态），themeVars 覆盖生效' },
       { id: 'theme-rpx-safe', name: 'rpx 与安全区', expect: 'rpx 在 Lynx 中不受支持（解析为 0，样式须用 px）；安全区数据由宿主注入，裸跑为 0 属预期' }
     ]
-  }
+  },
+  // 全量渲染清单：106 个组件各一条，见 component-checks.ts
+  ...componentSections
 ]
 
 export const totalItems = testSections.reduce((sum, s) => sum + s.items.length, 0)

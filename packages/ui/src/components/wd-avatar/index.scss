@@ -131,9 +131,10 @@ $avatar-color: var(--wot-avatar-color, $text-auxiliary) !default;
   }
 
   @include e(text) {
+    // 真机 2026-10-28 全量巡检：单行省略改由文本节点的原生 text-maxline="1"
+    // 承担（模板已声明）。overflow:hidden + text-overflow 在真机上会把文字
+    // 整段裁空（与 wd-segmented 同一根因），这里只保留不换行。
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     // Lynx 适配：text 节点不依赖继承（CONVENTIONS §8），居中显式写在文本
     // 元素上（NATIVE-REWRITE §3.2：容器 flex 居中 + text-align: center）。
     text-align: center;

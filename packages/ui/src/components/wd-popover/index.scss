@@ -92,10 +92,14 @@ $popover-menu-icon-margin-right: var(--wot-popover-menu-icon-margin-right, $spac
   }
 
   @include e(hidden) {
-    // Lynx 适配：wot-ui 用 left: -100vw 把度量副本移出视口，Lynx 视口单位
-    // 支持不确定，改用 -100%（相对定位包含块宽度的等价偏移；仅偏移不影响
-    // getRect 对宽高的度量）。visibility: hidden 保留布局盒供度量。
-    left: -100%;
+    // 度量副本：保留布局盒供 getRect 量宽高，但必须彻底移出视口。
+    // 真机 2026-10-28 全量巡检：原来只靠 `left: -100%` + `visibility: hidden`
+    // 双重保护，而 visibility 在 Lynx 不生效、百分比 left 对 absolute 元素的
+    // 解析也不保证 —— 任一失效副本就会画在原位，与真实气泡叠印。改用具体
+    // 像素偏移（不依赖百分比），visibility 仅作 Web 侧兜底。
+    left: -9999px;
+    top: -9999px;
+    /* audit-ignore: 已被像素偏移移出视口，visibility 仅作 Web 兜底 */
     visibility: hidden;
     pointer-events: none;
   }

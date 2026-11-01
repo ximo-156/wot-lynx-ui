@@ -344,6 +344,41 @@ function showVideoPreview() {
 }
 // RootPortal 根节点容器
 const portalBarVisible = ref(false)
+
+// ---------- 补充组件（全量覆盖：此前主 demo 未出现的 6 个组件）----------
+// 真机巡检要求「106 个组件全部有可渲染实例」，这 6 个此前只在文档里，
+// 真机上从未被看过一眼，因此单列一个区块。
+const iconSizes = ref([16, 20, 24, 32])
+const addressInfo = ref({
+  name: '张三',
+  tel: '13800138000',
+  province: '广东省',
+  city: '深圳市',
+  county: '南山区',
+  addressDetail: '科技园路 1 号',
+  isDefault: true
+})
+const coupons = ref([
+  { id: 1, name: '满 100 减 20', value: 20, unit: 'yuan', condition: '满 100 元可用', reason: '2026.10.01 - 2026.12.31' },
+  { id: 2, name: '8 折优惠', value: 8, unit: 'discount', condition: '满 200 元可用', reason: '2026.10.01 - 2026.12.31' }
+])
+const chosenCoupon = 0
+const pullRefreshing = ref(false)
+const pullRefreshCount = ref(0)
+function onPullRefresh() {
+  pullRefreshCount.value++
+  setTimeout(() => { pullRefreshing.value = false }, 800)
+}
+const shareVisible = ref(false)
+const shareOptions = ref([
+  { name: '微信好友', icon: 'chat' },
+  { name: '朋友圈', icon: 'picture' },
+  { name: '复制链接', icon: 'link' }
+])
+const submitPrice = ref(12880)
+function onSubmitBar() {
+  console.log('[demo] submit-bar submit')
+}
 </script>
 
 <template>
@@ -1482,6 +1517,43 @@ const portalBarVisible = ref(false)
         </view>
       </view>
 
+      <!-- 补充组件（全量覆盖）：这 6 个此前在主 demo 中从未出现，
+           真机上一次都没被看过，因此单列一个区块，纳入真机巡检范围 -->
+      <view class="demo-section">
+        <text class="demo-section__title">补充组件（全量覆盖 · 真机必查）</text>
+        <view class="demo-panel">
+          <text class="demo-panel__label">Icon 直接使用（此前仅经其它组件间接渲染）</text>
+          <view class="demo-row">
+            <wd-icon v-for="s in iconSizes" :key="s" name="setting" :size="s + 'px'" color="#755ffe" />
+          </view>
+
+          <text class="demo-panel__label">SubmitBar 提交栏（price 单位为分）</text>
+          <wd-submit-bar :price="submitPrice" label="合计：" button-text="提交订单" @submit="onSubmitBar" />
+
+          <text class="demo-panel__label">Coupon 优惠券（满减券 / 折扣券 / 首张选中）</text>
+          <!-- 注意：wd-coupon 只 emit change/exchange，没有 update:chosenCoupon，
+               写 v-model:chosen-coupon 会静默无效，这里用单向 prop 展示选中态 -->
+          <wd-coupon :chosen-coupon="chosenCoupon" :coupons="coupons" :show-exchange-bar="true" />
+
+          <text class="demo-panel__label">AddressEdit 地址编辑</text>
+          <wd-address-edit :address-info="addressInfo" @save="(e: any) => console.log('[demo] address save', e)" />
+
+          <text class="demo-panel__label">PullRefresh 下拉刷新（在框内下拉，已刷新 {{ pullRefreshCount }} 次）</text>
+          <view :style="{ height: '160px' }">
+            <wd-pull-refresh v-model="pullRefreshing" @refresh="onPullRefresh">
+              <view :style="{ padding: '12px' }">
+                <text class="demo-panel__label">下拉试试：已刷新 {{ pullRefreshCount }} 次</text>
+              </view>
+            </wd-pull-refresh>
+          </view>
+
+          <text class="demo-panel__label">ShareSheet 分享面板</text>
+          <view class="demo-row">
+            <wd-button size="small" @tap="shareVisible = true">打开分享面板</wd-button>
+          </view>
+        </view>
+      </view>
+
       <!-- 不可见弹层实例（命令式 / 受控显隐，集中在 scroll-view 末尾） -->
       <wd-cascader
         v-model="cascaderValue"
@@ -1528,6 +1600,12 @@ const portalBarVisible = ref(false)
         to="/pages/demo/index"
       />
       <wd-toast selector="demo-toast" />
+      <wd-share-sheet
+        v-model="shareVisible"
+        :options="shareOptions"
+        title="分享到"
+        @select="(e: any) => console.log('[demo] share select', e)"
+      />
       <wd-image-preview ref="imagePreviewRef" selector="demo-image-preview" />
       <wd-video-preview ref="videoPreviewRef" selector="demo-video-preview" close-position="right-top" />
     </scroll-view>

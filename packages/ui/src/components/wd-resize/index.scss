@@ -21,7 +21,11 @@ $resize-wrapper-z-index: var(--wot-resize-wrapper-z-index, -9999) !default; // w
 
   @include e(wrapper) {
     /* 绝对定位铺满容器：四边 0（NATIVE-REWRITE §3.2 绝对定位居中写法），
-       隐藏且不参与命中，滚动事件驱动尺寸探测 */
+       隐藏且不参与命中，滚动事件驱动尺寸探测。
+       真机 2026-10-28 全量巡检：visibility: hidden 在 Lynx 不生效，这个
+       铺满容器的 scroll-view 会盖住内容并吞掉触摸（内部控件点不动、
+       拖拽手柄失效），因此命中必须显式关掉——程序化 scrollTop 变化仍会
+       派发 scroll，度量链路不受影响。 */
     position: absolute;
     top: 0;
     bottom: 0;
@@ -29,7 +33,9 @@ $resize-wrapper-z-index: var(--wot-resize-wrapper-z-index, -9999) !default; // w
     right: 0;
     z-index: $resize-wrapper-z-index;
     overflow: hidden;
+    /* audit-ignore: 命中已由 pointer-events:none 关掉，visibility 仅 Web 兜底 */
     visibility: hidden;
+    pointer-events: none;
 
     @include m(placeholder) {
       transition: none;

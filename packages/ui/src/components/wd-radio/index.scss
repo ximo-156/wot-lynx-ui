@@ -179,12 +179,14 @@ $radio-button-icon-left: var(--wot-radio-button-icon-left, $n-4) !default;
 
     @include when(checked) {
       color: $radio-checked-color;
-      border-color: currentColor;
+      // 真机 2026-10-28 全量巡检：同 wd-checkbox，currentColor 在真机的
+      // background 上不解析 → 按钮模式的选中形状隐形。改写具体令牌色。
+      border-color: $radio-checked-color;
       background: $radio-button-checked-bg;
 
       .wd-radio__shape {
         color: $radio-checked-color;
-        background: currentColor;
+        background: $radio-checked-color;
       }
     }
   }

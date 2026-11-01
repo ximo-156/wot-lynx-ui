@@ -59,7 +59,11 @@ function onTouchStart(event: any) {
       >
         <view v-if="focused && index === value.length" class="wd-password-input__cursor" />
         <view v-else class="wd-password-input__value">
-          <view :style="{ visibility: mask && value[index] ? 'visible' : 'hidden' }" class="wd-password-input__mask" />
+          <!-- 掩码点（真机 2026-10-28 全量巡检）：原实现常驻渲染，用内联
+               `visibility: hidden/visible` 切换。Lynx 不解析 visibility，
+               真机上每个空格都会显示实心圆点——空密码看起来像已填满。
+               改 v-if 结构级挂载，只有该位有值且开启 mask 才渲染。 -->
+          <view v-if="mask && value[index]" class="wd-password-input__mask" />
           <text v-if="!mask && value[index]">{{ value[index] }}</text>
         </view>
       </view>

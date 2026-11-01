@@ -23,6 +23,8 @@
     "check:meta": "node scripts/gen-meta.mjs --check",
     "check:docs": "node scripts/gen-docs.mjs --check",
     "check:exports": "node scripts/check-exports.mjs",
+    "check:device-coverage": "node scripts/check-device-coverage.mjs",
+    "audit:device-traps": "node scripts/audit-device-traps.mjs",
     "lint:conventions": "node scripts/review-lint.mjs",
     "audit:design": "node scripts/design-audit.mjs",
     "audit:design:json": "node scripts/design-audit.mjs --json",
@@ -34,7 +36,7 @@
     "docs:dev": "pnpm --filter wot-lynx-ui-docs run dev",
     "docs:build": "pnpm --filter wot-lynx-ui-docs run build",
     "check:worklets": "node scripts/check-worklets.mjs",
-    "verify": "pnpm check:index && pnpm check:exports && pnpm check:deps && pnpm check:snapshot && pnpm check:meta && pnpm check:docs && pnpm build:css && pnpm typecheck && pnpm test && pnpm build:demo && pnpm check:worklets"
+    "verify": "pnpm check:index && pnpm check:exports && pnpm check:deps && pnpm check:snapshot && pnpm check:meta && pnpm check:docs && pnpm check:device-coverage && pnpm build:css && pnpm typecheck && pnpm test && pnpm build:demo && pnpm check:worklets"
   },
   "packageManager": "pnpm@10.24.0",
   "engines": {

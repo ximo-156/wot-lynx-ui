@@ -47,11 +47,13 @@ $tooltip-line-height: var(--wot-tooltip-line-height, $typography-body-line-heigh
   }
 
   @include e(hidden) {
-    // Lynx 适配：wot-ui 用 left: -100vw / bottom: -100vh 把度量副本移出
-    // 视口，Lynx 视口单位支持不确定，改用 -100%（相对定位包含块的等价偏移；
-    // 仅偏移不影响 getRect 对宽高的度量）。visibility: hidden 保留布局盒。
-    left: -100%;
-    bottom: -100%;
+    // 度量副本：保留布局盒供 getRect 量宽高，但必须彻底移出视口。
+    // 真机 2026-10-28 全量巡检：visibility 在 Lynx 不生效、百分比偏移对
+    // absolute 元素的解析也不保证，任一失效副本就会画在原位与真实气泡
+    // 叠印。改用具体像素偏移（不依赖百分比），visibility 仅作 Web 兜底。
+    left: -9999px;
+    top: -9999px;
+    /* audit-ignore: 已被像素偏移移出视口，visibility 仅作 Web 兜底 */
     visibility: hidden;
     pointer-events: none;
   }

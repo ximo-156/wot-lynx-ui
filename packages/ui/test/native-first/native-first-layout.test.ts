@@ -174,10 +174,13 @@ describe('原生优先重写 · 布局居中契约（calendar / calendar-view / 
     await pause(50)
     const items = container.querySelectorAll('.wd-password-input__item')
     expect(items.length).toBe(6)
-    // value.length = 2 → 第 3 格（index 2）渲染光标，其余渲染 __value + __mask
+    // value.length = 2 → 第 3 格（index 2）渲染光标，其余渲染 __value
     expect(container.querySelectorAll('.wd-password-input__cursor').length).toBe(1)
     expect(container.querySelectorAll('.wd-password-input__value').length).toBe(5)
-    expect(container.querySelectorAll('.wd-password-input__mask').length).toBe(5)
+    // 掩码点按需渲染（真机 2026-10-28 巡检）：原实现 6 格各有一个 mask 元素，
+    // 用内联 visibility 切换显隐；Lynx 不解析 visibility，空密码会显示满屏
+    // 圆点。改 v-if 后只有真正有值的格子才有 mask —— 2 位输入 → 2 个。
+    expect(container.querySelectorAll('.wd-password-input__mask').length).toBe(2)
     cleanup()
 
     // 日历视图：默认月面板，日期格为 __day > __day-container > (__day-top /

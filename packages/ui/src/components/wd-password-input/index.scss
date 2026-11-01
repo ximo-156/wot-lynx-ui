@@ -105,7 +105,7 @@ $password-input-cursor-duration: var(--wot-password-input-cursor-duration, 1s) !
     background: $password-input-dot-color;
     border-radius: $password-input-dot-radius;
     transform: translate(-50%, -50%);
-    visibility: hidden;
+    // 显隐已改 v-if 结构级挂载（真机不解析 visibility，见模板注释）
   }
 
   @include e(cursor) {
