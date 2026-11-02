@@ -63,7 +63,14 @@ $password-input-cursor-duration: var(--wot-password-input-cursor-duration, 1s) !
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    flex: 1;
+    // 真机 2026-11-01 缺陷：原来只写 `flex: 1`（= flex-basis: 0），而根节点
+    // 宽度是 auto（在 flex 行里按内容收缩）——basis 0 让「内容宽度」也归零，
+    // 引擎把容器宽度算成 6×1px 边框 = 6px，六格各分到 1px，整组渲染成一根
+    // 竖条（截图里被误认成键盘叠在一起）。
+    // 修法：给每格确定基准宽度（basis: auto 取 width），容器收缩到 6×格宽；
+    // 容器一旦被撑宽，flex-grow 仍按 wot-ui 语义等分剩余空间。
+    flex: 1 1 auto;
+    width: $password-input-height;
     height: 100%;
     color: $password-input-text-color;
     font-size: $password-input-font-size;

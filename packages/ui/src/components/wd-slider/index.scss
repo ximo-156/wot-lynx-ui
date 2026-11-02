@@ -82,9 +82,15 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
 
     // 默认（线状）样式
     @include m(default) {
-      height: $slider-bar-height;
-      background: $slider-bar-bg;
-      border-radius: $slider-bar-radius;
+      // 真机 2026-11-01 缺陷：轨道盒原来是 2px 高 + 满圆角，24px 的圆点
+      // 上下各越界 11px，真机上越界子节点不绘制（截图里三条滑轨都看不到
+      // 圆点，也就没有可拖拽的命中区域）。
+      // 修法：轨道盒只作「定位 / 命中盒」，高度撑到圆点尺寸；2px 的视觉
+      // 轨道下沉到 __track 的背景（见 --horizontal / --vertical 块），
+      // 圆点不再越界。占用高度与旧实现一致（旧：2px + 上下 11px margin）。
+      height: $slider-dot-size;
+      background: transparent;
+      border-radius: 0;
     }
 
     // 管道（胶囊）样式
@@ -111,7 +117,9 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
   @include e(line) {
     position: relative;
     height: 100%;
-    background: $slider-line-bg;
+    // 视觉下沉到 __line-fill（真机 2026-11-01）：进度条节点本身改成
+    // 「圆点的定位盒」，必须能容纳 24px 圆点，不能再自带 2px 的着色。
+    background: transparent;
     border-radius: inherit;
 
     @include m(capsule) {
@@ -127,9 +135,31 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     }
   }
 
+  // 进度条视觉（真正的 2px 着色条）：宽度恒为 __line 的 100%，
+  // 因而跟手时只需改 __line 的 width/left，这里自动跟随。
+  @include e(line-fill) {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: $slider-line-height;
+    transform: translateY(-50%);
+    background: $slider-line-bg;
+    border-radius: $slider-bar-radius;
+
+    @include m(capsule) {
+      height: $slider-line-height-capsule;
+    }
+  }
+
   @include e(dot) {
     position: absolute;
-    z-index: 1;
+    // 显式尺寸（真机 2026-11-01）：原来只靠子节点撑开（shrink-to-fit），
+    // 真机上绝对定位盒被算成 0 尺寸，圆点既不绘制也没有命中区域。
+    width: $slider-dot-size;
+    height: $slider-dot-size;
+    // 高于 __track(1) 与 __line(2)：命中测试必须落在圆点上
+    z-index: 3;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -265,8 +295,30 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
 
     @include me(bar) {
       @include m(default) {
-        margin-top: calc($slider-dot-size / 2 - $slider-bar-height);
-        margin-bottom: calc($slider-dot-size / 2 - $slider-bar-height);
+        // 占用高度与旧实现一致（旧：2px 轨道 + 上下各 (圆点/2 - 2)px margin），
+        // 轨道盒已撑到圆点尺寸，margin 归零即可维持原布局高度。
+        margin-top: 0;
+        margin-bottom: 0;
+
+        // 2px 视觉轨道：绝对定位在轨道盒垂直中线上
+        @include me(track) {
+          top: 50%;
+          bottom: auto;
+          height: $slider-bar-height;
+          transform: translateY(-50%);
+          background: $slider-bar-bg;
+          border-radius: $slider-bar-radius;
+        }
+
+        // 进度条盒：撑满圆点高度，圆点居中后不再越界；z-index 高于 __track
+        // （track 自带 z-index: 1 且现在有背景，不抬升会被它盖住）
+        @include me(line) {
+          position: absolute;
+          top: 50%;
+          height: $slider-dot-size;
+          transform: translateY(-50%);
+          z-index: 2;
+        }
       }
 
       // 管道样式下的特殊处理
@@ -344,9 +396,38 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
       flex: 1;
 
       @include m(default) {
-        width: $slider-bar-height;
+        // 同横向：轨道盒撑到圆点尺寸（旧实现 2px 宽 + 左右各 11px margin，
+        // 占用宽度不变），2px 视觉下沉到 __track。
+        width: $slider-dot-size;
         height: 100%;
-        margin: unset calc($slider-dot-size / 2);
+        margin: unset 0;
+
+        @include edeep(track) {
+          left: 50%;
+          right: auto;
+          width: $slider-bar-height;
+          transform: translateX(-50%);
+          background: $slider-bar-bg;
+          border-radius: $slider-bar-radius;
+        }
+
+        @include edeep(line) {
+          position: absolute;
+          left: 50%;
+          top: 0;
+          width: $slider-dot-size;
+          height: 100%;
+          transform: translateX(-50%);
+          z-index: 2;
+        }
+
+        @include edeep(line-fill) {
+          left: 50%;
+          top: 0;
+          width: $slider-bar-height;
+          height: 100%;
+          transform: translateX(-50%);
+        }
       }
 
       @include m(capsule) {
@@ -361,6 +442,16 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
         @include edeep(track) {
           top: $slider-capsule-track-inset;
           bottom: $slider-capsule-track-inset;
+        }
+
+        // 纵向胶囊：进度条视觉条改为竖向铺满（默认主题的竖向规则见上方
+        // m(default)；胶囊的线宽由 --capsule 的 18px 决定，方向仍需翻转）
+        @include edeep(line-fill) {
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          transform: none;
         }
 
         @include edeep(dot-slider) {

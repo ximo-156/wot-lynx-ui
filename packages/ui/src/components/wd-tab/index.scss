@@ -19,6 +19,11 @@
 
     @include m(inactive) {
       height: 0;
+      // 真机 2026-11-01：只收高度不裁剪时，内容仍然溢出绘制——非激活面板
+      // 的文字会压在页面上（暗色主题下是「亮色令牌的幽灵文字」，看起来像
+      // 文字消失）。这里补 overflow: hidden 让溢出内容真正被裁掉。
+      // 该节点无圆角，不受 §19 差异 #9「圆角容器 + overflow 裁空」影响。
+      overflow: hidden;
       // 与 wot-ui 2.3.2 逐字一致（wot-parity-nav-controls 对 transition 做字符串相等断言），
       // 不接受动效令牌归一（归一后字符串不等，断言即失败）
       transition: height 0.3s ease-in-out;

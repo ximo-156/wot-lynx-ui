@@ -10,5 +10,12 @@ $overlay-bg: var(--wot-overlay-bg, $opac-7_55) !default;
   top: 0;
   right: 0;
   bottom: 0;
+  // 根节点三件套（CONVENTIONS §15）：Lynx 3.x 默认 linear 布局，子项的
+  // `flex: 1` 只在父级 `display: flex` 上才生效。真机 2026-11-01 缺陷：
+  // 遮罩插槽内容（消费方写 `flex: 1` 撑满 + 居中）在 linear 下 flex 失效，
+  // 塌成内容尺寸贴在屏幕左上角——遮罩铺满、内容却挤在角上。
+  // 遮罩自身尺寸由四边 0 决定，这里只补布局声明，不影响定位与背景。
+  display: flex;
+  flex-direction: column;
   background: $overlay-bg;
 }

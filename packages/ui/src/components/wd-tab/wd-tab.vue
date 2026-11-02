@@ -8,8 +8,13 @@
  * - tabBodyStyle：参考源以 objToStyle 输出字符串（display:none），Lynx 的
  *   字符串 :style 会被静默丢弃（CONVENTIONS §19），改为对象语法并经
  *   Style Funnel 输出完整键集——非激活且父级未开 animated 时写
- *   display:none，其余状态显式写回 linear（Lynx view 默认布局），避免
- *   上一帧的 none 残留（§20）；
+ *   display:none，其余状态显式写回 flex，避免上一帧的 none 残留（§20）；
+ * - **非激活面板的兜底裁剪（真机 2026-11-01 修复）**：真机上 `display:none`
+ *   收起后内容仍溢出绘制，暗色切换后留下一层「亮色令牌的幽灵文字」
+ *   （截图里「标签一内容」以 #6B7085 画在纯黑底上 = 看不见）。面板常驻是
+ *   参考源契约（lazy 面板画过就保留，`wot-parity-nav-controls` 锁定），
+ *   故不改结构级卸载，改为在 `__body--inactive` 上补 `height: 0` +
+ *   `overflow: hidden`，让溢出的内容被真正裁掉；
  * - name 类型校验（number / string）与重名检测逻辑与参考源一致；
  * - customStyle 经 parseStyle 归一为对象后绑定。
  */
@@ -45,6 +50,12 @@ const TAB_BODY_STYLE = defineStyleKeys({ display: 'flex' })
 
 /**
  * tab body 样式
+ *
+ * 显隐沿用参考源契约（已画过的面板常驻 + display 切换，见
+ * `wot-parity-nav-controls` 的 lazy 面板断言），真机上的残留问题改由
+ * `__body--inactive` 的「height: 0 + overflow: hidden」兜底：
+ * 真机 2026-11-01 缺陷——非激活面板收起后内容仍溢出绘制，暗色下留下一层
+ * 亮色令牌的幽灵文字（「标签一内容」以 #6B7085 画在纯黑底上 = 看不见）。
  */
 const tabBodyStyle = computed(() =>
   resolveStyle(TAB_BODY_STYLE, {

@@ -2,6 +2,14 @@
  * wd-slider — 滑块（原生优先重写版）
  *
  * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - **圆点不再越界（真机 2026-11-01 修复）**：原实现把 24px 圆点塞进 2px 高、
+ *   `border-radius: inherit` 的 `__line` 里，圆点上下各越界 11px，真机上越界
+ *   子节点不绘制——三条滑轨都看不到圆点，也就没有可拖拽的命中区域（「不能
+ *   滑动」）。现在 `__bar` / `__line` 只作「定位盒」，尺寸撑到圆点大小，
+ *   2px 视觉下沉到 `__track`（轨道底色）与 `__line-fill`（进度条着色），
+ *   圆点显式定尺寸（不再依赖 shrink-to-fit）并抬到 z-index 3；进度条宽度
+ *   仍由 Vue / worklet 改 `__line` 的 width/left 驱动，`__line-fill` 恒为
+ *   100%，跟手链路完全不变；
  * - **跟手走主线程（声明式 MTS）**：滑块的 touchmove 经
  *   `main-thread-bindtouchmove` 绑定 `'main thread'` worklet，触点经绝对
  *   定位公式换算后 `setStyleProperty` 直改进度条元素——零线程跨越，
@@ -206,8 +214,18 @@ const barClass = computed(() => {
 
 /**
  * 轨道样式
+ *
+ * 默认主题下轨道盒已改成「圆点大小的定位盒」（真机 2026-11-01：2px 轨道盒
+ * 会把越界的 24px 圆点整段裁掉），2px 视觉下沉到 __track，因此自定义
+ * inactiveColor 也要跟着下沉；胶囊主题仍由轨道盒自身着色。
+ * 两个键都恒定输出（CONVENTIONS §20：省略键 = 保留旧值）。
  */
-const barStyle = computed(() => ({ 'background-color': props.inactiveColor || '' }))
+const barStyle = computed(() => ({ 'background-color': props.theme === 'default' ? '' : props.inactiveColor || '' }))
+
+/**
+ * 轨道视觉样式（仅默认主题承载 inactiveColor）
+ */
+const trackStyle = computed(() => ({ 'background-color': props.theme === 'default' ? props.inactiveColor || '' : '' }))
 
 /**
  * 进度条类名
@@ -221,9 +239,13 @@ const lineClass = computed(() => {
 
 /**
  * 进度条样式（落定后由 Vue 接管；跟手期间由 worklet 直改，值一致）
+ *
+ * 着色已移到内部的 __line-fill（真机 2026-11-01）：进度条节点本身是圆点的
+ * 定位盒，必须能容纳 24px 圆点，不能再自带 2px 的着色；宽度仍由这里下发，
+ * __line-fill 恒为 100%，跟手改 width/left 时自动跟随。
  */
 const lineStyle = computed(() => {
-  const style: Record<string, string> = { width: props.vertical ? '' : '0%', height: props.vertical ? '0%' : '', left: props.vertical ? '' : '0', top: props.vertical ? '0' : '', 'background-color': props.activeColor || '' }
+  const style: Record<string, string> = { width: props.vertical ? '' : '0%', height: props.vertical ? '0%' : '', left: props.vertical ? '' : '0', top: props.vertical ? '0' : '' }
 
   if (scope.value === 0) return style
 
@@ -245,6 +267,12 @@ const lineStyle = computed(() => {
 
   return style
 })
+
+/** 进度条视觉条类名（胶囊主题线宽不同） */
+const fillClass = computed(() => `wd-slider__line-fill wd-slider__line-fill--${props.theme}`)
+
+/** 进度条视觉条样式（activeColor 在此下发） */
+const fillStyle = computed(() => ({ 'background-color': props.activeColor || '' }))
 
 // ---------- 监听器 -----------
 
@@ -749,8 +777,9 @@ const onDotTouchMove = (event: any) => {
       @touchmove="onBarTouchMove"
       @tap.stop="onBarClick"
     >
-      <!-- 可滑动有效轨道（用于尺寸测量与 marks 定位） -->
-      <view :id="trackId" :main-thread-ref="trackRef" class="wd-slider__track">
+      <!-- 可滑动有效轨道（用于尺寸测量与 marks 定位；默认主题下同时承载
+           2px 视觉轨道背景，见 index.scss 的 __bar--default 注释） -->
+      <view :id="trackId" :main-thread-ref="trackRef" class="wd-slider__track" :style="trackStyle">
         <template v-if="hasMarks">
           <view
             v-for="(mark, index) in scaleList"
@@ -789,6 +818,10 @@ const onDotTouchMove = (event: any) => {
         :left-bound="String(currentValue[0])"
         :right-bound="String(currentValue[1])"
       >
+        <!-- 进度条视觉条（真机 2026-11-01：着色从 __line 下沉到这里，
+             让 __line 变成能容纳 24px 圆点的定位盒） -->
+        <view :class="fillClass" :style="fillStyle" />
+
         <!-- 单滑块 / 双滑块左侧 -->
         <view
           :class="`wd-slider__dot ${range ? 'wd-slider__dot--left' : ''}`"

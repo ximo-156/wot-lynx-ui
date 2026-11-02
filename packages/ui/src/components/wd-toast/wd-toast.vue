@@ -86,6 +86,8 @@ const TOAST_ROOT_STYLE = defineStyleKeys({
   right: '0px',
   top: '0px',
   bottom: '0px',
+  width: '100%',
+  height: '100%',
   display: 'flex',
   'flex-direction': 'column',
   'align-items': 'center',
@@ -95,7 +97,29 @@ const TOAST_ROOT_STYLE = defineStyleKeys({
   'z-index': '100'
 })
 
-const transitionStyle = computed<Record<string, string>>(() => resolveStyle(TOAST_ROOT_STYLE, { 'z-index': String(zIndex.value) }))
+/**
+ * 窗口尺寸（取不到时退回 100%，至少不比现状更差）。
+ *
+ * 真机 2026-11-01 缺陷：四边 0 并没有把这个 fixed 节点撑满——`display: flex`
+ * 的 fixed 容器在真机上按**内容尺寸**收缩（同页的 .wd-overlay 是 linear
+ * 布局，四边 0 反而铺满，形成对照），`justify-content / align-items` 只能
+ * 在一个内容大小的盒子里居中，于是 toast 贴在屏幕左上角、文字被上边缘裁掉。
+ * 修法：宽高按窗口尺寸显式下发，不再依赖引擎对「四边 0 + flex」的尺寸推导。
+ */
+function viewportSize(): { width: string; height: string } {
+  const info = getSystemInfo()
+  const w = Number(info?.windowWidth)
+  const h = Number(info?.windowHeight)
+  return {
+    width: Number.isFinite(w) && w > 0 ? `${w}px` : '100%',
+    height: Number.isFinite(h) && h > 0 ? `${h}px` : '100%'
+  }
+}
+
+const transitionStyle = computed<Record<string, string>>(() => {
+  const size = viewportSize()
+  return resolveStyle(TOAST_ROOT_STYLE, { 'z-index': String(zIndex.value), width: size.width, height: size.height })
+})
 
 const contentStyle = computed(() => {
   const offsets: Record<string, number> = { top: -0.4, 'middle-top': -0.188, bottom: 0.4 }
