@@ -130,10 +130,12 @@ $upload-row-spacing: var(--wot-upload-row-spacing, $spacing-tight) !default;
 
   @include e(picture, file, video) {
     position: relative;
-    // 参考源声明（Web 块级流）：Lynx 引擎只识别 flex / none / linear，该值
-    // 在真机被静默丢弃——保留仅为与 wot-ui 声明集对齐；file / video 由下方
-    // 规则覆盖为 flex 纵排居中，picture 为原生 image 元素（宽高 100% 撑满）。
-    display: block;
+    // 真机（2026-11-03）：`display:block` 是 Web 块级声明，Lynx 只识别
+    // flex / none / linear，会被静默丢弃——作为 flex 子项时缩略图按内容宽
+    // 塌陷（预览格子变形/看不见）。这里改成 flex 并在 ——picture 之外的
+    // 两种形态由下方规则覆盖为纵排居中；picture 为原生 image 元素，宽高
+    // 100% 已撑满。
+    display: flex;
     width: 100%;
     height: 100%;
   }

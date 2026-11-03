@@ -310,7 +310,12 @@ $step-description-padding: var(--wot-step-description-padding, $padding-zero $pa
 
   @include e(dot) {
     position: relative;
-    display: block;
+    // 真机（2026-11-03）：`display:block` 是 Web 块级声明，Lynx 只识别
+    // flex / none / linear，会被静默丢弃 —— 圆点作为 flex 子项时会按内容宽
+    // 塌陷，8px 的小圆点直接看不见。改成显式 flex 居中，语义等价且真机生效。
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: $step-dot-size;
     height: $step-dot-size;
     border-radius: 50%;

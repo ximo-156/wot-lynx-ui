@@ -2,14 +2,32 @@
  * wd-slider — 滑块（原生优先重写版）
  *
  * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
+ * - **整条滑轨在真机上不绘制（2026-11-03 修复，本轮核心）**：用户截图里三条
+ *   滑轨只剩 24px 空白高度、什么都没画。两个成因都在「Web 成立、Lynx 原生不
+ *   成立」的写法上：
+ *   ① 层序：`__track(z1)` / `__line(z2)` / `__dot(z3)` 挂在**没有 z-index** 的
+ *      `__bar` 上 —— 真机上带 z-index 的绝对定位节点必须落在自带层叠上下文的
+ *      父级里，否则绘制顺序与 Web 不一致（CONVENTIONS §19 定位 FAQ），整棵子树
+ *      连同刻度文字一起不画。现在根节点与 `__bar` 各加 `z-index: 0`，内部
+ *      **全部删除** z-index，层序改由 DOM 顺序保证。
+ *   ② 几何：2px 视觉条原来用 `top: 50% + translateY(-50%)` 数值居中，真机不稳。
+ *      现在视觉条下沉成 `__track-line` / `__line-fill` 两个**常规流**子节点，
+ *      由父级 `display:flex + align-items:center` 结构居中；`__line` 改
+ *      `top: 0; height: 100%`，圆点贴顶即垂直居中，只剩水平方向的
+ *      `translateX(±50%)` 用于跨轨道两端。
+ *   ③ 内联样式：`lineStyle` 原来对不适用的方向下发 `height: ''` / `top: ''`，
+ *      空串经 Lynx 内联通道是「无效值」，会顶掉 CSS 类里的 height → `__line`
+ *      塌成 0 高，圆点与进度条一起消失。现在恒定输出四个键且**全是合法值**
+ *      （CONVENTIONS §20）；`barStyle`/`trackStyle`/`fillStyle` 的空串改经
+ *      `filterStyle()` 剔除，未自定义颜色时让 CSS 令牌继续生效。
+ *   跟手链路（worklet / 主线程度量 / 落定公式）一行未改。
  * - **圆点不再越界（真机 2026-11-01 修复）**：原实现把 24px 圆点塞进 2px 高、
  *   `border-radius: inherit` 的 `__line` 里，圆点上下各越界 11px，真机上越界
  *   子节点不绘制——三条滑轨都看不到圆点，也就没有可拖拽的命中区域（「不能
  *   滑动」）。现在 `__bar` / `__line` 只作「定位盒」，尺寸撑到圆点大小，
- *   2px 视觉下沉到 `__track`（轨道底色）与 `__line-fill`（进度条着色），
- *   圆点显式定尺寸（不再依赖 shrink-to-fit）并抬到 z-index 3；进度条宽度
- *   仍由 Vue / worklet 改 `__line` 的 width/left 驱动，`__line-fill` 恒为
- *   100%，跟手链路完全不变；
+ *   2px 视觉下沉到 `__track-line`（轨道底色）与 `__line-fill`（进度条着色），
+ *   圆点显式定尺寸（不再依赖 shrink-to-fit）；进度条宽度仍由 Vue / worklet 改
+ *   `__line` 的 width/left 驱动，`__line-fill` 恒为 100%，跟手链路完全不变；
  * - **跟手走主线程（声明式 MTS）**：滑块的 touchmove 经
  *   `main-thread-bindtouchmove` 绑定 `'main thread'` worklet，触点经绝对
  *   定位公式换算后 `setStyleProperty` 直改进度条元素——零线程跨越，
@@ -215,17 +233,21 @@ const barClass = computed(() => {
 /**
  * 轨道样式
  *
- * 默认主题下轨道盒已改成「圆点大小的定位盒」（真机 2026-11-01：2px 轨道盒
- * 会把越界的 24px 圆点整段裁掉），2px 视觉下沉到 __track，因此自定义
- * inactiveColor 也要跟着下沉；胶囊主题仍由轨道盒自身着色。
- * 两个键都恒定输出（CONVENTIONS §20：省略键 = 保留旧值）。
+ * 默认主题下轨道盒本身不承载视觉：2px 视觉条下沉到 __track-line（真机
+ * 2026-11-03），因此自定义 inactiveColor 落到 __track-line 上；胶囊主题
+ * 仍由轨道盒自身着色。
+ *
+ * ⚠️ 空串不能直接下发（真机 2026-11-03 缺陷）：Lynx 原生内联通道把
+ * `background-color: ''` 当作无效值写入元素属性表，会把 CSS 类里的令牌色
+ * 一起顶掉 —— 轨道与进度条双双透明，整条滑块看起来「消失」。这里统一经
+ * filterStyle 剔除空值，未自定义颜色时让 CSS 令牌继续生效。
  */
-const barStyle = computed(() => ({ 'background-color': props.theme === 'default' ? '' : props.inactiveColor || '' }))
+const barStyle = computed(() => filterStyle({ 'background-color': props.theme === 'capsule' ? props.inactiveColor : '' }))
 
 /**
  * 轨道视觉样式（仅默认主题承载 inactiveColor）
  */
-const trackStyle = computed(() => ({ 'background-color': props.theme === 'default' ? props.inactiveColor || '' : '' }))
+const trackStyle = computed(() => filterStyle({ 'background-color': props.theme === 'default' ? props.inactiveColor : '' }))
 
 /**
  * 进度条类名
@@ -240,12 +262,19 @@ const lineClass = computed(() => {
 /**
  * 进度条样式（落定后由 Vue 接管；跟手期间由 worklet 直改，值一致）
  *
- * 着色已移到内部的 __line-fill（真机 2026-11-01）：进度条节点本身是圆点的
+ * 着色在内部的 __line-fill（真机 2026-11-01）：进度条节点本身是圆点的
  * 定位盒，必须能容纳 24px 圆点，不能再自带 2px 的着色；宽度仍由这里下发，
  * __line-fill 恒为 100%，跟手改 width/left 时自动跟随。
+ *
+ * ⚠️ 键值恒定输出且**全部是合法值**（CONVENTIONS §20）：上一版对不适用的
+ * 方向下发 `height: ''` / `top: ''`，真机把空串当无效值写进元素属性表，
+ * 顶掉了 CSS 类里的 height，__line 塌成 0 高 —— 圆点与进度条被整段裁掉
+ * （2026-11-03 真机缺陷）。这里改成下发与样式表一致的具体值。
  */
 const lineStyle = computed(() => {
-  const style: Record<string, string> = { width: props.vertical ? '' : '0%', height: props.vertical ? '0%' : '', left: props.vertical ? '' : '0', top: props.vertical ? '0' : '' }
+  const style: Record<string, string> = props.vertical
+    ? { width: '100%', height: '0%', left: '0', top: '0' }
+    : { width: '0%', height: '100%', left: '0', top: '0' }
 
   if (scope.value === 0) return style
 
@@ -261,7 +290,7 @@ const lineStyle = computed(() => {
   } else {
     const value = modelValue.value as number
     const size = ((value - props.min) / scope.value) * 100
-    style[startProp] = '0'
+    style[startProp] = '0%'
     style[prop] = `${size}%`
   }
 
@@ -271,8 +300,8 @@ const lineStyle = computed(() => {
 /** 进度条视觉条类名（胶囊主题线宽不同） */
 const fillClass = computed(() => `wd-slider__line-fill wd-slider__line-fill--${props.theme}`)
 
-/** 进度条视觉条样式（activeColor 在此下发） */
-const fillStyle = computed(() => ({ 'background-color': props.activeColor || '' }))
+/** 进度条视觉条样式（activeColor 在此下发；空值不下发，见 barStyle 注释） */
+const fillStyle = computed(() => filterStyle({ 'background-color': props.activeColor }))
 
 // ---------- 监听器 -----------
 
@@ -777,9 +806,13 @@ const onDotTouchMove = (event: any) => {
       @touchmove="onBarTouchMove"
       @tap.stop="onBarClick"
     >
-      <!-- 可滑动有效轨道（用于尺寸测量与 marks 定位；默认主题下同时承载
-           2px 视觉轨道背景，见 index.scss 的 __bar--default 注释） -->
-      <view :id="trackId" :main-thread-ref="trackRef" class="wd-slider__track" :style="trackStyle">
+      <!-- 可滑动有效轨道（用于尺寸测量与 marks 定位；默认主题下 2px 视觉轨道
+           由内部的 __track-line 承载，见 index.scss 的 __bar--default 注释） -->
+      <view :id="trackId" :main-thread-ref="trackRef" class="wd-slider__track">
+        <!-- 2px 视觉轨道（真机 2026-11-03）：常规流子节点 + 父级 display:flex
+             居中，不依赖 top:50% / transform，也不参与 z-index 层序。
+             胶囊主题的轨道底色由 __bar 自身承担，故只在默认主题渲染。 -->
+        <view v-if="props.theme === 'default'" class="wd-slider__track-line" :style="trackStyle" />
         <template v-if="hasMarks">
           <view
             v-for="(mark, index) in scaleList"

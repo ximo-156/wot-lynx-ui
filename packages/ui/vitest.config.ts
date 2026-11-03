@@ -192,7 +192,21 @@ export default defineConfig({
         plugins: [vue({
           template: {
             compilerOptions: {
-              isCustomElement: (tag: string) => LYNX_NATIVE_TAGS.has(tag)
+              isCustomElement: (tag: string) => LYNX_NATIVE_TAGS.has(tag),
+              /**
+               * 必须与产线编译器一致地关掉静态提升（2026-11-03）。
+               *
+               * vue-lynx 运行时的 `createStaticVNode` 是**直接抛错**的实现
+               * （「the Lynx renderer does not implement insertStaticContent」），
+               * 因此 Lynx 产线编译器不做静态提升。测试环境用的是标准
+               * @vitejs/plugin-vue，默认 `hoistStatic: true`：只要 SFC 里存在
+               * 「连续多棵纯静态兄弟子树」，编译产物就会走 createStaticVNode，
+               * 挂载时直接崩（`hostInsertStaticContent is not a function`）。
+               * 组件级单测模板小碰不到；一旦像 demo 的 Showcase 那样把整页演示
+               * 内容聚合进一个 SFC，全量挂载测试（event-registry）必然触发。
+               * 关掉后测试编译产物与真机一致，也不会再有这类假失败。
+               */
+              hoistStatic: false
             }
           }
         }), mtsWorkletPlugin()],

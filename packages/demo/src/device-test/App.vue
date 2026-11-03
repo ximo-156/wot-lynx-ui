@@ -4,7 +4,21 @@ import { useToast } from 'wot-lynx-ui'
 
 import { testSections, totalItems, type TestItem } from './checklist'
 import ChecklistBox from './ChecklistBox.vue'
+import Showcase from '../showcase/Showcase.vue'
 import { demoImage } from '../assets/demo-images'
+
+/**
+ * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
+ * 真机排查第一时间看它，避免"改了没生效"的误判。
+ */
+const buildTag = 'R5 · 2026-11-03 全量组件展厅 + Slider 真机修复'
+
+/**
+ * 全量渲染清单（component-checks.ts 的 6 组，共 106 条）。
+ * 前 8 组是手写的交互卡片（testSections[0..7]），之后的 6 组按数据渲染，
+ * 保证「106 个组件的检查项」在真机页面上也真的看得见。
+ */
+const renderSections = computed(() => testSections.slice(8))
 
 // ---------- 设备信息 ----------
 const sysInfo = (globalThis as any).SystemInfo || {}
@@ -141,7 +155,7 @@ const safeAreaText = computed(() => {
       <!-- ============ 头部：设备信息 ============ -->
       <view class="header">
         <text class="header__title">wot-lynx-ui 真机测试</text>
-        <text class="header__sub">Vue Lynx · 8 组 35 项验收清单</text>
+        <text class="header__sub">Vue Lynx · 8 组交互 + 6 组全量渲染 · 共 {{ totalItems }} 项</text>
         <view class="header__device">
           <text class="header__device-item">平台 {{ deviceInfo.platform }}</text>
           <text class="header__device-item">屏幕 {{ deviceInfo.width }}×{{ deviceInfo.height }}</text>
@@ -409,6 +423,26 @@ const safeAreaText = computed(() => {
       <wd-dialog ref="dialogRef" selector="device-test-dialog" />
       <wd-toast selector="device-test-toast" />
       <wd-keyboard v-model="payValue" v-model:visible="keyboardVisible" />
+
+      <!-- ============ 全量组件渲染（106/106，真机必查） ============ -->
+      <!-- 为什么放在这一页（2026-11-03）：交互清单只覆盖 28 个组件，其余 78 个
+           组件在 device-test 页面上**没有可渲染实例**——真机上自然"显示不出来"，
+           而主 demo 在电脑上是齐全的。这里直接挂载与 main 入口**同一份**
+           Showcase：真机与电脑看到的是完全相同的 106 个组件实例，任何
+           「电脑能显示、真机不显示」的差异都能当场在真机页上看到。 -->
+      <view class="card">
+        <text class="card__title">全量组件渲染（106 / 106）</text>
+        <text class="card__hint">与主 demo 共用同一份 Showcase：以下每个组件在真机上都应有真实渲染结果</text>
+        <text class="tag">构建标记 {{ buildTag }}</text>
+      </view>
+      <Showcase />
+
+      <!-- ============ 全量渲染清单（6 组 106 条，逐项对照上面的实例） ============ -->
+      <view v-for="section in renderSections" :key="section.id" class="card">
+        <text class="card__title">{{ section.title }}</text>
+        <text class="card__hint">{{ section.hint }}</text>
+        <ChecklistBox :items="section.items" :checked="checked" @toggle="toggle" />
+      </view>
     </scroll-view>
   </wd-config-provider>
 </template>

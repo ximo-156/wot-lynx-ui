@@ -68,6 +68,12 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
   flex-flow: row nowrap;
   align-items: center;
   position: relative;
+  /* 真机层序（CONVENTIONS §19 定位 FAQ，2026-11-03 真机缺陷）：
+     绝对定位 + z-index 的子节点必须落在「自带层叠上下文」的父级里，否则真机
+     绘制顺序与 Web 不一致——上一版 __track(z1) / __line(z2) / __dot(z3) 挂在
+     没有 z-index 的 __bar 上，整条滑轨连同刻度一起不绘制（卡片里只剩 24px 的
+     空白高度，看起来像组件消失）。根节点先建立上下文，__bar 再收口一层。 */
+  z-index: 0;
 
   @include m(with-extreme) {
     @include me(bar) {
@@ -79,6 +85,8 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
   @include e(bar) {
     flex: 1;
     position: relative;
+    /* 同根节点：把子节点的 z-index 收进本节点层叠上下文（真机层序） */
+    z-index: 0;
 
     // 默认（线状）样式
     @include m(default) {
@@ -86,8 +94,8 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
       // 上下各越界 11px，真机上越界子节点不绘制（截图里三条滑轨都看不到
       // 圆点，也就没有可拖拽的命中区域）。
       // 修法：轨道盒只作「定位 / 命中盒」，高度撑到圆点尺寸；2px 的视觉
-      // 轨道下沉到 __track 的背景（见 --horizontal / --vertical 块），
-      // 圆点不再越界。占用高度与旧实现一致（旧：2px + 上下 11px margin）。
+      // 轨道下沉到 __track-line 的常规流子节点（见 --horizontal / --vertical
+      // 块），圆点不再越界。占用高度与旧实现一致（旧：2px + 上下 11px margin）。
       height: $slider-dot-size;
       background: transparent;
       border-radius: 0;
@@ -111,7 +119,19 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 1;
+    /* 不参与 z-index 层序：DOM 顺序已经保证 __track 在 __line 之下，
+       显式抬升在真机上会打乱绘制顺序（见根节点注释）。 */
+  }
+
+  /* 2px 视觉轨道（真机 2026-11-03）：常规流子节点，由父级 display:flex +
+     align-items:center 结构居中。整条链路不再依赖 top:50% / transform，
+     也不再有越界裁剪风险。 */
+  @include e(track-line) {
+    width: 100%;
+    height: $slider-line-height;
+    flex-shrink: 0;
+    background: $slider-bar-bg;
+    border-radius: $slider-bar-radius;
   }
 
   @include e(line) {
@@ -121,7 +141,8 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     // 「圆点的定位盒」，必须能容纳 24px 圆点，不能再自带 2px 的着色。
     background: transparent;
     border-radius: inherit;
-
+    /* 默认主题下用 flex 结构居中 __line-fill（见 --horizontal/--vertical
+       的 m(default) 块）；胶囊主题仍用绝对定位的 18px 视觉条。 */
     @include m(capsule) {
       height: $slider-line-height-capsule;
     }
@@ -137,6 +158,8 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
 
   // 进度条视觉（真正的 2px 着色条）：宽度恒为 __line 的 100%，
   // 因而跟手时只需改 __line 的 width/left，这里自动跟随。
+  // 默认主题下由 m(default) 改成「常规流 + 父级 flex 居中」；
+  // 这里保留的绝对定位是胶囊主题的形态。
   @include e(line-fill) {
     position: absolute;
     left: 0;
@@ -158,8 +181,8 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     // 真机上绝对定位盒被算成 0 尺寸，圆点既不绘制也没有命中区域。
     width: $slider-dot-size;
     height: $slider-dot-size;
-    // 高于 __track(1) 与 __line(2)：命中测试必须落在圆点上
-    z-index: 3;
+    /* 不写 z-index（真机 2026-11-03）：__dot 在 DOM 中排在 __line-fill 之后，
+       顺序已保证它在进度条之上；显式 z-index 反而打乱真机绘制顺序。 */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -175,7 +198,6 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     /* 出场 transition：目标是隐藏态，所以写在这里 */
     transition: opacity $slider-dot-popover-duration-exit $slider-dot-popover-easing-exit,
       transform $slider-dot-popover-duration-exit $slider-dot-popover-easing-exit;
-    z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -300,24 +322,33 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
         margin-top: 0;
         margin-bottom: 0;
 
-        // 2px 视觉轨道：绝对定位在轨道盒垂直中线上
+        // 轨道盒改成 flex 行容器：2px 视觉条（__track-line）与进度条
+        // （__line-fill）都由 align-items:center 结构居中，
+        // 不再依赖 top:50% + translateY(-50%)（真机 2026-11-03）。
         @include me(track) {
-          top: 50%;
-          bottom: auto;
-          height: $slider-bar-height;
-          transform: translateY(-50%);
-          background: $slider-bar-bg;
-          border-radius: $slider-bar-radius;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
         }
 
-        // 进度条盒：撑满圆点高度，圆点居中后不再越界；z-index 高于 __track
-        // （track 自带 z-index: 1 且现在有背景，不抬升会被它盖住）
+        // 进度条盒：与轨道盒等高，圆点（圆点尺寸 = 轨道盒高度）贴顶即居中，
+        // 无需垂直位移；宽度/左偏移仍由内联样式与 worklet 驱动。
         @include me(line) {
           position: absolute;
-          top: 50%;
-          height: $slider-dot-size;
-          transform: translateY(-50%);
-          z-index: 2;
+          top: 0;
+          height: 100%;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+        }
+
+        @include me(line-fill) {
+          position: relative;
+          left: auto;
+          top: auto;
+          width: 100%;
+          height: $slider-line-height;
+          transform: none;
         }
       }
 
@@ -336,18 +367,20 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     }
 
     @include me(dot) {
-      top: 50%;
-      transform: translateY(-50%);
+      // 圆点高度 = 轨道盒高度，贴顶即垂直居中（不再用 translateY 居中）
+      top: 0;
 
       // 双滑块定位
       @include m(left) {
         left: 0;
-        transform: translate(-50%, -50%);
+        right: auto;
+        transform: translateX(-50%);
       }
 
       @include m(right) {
         right: 0;
-        transform: translate(50%, -50%);
+        left: auto;
+        transform: translateX(50%);
       }
     }
 
@@ -356,7 +389,8 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
       @include m(single) {
         @include me(dot) {
           right: 0;
-          transform: translate(50%, -50%);
+          left: auto;
+          transform: translateX(50%);
         }
       }
     }
@@ -403,30 +437,36 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
         margin: unset 0;
 
         @include edeep(track) {
-          left: 50%;
-          right: auto;
+          // 同横向：轨道盒只作测量容器，2px 竖线由 __track-line 常规流居中
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        @include edeep(track-line) {
           width: $slider-bar-height;
-          transform: translateX(-50%);
-          background: $slider-bar-bg;
-          border-radius: $slider-bar-radius;
+          height: 100%;
         }
 
         @include edeep(line) {
+          // 进度条盒与轨道盒等宽（圆点尺寸），圆点横向贴中即居中
           position: absolute;
-          left: 50%;
+          left: 0;
           top: 0;
-          width: $slider-dot-size;
+          width: 100%;
           height: 100%;
-          transform: translateX(-50%);
-          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         }
 
         @include edeep(line-fill) {
-          left: 50%;
-          top: 0;
+          position: relative;
+          left: auto;
+          top: auto;
           width: $slider-bar-height;
           height: 100%;
-          transform: translateX(-50%);
+          transform: none;
         }
       }
 

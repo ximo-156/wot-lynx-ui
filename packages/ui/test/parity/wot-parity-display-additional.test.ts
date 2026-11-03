@@ -174,7 +174,7 @@ describe('official display additional: img / empty', () => {
     expect(container.querySelector('.wd-img__loading')).toBeNull()
   })
 
-  it('img preview is success-only and uses previewSrc; sizing/radius resets preserve round clipping', async () => {
+  it('img preview is success-only and uses previewSrc; round corners come from the image node, never from overflow clipping', async () => {
     const preview = vi.spyOn(uni, 'previewImage').mockImplementation(() => undefined as any)
     const width = ref<number | undefined>(120), radius = ref<number | undefined>(8), round = ref(false)
     const { container } = render({ setup: () => () => h(Img, { src: 'image.png', previewSrc: 'preview.png', enablePreview: true, width: width.value, radius: radius.value, round: round.value }) } as any)
@@ -188,10 +188,13 @@ describe('official display additional: img / empty', () => {
     await settle()
     expect(style(root).borderRadius).toBe('')
     expect(style(root).width).toBe('')
-    expect(style(root).overflow).toBe('hidden')
+    // 真机 2026-11-03（CONVENTIONS §19 差异 #9）：圆角容器 + overflow:hidden 会把
+    // 内容整段裁空（圆角图片在真机直接消失）。overflow 恒为 visible，圆角改由
+    // 图片节点自身 border-radius: inherit 承担 —— 有圆角也不再裁剪。
+    expect(style(root).overflow).toBe('visible')
     round.value = false
     await settle()
-    expect(style(root).overflow).toBe('')
+    expect(style(root).overflow).toBe('visible')
   })
 
   it('empty uses the official empty icon and iconSize updates both its box and glyph', async () => {

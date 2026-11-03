@@ -59,7 +59,7 @@ describe('wot 2.3.2 core and display compatibility', () => {
     expect(content.style.right).toBe('')
   })
 
-  it('clears image radius and clipping when removing overrides', async () => {
+  it('clears image radius when removing overrides and never clips by overflow', async () => {
     const radius = ref<number | undefined>(20)
     const width = ref<number | undefined>(100)
     const { container } = render({ setup: () => () => h(Img, { src: 'image.png', radius: radius.value, width: width.value }) } as any)
@@ -68,7 +68,9 @@ describe('wot 2.3.2 core and display compatibility', () => {
     radius.value = undefined; width.value = undefined
     await frames()
     expect(root.style.borderRadius).toBe('')
-    expect(root.style.overflow).toBe('')
+    // 圆角不再靠 overflow:hidden 裁剪（CONVENTIONS §19 差异 #9，真机 2026-11-03）：
+    // 该组合会把圆角图片整段裁空，overflow 恒定下发 visible 以防历史值残留。
+    expect(root.style.overflow).toBe('visible')
     expect(root.style.width).toBe('')
   })
 

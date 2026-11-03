@@ -20,12 +20,21 @@ const status = ref<'loading' | 'success' | 'error'>('loading')
 watch(() => props.src, () => { status.value = 'loading' })
 
 const rootClass = computed(() => ['wd-img', { 'is-round': props.round }, props.customClass])
-const IMG_STYLE = defineStyleKeys({ height: '', width: '', 'border-radius': '', overflow: '' })
+/**
+ * 圆角不再用 `overflow: hidden` 裁（真机 2026-11-03）：
+ * CONVENTIONS §19 差异 #9 —— 圆角容器上的 overflow:hidden 在真机会把内容
+ * **整段裁空**（wd-segmented 白字、wd-slider 手柄图标都是这个成因）。wd-img
+ * 之前靠它做圆角，等于给「带 radius/round 的图片」埋了同一个坑：圆角图片在
+ * 真机上直接不显示。改成圆角只写在节点上 + __image 自身 `border-radius:
+ * inherit`（见 index.scss），图片元素自己带圆角，无需裁剪。
+ * overflow 键仍需恒定为合法值（CONVENTIONS §20），否则历史值会残留。
+ */
+const IMG_STYLE = defineStyleKeys({ height: '', width: '', 'border-radius': '', overflow: 'visible' })
 const rootStyle = computed(() => resolveStyle(IMG_STYLE, {
   height: isDef(props.height) ? addUnit(props.height) : '',
   width: isDef(props.width) ? addUnit(props.width) : '',
   'border-radius': isDef(props.radius) ? addUnit(props.radius) : '',
-  overflow: isDef(props.radius) || props.round ? 'hidden' : ''
+  overflow: 'visible'
 }, parseStyle(props.customStyle)))
 
 function handleLoad(event: any) {

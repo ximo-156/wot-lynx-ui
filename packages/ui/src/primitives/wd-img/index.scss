@@ -30,10 +30,17 @@ $img-error-icon-size: var(--wot-img-error-icon-size, $n-32) !default;
   display: flex;
 
   @include e(image) {
-    display: block;
+    // 真机（2026-11-03）：`display:block` 在 Lynx 被静默丢弃（只识别
+    // flex / none / linear）。图片节点作为 flex 子项时按内容宽塌陷，
+    // 百分比宽高失效会整块看不见——改成 flex，宽高 100% 才真正撑满。
+    display: flex;
     width: 100%;
     height: 100%;
     box-sizing: border-box;
+    // 圆角由图片元素自己承担（真机 2026-11-03）：根节点不再用
+    // overflow:hidden 裁剪（CONVENTIONS §19 差异 #9：圆角容器 +
+    // overflow:hidden 会把内容整段裁空，圆角图片会直接消失）。
+    border-radius: inherit;
   }
 
   @include e(loading) {

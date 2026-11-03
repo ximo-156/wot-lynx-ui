@@ -12,9 +12,13 @@ $loading-color-text: var(--wot-loading-color-text, $text-main) !default;
 // 组件基准尺寸
 $loading-size: var(--wot-loading-size, $n-28) !default;
 // 容器宽度
-$loading-size-width: var(--wot-loading-size-width, 1em) !default;
+// 真机（2026-11-03）：原值 1em 依赖 em 相对父级 font-size 解析，Lynx 的 em
+// 基准不稳定（audit-device-traps 的 em-unit 规则）——一旦解析成 0，加载器
+// 容器变 0×0，四类 Loading 在真机上会整块不可见。改用与父级 font-size 同源
+// 的 $loading-size（28px）：数值与原来的 1em 完全一致，但不依赖 em 解析。
+$loading-size-width: var(--wot-loading-size-width, $loading-size) !default;
 // 容器高度
-$loading-size-height: var(--wot-loading-size-height, 1em) !default;
+$loading-size-height: var(--wot-loading-size-height, $loading-size) !default;
 // 圆形加载器描边宽度
 $loading-spinner-circle-stroke-width: var(--wot-loading-spinner-circle-stroke-width, 15%) !default;
 // 圆形加载器圆角
