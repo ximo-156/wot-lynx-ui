@@ -1,12 +1,21 @@
 /**
- * wot-lynx-ui 标签转换 loader。
+ * wot-lynx-ui 模板兼容 loader。
  *
- * Vue Lynx 的编译器配置了 `isNativeTag: () => true`，所有 kebab-case 标签
- * （如 <wd-button>）都会被判定为 Lynx 原生元素而非组件。本 loader 在
- * rspack-vue-loader 之前运行，将模板中的 wd-* 标签改写为 PascalCase，
- * 使业务代码可以沿用 wot-ui 的 <wd-button> 写法。
+ * 两项改写，都只发生在 template 块内，不影响属性名、事件名与文本内容：
  *
- * 仅改写 template 块内的组件标签，不影响属性名、事件名与文本内容。
+ * 1. 标签兼容：Vue Lynx 的编译器配置了 `isNativeTag: () => true`，所有
+ *    kebab-case 标签（如 <wd-button>）都会被判定为 Lynx 原生元素而非组件。
+ *    本 loader 在 rspack-vue-loader 之前运行，将模板中的 wd-* 标签改写为
+ *    PascalCase，使业务代码可以沿用 wot-ui 的 <wd-button> 写法。
+ *
+ * 2. 静态 style 属性 → 对象语法：vue-lynx 的 patchProp 对 `style` 只处理
+ *    对象/数组（内部走 normalizeStyle），**字符串值被静默替换为 {}**
+ *    （runtime/dist/node-ops.js）——不报错、不告警，只是样式全部消失。
+ *    Web 端把 style 当普通 DOM 属性处理，字符串照常生效，因此这类写法
+ *    在电脑上正常、在真机上整块消失（高度塌陷、背景与内边距丢失、
+ *    固定定位失效……）。本 loader 把 `style="height: 120px"` 改写为
+ *    `:style="{ 'height': '120px' }"`，两端行为一致。
+ *    已带 `:` / `v-bind:` 前缀的动态 style 不受影响。
  *
  * 为什么不用「尖括号深度计数」定位模板块（历史实现）：
  * - 模板里的 HTML 注释、文本、代码示例都可能出现 template 字面量；
@@ -24,6 +33,8 @@
 const WD_TAG_RE = /<(wd-[\w-]+)/g
 const WD_CLOSE_RE = /<\/(wd-[\w-]+)>/g
 const TAG_NAME_RE = /^<(\/?)([a-zA-Z][\w-]*)/
+// 静态 style="..."（不匹配 :style / v-bind:style —— 前面必须是空白）
+const STATIC_STYLE_RE = /(\s)style="([^"]*)"/g
 
 /**
  * wd-xxx-yyy → WdXxxYyy
@@ -57,6 +68,84 @@ function findTagEnd(source, start) {
     if (ch === '>') return i
   }
   return -1
+}
+
+/** 按顶层分号切分 CSS 声明串（括号 / 引号内的分号不算分隔符）。 */
+function splitDeclarations(value) {
+  const parts = []
+  let current = ''
+  let depth = 0
+  let quote = ''
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i]
+    if (quote) {
+      current += char
+      if (char === quote) quote = ''
+      continue
+    }
+    if (char === '"' || char === "'") {
+      quote = char
+      current += char
+      continue
+    }
+    if (char === '(') depth++
+    else if (char === ')') depth--
+    if (char === ';' && depth === 0) {
+      parts.push(current)
+      current = ''
+      continue
+    }
+    current += char
+  }
+  parts.push(current)
+  return parts
+}
+
+/** JS 单引号字符串转义 */
+function escapeSingleQuote(text) {
+  return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+/**
+ * `height: 120px; background: #fff` → `{ 'height': '120px', 'background': '#fff' }`
+ *
+ * 返回 null 表示无法安全转换（调用方保留原样）。
+ */
+function styleStringToObjectLiteral(value) {
+  const declarations = []
+  for (const part of splitDeclarations(value)) {
+    const trimmed = part.trim()
+    if (!trimmed) continue
+    const index = trimmed.indexOf(':')
+    if (index === -1) return null
+    const property = trimmed.slice(0, index).trim()
+    const raw = trimmed.slice(index + 1).trim()
+    if (!property || !raw) return null
+    // 插值 / 变量引用等无法静态求值的写法不转换
+    if (raw.includes('{{') || property.includes('{{')) return null
+    declarations.push(`'${escapeSingleQuote(property)}': '${escapeSingleQuote(raw)}'`)
+  }
+  if (!declarations.length) return null
+  return `{ ${declarations.join(', ')} }`
+}
+
+/**
+ * 把 template 中的静态 style="..." 改写为 :style="{...}"。
+ *
+ * 规则：
+ * - 无法安全转换的（含插值、非法声明）原样保留——宁可维持现状也不能产坏模板；
+ * - 同一标签上已有动态 style 绑定（`:style` / `v-bind:style`）时**不改写**，
+ *   否则会出现重复属性，且后写的那个会把动态绑定覆盖掉。
+ */
+function transformStaticStyle(template) {
+  return template.replace(/<[a-zA-Z][^<>]*>/g, (tag) => {
+    if (/(?:v-bind)?:style\s*=/.test(tag)) return tag
+    return tag.replace(STATIC_STYLE_RE, (match, space, value) => {
+      const literal = styleStringToObjectLiteral(value)
+      if (!literal) return match
+      return `${space}:style="${literal.replace(/"/g, '&quot;')}"`
+    })
+  })
 }
 
 /**
@@ -169,9 +258,9 @@ module.exports = function wotLynxTagTransformLoader(source) {
   const template = source.slice(block.contentStart, block.contentEnd)
   const after = source.slice(block.contentEnd)
 
-  const transformed = template
-    .replace(WD_TAG_RE, (_, tag) => '<' + pascal(tag))
-    .replace(WD_CLOSE_RE, (_, tag) => '</' + pascal(tag) + '>')
+  const transformed = transformStaticStyle(
+    template.replace(WD_TAG_RE, (_, tag) => '<' + pascal(tag)).replace(WD_CLOSE_RE, (_, tag) => '</' + pascal(tag) + '>')
+  )
 
   // 安全网：模板内不允许残留 wd-* 标签。残留意味着标签写法超出了转换正则
   // （例如换行/非法字符），继续构建只会把 603 崩溃推迟到真机。
@@ -187,3 +276,6 @@ module.exports = function wotLynxTagTransformLoader(source) {
   }
   return before + transformed + after
 }
+
+module.exports.styleStringToObjectLiteral = styleStringToObjectLiteral
+module.exports.transformStaticStyle = transformStaticStyle

@@ -127,3 +127,57 @@ button />
 `)).toThrow(/仍有未转换的 wd-\* 标签/)
   })
 })
+
+/**
+ * 静态 style → 对象语法（CONVENTIONS §19）。
+ *
+ * vue-lynx 的 patchProp 只处理对象/数组，字符串 style 被静默替换为 {}：
+ * Web 预览按 DOM 属性解析所以「电脑正常」，真机上高度塌陷、背景丢失、
+ * 固定定位失效。loader 在构建期把静态 style 改写成对象语法，两端一致。
+ */
+describe('tag-transform-loader · 静态 style 改写', () => {
+  it('style="a: b; c: d" 改写为 :style="{ \'a\': \'b\', \'c\': \'d\' }"', () => {
+    const out = transform(`<template>
+  <view style="height: 120px; background: #fff" />
+</template>
+`)
+    expect(out).toContain(`:style="{ 'height': '120px', 'background': '#fff' }"`)
+    expect(out).not.toContain('style="height: 120px')
+  })
+
+  it('已带 :style 的标签不再改写静态 style（避免重复属性覆盖动态绑定）', () => {
+    const out = transform(`<template>
+  <view :style="{ color: 'red' }" style="top: 0" />
+</template>
+`)
+    expect(out).toContain(`:style="{ color: 'red' }"`)
+    expect(out).toContain('style="top: 0"')
+    // 同一标签上不得出现两个 :style（后者会覆盖前者）
+    expect(out).not.toMatch(/:style="[^"]*"[^>]*:style="/)
+  })
+
+  it('v-bind:style 同样视为动态绑定，原样保留', () => {
+    const out = transform(`<template>
+  <view v-bind:style="dyn" style="top: 0" />
+</template>
+`)
+    expect(out).toContain('<view v-bind:style="dyn" style="top: 0" />')
+  })
+
+  it('含插值的 style 不改写（无法静态求值，宁可保留原样）', () => {
+    const out = transform(`<template>
+  <view style="width: {{ w }}px" />
+</template>
+`)
+    expect(out).toContain('style="width: {{ w }}px"')
+    expect(out).not.toContain(':style=')
+  })
+
+  it('组件标签改写与 style 改写在同一次转换里都生效', () => {
+    const out = transform(`<template>
+  <wd-button style="height: 40px">按钮</wd-button>
+</template>
+`)
+    expect(out).toContain('<WdButton :style="{ \'height\': \'40px\' }">按钮</WdButton>')
+  })
+})
