@@ -11,15 +11,25 @@ import { pluginWotLynxTags, pluginWotLynxWebFonts } from 'wot-lynx-ui/plugin'
 const uiSrc = (p: string) => fileURLToPath(new URL(`../ui/src/${p}`, import.meta.url))
 
 /**
- * 仅 dev 启用 rspack 持久化缓存（2026-10-27）：
- * - dev 从内存 serve，开持久化缓存后走 filesystem 缓存（`node_modules/.cache`），
- *   Ctrl+C 正常退出后再启动会命中缓存，编译量从 ~3.6s 降到 ~1.5–2.2s，
- *   整体就绪约 2.5–6s（冷启 ~5s）。日常「启动 demo」基本落在 10s 内。
- * - build 模式在 rspeedy 0.13.5 下开 `buildCache` 会导致产物不落盘（dist 为空），
- *   故 **build 完全不注入 performance 配置**（保持与原始一致）。
- * 用 `process.argv[2]`（rspeedy 子命令位）判断，避免误伤 build。
+ * ⚠️ 曾经在 dev 注入 `performance.buildCache: true`（rspack 持久化缓存）把启动
+ * 压到 ~6.9s，**2026-10-27 已移除**——它与图标字体不兼容，会造成「真机图标全变
+ * 豆腐块」这种极难定位的故障：
+ *
+ *   @font-face 的 src 在 dev 下由资产管线写成**绝对地址**
+ *   （`http://<lan-ip>:<port>/static/font/wot-icons.<hash>.ttf`），而 <port> 是
+ *   dev server **运行时**才确定的（3000 被占用就顺延 3001）。持久化缓存按配置
+ *   做 key、不含实际端口，于是：
+ *     一次 dev server 落在 3001 → 带 3001 的 CSS 进缓存
+ *     下次 3000 空闲、服务跑在 3000 → 缓存原样回放 3001 的地址
+ *     设备能拉到 bundle（同源 3000），却拉不到字体（3001 无人监听）
+ *     → 图标全部回落成 fallback 字体的豆腐块，页面其它部分完全正常
+ *   现场证据：`node_modules/.cache/rspack/**` 里能 grep 到旧端口。
+ *
+ * 要恢复缓存必须先解耦地址：把 dev 的资产地址改成源相对的 `dev.assetPrefix: '/'`
+ * （`/static/font/...`），让 URL 与端口无关——但该形态在 Lynx 原生端的 url()
+ * 解析尚未真机验证，验证通过前不要重新打开 buildCache。
+ * 不带缓存冷启约 8s，仍在 10s 目标内（package.json 的 dev 脚本已指向 dev:demo）。
  */
-const isDev = process.argv[2] === 'dev'
 
 /**
  * 选取真实局域网 IPv4 作为 dev server 的 host（二维码 / assetPrefix /
@@ -148,8 +158,8 @@ export default defineConfig({
       }
     }
   },
-  // 仅 dev 注入持久化缓存；build 不注入，保持与原始行为完全一致（见顶部 isDev 说明）。
-  ...(isDev ? { performance: { buildCache: true } } : {}),
+  // 不注入 performance.buildCache：见文件顶部「dev 持久化缓存」说明
+  // （绝对资产地址 + 缓存 = 换端口后图标字体 404）。
   source: {
     // 多入口：main 为组件总览，device-test 为真机测试清单页（独立二维码）
     entry: {
