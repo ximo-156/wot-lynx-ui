@@ -119,10 +119,42 @@ LynxView.load(bundleUrl)  // bundleUrl 为 device-test.lynx.bundle 的可访问�
 
 | 现象 | 排查 |
 | --- | --- |
+| 卡在 `Rspeedy v0.13.5 (… , Rspack …)` 一行不动，几分钟没输出 | 仓库在 iCloud「桌面与文稿」里、`node_modules` 被系统驱逐成占位文件。见下方《启动卡住：iCloud 占位文件》 |
 | 二维码扫不出来 / 白屏 | 确认手机与电脑同局域网；确认 `lynx.config.ts` 中 `pluginVueLynx` 已启用 |
 | 样式丢失 / 主题色不对 | 确认入口文件 `import 'wot-lynx-ui/theme'`，且 `enableCSSInheritance: true` |
 | 组件不渲染（显示为空白原生元素） | 检查是否使用了 kebab-case 标签但未安装 `pluginWotLynxTags()` 插件 |
 | 键盘不弹出 | 真机需宿主 App 授权；Explorer 中通常正常 |
+
+## 启动卡住：iCloud 占位文件
+
+典型现场：`pnpm dev:device-test` 只打印了
+
+```
+  Rspeedy v0.13.5 (Rsbuild v1.7.3, Rspack v1.7.12)
+```
+
+然后**一直停在这里**，没有任何报错、没有二维码，只有 Ctrl+C 才能退出。它不是设备问题，也不是配置问题——dev server 根本还没起来。
+
+**原因**：macOS「桌面与文稿」开启 iCloud 同步后，`~/Documents` 的底层目录属于 iCloud Drive。长时间没访问的文件会被系统释放为**仅云端占位文件**（`ls -lO` 显示 `dataless` 标志）。rspeedy 冷启动要读上万个文件，每个占位文件都要走一次 iCloud 按需下载：实测单文件 0.5–4.4s，而读取是串行逐文件进行的，于是整体看起来"卡死"。
+
+**确认**：
+
+```bash
+ls -lO node_modules/.pnpm/es-abstract@1.24.2/node_modules/es-abstract/2019/IsArray.js
+# 输出里带 "dataless" 即为占位文件；带普通权限位且无该标志则是本地文件
+```
+
+**修复**（依赖已缓存在本地 pnpm store，重装只是重新落盘，不需要联网）：
+
+```bash
+pnpm install --force --prefer-offline
+```
+
+**尤其不要**用 `brctl download node_modules` 或 `cat` 全量遍历来"补下载"：前者与后台同步抢带宽、按每个文件几百毫秒推进，`node_modules` 近 3 万个文件要跑几十分钟；后者只能逐个补、还可能与同步冲突。重装后占位文件从 2.5 万个降到个位数，`pnpm dev:device-test` 恢复约 3.5s 就绪。
+
+**长效做法**：把仓库放到非 iCloud 目录（如 `~/dev/`、`~/work/`），或在「系统设置 → Apple 账户 → iCloud → iCloud 云盘」里关闭「桌面与文稿」同步。
+
+> 连带影响：同样的占位文件也会让 `grep -r`、`vitest`、`git status` 等任何遍历 `node_modules` 的命令变得极慢，甚至看起来挂死。
 
 ## 测试通过标准
 
