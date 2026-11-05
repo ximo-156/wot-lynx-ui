@@ -188,7 +188,8 @@ async function finishGesture(event: any, canceled: boolean) {
   const hadGesture = Boolean(dragging.value && dragStartRef.current)
   const endpoint = touchPoint(event, true)
   if (hadGesture && !canceled && endpoint) applyDragPoint(endpoint)
-  if (dragStartRef.current?.moved) dragTapAt = Date.now()
+  const moved = Boolean(dragStartRef.current?.moved)
+  if (moved) dragTapAt = Date.now()
   const finalPosition = { left: left.value, top: top.value }
   dragging.value = false
   dragStartRef.current = null
@@ -197,6 +198,7 @@ async function finishGesture(event: any, canceled: boolean) {
   const epoch = configEpoch.value
   const rect = await getRect(`.${triggerId}`, false, proxy)
   if (disposed.value || revision !== gestureRevision.value || epoch !== configEpoch.value || !props.draggable || props.disabled) return
+  if (hadGesture && !moved) return
   // getRect 的失败兜底是全零矩形；0 坐标有限并不代表度量有效。
   // 实际拖动使用已经接受的终点，避免异步查询上一帧的坐标造成松手回跳。
   const validRect = Number(rect.width) > 0 && Number(rect.height) > 0 && Number.isFinite(Number(rect.top)) && Number.isFinite(Number(rect.left))

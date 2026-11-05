@@ -383,8 +383,8 @@ async function updateLineStyle(animation: boolean = true) {
   const current = () => isAlive() && request === lineRequest && activeIndex === state.activeIndex
   try {
     const [rects, textRects] = await Promise.all([
-      getRect($item, true, proxy),
-      !isDef(lineWidth) && lineTheme === 'text' ? getRect($itemText, true, proxy) : Promise.resolve([])
+      getRect($item, true, proxy, undefined, navItems().map((_, index) => `#${tabsId}-item-${index}`)),
+      !isDef(lineWidth) && lineTheme === 'text' ? getRect($itemText, true, proxy, undefined, navItems().map((_, index) => `#${tabsId}-text-${index}`)) : Promise.resolve([])
     ])
     if (!current()) return
     const rect = rects[activeIndex]
@@ -427,7 +427,7 @@ function scrollIntoView() {
   const request = ++scrollRequest
   if (!state.inited || !isAlive()) return
   const activeIndex = state.activeIndex
-  Promise.all([getRect($item, true, proxy), getRect($container, false, proxy)]).then(([navItemsRects, navRect]) => {
+  Promise.all([getRect($item, true, proxy, undefined, navItems().map((_, index) => `#${tabsId}-item-${index}`)), getRect($container, false, proxy)]).then(([navItemsRects, navRect]) => {
     if (!isAlive() || request !== scrollRequest || activeIndex !== state.activeIndex) return
     const selectItem = navItemsRects[activeIndex]
     if (!selectItem) return
@@ -602,14 +602,14 @@ const onBodyTouchMove = (event: any) => {
                     v-for="(item, index) in navItems()"
                     :key="index"
                     :class="`wd-tabs__nav-item  ${state.activeIndex === index ? 'is-active' : ''} ${item.disabled ? 'is-disabled' : ''}`"
-                    :style="getTabItemStyle(index)"
+                    :id="`${tabsId}-item-${index}`" :style="getTabItemStyle(index)"
                   >
                     <!-- 与非吸顶分支同款 custom-class：缺了会丢失徽标的 flex
                          居中与 max-width/min-width 约束（长徽标溢出导航项） -->
                     <WdBadge custom-class="wd-tabs__nav-item-badge" v-if="item.badgeProps" v-bind="item.badgeProps">
-                      <text class="wd-tabs__nav-item-text">{{ item.title }}</text>
+                      <text :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
                     </WdBadge>
-                    <text v-else class="wd-tabs__nav-item-text">{{ item.title }}</text>
+                    <text v-else :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
 
                     <view
                       :class="`wd-tabs__line ${state.activeIndex === index && state.useInnerLine ? 'is-' + lineTheme : ''} wd-tabs__line--inner`"
@@ -684,12 +684,12 @@ const onBodyTouchMove = (event: any) => {
                 @tap="handleSelect(index)"
                 :key="index"
                 :class="`wd-tabs__nav-item ${state.activeIndex === index ? 'is-active' : ''} ${item.disabled ? 'is-disabled' : ''}`"
-                :style="getTabItemStyle(index)"
+                :id="`${tabsId}-item-${index}`" :style="getTabItemStyle(index)"
               >
                 <WdBadge custom-class="wd-tabs__nav-item-badge" v-if="item.badgeProps" v-bind="item.badgeProps">
-                  <text class="wd-tabs__nav-item-text">{{ item.title }}</text>
+                  <text :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
                 </WdBadge>
-                <text v-else class="wd-tabs__nav-item-text">{{ item.title }}</text>
+                <text v-else :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
                 <view
                   :class="`wd-tabs__line ${state.activeIndex === index && state.useInnerLine ? 'is-' + lineTheme : ''} wd-tabs__line--inner`"
                   v-if="state.activeIndex === index && state.useInnerLine"

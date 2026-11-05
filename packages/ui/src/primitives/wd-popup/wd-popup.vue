@@ -12,14 +12,13 @@
  * - 遮罩点击：wd-overlay 把 transition 根 view 的引擎原生 tap 重新 emit 为
  *   click 与 tap（Lynx view 不派发 click，只派发 tap，CONVENTIONS §14），
  *   此处绑 @click 与 wot-ui API 对齐；
- * - safeAreaInsetBottom：参考源读 getSystemInfo().safeAreaInsets.bottom
- *   （MP-WEIXIN 走 screenHeight - safeArea.bottom 分支），Lynx 的 SystemInfo
- *   不提供安全区数据（CONVENTIONS §7：置零、可由宿主注入），宿主注入
- *   SystemInfo.safeAreaInsets 时取 bottom，否则降级为 0；
+ * - safeAreaInsetBottom：优先使用宿主 safeAreaInsets.bottom；只有 safeArea
+ *   矩形时按当前窗口底边与安全区底边计算，避免视口已避让时重复加高。
+ *   无有效安全区数据回落 0，不把零占位矩形当作整屏安全距离。
  * - 内联样式为对象，createStyleResolver 每帧补全定位/宽高/安全区及曾使用的
  *   customStyle 键；移除定制或切换位置不会留下旧边/尺寸。max-width/max-height
  *   按宿主 windowWidth/windowHeight 限界，border-box 使底部 inset 包含在限界内；
- *   wrapper 明确 position:relative + z-index:0，fixed 仍在过渡根上。
+ *   wrapper 明确 position:relative 并跟随弹窗 z-index，fixed 仍在过渡根上。
  *   center 保留既有收缩包裹 + translate 定位/缩放契约，不新增全屏不透明父层。
  * - 根节点三件套（NATIVE-REWRITE §3.1）：.wd-popup 显式 display: flex +
  *   flex-direction: column——Lynx 3.x 默认 linear 布局下 flex-direction
@@ -88,8 +87,8 @@ const inPlace = ref(props.modelValue)
 watch(() => props.modelValue, (show) => { if (show) inPlace.value = true }, { flush: 'sync' })
 useLockScroll(() => props.lockScroll && inPlace.value, scrollLockOwner)
 
-// fixed 节点的直接父层必须有明确层叠基准；不能在 slot 内再加 fixed。
-const WRAPPER_STYLE = { position: 'relative', 'z-index': '0' } as const
+// 父层必须与弹窗同层；固定为 0 会把整个 fixed 面板压在背景滚轮的 z-index 下。
+const wrapperStyle = computed(() => ({ position: 'relative' as const, 'z-index': String(props.zIndex) }))
 const safeBottom = ref(0)
 const viewportWidth = ref(375)
 const viewportHeight = ref(812)
@@ -145,8 +144,13 @@ watch([() => props.modelValue, () => props.safeAreaInsetBottom, () => props.posi
   const info = getSystemInfo()
   viewportWidth.value = info.windowWidth
   viewportHeight.value = info.windowHeight
-  const bottom = Number(info.safeAreaInsets?.bottom)
-  safeBottom.value = props.safeAreaInsetBottom && Number.isFinite(bottom)
+  const inset = info.safeAreaInsets?.bottom
+  const areaBottom = Number(info.safeArea?.bottom)
+  const viewportBottom = info.windowTop + info.windowHeight
+  const bottom = inset != null && Number.isFinite(Number(inset))
+    ? Number(inset)
+    : Number.isFinite(areaBottom) && areaBottom > 0 ? viewportBottom - areaBottom : 0
+  safeBottom.value = props.safeAreaInsetBottom
     ? Math.min(info.windowHeight, Math.max(0, bottom))
     : 0
 }, { immediate: true, flush: 'sync' })
@@ -171,7 +175,7 @@ function close() {
 
 <template>
   <WdRootPortal v-if="rootPortal">
-    <view class="wd-popup-wrapper" :style="WRAPPER_STYLE">
+    <view class="wd-popup-wrapper" :style="wrapperStyle">
       <WdOverlay
         v-if="modal"
         :show="modelValue"
@@ -204,7 +208,7 @@ function close() {
   </WdRootPortal>
 
   <!-- 非传送模式 -->
-  <view v-else class="wd-popup-wrapper" :style="WRAPPER_STYLE">
+  <view v-else class="wd-popup-wrapper" :style="wrapperStyle">
     <WdOverlay
       v-if="modal"
       :show="modelValue"

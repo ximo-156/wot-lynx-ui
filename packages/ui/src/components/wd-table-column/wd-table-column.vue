@@ -63,7 +63,7 @@ function queueMeasure() {
     queued = false
     if (!alive || token !== request || isVirtual.value) return
     const configs = cellConfigs.value
-    const rects = await getRect(`.${contentClass}`, true)
+    const rects = await getRect(`.${contentClass}`, true, undefined, undefined, configs.map((config) => `#${contentClass}-${config.rowIndex}`))
     if (!alive || token !== request || isVirtual.value) return
     if (Array.isArray(rects)) configs.forEach((config, index) => {
       const height = Number(rects[index]?.height)
@@ -90,7 +90,7 @@ defineExpose({ sortDirection })
 <template>
   <view class="wd-table-column" :class="{ 'is-fixed': fixed }" :style="columnStyle">
     <view v-for="config in cellConfigs" :key="config.rowIndex" :class="config.class" :style="config.style" @tap="rowClick(config.rowIndex)">
-      <view :class="['wd-table__cell-content', contentClass, `is-${align}`]" @layoutchange="onContentLayout(config, $event)">
+      <view :id="`${contentClass}-${config.rowIndex}`" :class="['wd-table__cell-content', contentClass, `is-${align}`]" @layoutchange="onContentLayout(config, $event)">
         <slot v-if="$slots.value" name="value" :row="rowScope(config.rowIndex)" :index="config.rowIndex" />
         <text v-else :class="['wd-table__value', { 'is-ellipsis': ellipsis }]" :text-maxline="ellipsis ? 2 : undefined">{{ config.value }}</text>
       </view>

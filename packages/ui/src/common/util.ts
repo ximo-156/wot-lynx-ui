@@ -298,9 +298,10 @@ function warnSelectorQueryUnavailable(): void {
  * @param all 是否返回所有 selector 对应的节点
  * @param scope 兼容参数（uni-app 组件实例作用域），Lynx 下忽略
  * @param useFields 兼容参数，Lynx 下忽略
+ * @param selectors 批量查询不可用时，按渲染顺序逐项度量的稳定选择器
  * @returns 节点信息或节点信息数组
  */
-export function getRect(selector: string, all: boolean = false, scope?: any, useFields?: boolean): Promise<any> {
+export function getRect(selector: string, all: boolean = false, scope?: any, useFields?: boolean, selectors?: readonly string[]): Promise<any> {
   return new Promise<any>((resolve) => {
     /**
      * 度量不可用时的统一兜底：解析为零尺寸矩形（all 模式为空数组）并 warning 一次。
@@ -312,14 +313,28 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
      * "unhandled rejection: createSelectorQuery is not available"。
      */
     let settled = false
+    let fallbackStarted = false
+    const zeroRect = () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 })
+    const isMeasuredRect = (rect: any): boolean =>
+      rect != null && !isArray(rect) && Number.isFinite(rect.width) && rect.width >= 0 && Number.isFinite(rect.height) && rect.height >= 0
     const settle = (value: any) => {
       if (settled) return
       settled = true
       resolve(value)
     }
     const resolveUnavailable = () => {
+      if (all && selectors) {
+        if (settled || fallbackStarted) return
+        fallbackStarted = true
+        // Lynx Web 的 selectAll.invoke 返回 code 5；保留支持批量的宿主，
+        // 失败时才按明确 ID 走 single invoke。Promise.all 保序，失败项不移位。
+        Promise.all(selectors.map((itemSelector) =>
+          getRect(itemSelector, false, scope, useFields).then((rect) => isMeasuredRect(rect) ? rect : zeroRect())
+        )).then(settle)
+        return
+      }
       warnSelectorQueryUnavailable()
-      settle(all ? [] : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 })
+      settle(all ? [] : zeroRect())
     }
 
     /**
@@ -328,6 +343,7 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
      * document 是 iframe 文档，须回退到父文档查找。真机无 DOM，不走此路径。
      */
     const domMeasure = (): boolean => {
+      if (all && selectors) return false
       if (typeof document === 'undefined') return false
       try {
         const docs: any[] = [document]
@@ -358,7 +374,8 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
     }
 
     const lynx = (globalThis as any).lynx
-    const createQuery = getUniAdapter('createSelectorQuery') || (typeof lynx?.createSelectorQuery === 'function' ? () => lynx.createSelectorQuery() : undefined)
+    const queryAdapter = getUniAdapter('createSelectorQuery')
+    const createQuery = queryAdapter || (typeof lynx?.createSelectorQuery === 'function' ? () => lynx.createSelectorQuery() : undefined)
     if (!createQuery) {
       if (!domMeasure()) resolveUnavailable()
       return
@@ -366,13 +383,23 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
     let query: any
     try {
       query = createQuery()
-      if (scope && typeof query.in === 'function') query = query.in(scope) || query
+      // Lynx SelectorQuery.in(scope) 实际调用 scope.createSelectorQuery(this)。
+      // Vue 的组件 proxy 没有这个原生方法；传入它会在 select 前抛错，使尺寸恒为 0。
+      // 明确注入的 uni-compatible 查询适配器仍保留其原有 in(scope) 语义。
+      if (scope && typeof query.in === 'function' && (queryAdapter || typeof scope.createSelectorQuery === 'function')) {
+        query = query.in(scope) || query
+      }
     } catch {
       if (!domMeasure()) resolveUnavailable()
       return
     }
     const handleResult = (rect: RectResult | RectResult[]) => {
+      if (settled || fallbackStarted) return
       if (all) {
+        if (selectors && (!isArray(rect) || (selectors.length > 0 && rect.length === 0) || !rect.every(isMeasuredRect))) {
+          resolveUnavailable()
+          return
+        }
         // all 模式：无匹配节点时返回空数组而非 reject。
         // 调用方（rate/tabs/segmented 等）均直接遍历结果，空数组是合法的"无节点"语义；
         // reject 会导致调用方缺少 catch 时产生未处理的 Promise 拒绝。

@@ -109,7 +109,7 @@ function updateActiveStyle(animation: boolean = true) {
     return
   }
 
-  getRect(`#${segmentedId} .wd-segmented__item`, true, proxy).then((rects: any[]) => {
+  getRect(`#${segmentedId} .wd-segmented__item`, true, proxy, undefined, props.options.map((_, index) => `#${segmentedId}-item-${index}`)).then((rects: any[]) => {
     // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive() || request !== styleRequest) return
     const rect = rects[index]
@@ -192,6 +192,7 @@ defineExpose<SegmentedExpose>({
     <view
       v-for="(option, index) in options"
       :key="index"
+      :id="`${segmentedId}-item-${index}`"
       :class="[
         'wd-segmented__item',
         state.activeIndex === index ? 'is-active' : '',

@@ -159,14 +159,12 @@ const FALLBACK_SPECS: Record<string, FallbackSpec> = {
   },
   'table-column': {
     wrap: 'table',
+    // wd-table 没有 columns prop：列由 wd-table-column 子组件声明。
+    // 这里只给包裹的 table 传 data，列由下面的 innerNode 提供。
     wrapProps: {
       data: [
         { name: '张三', age: 28 },
         { name: '李四', age: 34 }
-      ],
-      columns: [
-        { prop: 'name', label: '姓名' },
-        { prop: 'age', label: '年龄' }
       ]
     },
     props: { prop: 'name', label: '姓名' }

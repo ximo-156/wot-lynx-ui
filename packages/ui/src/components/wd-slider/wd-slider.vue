@@ -297,6 +297,18 @@ function clamp(value: number, min: number, max: number): number {
 /**
  * 初始化滑块尺寸（后台：点击跳转与落定重算用）
  */
+/** 原生 layoutchange 提供已布局后的矩形，更新同一份轨道缓存。 */
+function onTrackLayoutChange(event: any) {
+  if (!isAlive()) return
+  const data = event?.detail?.layout ?? event?.detail
+  if (!data) return
+  const size = Number(props.vertical ? data.height : data.width)
+  if (!Number.isFinite(size) || size <= 0) return
+  trackSize.value = size
+  // layoutchange 的坐标空间因宿主而异；tap 起点仍由 boundingClientRect 提供。
+  if ((isDragging.value || isSettling.value) && dragTrackSize.value <= 0) dragTrackSize.value = size
+}
+
 function initSlider() {
   const request = ++rectRequest
   const vertical = props.vertical
@@ -544,8 +556,8 @@ function onTouchStart(event: any, index: number) {
   emit('dragstart', { value: modelValue.value })
 }
 
-/** 拖动已连续提交时不重采样 end；没有 BG move 才用终点兜底。 */
-function onTouchEnd(event: any) {
+/** 同一触点的 end 可补齐未派发的最后一帧；取消、无标识或缺失终点守住当前值。 */
+function onTouchEnd(event: any, canceled = false) {
   if (!isDragging.value) return
   // 第二根手指抬起不能结束第一根手指的拖动。
   if (activeTouchId !== undefined && event?.changedTouches?.length && !readTouch({ changedTouches: event.changedTouches }, activeTouchId, true)) return
@@ -564,7 +576,8 @@ function onTouchEnd(event: any) {
     emit('dragend', { value: modelValue.value })
     emit('change', modelValue.value)
   }
-  if (dragMoved || !Number.isFinite(pointer)) {
+  const hasIdentifiedEndpoint = activeTouchId !== undefined && !!event?.changedTouches?.length
+  if (canceled || !Number.isFinite(pointer) || (dragMoved && !hasIdentifiedEndpoint)) {
     finish()
     return
   }
@@ -779,9 +792,6 @@ const lineBindings = computed(() => ({
   class: lineClass.value,
   style: lineStyle.value,
   'main-thread-ref': lineRef,
-  'main-thread-bindtouchstart': onBarTouchStart,
-  'main-thread-bindtouchend': onDotTouchEnd,
-  'main-thread-bindtouchcancel': onDotTouchEnd,
   'gesture-active': String(isDragging.value || isSettling.value),
   'gesture-size': String(gestureSize.value),
   'gesture-min': String(props.min),
@@ -814,7 +824,7 @@ const lineBindings = computed(() => ({
     >
       <!-- 可滑动有效轨道（用于尺寸测量与 marks 定位；默认主题下 2px 视觉轨道
            由内部的 __track-line 承载，见 index.scss 的 __bar--default 注释） -->
-      <view :id="trackId" class="wd-slider__track">
+      <view :id="trackId" class="wd-slider__track" @layoutchange="onTrackLayoutChange">
         <!-- 2px 视觉轨道（真机 2026-11-03）：常规流子节点 + 父级 display:flex
              居中，不依赖 top:50% / transform，也不参与 z-index 层序。
              胶囊主题的轨道底色由 __bar 自身承担，故只在默认主题渲染。 -->
@@ -838,7 +848,12 @@ const lineBindings = computed(() => ({
 
       <!-- MTS 的 start/end 在 __line，move 在滑块；后台 start/end 在滑块，
            move 在 __bar。相同元素不重复注册同名 MT/BG 事件，tap 留在 __bar。 -->
-      <view v-bind="lineBindings">
+      <view v-bind="{
+        ...lineBindings,
+        'main-thread-bindtouchstart': onBarTouchStart,
+        'main-thread-bindtouchend': onDotTouchEnd,
+        'main-thread-bindtouchcancel': onDotTouchEnd
+      }">
         <!-- 进度条视觉条（真机 2026-11-01：着色从 __line 下沉到这里，
              让 __line 变成能容纳 24px 圆点的定位盒） -->
         <view :class="fillClass" :style="fillStyle" />
@@ -850,7 +865,7 @@ const lineBindings = computed(() => ({
           @touchstart="(e: any) => onTouchStart(e, 0)"
           :main-thread-bindtouchmove="onDotTouchMove"
           @touchend="onTouchEnd"
-          @touchcancel="onTouchEnd"
+          @touchcancel="(e: any) => onTouchEnd(e, true)"
         >
           <view v-if="popoverVisible !== 'never'" class="wd-slider__dot-popover" :class="{ 'is-visible': showDotPopover(0) }">
             <text class="wd-slider__dot-popover-text">{{ dotDisplayValue(0) }}</text>
@@ -869,7 +884,7 @@ const lineBindings = computed(() => ({
           @touchstart="(e: any) => onTouchStart(e, 1)"
           :main-thread-bindtouchmove="onDotTouchMove"
           @touchend="onTouchEnd"
-          @touchcancel="onTouchEnd"
+          @touchcancel="(e: any) => onTouchEnd(e, true)"
         >
           <view v-if="popoverVisible !== 'never'" class="wd-slider__dot-popover" :class="{ 'is-visible': showDotPopover(1) }">
             <text class="wd-slider__dot-popover-text">{{ dotDisplayValue(1) }}</text>

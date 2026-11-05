@@ -939,9 +939,9 @@ function onSubmitBar() {
                避免它压住其它章节的内容（需要时点「显示悬浮按钮」） -->
           <text class="demo-panel__label">当前：{{ fabDemoVisible ? '已显示（页面右下 / 左上各一枚）' : '未显示' }}</text>
         </view>
-        <!-- Lynx 定位FAQ：absolute/fixed 元素带 z-index 时，父级需同时 z-index:0，
-             否则真机绘制与命中测试层序不一致（悬浮按钮看得见点不到） -->
-        <view v-if="fabDemoVisible" :style="{ 'z-index': 0 }">
+        <!-- 定位容器与原 Fab 默认层级一致，并允许菜单越出容器；
+             固定父级为 0 会把整组悬浮按钮压在后续内容下面。 -->
+        <view v-if="fabDemoVisible" :style="{ position: 'relative', 'z-index': 99, overflow: 'visible' }">
           <wd-fab v-model:active="fabActive" @click="() => console.log('[demo] fab click')">
             <wd-button size="small" @tap="() => console.log('[demo] fab 菜单一')">菜单一</wd-button>
             <wd-button size="small" @tap="() => console.log('[demo] fab 菜单二')">菜单二</wd-button>
