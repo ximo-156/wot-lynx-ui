@@ -105,7 +105,7 @@ describe('遮罩 tap 关闭（真机事件语义）', () => {
 
     expect(updates, 'tap 遮罩应触发 update:modelValue(false)').toContain(false)
     expect(
-      isHidden(firstMatch(container, '.wd-popup-wrapper > .wd-transition')),
+      isHidden(firstMatch(container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition')),
       'tap 后弹层内容应隐藏'
     ).toBe(true)
     cleanup()

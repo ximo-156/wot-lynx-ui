@@ -11,7 +11,7 @@ import { demoImage } from '../assets/demo-images'
  * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
  * 真机排查第一时间看它，避免"改了没生效"的误判。
  */
-const buildTag = 'R7 · 手机端滑动 / 选择器 / 弹层修复'
+const buildTag = 'R8 · 弹层贴左上角修复（popup 定位 harness）'
 
 /**
  * 全量渲染清单（component-checks.ts 的 6 组，共 106 条）。
@@ -72,6 +72,21 @@ const overlayVisible = ref(false)
 const overlayEvent = ref('未触发')
 const dialogRef = ref<any>(null)
 const toast = useToast('device-test-toast')
+
+/**
+ * 贴边弹层（真机 2026-11-05 缺陷的正对场景）：
+ * 时间选择器 / Picker 是 position=bottom 的弹层，Dialog 是 center，
+ * notify 悬浮态靠左右内缩——三者曾一起被拉到屏幕左上角。
+ */
+const pickerVisible = ref(false)
+const pickerValue = ref<string[]>(['a'])
+const pickerColumns = ref([
+  ['a', 'b', 'c'],
+  ['x', 'y', 'z']
+])
+const datetimeVisible = ref(false)
+const datetimeValue = ref(Date.now())
+const notifyVisible = ref(false)
 
 function openPopup(position: 'top' | 'bottom' | 'center') {
   popupPosition.value = position
@@ -269,6 +284,12 @@ const safeAreaText = computed(() => {
                常驻关闭入口，遮罩会连点两秒自动收起，避免把页面永久挡住 -->
           <wd-button size="small" @tap="toast.loading({ msg: '加载中', duration: 2000 })">Toast 加载</wd-button>
         </view>
+        <!-- 贴边弹层：真机上曾整片贴到屏幕左上角（fixed + flex 收缩） -->
+        <view class="row">
+          <wd-button size="small" @tap="datetimeVisible = true">时间选择器</wd-button>
+          <wd-button size="small" @tap="pickerVisible = true">Picker</wd-button>
+          <wd-button size="small" @tap="notifyVisible = true">Notify 悬浮</wd-button>
+        </view>
         <text class="tag">事件：{{ overlayEvent }}</text>
         <ChecklistBox :items="testSections[3].items" :checked="checked" @toggle="toggle" />
       </view>
@@ -426,6 +447,11 @@ const safeAreaText = computed(() => {
       </wd-overlay>
       <wd-dialog ref="dialogRef" selector="device-test-dialog" />
       <wd-toast selector="device-test-toast" />
+      <!-- 贴边弹层验收面（popup 定位 harness）：bottom 贴底、center 居中、
+           floating 悬浮 banner 贴顶并左右内缩 12px -->
+      <wd-picker v-model="pickerValue" v-model:visible="pickerVisible" :columns="pickerColumns" title="选择器" />
+      <wd-datetime-picker v-model="datetimeValue" v-model:visible="datetimeVisible" type="datetime" title="日期时间" />
+      <wd-notify v-model:visible="notifyVisible" message="Notify 悬浮：贴顶 + 左右内缩" variant="floating" position="top" />
       <wd-keyboard v-model="payValue" v-model:visible="keyboardVisible" />
 
       <!-- ============ 全量组件渲染（106/106，真机必查） ============ -->

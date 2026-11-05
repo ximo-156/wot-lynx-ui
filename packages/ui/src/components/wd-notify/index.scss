@@ -94,6 +94,11 @@ $notify-types: ("primary": ("bg": $notify-primary-bg,
     color: $notify-floating-color;
     border-radius: $notify-floating-radius;
     box-shadow: $notify-floating-shadow;
+    /* 左右内缩落在可见条自己身上（真机 2026-11-05）：wd-popup 的面板已是
+       全宽透明层、位置由外层 harness 决定，不再接受 fixed 的 left/right；
+       内缩改用本节点 margin，视觉宽度与圆角仍然都长在这一层。 */
+    margin-left: $notify-floating-margin-horizontal;
+    margin-right: $notify-floating-margin-horizontal;
 
     .wd-notify__text { color: $notify-floating-color; }
 

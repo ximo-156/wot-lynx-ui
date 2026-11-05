@@ -228,7 +228,11 @@ describe('原生优先重写 · 弹层家族布局居中契约（popup / action-
   })
 
   it('Style Funnel：弹层内联样式完整键集，条件翻转不留残值', async () => {
-    // popup：z-index 与 padding-bottom 恒在场
+    // popup：z-index 与 padding-bottom 恒在场。
+    // 过渡根不再是 wrapper 的直接子节点：真机 2026-11-05 修复把「定位」拆到
+    // 全屏 .wd-popup-harness（fixed + 显式窗口像素 + flex 对齐），过渡根只做
+    // 可见面板（背景/圆角/动画）。真机上 fixed + display: flex 的节点会按内容
+    // 尺寸收缩，边值撑不开，整片弹层会贴到屏幕左上角。
     const popup = render(Popup as any, {
       modelValue: true,
       zIndex: 66,
@@ -236,15 +240,18 @@ describe('原生优先重写 · 弹层家族布局居中契约（popup / action-
       safeAreaInsetBottom: true
     } as any)
     await frames()
-    const popupRoot = firstMatch(popup.container, '.wd-popup-wrapper > .wd-transition.wd-popup')
+    const popupRoot = firstMatch(popup.container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition.wd-popup')
     const popupStyle = styleOf(popupRoot)
     expect(popupStyle).toMatch(/z-index:\s*66/)
     expect(popupStyle, 'safeAreaInsetBottom 无安全区数据时 padding-bottom 回落中性值 0px').toMatch(/padding-bottom:\s*0px/)
     expect(popupStyle, 'customStyle 经 parseStyle 归一后仍生效').toMatch(/background:\s*red/)
+    // 面板不再自带 fixed 边值：真机把 auto 边按 0 锚定，正是贴左上角的直接原因
+    expect(popupStyle, '面板定位不再依赖 auto 边').not.toMatch(/(left|right|top|bottom):\s*auto/)
+    expect(popupStyle, '面板由 harness 摆放，自身不写 fixed').not.toMatch(/position:\s*fixed/)
     cleanup()
 
     // notify：position 由 top 切 bottom、variant 由 floating 切 filled，
-    // padding-top / left / right 都必须回落中性值而不是保留旧值
+    // padding-top 都必须回落中性值而不是保留旧值
     const notifyTop = render(Notify as any, {
       visible: true,
       position: 'top',
@@ -253,18 +260,19 @@ describe('原生优先重写 · 弹层家族布局居中契约（popup / action-
       message: '顶部通知'
     } as any)
     await frames()
-    const topStyle = styleOf(firstMatch(notifyTop.container, '.wd-popup-wrapper > .wd-transition.wd-popup'))
+    const topStyle = styleOf(firstMatch(notifyTop.container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition.wd-popup'))
     expect(topStyle).toMatch(/padding-top:\s*44px/)
-    expect(topStyle).toMatch(/left:\s*12px/)
-    expect(topStyle).toMatch(/right:\s*12px/)
+    // 悬浮态的左右内缩已从弹层面板下移到可见条自身（.wd-notify--floating 的
+    // margin）：面板已是 harness 的 flex 子项，left/right 只会变成相对偏移
+    expect(topStyle, '面板不承担左右内缩').not.toMatch(/left:\s*12px/)
+    expect(topStyle, '面板不承担左右内缩').not.toMatch(/right:\s*12px/)
+    expect(css('wd-notify/index.css'), '悬浮态左右内缩落在可见条上').toMatch(/wd-notify--floating\{[^}]*margin-left:/)
     cleanup()
 
     const notifyBottom = render(Notify as any, { visible: true, position: 'bottom', message: '底部通知' } as any)
     await frames()
-    const bottomStyle = styleOf(firstMatch(notifyBottom.container, '.wd-popup-wrapper > .wd-transition.wd-popup'))
+    const bottomStyle = styleOf(firstMatch(notifyBottom.container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition.wd-popup'))
     expect(bottomStyle, 'top 的 padding-top 不得残留').toMatch(/padding-top:\s*0px/)
-    expect(bottomStyle, 'floating 的 left/right 不得残留').toMatch(/left:\s*0px/)
-    expect(bottomStyle).toMatch(/right:\s*0px/)
     cleanup()
   })
 
@@ -294,7 +302,7 @@ describe('原生优先重写 · 弹层家族布局居中契约（popup / action-
     } as any)
     await frames()
 
-    const transition = firstMatch(container, '.wd-popup-wrapper > .wd-transition.wd-popup')!
+    const transition = firstMatch(container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition.wd-popup')!
     expect(transition.className, '居中弹层类名与 wot-ui 一致').toContain('wd-popup--center')
     expect(transition.className).toContain('is-round')
     expect(isHidden(transition), '弹层应可见').toBe(false)
@@ -372,7 +380,7 @@ describe('原生优先重写 · 弹层家族布局居中契约（popup / action-
     dialogRef.value.alert({ title: '提示', msg: '这是一个对话框' })
     await frames()
 
-    const transition = firstMatch(container, '.wd-popup-wrapper > .wd-transition.wd-popup')!
+    const transition = firstMatch(container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition.wd-popup')!
     expect(isHidden(transition), 'alert 后对话框应可见').toBe(false)
     // 弹层背景透明由 .wd-popup.wd-dialog 承担，容器自身承载背景令牌
     expect(transition.className).toContain('wd-dialog')
@@ -387,13 +395,13 @@ describe('原生优先重写 · 弹层家族布局居中契约（popup / action-
     fireEvent.tap(confirmBtn!)
     await frames(2)
     expect(
-      firstMatch(container, '.wd-popup-wrapper > .wd-transition.wd-popup')!.className,
+      firstMatch(container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition.wd-popup')!.className,
       '确认后应立即开始离场，而不是跳过动画'
     ).toContain('wd-transition--zoom-in-leave-active')
     // 200ms 时长从双 rAF 的 to 态开始计时；6×33ms 不足以完整离场。
     await pause(300)
     expect(
-      isHidden(firstMatch(container, '.wd-popup-wrapper > .wd-transition.wd-popup')),
+      isHidden(firstMatch(container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition.wd-popup')),
       '确认后对话框应关闭'
     ).toBe(true)
     cleanup()

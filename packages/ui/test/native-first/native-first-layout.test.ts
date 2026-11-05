@@ -229,7 +229,9 @@ describe('原生优先重写 · 布局居中契约（calendar / calendar-view / 
     await pause(50)
     visible.value = true
     await pause(300)
-    // 弹层结构：wd-root-portal > wd-popup-wrapper > [overlay + transition]（CONVENTIONS §9）
+    // 弹层结构：wd-root-portal > wd-popup-wrapper > [overlay + wd-popup-harness
+    // > transition]（CONVENTIONS §9）；harness 是 2026-11-05 真机修复新增的
+    // 全屏定位层（fixed + 显式窗口像素 + flex 对齐），与 wd-toast 同构
     const popup = container.querySelector('.wd-calendar__popup')
     expect(popup, '日历弹层应渲染').not.toBeNull()
     expect(container.querySelector('.wd-calendar__view'), '日历视图容器应渲染').not.toBeNull()

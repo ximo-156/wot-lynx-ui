@@ -941,7 +941,7 @@ function onSubmitBar() {
         </view>
         <!-- 定位容器与原 Fab 默认层级一致，并允许菜单越出容器；
              固定父级为 0 会把整组悬浮按钮压在后续内容下面。 -->
-        <view v-if="fabDemoVisible" :style="{ position: 'relative', 'z-index': 99, overflow: 'visible' }">
+        <view v-if="fabDemoVisible" :style="{ position: 'relative', 'z-index': '99', overflow: 'visible' }">
           <wd-fab v-model:active="fabActive" @click="() => console.log('[demo] fab click')">
             <wd-button size="small" @tap="() => console.log('[demo] fab 菜单一')">菜单一</wd-button>
             <wd-button size="small" @tap="() => console.log('[demo] fab 菜单二')">菜单二</wd-button>

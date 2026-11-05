@@ -549,7 +549,8 @@ bg-color 头像曾因此整组白底白字不可见）。
   z-index 低于内容（真机按 z-index 绘制，两个平台才都不出问题）。
 
 **真机引擎行为差异清单**（2026-10-25 第二轮 + 2026-10-26 第三轮真机巡检
-沉淀；Web 预览全绿、真机翻车的九类「静默差异」，写组件前对照）：
+沉淀，2026-11-05 补入第 10 条；Web 预览全绿、真机翻车的十类「静默差异」，
+写组件前对照）：
 
 | # | 差异 | 真机表现 | 规则 |
 | --- | --- | --- | --- |
@@ -562,6 +563,7 @@ bg-color 头像曾因此整组白底白字不可见）。
 | 7 | flex 子项上的 `display: block` 被丢弃（引擎只认 flex / none / linear） | 工具栏「取消」按钮宽度塌成 padding 宽，文字溢出压住居中的标题 | 横向排列的子项显式 `display: flex` + `flex-direction: row`；居中同时给 `justify-content` + `align-items`（`text-align` 只作 Web 兜底） |
 | 8 | flex 子项的内联 `min-width` 不生效 | wd-switch 轨道宽度塌成 padding 之和，圆角把 30px 高的轨道压成正圆 → 整组渲染成「紫色月牙」 | 宽度确定时内联下发 `width`；只有「有内部文案需要撑开」的场景才用 `min-width`（此时靠内容撑开，失效也不影响可读性） |
 | 9 | 圆角容器上的 `overflow: hidden` 会把内容整段裁空 | wd-segmented 只剩灰底无「日/周/月」；wd-slider 白底圆点上的手柄图标消失（滑块看起来完全没了） | 单行/多行省略走文本节点的原生 `text-maxline`，不要靠 `overflow: hidden` + `text-overflow` 裁剪；图标容器不需要裁剪就不要写 overflow |
+| 10 | `position: fixed` **且** `display: flex` 的节点按内容尺寸收缩，四边 `0` / `left`+`right` 撑不开 | wd-toast（2026-11-01）、wd-popup（2026-11-05）整片内容塌到屏幕左上角：时间选择器只剩半截、Dialog 内容缺失。Web 预览完全正常 | 定位与外观分两层：外层全屏 harness 用 `fixed` + 四边 `0px` + **显式窗口像素宽高**（`getSystemInfo()`）+ flex 对齐，`pointer-events: none`；内层可见面板只做背景/圆角/动画。参见 `wd-toast` / `wd-popup` |
 
 另：Lynx 定位 FAQ——absolute/fixed 元素带 z-index 时，父级需同时
 `z-index: 0`，否则真机绘制与命中测试层序可能不一致（demo 的 fab 包裹层

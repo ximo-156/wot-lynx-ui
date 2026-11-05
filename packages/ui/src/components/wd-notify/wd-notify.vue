@@ -67,11 +67,18 @@ watch(
   { deep: true }
 )
 
-const POPUP_STYLE = defineStyleKeys({ 'background-color': 'transparent', 'padding-top': '0px', left: '0px', right: '0px', width: 'auto' })
+/**
+ * 弹层（面板）内联样式。
+ * 真机 2026-11-05：wd-popup 定位改为「全屏 harness + 面板 flex 子项」后，
+ * 面板不再是 fixed，`left/right` 只会变成相对偏移（悬浮态的左右内缩会
+ * 变成整体右移、右侧溢出）。左右内缩改由可见条 .wd-notify--floating 自己
+ * 的 margin 承担（见 index.scss），本层只保留背景透明与安全区 padding。
+ * 也不下发 width：面板宽度由 wd-popup 按窗口像素给定，写 auto 会让贴边
+ * 的 notify 收缩成内容宽度。
+ */
+const POPUP_STYLE = defineStyleKeys({ 'background-color': 'transparent', 'padding-top': '0px' })
 const popupStyle = computed(() => resolveStyle(POPUP_STYLE, {
-  'padding-top': state.value.position === 'top' ? addUnit(state.value.safeHeight || 0) : '',
-  left: state.value.variant === 'floating' ? '12px' : '',
-  right: state.value.variant === 'floating' ? '12px' : ''
+  'padding-top': state.value.position === 'top' ? addUnit(state.value.safeHeight || 0) : ''
 }))
 const ROOT_STYLE = defineStyleKeys({ color: '', 'background-color': '' })
 const rootStyle = computed(() => resolveStyle(ROOT_STYLE, {

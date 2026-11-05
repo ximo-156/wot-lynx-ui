@@ -5,7 +5,8 @@
  * - 默认轨道保留圆点尺寸的定位盒，细线使用常规流 flex 居中；层序按 DOM 顺序。
  * - 跟手保留声明式 MTS，提交仍走后台 dragstart / dragmove / dragend / change。
  *   原生事件的 Element 包装器不是 ref 包装器，滑块身份取稳定的 gesture-index；
- *   触点按 identifier / id 追踪，坐标优先 client / page，再兼容 x / y，缺失不当 0。
+ *   触点按 identifier / id 追踪；按原生事件时间拒绝早于当前手势的旧帧，
+ *   防止触点 ID 被复用后旧坐标混入。坐标优先 client / page，再兼容 x / y。
  * - 几何只有一个后台缓存来源，经 gesture-size 属性提供给主线程；每次手势固定
  *   有效长度，首次零尺寸可在开始/落定时补测，不在 touchmove 度量或独立异步 MT 查询。
  * - 拖动/异步落定时缓存完整样式引用，进度条采用单一属性绑定，避免 Vue
@@ -53,16 +54,18 @@ const gestureSize = computed(() => (isDragging.value || isSettling.value) ? drag
 // ---------- 主线程（MTS）引用 ----------
 interface MtElement {
   setStyleProperty(name: string, value: string): void
+  setStyleProperties?(style: Record<string, string>): void
   getAttribute(name: string): string | null
 }
 
 const lineRef = useMainThreadRef<MtElement | null>(null)
-const geomRef = useMainThreadRef<{ pointer: number; touchId?: string; left: number; right: number; version: string } | null>(null)
+const geomRef = useMainThreadRef<{ pointer: number; touchId?: string; left: number; right: number; version: string; timestamp?: number } | null>(null)
 const modelRevision = ref(0)
 // 按配置内容比较：父渲染重建相同 marks 数组不能取消拖动或每帧重新度量。
 const gestureConfigVersion = computed(() => JSON.stringify([props.min, props.max, props.step, props.vertical, props.range, isDisabled.value, props.theme, props.showExtremeValue, props.marks]))
 const gestureVersion = computed(() => JSON.stringify([gestureConfigVersion.value, modelRevision.value]))
 let activeTouchId: string | undefined
+let gestureEventTime: number | undefined
 let startPointer = 0
 let startValue: SliderValue = deepClone(modelValue.value)
 let dragMoved = false
@@ -418,6 +421,13 @@ function touchId(touch: any): string | undefined {
   return id == null ? undefined : String(id)
 }
 
+function eventTime(event: any): number | undefined {
+  const raw = event?.timestamp ?? event?.timeStamp
+  if (raw == null || raw === '') return undefined
+  const time = Number(raw)
+  return Number.isFinite(time) ? time : undefined
+}
+
 function readTouch(event: any, id?: string, changedFirst = false): any {
   const lists = changedFirst ? [event?.changedTouches, event?.touches] : [event?.touches, event?.changedTouches]
   for (const list of lists) {
@@ -430,7 +440,7 @@ function readTouch(event: any, id?: string, changedFirst = false): any {
 /** 坐标缺失/非有限数不能转成 0；client/page 优先于宿主兼容的 x/y。 */
 function readPointer(event: any, id?: string, changedFirst = false): number {
   const touch = readTouch(event, id, changedFirst)
-  if (id !== undefined && !touch && (event?.touches?.length || event?.changedTouches?.length)) return NaN
+  if (id !== undefined && !touch) return NaN
   const candidates = props.vertical
     ? [touch?.clientY, touch?.pageY, touch?.y, event?.detail?.y, event?.clientY, event?.pageY, event?.y]
     : [touch?.clientX, touch?.pageX, touch?.x, event?.detail?.x, event?.clientX, event?.pageX, event?.x]
@@ -542,6 +552,7 @@ function onTouchStart(event: any, index: number) {
   interactionRequest++ // 取消较早的轨道 tap / 异步落定
   touchIndex.value = index
   activeTouchId = id
+  gestureEventTime = eventTime(event)
   startValue = deepClone(modelValue.value)
   startPointer = pointer
   dragTrackSize.value = trackSize.value
@@ -559,8 +570,11 @@ function onTouchStart(event: any, index: number) {
 /** 同一触点的 end 可补齐未派发的最后一帧；取消、无标识或缺失终点守住当前值。 */
 function onTouchEnd(event: any, canceled = false) {
   if (!isDragging.value) return
+  const time = eventTime(event)
+  if (time !== undefined && gestureEventTime !== undefined && time < gestureEventTime) return
   // 第二根手指抬起不能结束第一根手指的拖动。
   if (activeTouchId !== undefined && event?.changedTouches?.length && !readTouch({ changedTouches: event.changedTouches }, activeTouchId, true)) return
+  if (time !== undefined) gestureEventTime = time
   const request = interactionRequest
   const pointer = readPointer(event, activeTouchId, true)
   tapSwallowUntil = Date.now() + TAP_SWALLOW_WINDOW
@@ -607,8 +621,11 @@ function onBarTouchStartBg() {
 /** MT move 不拦冒泡，后台只提交当前滑块/触点的连续值。 */
 function onBarTouchMove(event: any) {
   if (isDisabled.value || !isDragging.value || dragTrackSize.value <= 0 || !Number.isFinite(dragTrackSize.value)) return
+  const time = eventTime(event)
+  if (time !== undefined && gestureEventTime !== undefined && time < gestureEventTime) return
   const pointer = readPointer(event, activeTouchId)
   if (!Number.isFinite(pointer)) return
+  if (time !== undefined) gestureEventTime = time
   dragMoved = true
   updateValue(dragValue(pointer))
   emit('dragmove', { value: modelValue.value })
@@ -698,12 +715,14 @@ const onBarTouchStart = (event: any) => {
   }
   if (!Number.isFinite(pointer)) return
   const id = touch?.identifier ?? touch?.id
+  const rawTime = event.timestamp ?? event.timeStamp
   geomRef.current = {
     pointer,
     touchId: id == null ? undefined : String(id),
     left: Number(line.getAttribute('left-bound')),
     right: Number(line.getAttribute('right-bound')),
-    version
+    version,
+    timestamp: rawTime != null && rawTime !== '' && Number.isFinite(Number(rawTime)) ? Number(rawTime) : undefined
   }
 }
 
@@ -713,6 +732,9 @@ const onDotTouchMove = (event: any) => {
   const line = lineRef.current
   const geom = geomRef.current
   if (!line || !geom || line.getAttribute('gesture-disabled') === 'true' || geom.version !== line.getAttribute('gesture-version')) return
+  const rawTime = event.timestamp ?? event.timeStamp
+  const time = rawTime != null && rawTime !== '' && Number.isFinite(Number(rawTime)) ? Number(rawTime) : undefined
+  if (time !== undefined && geom.timestamp !== undefined && time < geom.timestamp) return
   const size = Number(line.getAttribute('gesture-size'))
   if (!Number.isFinite(size) || size <= 0) return
   const cfgMin = Number(line.getAttribute('gesture-min'))
@@ -733,7 +755,7 @@ const onDotTouchMove = (event: any) => {
     }
     if (touch) break
   }
-  if (geom.touchId !== undefined && !touch && (event.touches?.length || event.changedTouches?.length)) return
+  if (geom.touchId !== undefined && !touch) return
   const candidates = vertical
     ? [touch?.clientY, touch?.pageY, touch?.y, event.detail?.y, event.clientY, event.pageY, event.y]
     : [touch?.clientX, touch?.pageX, touch?.x, event.detail?.x, event.clientX, event.pageX, event.x]
@@ -744,9 +766,10 @@ const onDotTouchMove = (event: any) => {
     if (Number.isFinite(value)) { pointer = value; break }
   }
   if (!Number.isFinite(pointer)) return
+  if (time !== undefined) geom.timestamp = time
   // 原生运行时每次事件新建 Element 包装器，禁止与 MainThreadRef 做 === 比较。
   const target = event.currentTarget
-  const isRight = range && target && typeof target.getAttribute === 'function' && target.getAttribute('gesture-index') === '1'
+  const isRight = range && target && typeof target.getAttribute === 'function' && Number(target.getAttribute('gesture-index')) === 1
   const initial = isRight ? geom.right : geom.left
   if (!Number.isFinite(initial)) return
   const align = (value: number) => {
@@ -757,16 +780,22 @@ const onDotTouchMove = (event: any) => {
   const value = align(initial + ((pointer - geom.pointer) / size) * scopeV)
   const sizeProp = vertical ? 'height' : 'width'
   const startProp = vertical ? 'top' : 'left'
+  const movement: Record<string, string> = {}
   if (range) {
     const other = align(isRight ? geom.left : geom.right)
     if (!Number.isFinite(other)) return
     const left = Math.min(value, other)
     const right = Math.max(value, other)
-    line.setStyleProperty(startProp, `${((left - cfgMin) / scopeV) * 100}%`)
-    line.setStyleProperty(sizeProp, `${((right - left) / scopeV) * 100}%`)
+    movement[startProp] = `${((left - cfgMin) / scopeV) * 100}%`
+    movement[sizeProp] = `${((right - left) / scopeV) * 100}%`
   } else {
-    line.setStyleProperty(startProp, '0%')
-    line.setStyleProperty(sizeProp, `${((value - cfgMin) / scopeV) * 100}%`)
+    movement[startProp] = '0%'
+    movement[sizeProp] = `${((value - cfgMin) / scopeV) * 100}%`
+  }
+  if (typeof line.setStyleProperties === 'function') line.setStyleProperties(movement)
+  else {
+    line.setStyleProperty(startProp, movement[startProp])
+    line.setStyleProperty(sizeProp, movement[sizeProp])
   }
 }
 
@@ -775,6 +804,9 @@ const onDotTouchEnd = (event: any) => {
   'main thread'
   const geom = geomRef.current
   if (!geom) return
+  const rawTime = event.timestamp ?? event.timeStamp
+  const time = rawTime != null && rawTime !== '' && Number.isFinite(Number(rawTime)) ? Number(rawTime) : undefined
+  if (time !== undefined && geom.timestamp !== undefined && time < geom.timestamp) return
   if (geom.touchId !== undefined && event.changedTouches?.length) {
     let matches = false
     for (const touch of event.changedTouches) {

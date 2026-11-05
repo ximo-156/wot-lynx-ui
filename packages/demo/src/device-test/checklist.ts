@@ -5,7 +5,7 @@
  * expect 为真机上的预期结果，供测试人员对照。
  *
  * 两类分组：
- * 1. **交互清单**（本文件，8 组 / 35 项）：手势跟手、弹层回调、主题切换
+ * 1. **交互清单**（本文件，8 组 / 36 项）：手势跟手、弹层回调、主题切换
  *    等「必须动手操作」的场景，只覆盖 28 个组件；
  * 2. **全量渲染清单**（`component-checks.ts`，6 组 / 106 项）：一个组件
  *    一条，铺满全部 106 个组件，expect 指向该组件最可能翻车的真机行为。
@@ -72,6 +72,13 @@ export const testSections: TestSection[] = [
     title: '弹层 Popup / Dialog / Toast',
     hint: '验证遮罩/动画/回调/弹层级联',
     items: [
+      // 真机 2026-11-05：贴边弹层整片塌到屏幕左上角。单独成项——「弹层能开」
+      // 和「弹层在自己该在的位置」是两件事，只勾动画项会把它漏掉。
+      {
+        id: 'overlay-anchor',
+        name: '贴边定位',
+        expect: '时间选择器 / Picker 贴屏幕底部、Dialog 屏幕正中、notify 贴顶且左右各缩 12px；面板不得缩到左上角或只剩半截'
+      },
       { id: 'overlay-mask', name: '遮罩关闭', expect: '点击遮罩关闭弹层；closeOnClickModal=false 时点击不关' },
       { id: 'overlay-anim', name: '弹出动画', expect: '各方向入场动画方向正确；round 圆角与 closable 关闭按钮正常' },
       { id: 'overlay-callback', name: '打开/关闭回调', expect: 'update:modelValue 与 enter/leave 过渡事件按序触发，事件日志实时刷新' },

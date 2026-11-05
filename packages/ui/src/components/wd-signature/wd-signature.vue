@@ -466,8 +466,9 @@ const svgContent = computed(() => {
  *
  * 跟手渲染期间线段宽高由主线程 worklet 直改（绕过 Vue）；落笔 / 清空 /
  * 撤销 / 恢复时经 resetSegmentPool 赋新引用，池内联样式随该帧 SVG
- * 重绘一并重置为 0×0（同一帧，无闪烁）。笔画进行中引用不变——computed
- * / 重渲染不触碰该 prop，worklet 直改值不被冲刷（CONVENTIONS §20）。
+ * 重绘一并重置为 0×0（同一帧，无闪烁）。笔画进行中引用不变，v-memo
+ * 跳过池节点更新；否则 Vue 的 STYLE 快路径仍会重发零尺寸覆盖主线程绘制。
+ * 重置时新引用让 memo 失效，清空、撤销和恢复仍会及时同步。
  */
 const segmentResetStyle = ref<Record<string, string>>({ position: 'absolute', left: '0px', top: '0px', width: '0px', height: '0px' })
 
@@ -721,7 +722,7 @@ const onDrawEndMt = () => {
         <svg :content="svgContent" />
         <!-- 线段池：当前笔迹的跟手渲染元素（主线程 worklet 直改样式；
              隐藏态由 segmentResetStyle 驱动，随 SVG 重绘同帧重置） -->
-        <view v-for="index in POOL_SIZE" :key="index" :main-thread-ref="segmentRefs[index - 1]" :style="segmentResetStyle" />
+        <view v-for="index in POOL_SIZE" :key="index" v-memo="[segmentResetStyle]" :main-thread-ref="segmentRefs[index - 1]" :style="segmentResetStyle" />
       </view>
     </view>
     <view class="wd-signature__footer">

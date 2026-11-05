@@ -79,7 +79,7 @@ describe('弹层链路回归（真机测试缺陷锁定）', () => {
 
     show.value = true
     await frames()
-    const content = firstMatch(container, '.wd-popup-wrapper > .wd-transition')
+    const content = firstMatch(container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition')
     expect(isHidden(content), '打开后弹层内容应可见').toBe(false)
 
     const mask = firstMatch(container, '.wd-popup-wrapper .wd-overlay')
@@ -90,7 +90,7 @@ describe('弹层链路回归（真机测试缺陷锁定）', () => {
     fireEvent.tap(mask!)
     await settle()
     expect(updates, '点击遮罩应触发 update:modelValue(false)').toContain(false)
-    expect(isHidden(firstMatch(container, '.wd-popup-wrapper > .wd-transition')), '关闭后弹层内容应隐藏').toBe(true)
+    expect(isHidden(firstMatch(container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition')), '关闭后弹层内容应隐藏').toBe(true)
     cleanup()
   })
 
@@ -149,7 +149,7 @@ describe('弹层链路回归（真机测试缺陷锁定）', () => {
     dialogRef.value.alert({ title: '提示', msg: '这是一个对话框' })
     await frames()
 
-    const content = firstMatch(container, '.wd-popup-wrapper > .wd-transition')
+    const content = firstMatch(container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition')
     expect(isHidden(content), 'alert 后对话框应可见').toBe(false)
     expect(container.textContent).toContain('提示')
     expect(container.textContent).toContain('这是一个对话框')
@@ -181,7 +181,7 @@ describe('弹层链路回归（真机测试缺陷锁定）', () => {
     await frames()
 
     expect(updates, 'open 应触发 update:modelValue(true)').toContain(true)
-    const content = firstMatch(container, '.wd-popup-wrapper > .wd-transition')
+    const content = firstMatch(container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition')
     expect(isHidden(content), '打开后动作面板应可见').toBe(false)
     expect(container.textContent).toContain('选项一')
     cleanup()

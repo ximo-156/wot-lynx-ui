@@ -13,7 +13,14 @@ $popup-close-margin: var(--wot-popup-close-margin, $spacing-loose) !default;
 $popup-radius: var(--wot-popup-radius, $radius-large) !default;
 
 @include b(popup) {
-  position: fixed;
+  /* 定位拆两层（真机 2026-11-05 修复，见 wd-popup.vue 的 HARNESS_STYLE 注释）：
+     外层 .wd-popup-harness 是 fixed 全屏 flex 容器，负责把本节点摆到视口的
+     上/下/左/右/正中；本节点（过渡根 = 可见面板）只负责外观与动画。
+     因此这里不能再写 position: fixed + 边值：真机上「fixed + display: flex」
+     的节点会按内容尺寸收缩、边值撑不开，整片弹层会贴到屏幕左上角。
+     保留 position: relative 有两个用处：作为 .wd-popup__close 的包含块
+     （绝对定位），以及让消费方遗留的边值恒为 0px 而不产生偏移。 */
+  position: relative;
   // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
   // flex-direction 只挂在 display: flex 上才生效；弹层内容（消费方的
   // 任意 slot 节点）按纵向排布，故显式 column
@@ -34,19 +41,16 @@ $popup-radius: var(--wot-popup-radius, $radius-large) !default;
   /* 参考源用 mdeep() 生成根级 `:deep() .wd-popup--<position>`；本地 m() 的
      @at-root 产物与其归一化结果一致，mdeep() 会多带一层 .wd-popup 祖先、
      永不命中（CONVENTIONS §5.5 同类名错配） */
-  /* 定位说明（NATIVE-REWRITE §3.2「禁 left:50% + translate」的例外）：
-     居中弹层的 fixed 节点自带不透明背景令牌 --wot-popup-bg，且必须收缩
-     包裹内容（尺寸由消费方传入的任意 slot 决定）——若按四边 0 + flex
-     居中撑满视口，这层背景会涂满整个屏幕、把遮罩完全盖住（demo 的居中
-     弹层内容正依赖该背景）。故保留 left/top 50% + translate3d(-50%,-50%,0)
-     的收缩居中；transform-origin: 0 0 与 zoom-in 过渡帧的 scale 补偿同源
-     （参考源取值）。贴边位置（top/bottom/left/right）无此问题，均按
-     CONVENTIONS §9 用对应边贴边 + 根三件套纵向排布。 */
   @include m(center) {
-    left: 50%;
-    top: 50%;
-    transform: translate3d(-50%, -50%, 0);
-    transform-origin: 0% 0%;
+    /* 居中改由 harness 的 align-items/justify-content 完成：面板依旧收缩包裹
+       内容（尺寸取决于消费方 slot），背景只铺面板自身，不会涂满屏幕盖住遮罩。
+       历史写法 left/top: 50% + translate3d(-50%,-50%,0) 已移除——真机对
+       percent + translate 的居中不稳（CONVENTIONS §19 差异清单、
+       NATIVE-REWRITE §3.2 明令禁用）。 */
+    /* 缩放以面板自身中心为原点：面板已由 flex 居中，过渡帧只写 scale，
+       不再需要 translate 补偿，故 transform-origin 显式取中心，避免引擎
+       默认原点差异把缩放做成“从左上角长出来” */
+    transform-origin: 50% 50%;
 
     @include when(round) {
       border-radius: $popup-radius;
@@ -56,52 +60,39 @@ $popup-radius: var(--wot-popup-radius, $radius-large) !default;
        特异性（两类名）已高于 wd-transition 的单类名规则，无需 !important */
     &.wd-transition--zoom-in-enter-from,
     &.wd-transition--zoom-in-leave-to {
-      transform: scale(0.8) translate3d(-50%, -50%, 0);
+      transform: scale(0.8);
     }
 
     @include when(deep) {
       &.wd-transition--zoom-in-enter-from,
       &.wd-transition--zoom-in-leave-to {
-        transform: scale(0.1) translate3d(-50%, -50%, 0);
+        transform: scale(0.1);
       }
     }
   }
 
+  /* 贴边位置（top/bottom/left/right）不再写边值：位置由 harness 的
+     justify-content 决定，宽高由组件内联下发窗口像素（真机不认四边 0 的
+     尺寸推导）。此处只保留圆角。 */
   @include m(left) {
-    top: 0;
-    bottom: 0;
-    left: 0;
-
     @include when(round) {
       border-radius: 0 $popup-radius $popup-radius 0;
     }
   }
 
   @include m(right) {
-    top: 0;
-    right: 0;
-    bottom: 0;
-
     @include when(round) {
       border-radius: $popup-radius 0 0 $popup-radius;
     }
   }
 
   @include m(top) {
-    top: 0;
-    left: 0;
-    right: 0;
-
     @include when(round) {
       border-radius: 0 0 $popup-radius $popup-radius;
     }
   }
 
   @include m(bottom) {
-    right: 0;
-    bottom: 0;
-    left: 0;
-
     @include when(round) {
       border-radius: $popup-radius $popup-radius 0 0;
     }
