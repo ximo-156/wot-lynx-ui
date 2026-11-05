@@ -319,7 +319,7 @@
     "layer": "primitives",
     "family": null,
     "modelValue": false,
-    "events": ["tap","click","transitionend","touchmove","before-enter","enter","after-enter","before-leave","leave","after-leave"],
+    "events": ["tap","click","transitionend","touchstart","touchmove","touchend","touchcancel","before-enter","enter","after-enter","before-leave","leave","after-leave"],
     "slots": ["default"],
     "props": [
       {"name":"customStyle","type":"string | Record<string, any>","default":"''","description":"自定义根节点样式。 接受字符串（CSS 声明串）或对象两种语法：vue-lynx 的 patchProp 对 `:style` 只认对象（字符串形式会被静默丢弃，CONVENTIONS §19），组件 内部统一经 parseStyle() 归一为对象后下发，因此两种传入形式都支持。"},

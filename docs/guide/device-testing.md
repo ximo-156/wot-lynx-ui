@@ -60,7 +60,39 @@ pnpm dev:device-test
 
 > 2026-11-03 之前的 device-test 页只有 28 个组件实例，其余 78 个在真机上从未渲染过（用户反馈「电脑上有的组件真机上没有」就是这个原因）。现在两个入口共用 Showcase，`scripts/check-device-coverage.mjs` 会从 **device-test 入口**跟随 import 断言 106/106 覆盖，缺一个就报错。
 
-页面顶部有一行**构建标记**（如 `R5 · 2026-11-03 …`）：换包后这行会变。若真机上看到的标记不是最新的，说明加载的是旧 bundle，先解决缓存再验证。
+页面首屏构建标记为 **`R7 · 手机端滑动 / 选择器 / 弹层修复`**。重新打开手机页面确认标记，不依赖旧页面缓存或开发热更新。此前额外的顶部复测卡已经移除，所有修复均作用于原组件。
+
+### R7：直接检查原组件
+
+1. **Slider**：在原滑块区域连续拖动、快速反向及操作范围右端，手指未离开时进度应持续变化；松手不能被旧 v-model 回写或补发 tap 拉回。
+2. **时间选择器 / 弹窗**：打开后拖动滚轮、面板空白和遮罩，背景页面不得跟着滚动；关闭及退场完成后恢复背景滚动。弹层内部自己的 scroll-view 仍可滚动。
+3. **Fab**：在原悬浮按钮区域展开菜单、拖动和松手；查询失败不能把按钮拉回左上角，点页面空白可关闭菜单。
+4. **文字 / 布局**：检查原单元格、通知、空状态、按钮等文字是否留在自身容器内；底部和居中弹层不得超出手机视口。
+
+### 手机页面滚动锁接入
+
+锁滚必须关闭背景的原生 scroll-view，而不是只设置浏览器 body 或调用触摸 preventDefault。本项目两个原页面入口已经接入；其他消费者也应在背景滚动容器上绑定同一个只读状态，**不要绑到弹窗内的内容滚动容器**：
+
+```vue
+<script setup lang="ts">
+import { usePageScrollLock } from 'wot-lynx-ui'
+const pageScrollLocked = usePageScrollLock()
+</script>
+
+<template>
+  <scroll-view
+    scroll-orientation="vertical"
+    :scroll-enable="!pageScrollLocked"
+    :enable-scroll="!pageScrollLocked"
+  >
+    <!-- 原页面内容；保持原有确定高度链路 -->
+  </scroll-view>
+</template>
+```
+
+两个开关名用于覆盖当前原生/预览宿主的属性差异。Popup、Overlay 和正在拖动的 Slider/Fab 共用锁状态；嵌套弹层分别持有租约，不会因关闭其中一层就错误解锁。`lock-scroll="false"` 应使用 Vue 的布尔绑定 `:lock-scroll="false"`。
+
+**验证边界**：本轮优先修复手机原组件，不新增测试或演示文件。现有回归和运行时协议验证不能替代 Android/iOS 对实际触点、滚动仲裁和安全区的验收；若仍异常，请附构建标记、引擎版本及原组件的操作录像。
 
 ## 方式二：Web 预览（快速冒烟）
 

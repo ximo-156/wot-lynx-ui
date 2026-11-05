@@ -148,7 +148,6 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
     align-items: flex-start;
     text-align: left;
     font-size: $cell-title-font-size;
-    line-height: $cell-title-line-height;
     box-sizing: border-box;
   }
 
@@ -167,7 +166,6 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
     flex-direction: column;
     min-width: 0;
     font-size: $cell-title-font-size;
-    line-height: $cell-title-line-height;
     color: $cell-title-color;
     white-space: normal;
     word-wrap: break-word;
@@ -221,7 +219,6 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
     flex-direction: column;
     margin-top: $cell-label-margin-top;
     font-size: $cell-label-font-size;
-    line-height: $cell-label-line-height;
     color: $cell-label-color;
     white-space: normal;
     word-wrap: break-word;
@@ -256,7 +253,6 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
     flex: 1;
     min-width: 0;
     font-size: $cell-value-font-size;
-    line-height: $cell-value-line-height;
     color: $cell-value-color;
     /* vertical-align: middle 为 Web 专有声明（Lynx 不识别，PORTING §4.5
        删除清单），行内垂直居中由 __body 的 align-items: center 承担 */
@@ -277,7 +273,7 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
     }
 
     @include m(ellipsis) {
-      @include lineEllipsis;
+      // 省略由内部 text-maxline 承担，不用 overflow 裁掉整段手机文字。
       min-width: 0;
     }
   }
@@ -285,7 +281,6 @@ $cell-border-margin-horizontal: var(--wot-cell-border-margin-horizontal, $spacin
   @include e(placeholder) {
     color: $cell-placeholder-color;
     font-size: $cell-placeholder-font-size;
-    line-height: $cell-placeholder-line-height;
   }
 
   @include edeep(arrow-right) {

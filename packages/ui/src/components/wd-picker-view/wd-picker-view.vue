@@ -34,7 +34,12 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue-lynx'
 import { pickerViewProps, type PickerOption, type PickerViewExpose } from './types'
 import { useSelection } from '../../composables/useSelection'
 import { useAlive } from '../../composables/useAlive'
+import { useLockScroll } from '../../composables/useLockScroll'
 import { addUnit, isArray, isDef, isEqual, isObj, parseStyle } from '../../common/util'
+
+// 外壳只 catch 冒泡，内容节点的 bind 跟手/落定先正常运行；不是 capture。
+// 原生祖先的默认滚动仍由 Popup 的页面 scroll-enable 锁处理。
+function stopColumnTouch() {}
 
 const props = defineProps(pickerViewProps)
 const emit = defineEmits(['change', 'pickstart', 'pickend', 'update:modelValue'])
@@ -43,6 +48,7 @@ const bgDragStart: Array<{ y: number; offset: number } | undefined> = []
 const dragging: boolean[] = []
 /** 拖动中的列数（>0 时列内容过渡显式为 none，Style Funnel 两态同键） */
 const draggingCount = ref(0)
+useLockScroll(() => draggingCount.value > 0)
 // 每列 pickstart 是否已发出且 pickend 未落定：连续快速滑动时新手势接续
 // 旧手势的 settle，必须视为同一段选择，pickstart/pickend 才能配对
 const picking: boolean[] = []
@@ -220,8 +226,12 @@ function offsetToIndex(colIndex: number, offset: number): number {
  * 触点纵坐标（touchend 取 changedTouches，touchmove 取 touches）。
  * 跟手与落定共用同一公式输入，保证两段位移连续无跳变。
  */
-function pointerY(event: any): number {
-  return Number(event.changedTouches?.[0]?.clientY ?? event.touches?.[0]?.clientY ?? event.detail?.y ?? 0)
+function pointerY(event: any, ended = false): number | null {
+  const touch = ended ? event?.changedTouches?.[0] ?? event?.touches?.[0] : event?.touches?.[0] ?? event?.changedTouches?.[0]
+  const raw = touch?.clientY ?? touch?.pageY ?? touch?.y ?? event?.detail?.y
+  if (raw == null) return null
+  const y = Number(raw)
+  return Number.isFinite(y) ? y : null
 }
 
 /**
@@ -250,6 +260,8 @@ function rebuildCascadeColumns(columnIndex: number) {
  */
 function onTouchStart(event: any, colIndex: number) {
   if (!formatColumns.value[colIndex]?.length || props.itemHeight <= 0) return
+  const y = pointerY(event)
+  if (y === null) return
   changeRequest++
   if (settleTimers[colIndex] !== undefined) clearTimeout(settleTimers[colIndex])
   // pickstart/pickend 配对：上一手势 settle 未落定（pickend 未发）就再次
@@ -262,7 +274,7 @@ function onTouchStart(event: any, colIndex: number) {
     dragging[colIndex] = true
     draggingCount.value++
   }
-  bgDragStart[colIndex] = { y: pointerY(event), offset: offsets.value[colIndex] || 0 }
+  bgDragStart[colIndex] = { y, offset: offsets.value[colIndex] || 0 }
 }
 
 /**
@@ -276,8 +288,9 @@ function onTouchMove(event: any, colIndex: number) {
   if (!dragging[colIndex]) return
   const max = maxOffset(colIndex)
   const start = bgDragStart[colIndex]
-  if (!start) return
-  let offset = start.offset + (start.y - pointerY(event))
+  const y = pointerY(event)
+  if (!start || y === null) return
+  let offset = start.offset + (start.y - y)
   if (offset < 0) offset = offset * 0.3
   if (offset > max) offset = max + (offset - max) * 0.3
   offsets.value[colIndex] = offset
@@ -292,7 +305,8 @@ function onTouchEnd(event: any, colIndex: number) {
   draggingCount.value = Math.max(0, draggingCount.value - 1)
   const max = maxOffset(colIndex)
   const start = bgDragStart[colIndex]
-  let offset = start ? start.offset + (start.y - pointerY(event)) : offsets.value[colIndex] || 0
+  const y = pointerY(event, true)
+  let offset = start && y !== null ? start.offset + (start.y - y) : offsets.value[colIndex] || 0
   // 边缘阻尼 + 钳制（与 touchmove 同一公式；阻尼值越界后由钳制收敛）
   if (offset < 0) offset = offset * 0.3
   if (offset > max) offset = max + (offset - max) * 0.3
@@ -361,11 +375,15 @@ defineExpose<PickerViewExpose>({
       <view class="wd-picker-view__mask wd-picker-view__mask--top" :style="padHeightStyle" />
       <view class="wd-picker-view__mask wd-picker-view__mask--bottom" :style="padHeightStyle" />
 
-      <!-- 列（父）：容器壳，触摸事件由列内容（子）承担 -->
+      <!-- 内容先 bind 跟手/落定，列外壳再 catch 冒泡，不能用 capture 截断子列。 -->
       <view
         v-for="(col, colIndex) in formatColumns"
         :key="colIndex"
         class="wd-picker-view__column"
+        @touchstart.stop="stopColumnTouch"
+        @touchmove.stop="stopColumnTouch"
+        @touchend.stop="stopColumnTouch"
+        @touchcancel.stop="stopColumnTouch"
       >
         <!-- 列内容（子）：后台 touchstart / touchmove（跟手写 offsets）/
              touchend（落定 commit） -->

@@ -73,6 +73,16 @@ $checkbox-button-icon-left: var(--wot-checkbox-button-icon-left, $n-4) !default;
   }
 
   @include e(label) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+    font-size: $checkbox-label-font-size;
+    color: $checkbox-label-color;
+  }
+
+  .wd-checkbox__label-text,
+  .wd-checkbox__label text {
     font-size: $checkbox-label-font-size;
     color: $checkbox-label-color;
     line-height: $checkbox-label-line-height;

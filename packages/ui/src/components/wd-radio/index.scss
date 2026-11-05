@@ -102,6 +102,17 @@ $radio-button-icon-left: var(--wot-radio-button-icon-left, $n-4) !default;
   }
 
   @include e(label) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+    font-size: $radio-label-font-size;
+    color: $radio-label-color;
+    text-align: center;
+  }
+
+  .wd-radio__label-text,
+  .wd-radio__label text {
     font-size: $radio-label-font-size;
     color: $radio-label-color;
     line-height: $radio-label-line-height;

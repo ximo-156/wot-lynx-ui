@@ -65,14 +65,21 @@ $notify-types: ("primary": ("bg": $notify-primary-bg,
   box-sizing: border-box;
   padding: $notify-padding;
   font-size: $notify-font-size;
-  line-height: $notify-line-height;
   color: $notify-text-color;
+
+  @include e(text) {
+    color: $notify-text-color;
+    font-size: $notify-font-size;
+    line-height: $notify-line-height;
+  }
 
   @each $type,
   $conf in $notify-types {
     @include m($type) {
       background: map.get($conf, "bg");
       color: map.get($conf, "color");
+
+      .wd-notify__text { color: map.get($conf, "color"); }
 
       /* Lynx 适配：wot-ui 在 :deep() 里给 floating 变体的前缀图标单独上色，
          本地无 shadow DOM，直接写后代选择器 */
@@ -87,6 +94,8 @@ $notify-types: ("primary": ("bg": $notify-primary-bg,
     color: $notify-floating-color;
     border-radius: $notify-floating-radius;
     box-shadow: $notify-floating-shadow;
+
+    .wd-notify__text { color: $notify-floating-color; }
 
     &.wd-notify--top {
       margin-top: $notify-floating-margin-vertical;
@@ -111,10 +120,10 @@ $notify-types: ("primary": ("bg": $notify-primary-bg,
 
   @include e(content) {
     flex: 1 1 auto;
-    // 单行省略的文本容器：flex 行内的可收缩项需要 min-width: 0，否则文本
-    // 会把前缀图标 / 关闭按钮挤出屏外（flex 子项默认 min-width: auto）
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     min-width: 0;
-
-    @include lineEllipsis;
+    // text-maxline 在实际文字节点上承担省略，容器不裁剪整段内容。
   }
 }

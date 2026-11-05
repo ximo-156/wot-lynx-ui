@@ -504,6 +504,17 @@ bg-color 头像曾因此整组白底白字不可见）。
 直接父 view 或 text 自身（类或内联），状态色同步写到文字节点，不要
 隔着两层以上 view 靠继承。
 
+**标签型插槽与 fallback 必须共用文字出口**（2026-11-04）：只给
+`<slot>` 的 fallback 写原生 text/class 不够，调用方传入的普通文案会绕过
+这层样式。当前 Vue Lynx 的 `CREATE_TEXT` 会创建匿名原生 text，所以准确的
+问题不是“完全没有 text”，而是缺少明确的 class / 文字样式 / `text-maxline`。
+按钮、标签、单选、多选、分割线、加载文案统一使用
+[WdTextSlot](packages/ui/src/common/textSlot.ts)：只归一普通文字及 Fragment，
+保留自定义 view/组件、有效空格、数字 0、空锚点和键控结构；不要把任意布局插槽
+整体塞进一个 text。view 负责宽高和 flex 排列，字号/行高直接声明在 text 上。
+回归必须检查渲染出的文字节点和编译后的直接声明，不能仅断言 textContent 存在；
+这些检查仍不等同于 Android/iOS 像素验收。
+
 **已暴露的故障现象**（真机 + Web 预览同现）：
 
 | 组件 | 字符串样式 | 故障表现 |

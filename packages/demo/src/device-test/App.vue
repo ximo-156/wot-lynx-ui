@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue-lynx'
-import { useToast } from 'wot-lynx-ui'
+import { useToast, usePageScrollLock, useQueue } from 'wot-lynx-ui'
 
 import { testSections, totalItems, type TestItem } from './checklist'
 import ChecklistBox from './ChecklistBox.vue'
@@ -11,7 +11,7 @@ import { demoImage } from '../assets/demo-images'
  * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
  * 真机排查第一时间看它，避免"改了没生效"的误判。
  */
-const buildTag = 'R5 · 2026-11-03 全量组件展厅 + Slider 真机修复'
+const buildTag = 'R7 · 手机端滑动 / 选择器 / 弹层修复'
 
 /**
  * 全量渲染清单（component-checks.ts 的 6 组，共 106 条）。
@@ -19,6 +19,9 @@ const buildTag = 'R5 · 2026-11-03 全量组件展厅 + Slider 真机修复'
  * 保证「106 个组件的检查项」在真机页面上也真的看得见。
  */
 const renderSections = computed(() => testSections.slice(8))
+
+const pageScrollLocked = usePageScrollLock()
+const { closeOutside } = useQueue()
 
 // ---------- 设备信息 ----------
 const sysInfo = (globalThis as any).SystemInfo || {}
@@ -150,12 +153,13 @@ const safeAreaText = computed(() => {
         链路：page 根(屏幕高，确定) > app-root(100%) > scroll-view.page(100%) > 内容。
         wd-config-provider 的根 view 现已内置 height:100%，此处显式声明使布局契约不依赖组件内部实现。
         theme 受控切换：亮/暗令牌由 provider 根 view 的 wot-theme-* 类翻转（第 8 组验证）。 -->
-  <wd-config-provider :theme="themeMode" custom-class="app-root">
-    <scroll-view scroll-orientation="vertical" class="page">
+  <wd-config-provider :theme="themeMode" custom-class="app-root" @tap="closeOutside">
+    <scroll-view scroll-orientation="vertical" :scroll-enable="!pageScrollLocked" :enable-scroll="!pageScrollLocked" class="page">
       <!-- ============ 头部：设备信息 ============ -->
       <view class="header">
         <text class="header__title">wot-lynx-ui 真机测试</text>
         <text class="header__sub">Vue Lynx · 8 组交互 + 6 组全量渲染 · 共 {{ totalItems }} 项</text>
+        <text class="header__sub">{{ buildTag }}</text>
         <view class="header__device">
           <text class="header__device-item">平台 {{ deviceInfo.platform }}</text>
           <text class="header__device-item">屏幕 {{ deviceInfo.width }}×{{ deviceInfo.height }}</text>
@@ -190,11 +194,11 @@ const safeAreaText = computed(() => {
           <wd-button type="info">信息</wd-button>
         </view>
         <view class="row">
-          <wd-button type="primary" plain>朴素</wd-button>
-          <wd-button type="primary" dashed>虚线</wd-button>
-          <wd-button type="primary" soft>柔和</wd-button>
-          <wd-button type="primary" subtle>淡雅</wd-button>
-          <wd-button type="primary" text>文字</wd-button>
+          <wd-button type="primary" variant="plain">朴素</wd-button>
+          <wd-button type="primary" variant="dashed">虚线</wd-button>
+          <wd-button type="primary" variant="soft">柔和</wd-button>
+          <wd-button type="primary" variant="subtle">淡雅</wd-button>
+          <wd-button type="primary" variant="text">文字</wd-button>
         </view>
         <view class="row">
           <wd-button disabled>禁用</wd-button>

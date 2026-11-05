@@ -5,6 +5,7 @@ import './index.css'
 import { computed, useSlots } from 'vue-lynx'
 import { dividerProps } from './types'
 import { parseStyle } from '../../common/util'
+import { WdTextSlot } from '../../common/textSlot'
 
 const props = defineProps(dividerProps)
 const slots = useSlots()
@@ -25,7 +26,9 @@ function lineClass(position: 'first' | 'last') {
   <view :class="rootClass" :style="rootStyle">
     <template v-if="!vertical">
       <view :class="lineClass('first')" />
-      <view v-if="$slots.default" class="wd-divider__content"><slot /></view>
+      <view v-if="$slots.default" class="wd-divider__content">
+        <WdTextSlot text-class="wd-divider__text" :text-style="{ color: rootStyle.color }"><slot /></WdTextSlot>
+      </view>
       <view v-if="contentMode" :class="lineClass('last')" />
     </template>
     <view v-else class="wd-divider__line" />

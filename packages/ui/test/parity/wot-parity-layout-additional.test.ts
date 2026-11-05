@@ -63,9 +63,20 @@ describe('wot 2.3.2 layout behavior (real Lynx dual-thread renderer, not native 
     expect(oldA.classList.contains('is-first')).toBe(true)
     expect(element(container, '.grid-c').classList.contains('is-border')).toBe(true)
     keys.value = ['c', 'b', 'a']; await frames()
-    expect(element(container, '.grid-a')).toBe(oldA)
+    // 真机 2026-11-04：宫格改显式行结构（见 wd-grid.vue 顶部说明），子项按列数
+    // 切进 .wd-grid__row。跨行的 keyed 子项（这里 a 从第 1 行换到第 2 行）在 Vue
+    // 里必然走「卸载 + 新建」——DOM 节点不再复用。宫格子项本身无状态，渲染顺序与
+    // 边框类名才是契约，因此这里断言顺序/类名，不再断言节点同一性。
+    const itemOrder = [...container.querySelectorAll<HTMLElement>('.wd-grid-item')]
+      .map((item) => ['a', 'b', 'c', 'd'].find((key) => item.classList.contains(`grid-${key}`)))
+    expect(itemOrder, '渲染顺序必须跟随 keyed 重排').toEqual(['c', 'b', 'a'])
+    expect(container.querySelectorAll('.wd-grid__row')).toHaveLength(2)
     expect(element(container, '.grid-a').classList.contains('is-border')).toBe(true)
     expect(element(container, '.grid-c').classList.contains('is-first')).toBe(true)
+    // 行归属跟随重排后的顺序：['c','b','a'] + 2 列 → 第 1 行 [c,b]、第 2 行 [a]
+    const rows = [...container.querySelectorAll('.wd-grid__row')]
+    expect([...rows[0].querySelectorAll<HTMLElement>('.wd-grid-item')].map((item) => item.className.includes('grid-c') ? 'c' : 'b')).toEqual(['c', 'b'])
+    expect(rows[1].querySelectorAll('.wd-grid-item')).toHaveLength(1)
     keys.value = ['c', 'd']; await frames()
     expect(container.querySelectorAll('.wd-grid-item')).toHaveLength(2)
     expect(element(container, '.grid-d').classList.contains('is-right')).toBe(true)

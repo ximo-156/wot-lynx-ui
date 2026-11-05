@@ -10,6 +10,7 @@ import { computed, ref } from 'vue-lynx'
 import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { isString, isUndefined, parseStyle } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { WdTextSlot } from '../../common/textSlot'
 import { tagProps } from './types'
 import { useTranslate } from '../../composables/useTranslate'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
@@ -66,16 +67,20 @@ function handleConfirm(event: any) {
       @confirm="handleConfirm"
     />
     <view v-else-if="dynamic" class="wd-tag__text" :style="textStyle" @tap.stop="handleAdd">
-      <slot name="add">
-        <WdIcon name="plus" custom-class="wd-tag__add" />
-        <text text-maxline="1">{{ translate('add') }}</text>
-      </slot>
+      <WdTextSlot text-class="wd-tag__text-content" :text-style="textStyle" :text-maxline="1">
+        <slot name="add">
+          <WdIcon name="plus" custom-class="wd-tag__add" />
+          <text class="wd-tag__text-content" :style="textStyle" text-maxline="1">{{ translate('add') }}</text>
+        </slot>
+      </WdTextSlot>
     </view>
     <template v-else>
       <slot name="icon" v-if="$slots.icon || hasIcon">
         <WdIcon :name="icon" :class-prefix="iconPrefix" :css-icon="cssIcon" custom-class="wd-tag__icon" />
       </slot>
-      <view v-if="$slots.default" class="wd-tag__text" :style="textStyle"><slot /></view>
+      <view v-if="$slots.default" class="wd-tag__text" :style="textStyle">
+        <WdTextSlot text-class="wd-tag__text-content" :text-style="textStyle" :text-maxline="1"><slot /></WdTextSlot>
+      </view>
       <view v-if="closable" class="wd-tag__close" @tap.stop="handleClose">
         <WdIcon name="close" custom-class="wd-tag__close-icon" />
       </view>

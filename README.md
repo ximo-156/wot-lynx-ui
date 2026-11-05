@@ -194,10 +194,15 @@ npx vitest run --sequence.shuffle.files --sequence.seed=7   # 换几个 seed，�
 文档与侧边栏从 meta 生成（`pnpm gen:docs`）。改完跑：
 
 ```bash
-pnpm gen:meta                                     # 重新推导契约
-pnpm api:diff --base main --md api-changes.md     # 看这次改了什么、哪些是破坏性的
+pnpm gen:meta                                   # 重新推导契约
+pnpm api:diff                                   # 默认比较 HEAD 与工作区契约
+pnpm api:diff --base main --md api-changes.md --plan codemod-plan.json  # 指定基准并导出清单、迁移计划
 pnpm codemod --plan codemod-plan.json --dir .     # 按迁移计划改写调用方（默认 dry-run）
 ```
+
+`--base` 可省略，默认 `HEAD`（最近一次提交），只比较该提交与当前工作区的契约快照；
+它不会自动生成 meta，也不会显示已经提交进 `HEAD` 的改动。查看相对其他提交、分支或
+快照的差异时，请显式指定 `--base <git-ref|file>`，如 `main`、`HEAD~1` 或历史快照路径。
 
 `api:diff` 把差异分成 major / minor / patch / docs 四级；`codemod` 只自动改写**能证明
 等价**的 prop 改名，其余变更输出人工指引。详见 [ADR-019](./docs/adr/019-api-diff-and-codemod.md)。

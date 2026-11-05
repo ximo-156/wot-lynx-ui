@@ -112,7 +112,10 @@ describe('wd-fab MTS 跟手', () => {
     await pause(60)
     expect(styleOf(root), '落定应吸附到左侧边').toMatch(/left:\s*16px/)
     expect(styleOf(root), '落定恢复吸附过渡').toMatch(/transition:\s*all ease 0\.3s/)
-    // 动作菜单方向应翻转为 right（菜单在按钮右侧展开）
+    // 收起态不创建动作视图；展开后再检查吸附后的菜单方向。
+    expect(holder.container.querySelector('.wd-fab__actions')).toBeNull()
+    fireEvent.tap(holder.container.querySelector('.wd-fab__trigger')!)
+    await pause(20)
     expect(holder.container.querySelector('.wd-fab__actions--right'), '方向应翻转为 right').not.toBeNull()
 
     restore()
@@ -136,6 +139,9 @@ describe('wd-fab MTS 跟手', () => {
     fireEvent.touchend(root, { touches: [], changedTouches: [{ clientX: 330, clientY: 46 }] })
     await pause(60)
     expect(styleOf(root), '落定应吸附到右侧边').toMatch(/left:\s*314px/)
+    expect(holder.container.querySelector('.wd-fab__actions')).toBeNull()
+    fireEvent.tap(holder.container.querySelector('.wd-fab__trigger')!)
+    await pause(20)
     expect(holder.container.querySelector('.wd-fab__actions--left'), '方向应翻转为 left').not.toBeNull()
 
     restore()

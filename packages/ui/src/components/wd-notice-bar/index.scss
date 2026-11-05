@@ -78,18 +78,25 @@ $notice-bar-suffix-color: var(--wot-notice-bar-suffix-color, inherit) !default;
     flex: 1;
     height: $notice-bar-line-height;
     overflow: hidden;
-    line-height: $notice-bar-line-height;
   }
 
   @include e(content) {
     position: absolute;
+    top: 0;
+    left: 0;
     white-space: nowrap;
+  }
+
+  @include e(text) {
+    color: $text-main;
+    font-size: $notice-bar-font-size;
+    line-height: $notice-bar-line-height;
   }
 
   @include m(ellipse) {
     .wd-notice-bar__content {
       position: static;
-      @include lineEllipsis;
+      white-space: nowrap;
     }
   }
 

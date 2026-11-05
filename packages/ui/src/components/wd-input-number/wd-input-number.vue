@@ -445,7 +445,8 @@ function handleInput(event: any) {
  * 处理失焦事件
  */
 function handleBlur(event: any) {
-  const val = event.detail.value || ''
+  // 原生 blur 可能不带值：沿用当前输入，保留数值 0 与显式清空字符串。
+  const val = event?.detail?.value ?? inputValue.value
   updateValue(val)
   emit('blur', { value: val })
   formItemValidate.value?.validateByTrigger('blur')

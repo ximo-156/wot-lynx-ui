@@ -16,6 +16,7 @@ import { addUnit, isDef, parseStyle, sanitizeSvgContent } from '../../common/uti
 import { defineStyleKeys, resolveStyle, createStyleResolver } from '../../common/style'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
 import { PRIMARY_COLOR, SECONDARY_COLOR } from '../../common/theme'
+import { WdTextSlot } from '../../common/textSlot'
 
 const props = defineProps(loadingProps)
 const globalConfig = useGlobalConfig()
@@ -113,6 +114,10 @@ function waveInnerStyle(index: number): Record<string, string> {
         </view>
       </view>
     </view>
-    <view v-if="$slots.default || text" class="wd-loading__text"><slot><text class="wd-loading__text-content">{{ text }}</text></slot></view>
+    <view v-if="$slots.default || text" class="wd-loading__text">
+      <WdTextSlot text-class="wd-loading__text-content" :text-style="{ color: resolvedColor }">
+        <slot><text class="wd-loading__text-content" :style="{ color: resolvedColor }">{{ text }}</text></slot>
+      </WdTextSlot>
+    </view>
   </view>
 </template>

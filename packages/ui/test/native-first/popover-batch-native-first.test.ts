@@ -86,7 +86,11 @@ const BATCH_CSS = [
 ]
 
 describe('原生优先重写 · 气泡/浮层/预览布局居中契约（popover / tooltip / curtain / floating-panel / tour / image-preview / video-preview）', () => {
-  afterEach(() => cleanup())
+  afterEach(() => {
+    cleanup()
+    // 文件隔离关闭：本套件注入的视频宿主不能泄漏给后续能力降级测试。
+    configureUniAdapter({ createVideoContext: undefined })
+  })
 
   it('编译产物不含 Lynx 静默丢失的 Web 专有写法', () => {
     for (const rel of BATCH_CSS) {

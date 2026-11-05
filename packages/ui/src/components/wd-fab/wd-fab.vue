@@ -21,6 +21,7 @@ import { useRaf } from '../../composables/useRaf'
 import { closeOther, pushToQueue, removeFromQueue } from '../../common/clickoutside'
 import { type Queue, queueKey } from '../../composables/useQueue'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { useLockScroll } from '../../composables/useLockScroll'
 
 const props = defineProps(fabProps)
 const emit = defineEmits(['update:active', 'click', 'tap', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'layoutchange'])
@@ -29,7 +30,7 @@ const queue = inject<Queue | null>(queueKey, null)
 const { proxy } = getCurrentInstance() as any
 const disposed = ref(false)
 const mounted = ref(false)
-const inited = ref(false)
+const inited = ref(true)
 const isActive = ref(props.active)
 const fabDirection = ref(props.direction)
 const top = ref(0)
@@ -39,6 +40,7 @@ const fabSize = reactive({ width: 60, height: 60 })
 const bounding = reactive({ minTop: 0, minLeft: 0, maxTop: 0, maxLeft: 0 })
 const attractTransition = ref(false)
 const dragging = ref(false)
+useLockScroll(() => dragging.value)
 const geometryRevision = ref(0)
 const gestureRevision = ref(0)
 const configEpoch = ref(0)
@@ -115,14 +117,14 @@ watch(() => props.gap, () => {
   else clampPosition()
   void measureGeometry()
 }, { deep: true })
-watch(() => props.draggable, () => { invalidateGesture() })
+watch([() => props.draggable, () => props.disabled], () => { invalidateGesture() })
 watch(() => props.customStyle, () => {
   invalidateGesture()
   void measureGeometry()
 }, { deep: true })
 function handleLayoutChange(event: any) {
   emit('layoutchange', event)
-  void measureGeometry()
+  if (!dragging.value) void measureGeometry()
 }
 
 const ROOT_STYLE = defineStyleKeys({ top: '0px', left: '0px', transition: 'none', 'z-index': '' })
@@ -137,49 +139,71 @@ const rootStyle = computed(() => {
     ...parseStyle(props.customStyle)
   }
 })
-/** 拖拽起点（触点 + 当时 left/top）：touchstart 写、touchmove 读、touchend 清 */
-const dragStartRef: { current: { x: number; y: number; left: number; top: number } | null } = { current: null }
+/** 触点和位置都保留在原组件内；新手势不复用上一次起点。 */
+const dragStartRef: { current: { x: number; y: number; left: number; top: number; identifier?: string; moved: boolean } | null } = { current: null }
+let dragTapAt = 0
+function touchPoint(event: any, ended = false) {
+  const list = ended ? event?.changedTouches?.length ? event.changedTouches : event?.touches
+    : event?.touches?.length ? event.touches : event?.changedTouches
+  const id = dragStartRef.current?.identifier
+  const touch = id === undefined ? list?.[0] : Array.from(list || []).find((item: any) => String(item.identifier ?? item.id) === id) as any
+  if (id !== undefined && !touch) return null
+  const rawX = touch?.clientX ?? touch?.pageX ?? touch?.x ?? event?.detail?.x
+  const rawY = touch?.clientY ?? touch?.pageY ?? touch?.y ?? event?.detail?.y
+  if (rawX == null || rawY == null) return null
+  const x = Number(rawX), y = Number(rawY)
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+  const touchId = touch?.identifier ?? touch?.id
+  return { x, y, identifier: touchId == null ? undefined : String(touchId) }
+}
+function applyDragPoint(point: { x: number; y: number }) {
+  const start = dragStartRef.current
+  if (!start) return
+  start.moved ||= Math.abs(point.x - start.x) > 4 || Math.abs(point.y - start.y) > 4
+  left.value = Math.min(Math.max(start.left + point.x - start.x, bounding.minLeft), bounding.maxLeft)
+  top.value = Math.min(Math.max(start.top + point.y - start.y, bounding.minTop), bounding.maxTop)
+  commitTick.value++
+}
 function handleTouchStart(event: any) {
   emit('touchstart', event)
-  gestureRevision.value++ // 作废上一手势仍在等待的落定查询。
-  dragging.value = props.draggable && inited.value
-  if (dragging.value) {
-    const touch = event.touches && event.touches[0]
-    if (touch) {
-      dragStartRef.current = {
-        x: Number(touch.clientX), y: Number(touch.clientY),
-        left: left.value, top: top.value
-      }
-    }
-  }
+  gestureRevision.value++
+  geometryRevision.value++ // 初始或旧布局的查询不得在拖动期间改写边界。
+  dragStartRef.current = null
+  dragTapAt = 0
+  const point = touchPoint(event)
+  dragging.value = Boolean(props.draggable && !props.disabled && inited.value && point)
+  if (!dragging.value || !point) return
+  attractTransition.value = false
+  dragStartRef.current = { ...point, left: left.value, top: top.value, moved: false }
 }
-/** 后台跟手：触点差量直写 left/top（transition 由 attractTransition=false 保证为 none） */
+/** 跟手仅写缓存位置；不在 move 中测量、不把缺失坐标当 0。 */
 function handleTouchMove(event: any) {
   emit('touchmove', event)
-  const start = dragStartRef.current
-  if (!dragging.value || !start) return
-  const touch = event.touches && event.touches[0]
-  if (!touch) return
-  const x = Number(touch.clientX)
-  const y = Number(touch.clientY)
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return
-  left.value = Math.min(Math.max(start.left + (x - start.x), bounding.minLeft), bounding.maxLeft)
-  top.value = Math.min(Math.max(start.top + (y - start.y), bounding.minTop), bounding.maxTop)
-  commitTick.value++
+  if (!dragging.value || !dragStartRef.current) return
+  const point = touchPoint(event)
+  if (point) applyDragPoint(point)
 }
 async function finishGesture(event: any, canceled: boolean) {
   emit(canceled ? 'touchcancel' : 'touchend', event)
+  const hadGesture = Boolean(dragging.value && dragStartRef.current)
+  const endpoint = touchPoint(event, true)
+  if (hadGesture && !canceled && endpoint) applyDragPoint(endpoint)
+  if (dragStartRef.current?.moved) dragTapAt = Date.now()
+  const finalPosition = { left: left.value, top: top.value }
   dragging.value = false
   dragStartRef.current = null
-  if (!props.draggable || !inited.value) return
+  if (!props.draggable || props.disabled || !inited.value) return
   const revision = ++gestureRevision.value
   const epoch = configEpoch.value
   const rect = await getRect(`.${triggerId}`, false, proxy)
-  if (disposed.value || revision !== gestureRevision.value || epoch !== configEpoch.value || !props.draggable) return
-  const rectTop = Number(rect.top)
-  const rectLeft = Number(rect.left)
-  top.value = Math.min(Math.max(Number.isFinite(rectTop) ? rectTop : top.value, bounding.minTop), bounding.maxTop)
-  const center = (Number.isFinite(rectLeft) ? rectLeft : left.value) + (Number(rect.width) > 0 ? Number(rect.width) : fabSize.width) / 2
+  if (disposed.value || revision !== gestureRevision.value || epoch !== configEpoch.value || !props.draggable || props.disabled) return
+  // getRect 的失败兜底是全零矩形；0 坐标有限并不代表度量有效。
+  // 实际拖动使用已经接受的终点，避免异步查询上一帧的坐标造成松手回跳。
+  const validRect = Number(rect.width) > 0 && Number(rect.height) > 0 && Number.isFinite(Number(rect.top)) && Number.isFinite(Number(rect.left))
+  const endTop = hadGesture || !validRect ? finalPosition.top : Number(rect.top)
+  const endLeft = hadGesture || !validRect ? finalPosition.left : Number(rect.left)
+  top.value = Math.min(Math.max(endTop, bounding.minTop), bounding.maxTop)
+  const center = endLeft + (validRect ? Number(rect.width) : fabSize.width) / 2
   if (center < screen.width / 2) {
     left.value = bounding.minLeft
     fabDirection.value = 'right'
@@ -193,6 +217,11 @@ async function finishGesture(event: any, canceled: boolean) {
 }
 function handleTouchEnd(event: any) { void finishGesture(event, false) }
 function handleTouchCancel(event: any) { void finishGesture(event, true) }
+
+// A native visibility:hidden trigger still paints. Start from the documented
+// 60px fallback geometry before the first render; measurement only refines it.
+updateBounds()
+initPosition()
 
 const { start: startInit, cancel: cancelInit } = useRaf(() => measureGeometry())
 onMounted(() => {
@@ -210,8 +239,13 @@ onBeforeUnmount(() => {
   if (queue?.removeFromQueue) queue.removeFromQueue(proxy)
   else removeFromQueue(proxy)
 })
-function handleClick() {
+function handleClick(event?: any) {
   if (props.disabled) return
+  // 原生结束手势可能补发带坐标的 tap；新的 touchstart 会清掉该标记。
+  if (dragTapAt && Date.now() - dragTapAt <= 350 && touchPoint(event, true)) {
+    dragTapAt = 0
+    return
+  }
   if (!props.expandable) { emit('click'); return }
   isActive.value = !isActive.value
   emit('update:active', isActive.value)
@@ -233,8 +267,7 @@ defineExpose<FabExpose>({ open, close })
   >
     <view
       @tap.stop=""
-      :style="{ visibility: inited ? 'visible' : 'hidden' }"
-      :class="triggerId"
+      :class="`${triggerId} wd-fab__anchor`"
       @layoutchange="handleLayoutChange"
     >
       <slot name="trigger" :disabled="disabled">
@@ -257,6 +290,8 @@ defineExpose<FabExpose>({ open, close })
       :custom-class="`wd-fab__actions wd-fab__actions--${fabDirection}`"
       :show="isActive"
       :duration="300"
+      :lazy-render="true"
+      :destroy="true"
     >
       <slot />
     </WdTransition>

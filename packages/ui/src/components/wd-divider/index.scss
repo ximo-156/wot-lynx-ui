@@ -71,6 +71,14 @@ $divider-padding-default: var(--wot-divider-padding-default, $spacing-zero) !def
     flex-direction: row;
     align-items: center;
   }
+
+  .wd-divider__text,
+  .wd-divider__content text {
+    color: $divider-content-color;
+    font-size: $divider-font-size-default;
+    line-height: $divider-size-line-height;
+  }
+
   @include m(center, left, right) {
     .wd-divider__line--first { margin-right: $divider-margin-content-right; }
     .wd-divider__line--last { margin-left: $divider-margin-content-left; }

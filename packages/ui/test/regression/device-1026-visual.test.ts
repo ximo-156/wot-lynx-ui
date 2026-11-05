@@ -87,7 +87,8 @@ describe('真机 2026-10-26 巡检（叠印 / 几何塌陷 / 隐形）', () => {
   it('wd-button loading 颜色跟随 info 类型的深色文字', () => {
     const { container } = render(Button, { loading: true, type: 'info' })
     const content = container.querySelector('.wd-loading__spinner-circular')?.getAttribute('content') || ''
-    expect(content).toContain('#1a1a1a')
+    // 当前 text-main 令牌为 #2D273DFF；不能再使用旧色板固定的 #1a1a1a。
+    expect(content).toContain('#2D273DFF')
     cleanup()
   })
 })

@@ -311,7 +311,8 @@ async function scrollIntoView() {
   // 等待渲染完毕
   await pause()
   if (!isAlive() || request !== scrollRequest) return
-  let activeDate: number | null = 0
+  // null 才代表未选择；0 是合法时间戳，不能拿它占位后钳制到 minDate。
+  let activeDate: number | null = null
   if (isArray(props.value)) {
     // 对数组按时间排序,取第一个值
     const sortedValue = [...props.value].sort((a, b) => (a || 0) - (b || 0))
@@ -531,7 +532,7 @@ defineExpose<MonthPanelExpose>({
       :scroll-top="scrollTop"
       @scroll="switchMode === 'none' ? monthScroll($event) : undefined"
     >
-      <view v-for="(item, index) in displayMonths" :key="index" :id="`month${index}`">
+      <view v-for="(item, index) in displayMonths" :key="index">
         <Month
           :type="type"
           :date="item.date"

@@ -227,6 +227,9 @@ describe('official 2.3.2 fab applied contracts and geometry lifecycle', () => {
     expect(style(root)).toContain('left: 16px')
     expect(style(root)).toContain('top: 370px')
     expect(style(root)).toContain('transition: all ease 0.3s')
+    expect(holder.container.querySelector('.wd-fab__actions')).toBeNull()
+    fireEvent.tap(holder.container.querySelector('.wd-fab__trigger')!)
+    await pause(20)
     expect(holder.container.querySelector('.wd-fab__actions--right')).not.toBeNull()
     holder.props.value.draggable = false
     await pause(20)

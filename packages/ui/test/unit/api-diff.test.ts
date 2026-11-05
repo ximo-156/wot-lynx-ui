@@ -2,12 +2,68 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { diffMeta, buildPlan, renderMarkdown, classifyTypeChange, splitTopLevel } from '../../../../scripts/api-diff.mjs'
+import {
+  diffMeta,
+  buildPlan,
+  renderMarkdown,
+  classifyTypeChange,
+  splitTopLevel,
+  parseArgs
+} from '../../../../scripts/api-diff.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURES = path.join(HERE, '..', 'fixtures/api-diff')
 
 const readFixture = (name) => JSON.parse(readFileSync(path.join(FIXTURES, name), 'utf8'))
+
+describe('api-diff：CLI 参数', () => {
+  it('无参数时默认比较 HEAD 与工作区契约，不写出文件', () => {
+    expect(parseArgs([])).toEqual({
+      base: 'HEAD',
+      head: path.resolve(HERE, '../../meta.json'),
+      json: null,
+      md: null,
+      plan: null,
+      failOn: null,
+      includeDocs: false
+    })
+  })
+
+  it('仅指定其他选项时仍使用 HEAD 基准，保留目标与输出选项', () => {
+    expect(parseArgs([
+      '--head', 'snapshots/head.json',
+      '--md', 'api-changes.md',
+      '--json', 'api-changes.json',
+      '--plan', 'codemod-plan.json',
+      '--fail-on', 'major',
+      '--include-docs'
+    ])).toEqual({
+      base: 'HEAD',
+      head: 'snapshots/head.json',
+      json: 'api-changes.json',
+      md: 'api-changes.md',
+      plan: 'codemod-plan.json',
+      failOn: 'major',
+      includeDocs: true
+    })
+  })
+
+  it.each(['main', 'HEAD~1', 'snapshots/base meta.json'])('显式 --base %s 覆盖默认基准', (base) => {
+    expect(parseArgs(['--base', base, '--include-docs'])).toMatchObject({ base, includeDocs: true })
+  })
+
+  it('显式 --base 缺少值时仍报错，不回退到 HEAD', () => {
+    expect(() => parseArgs(['--base'])).toThrow('--base 缺少参数')
+  })
+
+  it('未知参数仍报错', () => {
+    expect(() => parseArgs(['--unknown'])).toThrow('未知参数：--unknown')
+  })
+
+  it.each(['--help', '-h'])('%s 不需要显式基准', (flag) => {
+    expect(parseArgs([flag])).toMatchObject({ base: 'HEAD', help: true })
+  })
+})
 
 /**
  * 期望清单**手工写死**，不从 diffMeta 的返回值推导。

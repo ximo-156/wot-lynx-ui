@@ -27,6 +27,8 @@ import { isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
 import type { LoadingProps } from '../wd-loading/types'
 import { createStyleResolver } from '../../common/style'
+import { WdTextSlot } from '../../common/textSlot'
+import { GREEN, ORANGE, PRIMARY_COLOR, RED, SECONDARY_COLOR, THEME_TEXT_COLOR } from '../../common/theme'
 
 const props = defineProps(buttonProps)
 const slots = useSlots()
@@ -66,43 +68,48 @@ const OPEN_TYPE_EVENTS: Partial<Record<ButtonOpenType, OpenTypeEvent>> = {
 }
 
 /**
- * 加载图标颜色（真机 2026-10-26 巡检）：原实现只给 wd-loading 传
- * `inheritColor`，而 Lynx 无法在 JS 侧真继承父级 color —— wd-loading 的
- * `resolvedColor` 回落到主题主色，于是紫色按钮上的 loading 也是紫色，
- * 整组不可见（图四「加载中」无转圈缺陷）。
- *
- * 按钮的文字色由类型 × 变体决定（scss 的 $button-types / $button-variants
- * 表），JS 侧按同一张表取令牌值：主题未覆盖时用与设计令牌一致的兜底
- * （实心类型为白字，info 为深字，plain/soft/text 变体为主色字）。
+ * SVG/icon/loading cannot resolve an ancestor's currentColor. Match the SCSS
+ * palette rather than treating every non-solid type as primary, or using the
+ * plain-text token for a solid button (which makes its foreground equal its bg).
+ * Arbitrary stylesheet overrides still need a concrete color via themeVars.
  */
-const SOLID_TEXT_FALLBACK: Record<string, string> = {
-  primary: '#ffffff', success: '#ffffff', danger: '#ffffff', warning: '#ffffff', info: '#1a1a1a'
-}
-const TEXT_COLOR_TOKEN: Record<string, string> = {
-  primary: 'buttonPrimaryColor', success: 'buttonSuccessColor', danger: 'buttonDangerColor',
-  warning: 'buttonWarningColor', info: 'buttonInfoColor'
-}
-const loadingTextColor = computed(() => {
-  const themeVars = (globalConfig.value.themeVars || {}) as Record<string, string>
+const buttonTextColor = computed(() => {
+  const themeVars = globalConfig.value.themeVars as Record<string, string>
+  const customColor = parseStyle(props.customStyle).color
+  if (customColor) return customColor
   const type = effectiveType.value
-  const token = TEXT_COLOR_TOKEN[type]
-  const themed = token ? themeVars[token] : undefined
-  if (effectiveVariant.value === 'base') {
-    return themed || SOLID_TEXT_FALLBACK[type] || themeVars.buttonMainColor || '#ffffff'
+  const dark = globalConfig.value.theme === 'dark'
+  if (effectiveVariant.value === 'base' && type !== 'info') {
+    return themeVars.buttonMainColor || themeVars.textWhite || '#ffffff'
   }
-  // 非实心变体的文字是主色系（plain / soft / subtle / dashed / text）
-  return themeVars.buttonPrimaryColor || '#755ffe'
+  const colors: Record<string, string> = {
+    primary: themeVars.buttonPrimaryColor || themeVars.primary6 || (dark ? SECONDARY_COLOR : PRIMARY_COLOR),
+    success: themeVars.buttonSuccessColor || themeVars.successMain || GREEN[dark ? 5 : 6],
+    warning: themeVars.buttonWarningColor || themeVars.warningMain || ORANGE[dark ? 5 : 6],
+    danger: themeVars.buttonDangerColor || themeVars.dangerMain || RED[dark ? 5 : 6],
+    info: themeVars.buttonInfoColor || themeVars.textMain || THEME_TEXT_COLOR[dark ? 'dark' : 'light']
+  }
+  return colors[type] || colors.primary
 })
 
-/** 加载配置：默认继承按钮文字色 */
+// Pass a size to WdIcon itself: its SVG/image branches cannot infer the button's
+// font-size. The CSS token stays overridable (Fab sets these on its trigger).
+const ICON_SIZES = { mini: 14, small: 16, medium: 20, large: 22 }
+const iconSize = computed(() => {
+  const size = effectiveSize.value
+  const fallback = ICON_SIZES[size]
+  return `var(--wot-button-size-icon-${size}, var(--wot-n-${fallback}, ${fallback}px))`
+})
+
+/** 加载配置：默认跟随与图标相同的按钮前景色。 */
 const customLoadingProps = computed(() => {
   const loading: Partial<LoadingProps> = isDef(props.loadingProps) ? omitBy(props.loadingProps!, isUndefined) : {}
   loading.customSpinnerClass = `${isDef(loading.customSpinnerClass) ? loading.customSpinnerClass : ''} wd-button__loading`
   // 官方 loadingColor 声明但未消费：兼容修正为低优先级别名，不覆盖 loadingProps.color。
   if (!isDef(loading.color) && isDef(props.loadingColor)) loading.color = props.loadingColor
-  // 无显式色时下发按钮自身的文字色（JS 解析成具体值，currentColor 在真机
-  // 不生效，见 loadingTextColor 注释）。
-  if (!isDef(loading.color)) loading.color = loadingTextColor.value
+  // 无显式色时下发按钮前景色，不依赖跨组件的 currentColor 继承。
+  if (!isDef(loading.color)) loading.color = buttonTextColor.value
+  if (!isDef(loading.size)) loading.size = 'var(--wot-button-loading-size, var(--wot-n-20, 20px))'
   // 有了具体色后不再走 inheritColor 的近似回落。
   loading.inheritColor = isDef(loading.inheritColor) ? loading.inheritColor : false
   return loading
@@ -110,7 +117,7 @@ const customLoadingProps = computed(() => {
 
 /** 是否仅展示图标 */
 const isIcon = computed(() => {
-  return !slots.default && !props.text && !!(props.icon || props.cssIcon)
+  return !slots.default && !props.text && !!(props.icon || props.cssIcon || props.loading)
 })
 
 const rootClass = computed(() => {
@@ -129,13 +136,28 @@ const rootClass = computed(() => {
 const outlined = computed(() => ['plain', 'dashed', 'subtle'].includes(effectiveVariant.value))
 const hoverVersion = computed(() => JSON.stringify([
   props.disabled, props.loading, props.hoverStartTime, props.hoverStayTime,
-  effectiveType.value, effectiveVariant.value, props.customStyle
+  effectiveType.value, effectiveVariant.value, props.customStyle, buttonTextColor.value
 ]))
+const labelStyle = computed(() => { hoverVersion.value; return { color: '' } })
+const iconStyle = computed(() => { hoverVersion.value; return { color: buttonTextColor.value } })
 const resolveRootStyle = createStyleResolver({ 'background-color': '', color: '' })
+const resolveTextStyle = createStyleResolver({ color: '', 'font-size': '', 'line-height': '', 'font-weight': '' })
+const textStyle = computed(() => {
+  const custom = parseStyle(props.customStyle)
+  return resolveTextStyle({
+    color: custom.color,
+    'font-size': custom['font-size'] ?? custom.fontSize,
+    'line-height': custom['line-height'] ?? custom.lineHeight,
+    'font-weight': custom['font-weight'] ?? custom.fontWeight
+  })
+})
 const rootStyle = computed(() => {
-  // props 改变即回写中性值，清除主线程按压在树上留下的临时覆盖。
+  // Typography belongs to the text, not another native view line box. Preserve
+  // customStyle's public effect while keeping the measured container geometric.
   hoverVersion.value
-  return resolveRootStyle(parseStyle(props.customStyle))
+  const custom = { ...parseStyle(props.customStyle) }
+  for (const key of ['font-size', 'fontSize', 'line-height', 'lineHeight', 'font-weight', 'fontWeight']) delete custom[key]
+  return resolveRootStyle(custom)
 })
 const resolveBorderStyle = createStyleResolver({ 'border-color': '' })
 const borderStyle = computed(() => { hoverVersion.value; return resolveBorderStyle() })
@@ -161,6 +183,8 @@ interface HoverPress {
 }
 const buttonRef = useMainThreadRef<HoverElement | null>(null)
 const borderRef = useMainThreadRef<HoverElement | null>(null)
+const labelRef = useMainThreadRef<HoverElement | null>(null)
+const iconRef = useMainThreadRef<HoverElement | null>(null)
 const pressRef = useMainThreadRef<HoverPress | null>(null)
 
 /**
@@ -190,6 +214,8 @@ const handleHoverStart = () => {
       pressRef.current = null
       if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', '')
       if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', '')
+      if (labelRef.current) labelRef.current.setStyleProperty('color', '')
+      if (iconRef.current) iconRef.current.setStyleProperty('color', current.getAttribute('hover-foreground') || '')
       if (borderRef.current) borderRef.current.setStyleProperty('border-color', '')
       return
     }
@@ -199,7 +225,11 @@ const handleHoverStart = () => {
       if (!press.active && now - press.started >= delay) {
         press.active = true
         if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', 'var(--wot-button-current-bg-active)')
-        if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
+        if (current.getAttribute('hover-custom-color') !== 'true') {
+          current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
+          if (labelRef.current) labelRef.current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
+          if (iconRef.current) iconRef.current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
+        }
         if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', 'var(--wot-button-plain-border-active)')
       }
       if (!press.active) requestAnimationFrame(() => step())
@@ -212,6 +242,8 @@ const handleHoverStart = () => {
     }
     if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', '')
     if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', '')
+    if (labelRef.current) labelRef.current.setStyleProperty('color', '')
+    if (iconRef.current) iconRef.current.setStyleProperty('color', current.getAttribute('hover-foreground') || '')
     if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', '')
     pressRef.current = null
   }
@@ -234,6 +266,8 @@ const handleHoverCancel = () => {
   pressRef.current = null
   if (element.getAttribute('hover-custom-background') !== 'true') element.setStyleProperty('background-color', '')
   if (element.getAttribute('hover-custom-color') !== 'true') element.setStyleProperty('color', '')
+  if (labelRef.current) labelRef.current.setStyleProperty('color', '')
+  if (iconRef.current) iconRef.current.setStyleProperty('color', element.getAttribute('hover-foreground') || '')
   if (borderRef.current) borderRef.current.setStyleProperty('border-color', '')
 }
 
@@ -274,6 +308,7 @@ function handleClick(event: any) {
     :hover-version="hoverVersion" :hover-disabled="disabled || loading"
     :hover-start-time="hoverStartTime" :hover-stay-time="hoverStayTime"
     :hover-custom-background="customHoverBackground" :hover-custom-color="customHoverColor"
+    :hover-foreground="buttonTextColor"
     :main-thread-bindtouchstart="handleHoverStart"
     :main-thread-bindtouchend="handleHoverEnd"
     :main-thread-bindtouchcancel="handleHoverCancel"
@@ -287,9 +322,15 @@ function handleClick(event: any) {
         :name="icon"
         :class-prefix="classPrefix"
         :css-icon="cssIcon"
+        :color="buttonTextColor"
+        :size="iconSize"
+        :custom-style="iconStyle"
+        :main-thread-ref="iconRef"
       />
-      <view v-if="$slots.default || text" class="wd-button__text">
-        <slot><text class="wd-button__text-content">{{ text }}</text></slot>
+      <view v-if="$slots.default || text" class="wd-button__text" :style="labelStyle" :main-thread-ref="labelRef">
+        <WdTextSlot text-class="wd-button__text-content" :text-style="textStyle" :text-maxline="1">
+          <slot><text class="wd-button__text-content" :style="textStyle" text-maxline="1">{{ text }}</text></slot>
+        </WdTextSlot>
       </view>
     </view>
     <view v-if="outlined" class="wd-button__border" :style="borderStyle" :main-thread-ref="borderRef" />

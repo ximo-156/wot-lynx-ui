@@ -41,8 +41,11 @@ import { ref, watch, nextTick, computed, reactive, onMounted, onActivated, onDea
 import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { getRect, isArray, isDef, parseStyle, uuid, type CSSProperties } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { WdTextSlot } from '../../common/textSlot'
 import { type NoticeBarExpose, noticeBarProps } from './types'
 import { useAlive } from '../../composables/useAlive'
+import { useGlobalConfig } from '../../composables/useGlobalConfig'
+import { ORANGE, RED, PRIMARY_COLOR, SECONDARY_COLOR, THEME_TEXT_COLOR } from '../../common/theme'
 
 // 实例唯一 id 前缀：getRect 按 id 度量，同页多实例避免选择器串台
 const instanceId = `wd-notice-bar-${uuid()}`
@@ -70,9 +73,7 @@ const transitionState = reactive<CSSProperties>({
   transitionTimingFunction: 'linear'
 })
 
-const animation = computed(() => {
-  return { ...transitionState }
-})
+const animation = computed(() => resolveStyle({}, transitionState))
 
 /**
  * 根节点可切换样式键 + 中性值（CONVENTIONS §20：每帧输出完整键集）。
@@ -92,6 +93,18 @@ const rootStyle = computed(() => {
     }),
     ...parseStyle(props.customStyle)
   }
+})
+const globalConfig = useGlobalConfig()
+const textColor = computed(() => {
+  if (rootStyle.value.color) return rootStyle.value.color
+  const variables = globalConfig.value.themeVars
+  const dark = globalConfig.value.theme === 'dark'
+  const colors: Record<string, string> = {
+    warning: variables.noticeBarWarningColor || variables.warningMain || ORANGE[dark ? 5 : 6],
+    info: variables.noticeBarInfoColor || variables.primary6 || (dark ? SECONDARY_COLOR : PRIMARY_COLOR),
+    danger: variables.noticeBarDangerColor || variables.dangerMain || RED[dark ? 5 : 6]
+  }
+  return colors[props.type] || variables.textMain || THEME_TEXT_COLOR[dark ? 'dark' : 'light']
 })
 const noticeBarClass = computed(() => {
   const { type, wrapable, scrollable } = props
@@ -273,10 +286,12 @@ defineExpose<NoticeBarExpose>({ reset })
     <view class="wd-notice-bar__wrap" :id="`${instanceId}-wrap`">
       <view class="wd-notice-bar__content" :id="`${instanceId}-content`" :style="animation" @transitionend="animationEnd" @tap="handleClick">
         <template v-if="isVertical">
-          <view v-for="item in textArray" :key="item"><text>{{ item }}</text></view>
-          <view v-if="textArray.length > 1"><text>{{ textArray[0] }}</text></view>
+          <view v-for="item in textArray" :key="item"><text class="wd-notice-bar__text" :style="{ color: textColor }" text-maxline="1">{{ item }}</text></view>
+          <view v-if="textArray.length > 1"><text class="wd-notice-bar__text" :style="{ color: textColor }" text-maxline="1">{{ textArray[0] }}</text></view>
         </template>
-        <slot v-else><text>{{ currentText }}</text></slot>
+        <WdTextSlot v-else text-class="wd-notice-bar__text" :text-style="{ color: textColor }" :text-maxline="!scrollable && !wrapable ? 1 : undefined">
+          <slot><text class="wd-notice-bar__text" :style="{ color: textColor }" :text-maxline="!scrollable && !wrapable ? 1 : undefined">{{ currentText }}</text></slot>
+        </WdTextSlot>
       </view>
     </view>
     <slot name="suffix">

@@ -205,15 +205,18 @@ $loading-text-line-height: var(--wot-loading-text-line-height, $typography-body-
     will-change: transform;
   }
 
-  @include e(text-content) {
-    color: inherit;
-    font-size: inherit;
-    line-height: inherit;
+  .wd-loading__text-content,
+  .wd-loading__text text {
+    color: $loading-color-main;
+    font-size: $loading-text-font-size;
+    line-height: $loading-text-line-height;
   }
 
   @include e(text) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     font-size: $loading-text-font-size;
-    line-height: $loading-text-line-height;
     color: currentColor;
   }
 }

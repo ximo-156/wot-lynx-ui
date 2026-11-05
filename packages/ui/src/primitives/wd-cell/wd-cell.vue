@@ -14,6 +14,7 @@ import { cellProps } from './types'
 import { useCell } from '../../composables/useCell'
 import { addUnit, isDef, parseStyle, type CSSProperties } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { WdTextSlot } from '../../common/textSlot'
 import { uni } from '../../common/uni'
 
 const props = defineProps(cellProps)
@@ -62,9 +63,9 @@ function onClick(event: any) {
           <WdIcon v-if="prefixIcon" :name="prefixIcon" :size="iconSize" :class-prefix="iconPrefix" :css-icon="cssIcon" :custom-class="`wd-cell__prefix ${customPrefixClass}`" />
         </slot>
         <view v-if="showTitle" class="wd-cell__title">
-          <slot v-if="useTitleSlot && $slots.title" name="title" />
+          <WdTextSlot v-if="useTitleSlot && $slots.title" text-class="wd-cell__title-text"><slot name="title" /></WdTextSlot>
           <text v-else-if="title" :class="['wd-cell__title-text', customTitleClass]">{{ title }}</text>
-          <slot v-if="useLabelSlot && $slots.label" name="label" />
+          <WdTextSlot v-if="useLabelSlot && $slots.label" text-class="wd-cell__label-text"><slot name="label" /></WdTextSlot>
           <view v-else-if="label" :class="`wd-cell__label ${customLabelClass}`"><text class="wd-cell__label-text">{{ label }}</text></view>
         </view>
         <text v-if="required && !hideAsterisk && asteriskPosition === 'end'" class="wd-cell__required">*</text>
@@ -72,7 +73,9 @@ function onClick(event: any) {
       <view class="wd-cell__right">
         <view class="wd-cell__body">
           <view :class="`wd-cell__value ${customValueClass} wd-cell__value--${cellValueAlign} ${ellipsis ? 'wd-cell__value--ellipsis' : ''} ${showPlaceholder ? 'wd-cell__placeholder' : ''}`">
-            <slot><text class="wd-cell__value-text" :text-maxline="ellipsis ? 1 : undefined">{{ showPlaceholder ? placeholder : value }}</text></slot>
+            <WdTextSlot text-class="wd-cell__value-text" :text-maxline="ellipsis ? 1 : undefined">
+              <slot><text class="wd-cell__value-text" :text-maxline="ellipsis ? 1 : undefined">{{ showPlaceholder ? placeholder : value }}</text></slot>
+            </WdTextSlot>
           </view>
           <WdIcon v-if="isLink" custom-class="wd-cell__arrow-right" :name="arrowDirection" :class-prefix="iconPrefix" />
           <slot v-else name="suffix">

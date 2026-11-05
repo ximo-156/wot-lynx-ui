@@ -20,6 +20,7 @@ import { radioProps, type RadioType } from './types'
 import { RADIO_GROUP_KEY, useRadioGroup } from '../../composables/useRadioGroup'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { getPropByPath, isDef, parseStyle } from '../../common/util'
+import { WdTextSlot } from '../../common/textSlot'
 
 const props = defineProps(radioProps)
 const emit = defineEmits(['tap'])
@@ -153,7 +154,7 @@ function handleClick(event: any) {
 <template>
   <view :class="rootClass" :style="rootStyle" @tap="handleClick">
     <view v-if="$slots.default" :class="['wd-radio__label', customLabelClass]">
-      <slot />
+      <WdTextSlot text-class="wd-radio__label-text" :text-maxline="isButton ? 1 : undefined"><slot /></WdTextSlot>
     </view>
 
     <template v-if="isButton">

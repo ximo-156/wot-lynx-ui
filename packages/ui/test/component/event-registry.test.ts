@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest'
 import DemoApp from '../../../demo/src/App.vue'
+import wotLynxUI from '../../src/index'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
 import { pause } from '../../src/common/util'
@@ -52,8 +53,13 @@ describe('事件注册表', () => {
       }
     }
 
-    const { container } = render(DemoApp as any)
+    const { container } = render(DemoApp as any, {}, [wotLynxUI])
     await pause(300)
+    // App 的真实入口才安装插件；只挂 App 而不安装，会把 wd-* 当未知标签，
+    // 原测试虽然通过，却没有运行任何组件内部的事件处理器。
+    expect(container.querySelectorAll('.wd-button').length).toBeGreaterThan(20)
+    expect(container.querySelector('.wd-calendar-view')).toBeTruthy()
+    expect(container.querySelector('wd-button')).toBeNull()
 
     // 模拟交互：点击可见元素 + 滚动滚动容器
     let fired = 0

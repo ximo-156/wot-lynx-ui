@@ -252,7 +252,7 @@ defineExpose<YearPanelExpose>({
       :scroll-top="scrollTop"
       @scroll="switchMode === 'none' ? yearScroll($event) : undefined"
     >
-      <view v-for="(item, index) in displayYears" :key="index" :id="`year${index}`">
+      <view v-for="(item, index) in displayYears" :key="index">
         <Year
           :type="type"
           :date="item.date"

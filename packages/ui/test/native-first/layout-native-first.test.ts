@@ -107,9 +107,17 @@ describe('原生优先：根节点三件套（NATIVE-REWRITE §3.1 / CONVENTIONS
     ).toMatch(/^(row|column)$/)
   })
 
-  it('wd-row / wd-grid 为 row 方向，其余为 column 方向', () => {
+  it('wd-row 为 row 方向；wd-grid 为纵向容器（子项按列数切行，见 __row）', () => {
     expect(rootRule('wd-row')['flex-direction']).toBe('row')
-    expect(rootRule('wd-grid')['flex-direction']).toBe('row')
+    // 真机 2026-11-04：宫格根节点改纵向 —— 子项按 column 切行包进 .wd-grid__row，
+    // 高度由行数逐行累加（多行 flex-wrap 容器在真机只按前两行结算，§19 差异 #6）。
+    expect(rootRule('wd-grid')['flex-direction']).toBe('column')
+    expect(rootRule('wd-grid')['flex-wrap']).toBeUndefined()
+    const rows = cssRules('wd-grid')
+    const rowRule = rows.find((r) => r.selector === '.wd-grid__row')
+    expect(rowRule, 'wd-grid 必须声明 .wd-grid__row 行容器').toBeTruthy()
+    expect(rowRule!.decls.display).toBe('flex')
+    expect(rowRule!.decls['flex-direction']).toBe('row')
     expect(rootRule('wd-divider')['flex-direction']).toBe('row')
     for (const c of ['wd-col', 'wd-grid-item', 'wd-card', 'wd-cell', 'wd-cell-group', 'wd-gap', 'wd-resize', 'wd-sticky', 'wd-sticky-box']) {
       expect(rootRule(c)['flex-direction'], `${c} 应为纵向堆叠`).toBe('column')

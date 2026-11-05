@@ -6,10 +6,18 @@
   box-sizing: border-box;
   overflow: hidden;
   /* 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
-     linear 布局，不显式写 display: flex 时 flex-wrap 被静默丢弃——宫格会
-     退化成「一行一个」；row 为宫格的内容方向 */
+     linear 布局，不显式写 display: flex 时 flex 属性会被静默丢弃。
+     真机 2026-11-04：根节点由 `row + wrap` 改**纵向**容器，子项按列数切行
+     包进 __row（见 wd-grid.vue 顶部说明）——多行 wrap 容器在真机上高度只按
+     前两行结算（§19 差异 #6），4 行宫格的后两行会被 overflow:hidden 裁掉。 */
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-direction: column;
   height: auto;
+
+  /* 一行宫格：纵向容器的子项，禁止被压缩（Lynx 下 flex 子项默认 shrink: 1） */
+  @include e(row) {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+  }
 }

@@ -30,16 +30,18 @@
  *   CONVENTIONS §14 的「根 view 原生事件名同时声明为 emit 并转发」：
  *   本组件 emits 声明 'tap' 并由根 view 转发，消费方绑 @tap 时作为
  *   组件事件被消费、不再穿透到根元素与内部绑定合并；
- * - disableTouchMove 时才注册 touchmove 监听（withModifiers 包装，
- *   与 @touchmove.stop.prevent 编译产物一致：catchEvent 绑定 +
- *   stopPropagation）。未加锁时不注册——避免每次触摸都跨线程派发
- *   （CONVENTIONS §14 / §16 触摸热路径）。
+ * - disableTouchMove 仅是本组件的冒泡 catch 开关，不是原生 scroll-enable：
+ *   子项 bind 先正常处理，根边界再阻止祖先 JS 处理器；实际原生背景滚动锁
+ *   由 useLockScroll 的共享状态接到页面 scroll-view 完成。
+ *   显式 catchtouch* key 保证切换 false 时 REMOVE_EVENT 仍删 catchEvent，
+ *   避免 onTouchmove + _lynxCatch 的解绑类型不对而留下 native catch。
  */
 <script lang="ts" setup>
 import './index.css'
 
 import { computed, onBeforeUnmount, ref, watch, withModifiers, vShow } from 'vue-lynx'
 import { isObj, parseStyle } from '../../common/util'
+import { createStyleResolver, defineStyleKeys } from '../../common/style'
 import { Transition as LynxTransition } from '../../common/lynxTransition'
 import { transitionProps, type TransitionName } from './types'
 
@@ -51,7 +53,10 @@ const emit = defineEmits([
   'tap',
   'click',
   'transitionend',
+  'touchstart',
   'touchmove',
+  'touchend',
+  'touchcancel',
   'before-enter',
   'enter',
   'after-enter',
@@ -152,11 +157,11 @@ const rootClass = computed(() => `wd-transition ${props.customClass}`)
  * 让 el._style 常带可见值，vShow 重发时即可覆盖残留（取值与 .wd-transition
  * 的 display:flex 类声明一致；customStyle 仍可覆盖）。
  */
-const rootStyle = computed<Record<string, string>>(() => {
-  const style: Record<string, string> = { 'transition-duration': `${phaseDuration.value}ms` }
-  if (!useVif.value) style.display = 'flex'
-  return { ...style, ...parseStyle(props.customStyle) }
-})
+const ROOT_STYLE = defineStyleKeys({ display: 'flex', 'transition-duration': '0ms' })
+const resolveRootStyle = createStyleResolver(ROOT_STYLE)
+const rootStyle = computed(() => resolveRootStyle(
+  { 'transition-duration': `${phaseDuration.value}ms` }, parseStyle(props.customStyle)
+))
 
 type PhaseEvent = 'before-enter' | 'enter' | 'after-enter' | 'before-leave' | 'leave' | 'after-leave'
 
@@ -183,15 +188,16 @@ function handleTap(e?: any) {
   emit('click', e)
 }
 
-function onTouchMove(e?: any) {
-  // 锁滚由 withModifiers 的 stop 修饰符承担，此处仅转发原生事件（CONVENTIONS §14）
-  emit('touchmove', e)
-}
-
-/** 锁滚监听：与模板 @touchmove.stop.prevent 的编译产物等价（catchEvent + stopPropagation） */
-const touchmoveLocked = computed(() =>
-  props.disableTouchMove ? withModifiers(onTouchMove, ['stop', 'prevent']) : undefined
-)
+// 这是冒泡 catch（子项先收到 bind），不是 capture，也不禁止内部 scroll-view
+// 的原生默认滚动。vue-lynx 0.5.1 的 prevent 修饰符未实现，不能当作 native 锁。
+const touchstartCatch = withModifiers((e?: any) => emit('touchstart', e), ['stop'])
+const touchmoveCatch = withModifiers((e?: any) => emit('touchmove', e), ['stop'])
+const touchendCatch = withModifiers((e?: any) => emit('touchend', e), ['stop'])
+const touchcancelCatch = withModifiers((e?: any) => emit('touchcancel', e), ['stop'])
+const touchstartLocked = computed(() => props.disableTouchMove ? touchstartCatch : undefined)
+const touchmoveLocked = computed(() => props.disableTouchMove ? touchmoveCatch : undefined)
+const touchendLocked = computed(() => props.disableTouchMove ? touchendCatch : undefined)
+const touchcancelLocked = computed(() => props.disableTouchMove ? touchcancelCatch : undefined)
 </script>
 
 <template>
@@ -220,7 +226,10 @@ const touchmoveLocked = computed(() =>
       v-if="useVif && show"
       :class="rootClass"
       :style="rootStyle"
-      :onTouchmove="touchmoveLocked"
+      :catchtouchstart="touchstartLocked"
+      :catchtouchmove="touchmoveLocked"
+      :catchtouchend="touchendLocked"
+      :catchtouchcancel="touchcancelLocked"
       @tap="handleTap"
     >
       <slot />
@@ -231,7 +240,10 @@ const touchmoveLocked = computed(() =>
       v-show-lynx="show"
       :class="rootClass"
       :style="rootStyle"
-      :onTouchmove="touchmoveLocked"
+      :catchtouchstart="touchstartLocked"
+      :catchtouchmove="touchmoveLocked"
+      :catchtouchend="touchendLocked"
+      :catchtouchcancel="touchcancelLocked"
       @tap="handleTap"
     >
       <slot v-if="!lazyRender || everShown" />

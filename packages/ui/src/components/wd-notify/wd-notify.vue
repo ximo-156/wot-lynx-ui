@@ -13,7 +13,10 @@ import { notifyProps, type NotifyType, type NotifyProps } from './types'
 import { getNotifyOptionKey, useNotify } from '.'
 import { addUnit, isDef, isFunction, isString, parseStyle } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { WdTextSlot } from '../../common/textSlot'
 import { useAlive } from '../../composables/useAlive'
+import { useGlobalConfig } from '../../composables/useGlobalConfig'
+import { GREEN, ORANGE, RED, PRIMARY_COLOR, SECONDARY_COLOR, THEME_TEXT_COLOR } from '../../common/theme'
 
 const props = defineProps(notifyProps)
 const emit = defineEmits(['click', 'closed', 'opened', 'update:visible', 'tap'])
@@ -75,6 +78,20 @@ const rootStyle = computed(() => resolveStyle(ROOT_STYLE, {
   color: state.value.color,
   'background-color': state.value.background
 }, parseStyle(state.value.customStyle)))
+const globalConfig = useGlobalConfig()
+const textColor = computed(() => {
+  if (rootStyle.value.color) return rootStyle.value.color
+  const variables = globalConfig.value.themeVars
+  const dark = globalConfig.value.theme === 'dark'
+  if (state.value.variant === 'floating') return variables.notifyFloatingColor || variables.textMain || THEME_TEXT_COLOR[dark ? 'dark' : 'light']
+  const colors: Record<string, string> = {
+    primary: variables.notifyPrimaryColor || variables.primary6 || (dark ? SECONDARY_COLOR : PRIMARY_COLOR),
+    success: variables.notifySuccessColor || variables.successMain || GREEN[dark ? 5 : 6],
+    warning: variables.notifyWarningColor || variables.warningMain || ORANGE[dark ? 5 : 6],
+    danger: variables.notifyDangerColor || variables.dangerMain || RED[dark ? 5 : 6]
+  }
+  return colors[state.value.type || 'primary'] || variables.notifyTextColor || '#ffffff'
+})
 const iconName = computed(() => {
   const icons: Record<NotifyType, string> = {
     primary: 'info-circle-fill', success: 'check-circle-fill', warning: 'exclamation-circle-fill', danger: 'close-circle-fill'
@@ -135,6 +152,7 @@ defineExpose({ showNotify, closeNotify })
     :position="state.position"
     :z-index="state.zIndex"
     :modal="false"
+    :lock-scroll="false"
     :root-portal="state.rootPortal"
     @leave="onClosed"
     @enter="onOpened"
@@ -145,7 +163,11 @@ defineExpose({ showNotify, closeNotify })
       @tap="onClick"
     >
       <slot name="prefix"><WdIcon v-if="iconName" :name="iconName" custom-class="wd-notify__prefix" /></slot>
-      <view class="wd-notify__content"><slot><text class="wd-notify__text">{{ state.message }}</text></slot></view>
+      <view class="wd-notify__content">
+        <WdTextSlot text-class="wd-notify__text" :text-style="{ color: textColor }" :text-maxline="1">
+          <slot><text class="wd-notify__text" :style="{ color: textColor }" text-maxline="1">{{ state.message }}</text></slot>
+        </WdTextSlot>
+      </view>
       <slot name="close" v-if="state.closable"><WdIcon name="close" custom-class="wd-notify__close" @tap="closeNotify" /></slot>
     </view>
   </WdPopup>

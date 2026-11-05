@@ -2,9 +2,6 @@
 @use '../index.scss' as *;
 
 @include b(month) {
-  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：根节点为「月份标题 +
-  // 日期网格」的纵向组合，显式声明 flex 纵向流向（linear 下 direction
-  // 静默丢失）。
   display: flex;
   flex-direction: column;
 
@@ -18,24 +15,19 @@
   }
 
   @include e(days) {
-    // 真机 2026-10-26 巡检：原为 `flex-wrap: wrap` 平铺 30 个日期格，真机
-    // 对多行 wrap 容器只按前两行结算高度 → 下个月的标题被拉进本月网格中间
-    // （图五缺陷）。改为显式行结构：纵向容器 + 每周一个 flex row，容器高度
-    // 由行数逐行累加，不再依赖 wrap 的高度结算。
+    // 真机多行 flex-wrap 高度结算不可靠：每周一个真实 row，逐行累加高度。
     display: flex;
     flex-direction: column;
-    font-size: $calendar-view-day-font-size;
-    color: $calendar-view-day-color;
     padding: $calendar-view-item-padding;
   }
 
   @include e(row) {
     display: flex;
     flex-direction: row;
+    flex-shrink: 0;
     align-items: flex-start;
 
-    // 末行不留底部间距。日期格自带 is-last-row 判断，但月初/月末的空位格
-    // 没有 item 数据、拿不到该修饰类，靠行级类统一收敛。
+    // 空位格没有 item，最后一行的间距统一由行级类收敛。
     &.is-last-row .wd-month__day {
       margin-bottom: 0;
     }
@@ -43,32 +35,28 @@
 
   @include e(day) {
     position: relative;
-    // 行内 7 等分（替代原 width: calc(100% / 7) + wrap 换行）
+    display: flex;
+    flex-direction: column;
+    // 行内 7 等分；内容盒明确占满日期格，不借 view 的行高撑开。
     flex: 1;
     height: $calendar-view-day-height;
-    line-height: $calendar-view-day-height;
-    font-weight: $calendar-view-day-font-weight;
     margin-bottom: $calendar-view-item-margin-bottom;
-    text-align: center;
 
-    // 月初空位（承担原首格 margin-left 的偏移作用），不响应点击
     &--empty {
       pointer-events: none;
     }
 
-    // Lynx 适配（真机 2026-10-25 巡检）：状态色同时下发给 __day-container
-    // 与 __day-text——带 class 的 text 不保证继承祖先的 color，只写容器时
-    // 选中态文字会回落到 __day-text 的基础色，紫底深字对比度不足。
+    // 状态色直接落到日期与辅助 text，不依赖跨 view 的字体继承。
     @include when(disabled) {
-      .wd-month__day-text {
+      .wd-month__day-text,
+      .wd-month__day-info {
         color: $calendar-view-color-disabled;
       }
     }
 
     @include when(current) {
-      color: $calendar-view-color-active;
-
-      .wd-month__day-text {
+      .wd-month__day-text,
+      .wd-month__day-info {
         color: $calendar-view-color-active;
       }
     }
@@ -77,10 +65,10 @@
       .wd-month__day-container {
         border-radius: $calendar-view-border-radius-active;
         background: $calendar-view-color-active;
-        color: $calendar-view-color-selected;
       }
 
-      .wd-month__day-text {
+      .wd-month__day-text,
+      .wd-month__day-info {
         color: $calendar-view-color-selected;
       }
     }
@@ -88,28 +76,36 @@
     @include when(middle) {
       .wd-month__day-container {
         background: $calendar-view-range-bg;
-        color: $calendar-view-range-color;
       }
 
-      .wd-month__day-text {
+      .wd-month__day-text,
+      .wd-month__day-info {
         color: $calendar-view-range-color;
       }
     }
+
     @include when(multiple-middle) {
       .wd-month__day-container {
         background: $calendar-view-color-active;
-        color: $calendar-view-color-selected;
       }
 
-      .wd-month__day-text {
+      .wd-month__day-text,
+      .wd-month__day-info {
         color: $calendar-view-color-selected;
+      }
+    }
+
+    // 只有带范围装饰的格子才需要升层；其直接父级显式建立局部层叠上下文。
+    // CONVENTIONS §19：带 z-index 的定位子节点要求父级同时 z-index: 0。
+    @include when(start, end) {
+      z-index: 0;
+
+      .wd-month__day-container {
+        z-index: 2;
       }
     }
 
     @include when(start) {
-      // Lynx 适配：wot-ui 用 ::after 绘制起点右半格的区间背景（高度等于
-      // 日期格、右半边），Lynx 无伪元素，改为模板中的真实元素
-      // wd-month__day-range（排在内容节点之后、z-index 低于内容）。
       .wd-month__day-range {
         position: absolute;
         top: 0;
@@ -128,17 +124,16 @@
 
       .wd-month__day-container {
         background: $calendar-view-color-active;
-        color: $calendar-view-color-selected;
         border-radius: $calendar-view-border-radius-active 0 0 $calendar-view-border-radius-active;
       }
 
-      .wd-month__day-text {
+      .wd-month__day-text,
+      .wd-month__day-info {
         color: $calendar-view-color-selected;
       }
     }
 
     @include when(end) {
-      // Lynx 适配：同上，::after 改为真实元素 wd-month__day-range（左半边）。
       .wd-month__day-range {
         position: absolute;
         top: 0;
@@ -151,11 +146,11 @@
 
       .wd-month__day-container {
         background: $calendar-view-color-active;
-        color: $calendar-view-color-selected;
         border-radius: 0 $calendar-view-border-radius-active $calendar-view-border-radius-active 0;
       }
 
-      .wd-month__day-text {
+      .wd-month__day-text,
+      .wd-month__day-info {
         color: $calendar-view-color-selected;
       }
     }
@@ -163,27 +158,27 @@
     @include when(same) {
       .wd-month__day-container {
         background: $calendar-view-color-active;
-        color: $calendar-view-color-selected;
         border-radius: $calendar-view-border-radius-active;
       }
 
-      .wd-month__day-text {
+      .wd-month__day-text,
+      .wd-month__day-info {
         color: $calendar-view-color-selected;
       }
     }
 
-    @include when(last-row){
+    @include when(last-row) {
       margin-bottom: 0;
     }
   }
 
   @include e(day-container) {
     position: relative;
-    z-index: 2;
-    // Lynx 适配（NATIVE-REWRITE §3.2）：日期文本容器单靠 text-align 依赖
-    // 文本节点撑满容器（linear 布局下不保证），补 justify-content +
-    // align-items 成对 flex 居中；display 不影响自身作为 linear 子项的
-    // 交叉轴拉伸，选中态背景仍铺满整个日期格。
+    // 带 class 的 text 不保证继承 view 的字体参数。日期格负责高度，
+    // 内容盒显式填满；行高只交给下方 text 节点，不承担 view 的定高职责。
+    width: 100%;
+    height: 100%;
+    flex-shrink: 0;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -191,13 +186,17 @@
   }
 
   @include e(day-text) {
-    // Lynx 适配（真机 2026-10-25 巡检）：带 class 的 text 不保证继承祖先
-    // view 的 color / font-size（周表头文字有显式色号、日期文字靠继承，
-    // 真机表现为周头可见而整月日期空白），此处显式下发与 __days 一致的
-    // 颜色与字号；selected/middle 等状态色仍由 __day-container 的
-    // color 声明经文本继承覆盖（无 class 的内层元素继承不受影响）。
     color: $calendar-view-day-color;
     font-size: $calendar-view-day-font-size;
+    line-height: $calendar-view-day-height;
+    font-weight: $calendar-view-day-font-weight;
+    text-align: center;
+  }
+
+  @include e(day-info) {
+    color: $calendar-view-day-color;
+    font-size: $calendar-view-info-font-size;
+    line-height: $calendar-view-info-line-height;
     font-weight: $calendar-view-day-font-weight;
     text-align: center;
   }
@@ -207,16 +206,10 @@
     top: $calendar-view-info-position;
     left: 0;
     right: 0;
-    // Lynx 适配：text-align 依赖文本节点撑满容器（linear 布局下不保证），
-    // 补 flex 居中（justify-content + align-items 成对）确保水平居中生效。
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    line-height: $calendar-view-info-line-height;
-    font-size: $calendar-view-info-font-size;
-    color: $calendar-view-day-color;
-    text-align: center;
   }
 
   @include e(day-bottom) {
@@ -224,14 +217,9 @@
     bottom: $calendar-view-info-position;
     left: 0;
     right: 0;
-    // Lynx 适配：同上，补 flex 居中（justify-content + align-items 成对）。
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    line-height: $calendar-view-info-line-height;
-    font-size: $calendar-view-info-font-size;
-    color: $calendar-view-day-color;
-    text-align: center;
   }
 }

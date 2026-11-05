@@ -29,7 +29,7 @@ const textareaValue = ref('')
 const numberValue = ref(5)
 const sliderValue = ref(50)
 const rateValue = ref(3)
-const segmentedValue = ref('a')
+const segmentedValue = ref('日')
 const pickerVisible = ref(false)
 const pickerValue = ref<string[]>(['a'])
 const pickerColumns = ref([
@@ -127,18 +127,16 @@ const sortValue = ref(0)
 const sortResetValue = ref(0)
 const sortDescValue = ref(0)
 const sortLineValue = ref(1)
-// SwiperNav 数据源（image: url + title；icon: icon + title）
-const swiperNavItems = ref([
-  { url: demoImage, title: '图片一' },
-  { url: demoImage, title: '图片二' },
-  { url: demoImage, title: '图片三' }
-])
-const swiperNavIconItems = ref([
-  { icon: 'home', title: '首页' },
-  { icon: 'camera', title: '相机' },
-  { icon: 'picture', title: '图片' }
-])
-const swiperNavIndex = ref(-1)
+// SwiperNav 是轮播指示器；控制按钮发 change({ dir, source })，由父层更新 current。
+const swiperNavTypes = ['dots', 'dots-bar', 'fraction'] as const
+const swiperNavTotal = 3
+const swiperNavIndex = ref(0)
+const swiperNavEvent = ref('尚未操作')
+function onSwiperNavChange(event: { dir: 'prev' | 'next'; source: string }) {
+  const offset = event.dir === 'prev' ? -1 : 1
+  swiperNavIndex.value = (swiperNavIndex.value + offset + swiperNavTotal) % swiperNavTotal
+  swiperNavEvent.value = `${event.source}: ${event.dir}`
+}
 // Tabbar 选中值（与既有 tabValue 区分）
 const tabbarValue = ref(0)
 const tabbarRoundValue = ref(1)
@@ -539,8 +537,9 @@ function onSubmitBar() {
           </view>
           <view class="demo-row">
             <wd-rate v-model="rateValue" />
-            <wd-segmented v-model="segmentedValue" :options="['日', '周', '月']" :style="{ flex: '1' }" />
+            <wd-segmented v-model:value="segmentedValue" :options="['日', '周', '月']" :style="{ flex: '1' }" />
           </view>
+          <text class="demo-tag demo-segmented-value">分段选择：{{ segmentedValue }}</text>
 
           <text class="demo-panel__label">Form + FormItem（schema 校验）</text>
           <wd-form ref="formRef" :model="formModel" :schema="formSchema" error-type="message">
@@ -825,12 +824,19 @@ function onSubmitBar() {
       <view class="demo-section">
         <text class="demo-section__title">SwiperNav 轮播导航</text>
         <view class="demo-panel">
-          <text class="demo-panel__label">图片导航（type="image"）</text>
-          <wd-swiper-nav :items="swiperNavItems" @click="(e: any) => { swiperNavIndex.value = e.index; console.log('[demo] swiper-nav click', e) }" />
-          <text class="demo-panel__label">图标导航（type="icon"）</text>
-          <wd-swiper-nav type="icon" :items="swiperNavIconItems" @click="(e: any) => { swiperNavIndex.value = e.index; console.log('[demo] swiper-nav click', e) }" />
+          <text class="demo-panel__label">dots / dots-bar / fraction：点击左右按钮切换当前项</text>
+          <view
+            v-for="navType in swiperNavTypes"
+            :key="navType"
+            class="demo-swiper-nav-preview"
+            :style="{ position: 'relative', width: '100%', height: '88px', 'margin-top': '8px', 'z-index': 0, 'background-color': '#755FFE', 'border-radius': '8px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'center' }"
+          >
+            <text :style="{ color: '#ffffff', 'font-size': '14px' }">{{ navType }} · 第 {{ swiperNavIndex + 1 }} 项</text>
+            <wd-swiper-nav :type="navType" :current="swiperNavIndex" :total="swiperNavTotal" show-controls @change="onSwiperNavChange" />
+          </view>
           <view class="demo-row">
-            <text class="demo-tag">点击索引：{{ swiperNavIndex }}</text>
+            <text class="demo-tag demo-swiper-nav-value">当前：{{ swiperNavIndex + 1 }}/{{ swiperNavTotal }}</text>
+            <text class="demo-tag demo-swiper-nav-event">事件：{{ swiperNavEvent }}</text>
           </view>
         </view>
       </view>

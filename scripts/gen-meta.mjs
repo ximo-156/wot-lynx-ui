@@ -756,6 +756,10 @@ function parseSlots(vueSrc) {
     const nameAttr = /\bname\s*=\s*"([^"]+)"/.exec(m[1])
     names.push(nameAttr ? nameAttr[1] : 'default')
   }
+  // 渲染函数组件（defineComponent + return () => h(...)，没有 <template>）无法写
+  // `<slot>` 标签，改在 SFC 头部注释里用 `@slot <name>` 声明（如 wd-grid 因为要按
+  // 列数切行而必须用渲染函数）。不声明就会让 meta/docs 误判成「无插槽」。
+  for (const m of vueSrc.matchAll(/@slot\s+([A-Za-z0-9_$-]+)/g)) names.push(m[1])
   return [...new Set(names)]
 }
 

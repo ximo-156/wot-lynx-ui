@@ -8,11 +8,11 @@
  *   之后、z-index 低于内容，两个平台都不遮字）；
  * - __day-top / __day-bottom 为绝对定位 + flex 居中的文本容器，用
  *   「view + 内部 text」承载（Lynx 的 text 不保证按 flex 容器布局）；
- * - firstDayStyle 由 objToStyle 字符串改为对象语法（CONVENTIONS §19）；
- * - 布局居中（NATIVE-REWRITE §3）：wd-month 根节点显式 display: flex +
- *   flex-direction: column；__day-container 补 justify-content +
- *   align-items 成对 flex 居中承载日期文本（text-align 单独不保证文本
- *   节点撑满容器），选中态背景仍铺满整个日期格。
+ * - 日期格与内容盒显式定高，行高/字号/颜色只落到 text；范围装饰
+ *   仅在起止格的局部层叠上下文内绘制，普通日期不升层；
+ * - 月初偏移由空位格承载，每周固定七格，不依赖 flex-wrap；
+ * - __day-container 以 justify-content + align-items 成对 flex 居中
+ *   承载日期文本，选中态背景仍铺满整个日期格。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -405,18 +405,15 @@ function getFormatterDate(date: number, day: string | number, type?: CalendarDay
           >
             <template v-if="cell.item">
               <view class="wd-month__day-container">
-                <!-- Lynx 适配：__day-top / __day-bottom 为绝对定位 + flex 居中的
-                     文本容器，沿用「view 承载布局 + 内部 text 放字形」写法
-                     （Lynx 的 text 不保证按 flex 容器布局，同 wd-slide-verify
-                     的 __track-text）；__day-text 仅设字重，直接用 text 元素 -->
+                <!-- view 只承载布局；三个 text 各自获得颜色、字号和行高。 -->
                 <view class="wd-month__day-top">
-                  <text>{{ cell.item.topInfo }}</text>
+                  <text class="wd-month__day-info">{{ cell.item.topInfo }}</text>
                 </view>
                 <text class="wd-month__day-text">
                   {{ cell.item.text }}
                 </text>
                 <view class="wd-month__day-bottom">
-                  <text>{{ cell.item.bottomInfo }}</text>
+                  <text class="wd-month__day-info">{{ cell.item.bottomInfo }}</text>
                 </view>
               </view>
               <!-- Lynx 适配：wot-ui 用 ::after 绘制范围态背景，此处为真实元素 -->

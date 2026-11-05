@@ -12,7 +12,7 @@
  * 3. **能力真的驱动了组件分支**：`wd-backtop` 的 `pageScroll` 门禁在 mock 下
  *    必须拦住宿主注入的 `pageScrollTo`。
  */
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { h } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { pause } from '../../src/common/util'
@@ -46,6 +46,9 @@ function installFullHost(): void {
     pageScrollTo: () => ({})
   })
 }
+
+// 既要退出时清理，也要在第一项执行前清理：测试 worker 会复用其它文件的模块。
+beforeEach(resetAdapters)
 
 afterEach(() => {
   cleanup()

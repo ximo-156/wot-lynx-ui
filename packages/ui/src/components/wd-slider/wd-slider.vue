@@ -1,73 +1,21 @@
 /*
  * wd-slider — 滑块（原生优先重写版）
  *
- * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
- * - **整条滑轨在真机上不绘制（2026-11-03 修复，本轮核心）**：用户截图里三条
- *   滑轨只剩 24px 空白高度、什么都没画。两个成因都在「Web 成立、Lynx 原生不
- *   成立」的写法上：
- *   ① 层序：`__track(z1)` / `__line(z2)` / `__dot(z3)` 挂在**没有 z-index** 的
- *      `__bar` 上 —— 真机上带 z-index 的绝对定位节点必须落在自带层叠上下文的
- *      父级里，否则绘制顺序与 Web 不一致（CONVENTIONS §19 定位 FAQ），整棵子树
- *      连同刻度文字一起不画。现在根节点与 `__bar` 各加 `z-index: 0`，内部
- *      **全部删除** z-index，层序改由 DOM 顺序保证。
- *   ② 几何：2px 视觉条原来用 `top: 50% + translateY(-50%)` 数值居中，真机不稳。
- *      现在视觉条下沉成 `__track-line` / `__line-fill` 两个**常规流**子节点，
- *      由父级 `display:flex + align-items:center` 结构居中；`__line` 改
- *      `top: 0; height: 100%`，圆点贴顶即垂直居中，只剩水平方向的
- *      `translateX(±50%)` 用于跨轨道两端。
- *   ③ 内联样式：`lineStyle` 原来对不适用的方向下发 `height: ''` / `top: ''`，
- *      空串经 Lynx 内联通道是「无效值」，会顶掉 CSS 类里的 height → `__line`
- *      塌成 0 高，圆点与进度条一起消失。现在恒定输出四个键且**全是合法值**
- *      （CONVENTIONS §20）；`barStyle`/`trackStyle`/`fillStyle` 的空串改经
- *      `filterStyle()` 剔除，未自定义颜色时让 CSS 令牌继续生效。
- *   跟手链路（worklet / 主线程度量 / 落定公式）一行未改。
- * - **圆点不再越界（真机 2026-11-01 修复）**：原实现把 24px 圆点塞进 2px 高、
- *   `border-radius: inherit` 的 `__line` 里，圆点上下各越界 11px，真机上越界
- *   子节点不绘制——三条滑轨都看不到圆点，也就没有可拖拽的命中区域（「不能
- *   滑动」）。现在 `__bar` / `__line` 只作「定位盒」，尺寸撑到圆点大小，
- *   2px 视觉下沉到 `__track-line`（轨道底色）与 `__line-fill`（进度条着色），
- *   圆点显式定尺寸（不再依赖 shrink-to-fit）；进度条宽度仍由 Vue / worklet 改
- *   `__line` 的 width/left 驱动，`__line-fill` 恒为 100%，跟手链路完全不变；
- * - **跟手走主线程（声明式 MTS）**：滑块的 touchmove 经
- *   `main-thread-bindtouchmove` 绑定 `'main thread'` worklet，触点经绝对
- *   定位公式换算后 `setStyleProperty` 直改进度条元素——零线程跨越，
- *   低端机跟手无滞后（CONVENTIONS §10）；
- * - **几何主线程自度量**：轨道矩形由 worklet 在轨道 touchstart（主线程）
- *   时经 `MainThread.Element.invoke('boundingClientRect')` 获取并缓入
- *   MainThreadRef——不在 touchmove 热路径重复度量（CONVENTIONS §16），
- *   也不依赖后台快照同步；
- * - **落定走后台**：滑块的 touchstart / touchend 为后台绑定（提交类
- *   逻辑），touchend 用同一套绝对公式由触点坐标重算终值并 commit；
- *   update:modelValue 与 dragmove 经轨道后台 touchmove 连续发出（isDragging
- *   守卫，仅拖动滑块时触发，与 wot-ui 语义一致）；
- * - **吞掉引擎补发的 tap**（真机 2026-10-27 修复「滑动松手回弹」）：Lynx 在
- *   touchend 之后还会补发一次 tap（同 wd-rate 的观测），而这次 tap 携带的是
- *   **按下时**的坐标。轨道的 @tap 是「点轨道跳转」，若不拦，拖动结束会被这次
- *   tap 按旧坐标重算一次值 —— 表现就是「怎么拖都弹回原位」。手势一旦提交过
- *   值（连续 dragmove 或 touchend 落定）就记下时间戳，紧跟其后 350ms 内的一次
- *   tap 直接吞掉（时间窗而非布尔标记：宿主不补发 tap 时不会误吞下一次真实点按）；
- *   干净点按（未拖动）不受影响，仍由 tap 走跳转；
- * - **几何兜底**（同轮修复）：后台 trackSize 在 onMounted 一次性测出，真机首帧
- *   可能量到 0 且此后不再重测，落定路径会因 trackSize<=0 直接 return（同样
- *   表现为回弹）。现在手势开始强制重测，touchend 落定时若仍无效则补测后再
- *   commit（与 wd-rate 的 refreshRects 兜底同思路）；
- * - **MT 触摸绑定不与 tap 同元素**（CONVENTIONS §19 真机差异 #4 / wd-rate 范本）：
- *   几何度量 worklet 挂在进度条 __line 上，不挂在带 @tap 的轨道 __bar 上，
- *   避免「需要 tap 的节点子树挂 MT 触摸绑定」引起的 tap 合成互扰；
- * - **范围模式边界**：左右滑块当前值经进度条元素属性 left-bound /
- *   right-bound 下发（Vue 属性绑定随重渲染更新），worklet 跟手时经
- *   `getAttribute` 实时读取，避免两滑块交叉；属性缺失时降级为仅
- *   min/max 钳制（后台落定仍按真实值钳制，终态正确）；
- * - min/max/step/vertical/range/disabled 经元素属性实时桥接，配置变化
- *   取消旧手势；拖动采用官方起值 + 位移，越过另一端后规范化排序；
- * - trackSize 为 0（度量失败）时 worklet 与后台同时守值：不写 NaN；
- * - wot-ui 的 `:first-child / :last-child` 与 `a + b` 兄弟选择器无 Lynx
- *   等价物，首尾刻度改用 v-for 索引类名 is-edge-start / is-edge-end；
- * - 滑块内置图标：wot-ui 用 multiple-horizontal，内置 iconfont 集无该字形，
- *   改用同语义的 drag；
- * - customStyle 经 parseStyle 归一为对象（CONVENTIONS §19）；
- *   activeColor / inactiveColor 为 prop 驱动的条件内联键，按 CONVENTIONS
- *   §20 的「低风险」类别处理。
+ * Lynx 实现说明：
+ * - 默认轨道保留圆点尺寸的定位盒，细线使用常规流 flex 居中；层序按 DOM 顺序。
+ * - 跟手保留声明式 MTS，提交仍走后台 dragstart / dragmove / dragend / change。
+ *   原生事件的 Element 包装器不是 ref 包装器，滑块身份取稳定的 gesture-index；
+ *   触点按 identifier / id 追踪，坐标优先 client / page，再兼容 x / y，缺失不当 0。
+ * - 几何只有一个后台缓存来源，经 gesture-size 属性提供给主线程；每次手势固定
+ *   有效长度，首次零尺寸可在开始/落定时补测，不在 touchmove 度量或独立异步 MT 查询。
+ * - 拖动/异步落定时缓存完整样式引用，进度条采用单一属性绑定，避免 Vue
+ *   每帧重发 STYLE 覆盖主线程位置；不依赖宿主对省略样式键的合并或替换语义。
+ *   落定后明确更新完整百分比，文案与属性在拖动期间仍正常更新。
+ * - 父 v-model 的拖动回写不取消手势；落定前的旧值回声不覆盖本次手势的当前值。
+ *   轨道 tap 查询与零几何落定都带交互代次，旧回调不能提交到下一次手势。
+ * - touchend / touchcancel 后的补发 tap 在短窗内全部忽略；下一次真实 touchstart
+ *   立即解除抑制。范围排序、步长与 dragend 在 change 前的事件时序保持一致。
+ * - customStyle 归一为对象；首尾刻度用索引类名代替 Lynx 不支持的结构伪类。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -78,6 +26,7 @@ import { sliderProps, type SliderEmits, type SliderExpose, type SliderMarks, typ
 import { deepClone, filterStyle, getRect, isArray, isDef, isEqual, parseStyle, uuid } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useAlive } from '../../composables/useAlive'
+import { useLockScroll } from '../../composables/useLockScroll'
 
 const props = defineProps(sliderProps)
 const emit = defineEmits<SliderEmits>()
@@ -88,6 +37,8 @@ const sliderId = ref<string>(`wd-slider-${uuid()}`)
 const trackId = ref<string>(`${sliderId.value}-track`)
 const touchIndex = ref<number>(0) // 当前正在拖动的滑块索引 (0 为左/单，1 为右)
 const isDragging = ref<boolean>(false) // 是否正在拖动
+const isSettling = ref(false) // 零几何异步落定期间仍保留 MTS 的样式所有权
+useLockScroll(() => isDragging.value || isSettling.value)
 
 /** 轨道长度 (水平为宽度，垂直为高度) —— 后台度量，供点击跳转与落定重算 */
 const trackSize = ref<number>(0)
@@ -95,49 +46,46 @@ const trackSize = ref<number>(0)
 const trackStart = ref<number>(0)
 const modelValue = ref<SliderValue>(getInitValue()) // 内部维护的滑块值
 
+/** 缓存轨道长度；一次有效手势内固定长度，MT/BG 均消费 gestureSize。 */
+const dragTrackSize = ref(0)
+const gestureSize = computed(() => (isDragging.value || isSettling.value) ? dragTrackSize.value : trackSize.value)
+
 // ---------- 主线程（MTS）引用 ----------
-/**
- * 主线程元素桩类型（worklet 内经 .current 取用）。
- * 与 @lynx-js/types 的 MainThread.Element 对齐的常用子集。
- */
 interface MtElement {
   setStyleProperty(name: string, value: string): void
   getAttribute(name: string): string | null
-  invoke(method: string, params?: any): Promise<any>
 }
 
-/** 进度条元素：跟手直改 width/left（或 height/top） */
 const lineRef = useMainThreadRef<MtElement | null>(null)
-/** 轨道元素：手势开始时主线程度量几何 */
-const trackRef = useMainThreadRef<MtElement | null>(null)
-/** 右滑块元素：worklet 经 currentTarget 判定拖动对象（范围模式） */
-const dotRRef = useMainThreadRef<MtElement | null>(null)
-/** 轨道几何快照 { size, start }（worklet 内 .current 活值） */
-const geomRef = useMainThreadRef<{ size: number; start: number; pointer: number; left: number; right: number; version: string } | null>(null)
-const gestureVersion = computed(() => JSON.stringify([props.min, props.max, props.step, props.vertical, props.range, isDisabled.value]))
+const geomRef = useMainThreadRef<{ pointer: number; touchId?: string; left: number; right: number; version: string } | null>(null)
+const modelRevision = ref(0)
+// 按配置内容比较：父渲染重建相同 marks 数组不能取消拖动或每帧重新度量。
+const gestureConfigVersion = computed(() => JSON.stringify([props.min, props.max, props.step, props.vertical, props.range, isDisabled.value, props.theme, props.showExtremeValue, props.marks]))
+const gestureVersion = computed(() => JSON.stringify([gestureConfigVersion.value, modelRevision.value]))
+let activeTouchId: string | undefined
 let startPointer = 0
 let startValue: SliderValue = deepClone(modelValue.value)
 let dragMoved = false
-/**
- * 本次手势提交过值的时间戳（0 表示没有待吞的补发 tap）。
- *
- * 真机引擎在 touchend 之后会补发一次 tap（见 wd-rate 的同类观测），而 tap 携带
- * 的是**按下时**的坐标：不拦的话「点轨道跳转」会在松手瞬间按旧坐标把值重算
- * 一遍，表现就是「怎么拖都弹回原位」。
- *
- * 用「时间窗 + 只吞一次」而不是布尔标记：宿主不一定补发 tap（Web 预览 / 测试
- * 环境），布尔标记会残留到下一次真实点按，把「点轨道跳转」吞掉。补发的 tap
- * 紧跟在 touchend 之后，350ms 足够覆盖，过期即自动失效。
- */
-let tapSwallowAt = 0
-/** 补发 tap 的识别窗口（毫秒）：紧跟 touchend，取远大于一帧、远小于人手二次点击 */
+/** 尚未收到最终受控值回写时，识别上一手势已发出的旧值回声。 */
+const pendingModelEchoes = new Set<string>()
+/** 补发 tap 短窗：新的真实 touchstart 立即清除，不在首个补 tap 后提前解除。 */
+let tapSwallowUntil = 0
 const TAP_SWALLOW_WINDOW = 350
 
 let rectRequest = 0
 let interactionRequest = 0
-watch([isDisabled, () => props.min, () => props.max, () => props.step, () => props.range, () => props.vertical], () => { interactionRequest++; rectRequest++; isDragging.value = false; trackSize.value = 0 }, { flush: 'sync' })
-// Measure the rendered orientation, not the obsolete setup-time horizontal track.
-watch([isDisabled, () => props.min, () => props.max, () => props.step, () => props.range, () => props.vertical, () => props.theme, () => props.showExtremeValue, () => props.marks], () => initSlider(), { flush: 'post', deep: true })
+watch(gestureConfigVersion, () => {
+  interactionRequest++
+  rectRequest++
+  isDragging.value = false
+  isSettling.value = false
+  activeTouchId = undefined
+  dragTrackSize.value = 0
+  trackSize.value = 0
+  pendingModelEchoes.clear()
+}, { flush: 'sync' })
+// Measure after an actual layout/configuration change, not equal inline-prop replacements.
+watch(gestureConfigVersion, () => initSlider(), { flush: 'post' })
 
 /**
  * 计算滑块的取值范围大小
@@ -260,22 +208,21 @@ const lineClass = computed(() => {
 })
 
 /**
- * 进度条样式（落定后由 Vue 接管；跟手期间由 worklet 直改，值一致）
+ * 静止/落定时输出完整且合法的定位键。
  *
- * 着色在内部的 __line-fill（真机 2026-11-01）：进度条节点本身是圆点的
- * 定位盒，必须能容纳 24px 圆点，不能再自带 2px 的着色；宽度仍由这里下发，
- * __line-fill 恒为 100%，跟手改 width/left 时自动跟随。
- *
- * ⚠️ 键值恒定输出且**全部是合法值**（CONVENTIONS §20）：上一版对不适用的
- * 方向下发 `height: ''` / `top: ''`，真机把空串当无效值写进元素属性表，
- * 顶掉了 CSS 类里的 height，__line 塌成 0 高 —— 圆点与进度条被整段裁掉
- * （2026-11-03 真机缺陷）。这里改成下发与样式表一致的具体值。
+ * 拖动与异步落定时保留同一个完整样式对象，并用 FULL_PROPS 逐值比较避免
+ * 向宿主重发 style。不能依赖 SET_STYLE 的省略键合并：实际宿主会把 width
+ * 清掉；也不能让编译器的 STYLE 快速路径每帧无条件重写 MTS 刚画的位置。
  */
+let committedLineStyle: Record<string, string> | undefined
 const lineStyle = computed(() => {
-  const style: Record<string, string> = props.vertical
-    ? { width: '100%', height: '0%', left: '0', top: '0' }
-    : { width: '0%', height: '100%', left: '0', top: '0' }
+  if ((isDragging.value || isSettling.value) && committedLineStyle) return committedLineStyle
 
+  const style: Record<string, string> = props.vertical
+    ? { width: '100%', height: '0%', left: '0', top: '0', transition: 'none' }
+    : { width: '0%', height: '100%', left: '0', top: '0', transition: 'none' }
+
+  committedLineStyle = style
   if (scope.value === 0) return style
 
   const prop = props.vertical ? 'height' : 'width'
@@ -311,11 +258,20 @@ const fillStyle = computed(() => filterStyle({ 'background-color': props.activeC
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (!isEqual(newValue, modelValue.value)) {
-      interactionRequest++
-      isDragging.value = false
-      modelValue.value = getInitValue()
+    if (isEqual(newValue, modelValue.value)) {
+      if (!isDragging.value && !isSettling.value) pendingModelEchoes.clear()
+      return
     }
+    // 已发出的旧值是受控回声，不能终止手势；真正的新外部值仍按原 API 替换。
+    if (pendingModelEchoes.has(JSON.stringify(newValue))) return
+    pendingModelEchoes.clear()
+    interactionRequest++
+    modelRevision.value++ // 声明式属性使 MT 的旧手势同步失效，无命令式 ref 派发。
+    isDragging.value = false
+    isSettling.value = false
+    activeTouchId = undefined
+    dragTrackSize.value = 0
+    modelValue.value = getInitValue()
   },
   { deep: true }
 )
@@ -347,13 +303,12 @@ function initSlider() {
   getRect(`#${trackId.value}`, false, proxy).then((data) => {
     // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive() || request !== rectRequest || vertical !== props.vertical) return
-    if (vertical) {
-      trackSize.value = Number(data.height)
-      trackStart.value = Number(data.top)
-    } else {
-      trackSize.value = Number(data.width)
-      trackStart.value = Number(data.left)
-    }
+    const size = Number(vertical ? data.height : data.width)
+    const start = Number(vertical ? data.top : data.left)
+    if (!Number.isFinite(size) || size <= 0 || !Number.isFinite(start)) return
+    trackSize.value = size
+    trackStart.value = start
+    if ((isDragging.value || isSettling.value) && dragTrackSize.value <= 0) dragTrackSize.value = size
   })
 }
 
@@ -416,6 +371,7 @@ function updateValue(value: SliderValue) {
   }
 
   if (!isEqual(newValue, modelValue.value)) {
+    if (isDragging.value || isSettling.value) pendingModelEchoes.add(JSON.stringify(newValue))
     modelValue.value = newValue
   }
 }
@@ -434,30 +390,44 @@ function ensureTrackSize(): Promise<number> {
   return getRect(`#${trackId.value}`, false, proxy).then((data) => {
     if (!isAlive() || request !== rectRequest || vertical !== props.vertical) return trackSize.value
     const size = Number(vertical ? data.height : data.width)
-    if (Number.isFinite(size) && size > 0) {
+    const start = Number(vertical ? data.top : data.left)
+    if (Number.isFinite(size) && size > 0 && Number.isFinite(start)) {
       trackSize.value = size
-      trackStart.value = Number(vertical ? data.top : data.left)
+      trackStart.value = start
+      if ((isDragging.value || isSettling.value) && dragTrackSize.value <= 0) dragTrackSize.value = size
     }
     return trackSize.value
   })
 }
 
-/**
- * 从触摸 / tap 事件里取触点主坐标（水平 clientX、垂直 clientY）。
- *
- * 三种载荷形态都要认：
- * - 触摸事件：`touches[0]` / `changedTouches[0]`（真机与 Web 同形）；
- * - Lynx tap：`touches` 为空，坐标在 `detail.x / detail.y`；
- * - Web 预览的 click（@tap 映射）：`detail` 是点击次数（数字），坐标在 `clientX/clientY`。
- * 都取不到返回 NaN —— 调用方必须降级，不能默认成 0（0 会被当成「点在轨道最左端」）。
- */
-function readPointer(event: any): number {
-  const touch = event?.changedTouches?.[0] ?? event?.touches?.[0]
-  const raw = props.vertical
-    ? touch?.clientY ?? event?.detail?.y ?? event?.clientY
-    : touch?.clientX ?? event?.detail?.x ?? event?.clientX
-  const value = Number(raw)
-  return Number.isFinite(value) ? value : NaN
+/** 原生 touch identifier 与部分宿主的 id 都是触点标识，不依赖 touches 顺序。 */
+function touchId(touch: any): string | undefined {
+  const id = touch?.identifier ?? touch?.id
+  return id == null ? undefined : String(id)
+}
+
+function readTouch(event: any, id?: string, changedFirst = false): any {
+  const lists = changedFirst ? [event?.changedTouches, event?.touches] : [event?.touches, event?.changedTouches]
+  for (const list of lists) {
+    if (!list?.length) continue
+    if (id === undefined) return list[0]
+    for (let i = 0; i < list.length; i++) if (touchId(list[i]) === id) return list[i]
+  }
+}
+
+/** 坐标缺失/非有限数不能转成 0；client/page 优先于宿主兼容的 x/y。 */
+function readPointer(event: any, id?: string, changedFirst = false): number {
+  const touch = readTouch(event, id, changedFirst)
+  if (id !== undefined && !touch && (event?.touches?.length || event?.changedTouches?.length)) return NaN
+  const candidates = props.vertical
+    ? [touch?.clientY, touch?.pageY, touch?.y, event?.detail?.y, event?.clientY, event?.pageY, event?.y]
+    : [touch?.clientX, touch?.pageX, touch?.x, event?.detail?.x, event?.clientX, event?.pageX, event?.x]
+  for (const raw of candidates) {
+    if (raw == null || raw === '') continue
+    const value = Number(raw)
+    if (Number.isFinite(value)) return value
+  }
+  return NaN
 }
 
 /**
@@ -477,9 +447,10 @@ function positionToValue(position: number): number {
  * @returns {number} 转换后的数值
  */
 function pointerToValue(pointer: number, index: number): number {
-  if (trackSize.value <= 0 || !Number.isFinite(trackSize.value) || !Number.isFinite(pointer)) return props.min
+  const size = dragTrackSize.value
+  if (size <= 0 || !Number.isFinite(size) || !Number.isFinite(pointer)) return props.min
   const value = props.range && isArray(startValue) ? startValue[index] : (startValue as number)
-  return value + ((pointer - startPointer) / trackSize.value) * scope.value
+  return value + ((pointer - startPointer) / size) * scope.value
 }
 
 /** 范围拖动始终保留另一端；所有 drag 事件与 v-model 使用同一种值形状。 */
@@ -550,89 +521,80 @@ function showDotPopover(index: number): boolean {
  * @param {number} index 滑块索引
  */
 function onTouchStart(event: any, index: number) {
-  if (isDisabled.value) return
+  if (isDisabled.value || isDragging.value) return
+  const touch = readTouch(event, undefined, true)
+  const id = touchId(touch)
+  const pointer = readPointer(event, id, true)
+  if (!Number.isFinite(pointer)) return
 
+  interactionRequest++ // 取消较早的轨道 tap / 异步落定
   touchIndex.value = index
+  activeTouchId = id
   startValue = deepClone(modelValue.value)
-  const pointer = readPointer(event)
-  startPointer = Number.isFinite(pointer) ? pointer : 0
+  startPointer = pointer
+  dragTrackSize.value = trackSize.value
   dragMoved = false
-  tapSwallowAt = 0
+  // 快速开始下一手势时仍可能收到上一手势的父级回声，保留到最新值被确认。
+  pendingModelEchoes.add(JSON.stringify(modelValue.value))
+  tapSwallowUntil = 0
+  isSettling.value = false
   isDragging.value = true
-  // 几何兜底：真机首帧可能量到 0 且此后不再重测，手势开始强制重测一次
-  // （每个手势一次，不在 touchmove 热路径上，CONVENTIONS §16）
+  // 每个手势一次；有效长度不在拖动中变化，零尺寸则等本次结果补齐。
   initSlider()
   emit('dragstart', { value: modelValue.value })
 }
 
-/**
- * 滑块触摸结束（后台：绝对公式重算终值并 commit）
- *
- * 三条路径：
- * 1. 拖动中已由 dragmove 连续提交 → 只补 dragend/change；
- * 2. 宿主没派发后台 touchmove（dragMoved 为假）→ 用 touchend 坐标落定；
- * 3. 几何缺失（trackSize 为 0）→ 补测后再落定，绝不静默丢值。
- *
- * 只要本次手势提交过值（或即将提交），就记录 tapSwallowAt，让引擎在 touchend
- * 后补发的那一次 tap 被 @tap 处理器吞掉——否则「点轨道跳转」会按**按下时**的
- * 坐标把值重算一遍，表现为松手回弹（真机 2026-10-27 缺陷）。
- */
+/** 拖动已连续提交时不重采样 end；没有 BG move 才用终点兜底。 */
 function onTouchEnd(event: any) {
   if (!isDragging.value) return
+  // 第二根手指抬起不能结束第一根手指的拖动。
+  if (activeTouchId !== undefined && event?.changedTouches?.length && !readTouch({ changedTouches: event.changedTouches }, activeTouchId, true)) return
+  const request = interactionRequest
+  const pointer = readPointer(event, activeTouchId, true)
+  tapSwallowUntil = Date.now() + TAP_SWALLOW_WINDOW
+  isSettling.value = true
   isDragging.value = false
-  if (isDisabled.value) return
 
-  // 坐标必须同步取出：落定可能异步（补测几何），届时事件对象已被引擎回收
-  const pointer = readPointer(event)
   const finish = () => {
+    if (!isAlive() || isDisabled.value || request !== interactionRequest) return
+    isSettling.value = false
+    activeTouchId = undefined
+    tapSwallowUntil = Date.now() + TAP_SWALLOW_WINDOW
+    if (isEqual(props.modelValue, modelValue.value)) pendingModelEchoes.clear()
     emit('dragend', { value: modelValue.value })
     emit('change', modelValue.value)
   }
-
-  if (dragMoved) {
-    tapSwallowAt = Date.now()
+  if (dragMoved || !Number.isFinite(pointer)) {
     finish()
     return
   }
-  if (!Number.isFinite(pointer)) {
-    finish()
-    return
-  }
-
-  tapSwallowAt = Date.now()
-  if (trackSize.value > 0 && Number.isFinite(trackSize.value)) {
+  if (dragTrackSize.value > 0 && Number.isFinite(dragTrackSize.value)) {
     updateValue(dragValue(pointer))
     finish()
     return
   }
   ensureTrackSize().then((size) => {
-    if (!isAlive() || isDisabled.value || size <= 0) return
-    updateValue(dragValue(pointer))
+    if (!isAlive() || isDisabled.value || request !== interactionRequest) return
+    if (size > 0 && Number.isFinite(size)) {
+      dragTrackSize.value = size
+      updateValue(dragValue(pointer))
+    }
     finish()
   })
 }
 
-/**
- * 轨道触摸开始（后台）：只负责复位「本次手势已提交过值」标记。
- *
- * 引擎补发的 tap 紧跟 touchend；但宿主不一定补发（Web 预览 / 测试环境），
- * 标记一旦残留，会把**下一次真正点轨道跳转**的 tap 吞掉。点按必然先有
- * touchstart，在这里复位即可（同 wd-rate 的做法）。滑块自身的 touchstart
- * 会先冒泡到本节点之前执行，两处都置 false，顺序无副作用。
- */
+/** 新的真实轨道点按解除补 tap 抑制；第二触点不能重置正在进行的手势。 */
 function onBarTouchStartBg() {
-  tapSwallowAt = 0
+  if (isDragging.value) return
+  interactionRequest++
+  isSettling.value = false
+  tapSwallowUntil = 0
 }
 
-/**
- * 轨道触摸移动（后台：仅拖动滑块时经冒泡收到，发 dragmove）
- *
- * 滑块上的 main-thread-bindtouchmove 不拦截冒泡，事件继续上浮到轨道；
- * isDragging 守卫保证只有「拖动滑块」才派发，与 wot-ui 语义一致。
- */
+/** MT move 不拦冒泡，后台只提交当前滑块/触点的连续值。 */
 function onBarTouchMove(event: any) {
-  if (isDisabled.value || !isDragging.value || trackSize.value <= 0 || !Number.isFinite(trackSize.value)) return
-  const pointer = readPointer(event)
+  if (isDisabled.value || !isDragging.value || dragTrackSize.value <= 0 || !Number.isFinite(dragTrackSize.value)) return
+  const pointer = readPointer(event, activeTouchId)
   if (!Number.isFinite(pointer)) return
   dragMoved = true
   updateValue(dragValue(pointer))
@@ -644,13 +606,9 @@ function onBarTouchMove(event: any) {
  * @param event 点击事件
  */
 function onBarClick(event: any) {
-  // 引擎在 touchend 之后会补发一次 tap，且坐标是**按下时**的位置：
-  // 本次手势刚提交过值时必须吞掉，否则拖动结果会被拉回起点（回弹）。
-  if (tapSwallowAt && Date.now() - tapSwallowAt < TAP_SWALLOW_WINDOW) {
-    tapSwallowAt = 0
-    return
-  }
-  tapSwallowAt = 0
+  // 不在第一个补 tap 后清除：同一手势的重复 tap 都不能覆盖终值。
+  if (Date.now() < tapSwallowUntil || isDragging.value || isSettling.value) return
+  tapSwallowUntil = 0
   if (isDisabled.value) return
 
   const request = ++interactionRequest
@@ -663,9 +621,12 @@ function onBarClick(event: any) {
   getRect(`#${trackId.value}`, false, proxy).then((data) => {
     // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive() || isDisabled.value || request !== interactionRequest || vertical !== props.vertical) return
-    trackSize.value = Number(props.vertical ? data.height : data.width)
-    trackStart.value = Number(props.vertical ? data.top : data.left)
-    handleBarClickAt(pointer - trackStart.value)
+    const size = Number(props.vertical ? data.height : data.width)
+    const start = Number(props.vertical ? data.top : data.left)
+    if (!Number.isFinite(size) || size <= 0 || !Number.isFinite(start)) return
+    trackSize.value = size
+    trackStart.value = start
+    handleBarClickAt(pointer - start)
   })
 }
 
@@ -702,92 +663,137 @@ defineExpose<SliderExpose>({
 
 // ---------- 主线程 worklet（跟手，零线程跨越） ----------
 
-/**
- * 触摸开始（主线程）：一次性度量轨道几何并缓存。
- *
- * 绑在进度条 __line（而不是带 @tap 的轨道 __bar）：MT 触摸绑定与 tap 同元素
- * 会互相干扰（CONVENTIONS §19 差异 #4）。滑块是 __line 的后代，touchstart
- * 冒泡到这里；度量目标仍是 __track，语义不变。
- */
+/** 主线程只记录起点/起值；长度消费后台唯一缓存，不再独立 invoke 度量。 */
 const onBarTouchStart = (event: any) => {
   'main thread'
-  const track = trackRef.current
   const line = lineRef.current
-  geomRef.current = null
-  if (!track || !line || line.getAttribute('gesture-disabled') === 'true' || typeof track.invoke !== 'function') return
-  const vertical = line.getAttribute('gesture-vertical') === 'true'
+  if (!line || line.getAttribute('gesture-disabled') === 'true') return
+  const previous = geomRef.current
   const version = line.getAttribute('gesture-version') || ''
-  const touch = event.touches && event.touches[0]
-  if (!touch) return
-  const pointer = vertical ? touch.clientY : touch.clientX
-  const left = Number(line.getAttribute('left-bound'))
-  const right = Number(line.getAttribute('right-bound'))
-  track.invoke('boundingClientRect').then((rect: any) => {
-    if (trackRef.current !== track || lineRef.current !== line || line.getAttribute('gesture-version') !== version) return
-    geomRef.current = {
-      size: vertical ? rect.height : rect.width,
-      start: vertical ? rect.top : rect.left,
-      pointer, left, right, version
-    }
-  })
+  if (previous && previous.version === version && line.getAttribute('gesture-active') === 'true') return
+  geomRef.current = null
+  const vertical = line.getAttribute('gesture-vertical') === 'true'
+  const touch = event.changedTouches?.[0] ?? event.touches?.[0]
+  const candidates = vertical
+    ? [touch?.clientY, touch?.pageY, touch?.y, event.detail?.y, event.clientY, event.pageY, event.y]
+    : [touch?.clientX, touch?.pageX, touch?.x, event.detail?.x, event.clientX, event.pageX, event.x]
+  let pointer = NaN
+  for (const raw of candidates) {
+    if (raw == null || raw === '') continue
+    const value = Number(raw)
+    if (Number.isFinite(value)) { pointer = value; break }
+  }
+  if (!Number.isFinite(pointer)) return
+  const id = touch?.identifier ?? touch?.id
+  geomRef.current = {
+    pointer,
+    touchId: id == null ? undefined : String(id),
+    left: Number(line.getAttribute('left-bound')),
+    right: Number(line.getAttribute('right-bound')),
+    version
+  }
 }
 
-/**
- * 滑块跟手移动（主线程）：绝对定位公式 + 进度条样式直改。
- *
- * 范围模式下经 currentTarget 与右滑块引用比对判定拖动对象，边界值经
- * 进度条元素属性 left-bound / right-bound 实时读取（后台随重渲染更新）。
- */
+/** 稳定滑块属性 + 固定触点 ID；MT/BG 使用相同起值、长度和舍入公式。 */
 const onDotTouchMove = (event: any) => {
   'main thread'
   const line = lineRef.current
   const geom = geomRef.current
-  if (!line || !geom || !Number.isFinite(geom.size) || geom.size <= 0 || line.getAttribute('gesture-disabled') === 'true' || geom.version !== line.getAttribute('gesture-version')) return
+  if (!line || !geom || line.getAttribute('gesture-disabled') === 'true' || geom.version !== line.getAttribute('gesture-version')) return
+  const size = Number(line.getAttribute('gesture-size'))
+  if (!Number.isFinite(size) || size <= 0) return
   const cfgMin = Number(line.getAttribute('gesture-min'))
   const cfgMax = Number(line.getAttribute('gesture-max'))
   const cfgStep = Number(line.getAttribute('gesture-step')) || 1
-  const cfgVertical = line.getAttribute('gesture-vertical') === 'true'
-  const cfgRange = line.getAttribute('gesture-range') === 'true'
-  const touch = event.touches && event.touches[0]
-  if (!touch) return
-
+  const vertical = line.getAttribute('gesture-vertical') === 'true'
+  const range = line.getAttribute('gesture-range') === 'true'
   const scopeV = cfgMax - cfgMin
-  if (scopeV === 0) return
+  if (!Number.isFinite(scopeV) || scopeV <= 0 || cfgStep <= 0) return
 
-  const pointer = cfgVertical ? touch.clientY : touch.clientX
-  const dotR = dotRRef.current
-  const isRight = !!dotR && !!event.currentTarget && (event.currentTarget as unknown) === dotR
-  const initial = cfgRange && isRight ? geom.right : geom.left
-  let value = initial + ((pointer - geom.pointer) / geom.size) * scopeV
-  value = cfgMin + Math.round((value - cfgMin) / cfgStep) * cfgStep
-  value = Math.min(Math.max(value, cfgMin), cfgMax)
-
-  const sizeProp = cfgVertical ? 'height' : 'width'
-  const startProp = cfgVertical ? 'top' : 'left'
-
-  if (cfgRange) {
-    const leftV = geom.left
-    const rightV = geom.right
-    const hasLeft = !isNaN(leftV)
-    const hasRight = !isNaN(rightV)
-    // 拖动对象判定：currentTarget 即右滑块则为右滑块，否则左/单滑块
-    if (isRight) {
-      const endPct = ((Math.max(value, leftV) - cfgMin) / scopeV) * 100
-      const startPct = hasLeft ? ((Math.min(value, leftV) - cfgMin) / scopeV) * 100 : endPct
-      line.setStyleProperty(startProp, `${startPct}%`)
-      line.setStyleProperty(sizeProp, `${Math.max(0, endPct - startPct)}%`)
-    } else {
-      const startPct = ((Math.min(value, rightV) - cfgMin) / scopeV) * 100
-      const endPct = hasRight ? ((Math.max(value, rightV) - cfgMin) / scopeV) * 100 : startPct
-      line.setStyleProperty(startProp, `${startPct}%`)
-      line.setStyleProperty(sizeProp, `${Math.max(0, endPct - startPct)}%`)
+  let touch: any
+  for (const list of [event.touches, event.changedTouches]) {
+    if (!list?.length) continue
+    if (geom.touchId === undefined) { touch = list[0]; break }
+    for (let i = 0; i < list.length; i++) {
+      const id = list[i]?.identifier ?? list[i]?.id
+      if (id != null && String(id) === geom.touchId) { touch = list[i]; break }
     }
+    if (touch) break
+  }
+  if (geom.touchId !== undefined && !touch && (event.touches?.length || event.changedTouches?.length)) return
+  const candidates = vertical
+    ? [touch?.clientY, touch?.pageY, touch?.y, event.detail?.y, event.clientY, event.pageY, event.y]
+    : [touch?.clientX, touch?.pageX, touch?.x, event.detail?.x, event.clientX, event.pageX, event.x]
+  let pointer = NaN
+  for (const raw of candidates) {
+    if (raw == null || raw === '') continue
+    const value = Number(raw)
+    if (Number.isFinite(value)) { pointer = value; break }
+  }
+  if (!Number.isFinite(pointer)) return
+  // 原生运行时每次事件新建 Element 包装器，禁止与 MainThreadRef 做 === 比较。
+  const target = event.currentTarget
+  const isRight = range && target && typeof target.getAttribute === 'function' && target.getAttribute('gesture-index') === '1'
+  const initial = isRight ? geom.right : geom.left
+  if (!Number.isFinite(initial)) return
+  const align = (value: number) => {
+    const clamped = Math.min(Math.max(value, cfgMin), cfgMax)
+    const stepped = parseFloat((cfgMin + Math.round((clamped - cfgMin) / cfgStep) * cfgStep).toFixed(10))
+    return Math.min(Math.max(stepped, cfgMin), cfgMax)
+  }
+  const value = align(initial + ((pointer - geom.pointer) / size) * scopeV)
+  const sizeProp = vertical ? 'height' : 'width'
+  const startProp = vertical ? 'top' : 'left'
+  if (range) {
+    const other = align(isRight ? geom.left : geom.right)
+    if (!Number.isFinite(other)) return
+    const left = Math.min(value, other)
+    const right = Math.max(value, other)
+    line.setStyleProperty(startProp, `${((left - cfgMin) / scopeV) * 100}%`)
+    line.setStyleProperty(sizeProp, `${((right - left) / scopeV) * 100}%`)
   } else {
-    const pct = ((value - cfgMin) / scopeV) * 100
-    line.setStyleProperty(startProp, '0')
-    line.setStyleProperty(sizeProp, `${Math.max(0, pct)}%`)
+    line.setStyleProperty(startProp, '0%')
+    line.setStyleProperty(sizeProp, `${((value - cfgMin) / scopeV) * 100}%`)
   }
 }
+
+/** 主线程终止相同触点；后台 end 在子节点，避免同一元素同名绑定互相覆盖。 */
+const onDotTouchEnd = (event: any) => {
+  'main thread'
+  const geom = geomRef.current
+  if (!geom) return
+  if (geom.touchId !== undefined && event.changedTouches?.length) {
+    let matches = false
+    for (const touch of event.changedTouches) {
+      const id = touch?.identifier ?? touch?.id
+      if (id != null && String(id) === geom.touchId) { matches = true; break }
+    }
+    if (!matches) return
+  }
+  geomRef.current = null
+}
+
+// 单一 v-bind 不走 mergeProps 的 style 拷贝；完整样式引用不变时，FULL_PROPS
+// 不调用 hostPatchProp('style')，而数值文案、gesture 属性仍正常更新。
+const lineBindings = computed(() => ({
+  class: lineClass.value,
+  style: lineStyle.value,
+  'main-thread-ref': lineRef,
+  'main-thread-bindtouchstart': onBarTouchStart,
+  'main-thread-bindtouchend': onDotTouchEnd,
+  'main-thread-bindtouchcancel': onDotTouchEnd,
+  'gesture-active': String(isDragging.value || isSettling.value),
+  'gesture-size': String(gestureSize.value),
+  'gesture-min': String(props.min),
+  'gesture-max': String(props.max),
+  'gesture-step': String(validStep.value),
+  'gesture-vertical': String(props.vertical),
+  'gesture-range': String(props.range),
+  'gesture-disabled': String(isDisabled.value),
+  'gesture-version': gestureVersion.value,
+  'left-bound': String(currentValue.value[0]),
+  'right-bound': String(currentValue.value[1])
+}))
 </script>
 
 <template>
@@ -808,7 +814,7 @@ const onDotTouchMove = (event: any) => {
     >
       <!-- 可滑动有效轨道（用于尺寸测量与 marks 定位；默认主题下 2px 视觉轨道
            由内部的 __track-line 承载，见 index.scss 的 __bar--default 注释） -->
-      <view :id="trackId" :main-thread-ref="trackRef" class="wd-slider__track">
+      <view :id="trackId" class="wd-slider__track">
         <!-- 2px 视觉轨道（真机 2026-11-03）：常规流子节点 + 父级 display:flex
              居中，不依赖 top:50% / transform，也不参与 z-index 层序。
              胶囊主题的轨道底色由 __bar 自身承担，故只在默认主题渲染。 -->
@@ -830,27 +836,9 @@ const onDotTouchMove = (event: any) => {
         </template>
       </view>
 
-      <!-- 进度条 + 滑块（main-thread-ref 供 worklet 跟手直改；
-           left-bound / right-bound 属性向主线程下发范围边界。
-           几何度量的 MT touchstart 挂在本节点：轨道 __bar 上有 @tap（点轨道跳转），
-           而「需要 tap 的节点子树不挂 MT 触摸绑定」是 CONVENTIONS §19 差异 #4
-           的硬规则（wd-picker-view / wd-fab 曾因此回退）。滑块是 __line 的后代，
-           touchstart 会冒泡到这里，度量目标仍是同一条轨道。 -->
-      <view
-        :main-thread-ref="lineRef"
-        :class="lineClass"
-        :style="lineStyle"
-        :main-thread-bindtouchstart="onBarTouchStart"
-        :gesture-min="String(min)"
-        :gesture-max="String(max)"
-        :gesture-step="String(validStep)"
-        :gesture-vertical="String(vertical)"
-        :gesture-range="String(range)"
-        :gesture-disabled="String(isDisabled)"
-        :gesture-version="gestureVersion"
-        :left-bound="String(currentValue[0])"
-        :right-bound="String(currentValue[1])"
-      >
+      <!-- MTS 的 start/end 在 __line，move 在滑块；后台 start/end 在滑块，
+           move 在 __bar。相同元素不重复注册同名 MT/BG 事件，tap 留在 __bar。 -->
+      <view v-bind="lineBindings">
         <!-- 进度条视觉条（真机 2026-11-01：着色从 __line 下沉到这里，
              让 __line 变成能容纳 24px 圆点的定位盒） -->
         <view :class="fillClass" :style="fillStyle" />
@@ -858,6 +846,7 @@ const onDotTouchMove = (event: any) => {
         <!-- 单滑块 / 双滑块左侧 -->
         <view
           :class="`wd-slider__dot ${range ? 'wd-slider__dot--left' : ''}`"
+          gesture-index="0"
           @touchstart="(e: any) => onTouchStart(e, 0)"
           :main-thread-bindtouchmove="onDotTouchMove"
           @touchend="onTouchEnd"
@@ -875,7 +864,7 @@ const onDotTouchMove = (event: any) => {
         <!-- 双滑块右侧 -->
         <view
           v-if="range"
-          :main-thread-ref="dotRRef"
+          gesture-index="1"
           :class="`wd-slider__dot wd-slider__dot--right`"
           @touchstart="(e: any) => onTouchStart(e, 1)"
           :main-thread-bindtouchmove="onDotTouchMove"

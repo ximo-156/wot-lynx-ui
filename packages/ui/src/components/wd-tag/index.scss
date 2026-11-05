@@ -234,13 +234,13 @@ $tag-sizes: (
     align-items: center;
     color: inherit;
     font-size: inherit;
-    line-height: inherit;
+  }
 
-    text {
-      color: inherit;
-      font-size: inherit;
-      line-height: inherit;
-    }
+  .wd-tag__text-content,
+  .wd-tag__text text {
+    color: $tag-color;
+    font-size: $tag-font-size;
+    line-height: $tag-default-line-height;
   }
 
   @include e(border) {
@@ -270,8 +270,13 @@ $tag-sizes: (
   @each $size, $conf in $tag-sizes {
     @include when($size) {
       font-size: map.get($conf, "font-size");
-      line-height: map.get($conf, "line-height");
       padding: map.get($conf, "padding");
+
+      .wd-tag__text-content,
+      .wd-tag__text text {
+        font-size: map.get($conf, "font-size");
+        line-height: map.get($conf, "line-height");
+      }
 
       @include when(round) {
         padding: map.get($conf, "round-padding");
@@ -301,6 +306,11 @@ $tag-sizes: (
       $bg: map.get($conf, "bg");
       $light-bg: map.get($conf, "light-bg");
 
+      .wd-tag__text-content,
+      .wd-tag__text text {
+        color: $color;
+      }
+
       @include when(light) {
         background: $light-bg;
         color: $color;
@@ -309,6 +319,11 @@ $tag-sizes: (
       @include when(dark) {
         background: $bg;
         color: $tag-color;
+
+        .wd-tag__text-content,
+        .wd-tag__text text {
+          color: $tag-color;
+        }
       }
 
       // 覆盖层替代官方伪元素，不为自适应尺寸额外增加 2px 描边。

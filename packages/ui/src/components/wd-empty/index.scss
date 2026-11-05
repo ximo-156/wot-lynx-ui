@@ -36,10 +36,10 @@ $empty-padding-bottom: var(--wot-empty-padding-bottom, $spacing-ultra-loose) !de
   }
 
   @include e(tip) {
-    font-size: inherit;
-    line-height: inherit;
-    font-weight: inherit;
-    color: inherit;
+    font-size: $empty-text-font-size;
+    line-height: $empty-text-line-height;
+    font-weight: $empty-text-font-weight;
+    color: $empty-text-color;
     text-align: center;
     word-break: break-all;
   }
@@ -47,7 +47,6 @@ $empty-padding-bottom: var(--wot-empty-padding-bottom, $spacing-ultra-loose) !de
   @include e(text) {
     margin-top: $empty-text-margin-top;
     font-size: $empty-text-font-size;
-    line-height: $empty-text-line-height;
     font-weight: $empty-text-font-weight;
     color: $empty-text-color;
     text-align: center;

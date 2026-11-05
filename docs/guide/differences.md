@@ -1,6 +1,6 @@
 # 与 wot-ui 的差异
 
-wot-lynx-ui 力求在 API、交互与视觉上与 wot-ui 2.3.2 严格对齐（设计令牌同源、props/events/slots 逐条一致、组件样式逐值一致），但 Lynx 是原生渲染引擎，与 Web/小程序运行时有本质差异。以下是完整的差异清单。
+wot-lynx-ui 以 wot-ui 2.3.2 的 API、交互和度量为参考，在 Lynx 原生渲染管线上独立实现，默认使用项目紫色品牌主题，**不宣称默认视觉逐像素一致**。运行时 props 守卫和 API 清单不能证明所有 TypeScript 类型、交互或 Android/iOS 真机行为都已一致；以下记录已知的实现差异与能力边界。
 
 ## 使用方式差异
 
@@ -92,7 +92,7 @@ Lynx 3.x 启用新 CSS 引擎后 **view 的默认布局是 Lynx 自研的 `linea
 ```vue
 <template>
   <!-- 正确：横向排列的容器显式声明 display:flex -->
-  <view style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px">
+  <view :style="{ display: 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', gap: '10px' }">
     <wd-button>主要按钮</wd-button>
     <wd-button>成功</wd-button>
   </view>
@@ -144,7 +144,7 @@ configureUniAdapter({
 
 ## 已适配保留的能力
 
-- 全部 101 个官方组件的 props / slots / events 定义（含小程序专有 props 的类型兼容；另有 6 个本地扩展组件）
+- 以官方 101 个顶层目录（含空占位）及内部 props 模块的版本化快照做运行时守卫；主入口为 100 个官方有效对应组件与 6 个本地扩展。完整 TypeScript 类型、所有 slots/events 行为和真机验收分别验证，不能由 prop 守卫推导
 - 16 种语言包（`Locale`）
 - `useToast` / `useNotify` 等函数式 API
 - BEM 类名结构（`wd-xxx__element--modifier`）

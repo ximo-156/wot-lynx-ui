@@ -19,6 +19,7 @@ import { checkboxProps, type CheckboxDirection, type CheckboxExpose, type Checkb
 import { useCheckboxGroup } from '../../composables/useCheckboxGroup'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { getPropByPath, isDef, parseStyle } from '../../common/util'
+import { WdTextSlot } from '../../common/textSlot'
 
 const props = defineProps(checkboxProps)
 const emit = defineEmits(['change', 'update:modelValue', 'tap'])
@@ -204,7 +205,7 @@ function toggle(event?: any) {
 <template>
   <view :class="rootClass" :style="rootStyle" @tap="toggle">
     <view v-if="$slots.default" :class="['wd-checkbox__label', customLabelClass]">
-      <slot />
+      <WdTextSlot text-class="wd-checkbox__label-text" :text-maxline="isButton ? 1 : undefined"><slot /></WdTextSlot>
     </view>
 
     <template v-if="isButton">

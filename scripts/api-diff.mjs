@@ -34,12 +34,14 @@
  *
  * ## 用法
  *
+ *   node scripts/api-diff.mjs                               # HEAD → 工作区 meta
  *   node scripts/api-diff.mjs --base v0.1.0
  *   node scripts/api-diff.mjs --base v0.1.0 --md api-changes.md --json api-changes.json --plan codemod-plan.json
  *   node scripts/api-diff.mjs --base v0.1.0 --fail-on major     # CI 用，命中即 exit 1
  *
- * `--base` 既可以是 git ref（读该 commit 的 packages/ui/meta.json），
- * 也可以是本地文件路径（便于对比任意两份快照）。
+ * `--base` 默认 HEAD（最近一次提交），比较该提交与工作区当前的 meta。
+ * 也可以显式指定其他 git ref（读该 commit 的 packages/ui/meta.json），
+ * 或本地文件路径（便于对比任意两份快照）。
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
@@ -649,8 +651,9 @@ function loadBaseMeta(spec) {
   }
 }
 
-function parseArgs(argv) {
-  const args = { base: null, head: DEFAULT_HEAD, json: null, md: null, plan: null, failOn: null, includeDocs: false }
+/** 默认比较最近一次提交与工作区契约，显式 --base 仍可指定其他基准。 */
+export function parseArgs(argv) {
+  const args = { base: 'HEAD', head: DEFAULT_HEAD, json: null, md: null, plan: null, failOn: null, includeDocs: false }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     const next = () => {
@@ -673,16 +676,17 @@ function parseArgs(argv) {
 
 function usage() {
   return [
-    '用法：node scripts/api-diff.mjs --base <git-ref|file> [选项]',
+    '用法：node scripts/api-diff.mjs [--base <git-ref|file>] [选项]',
     '',
     '选项：',
-    '  --head <file>     目标 meta，默认 packages/ui/meta.json',
-    '  --md <file>       写出 Markdown 变更清单',
-    '  --json <file>     写出完整变更清单 JSON',
-    '  --plan <file>     写出迁移计划 JSON（供 codemod 消费）',
-    '  --fail-on <级别>  命中该级别及以上时 exit 1（docs|patch|minor|major）',
-    '  --include-docs    变更清单包含纯描述变更',
-    '  -h, --help        显示本帮助'
+    '  --base <git-ref|file>  基准 meta，默认 HEAD（最近一次提交）',
+    '  --head <file>         目标 meta，默认 packages/ui/meta.json',
+    '  --md <file>           写出 Markdown 变更清单',
+    '  --json <file>         写出完整变更清单 JSON',
+    '  --plan <file>         写出迁移计划 JSON（供 codemod 消费）',
+    '  --fail-on <级别>      命中该级别及以上时 exit 1（docs|patch|minor|major）',
+    '  --include-docs        变更清单包含纯描述变更',
+    '  -h, --help            显示本帮助'
   ].join('\n')
 }
 

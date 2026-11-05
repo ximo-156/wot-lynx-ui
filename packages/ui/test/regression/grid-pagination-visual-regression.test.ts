@@ -230,7 +230,15 @@ describe('宫格：保留参考视觉与动态布局', () => {
     expect(cssValue(content, 'gap')).toBe('0')
     expect(cssValue(rule('wd-grid-item', '.wd-grid-item__content .wd-grid-item__text.is-spaced'), 'margin-top')).toBe('4px')
     expect(cssValue(rule('wd-grid-item', '.wd-grid-item .wd-grid-item__icon'), 'font-size')).toBe('32px')
-    expect(rule('wd-grid', '.wd-grid')['flex-wrap']).toBe('wrap')
+    // 真机 2026-11-04：宫格由「row + flex-wrap」改成「纵向容器 + 每行一个 __row」。
+    // 多行 wrap 容器在真机上高度只按前两行结算（CONVENTIONS §19 差异 #6），
+    // 4 行图标宫格的后两行会被 overflow:hidden 裁掉；行结构把高度改成逐行累加。
+    const grid = rule('wd-grid', '.wd-grid')
+    expect(grid['flex-direction']).toBe('column')
+    expect(grid['flex-wrap']).toBeUndefined()
+    const row = rule('wd-grid', '.wd-grid__row')
+    expect(row['display']).toBe('flex')
+    expect(row['flex-direction']).toBe('row')
   })
 
   it('5列每项20%，label样式和省略属性落在真实text而非无样式子text', async () => {
@@ -249,6 +257,33 @@ describe('宫格：保留参考视觉与动态布局', () => {
     expect(label.classList.contains('is-ellipsis')).toBe(true)
     expect(label.getAttribute('text-maxline')).toBe('1')
     expect(container.querySelector('.wd-grid-item__icon.wd-icon')).toBeTruthy()
+  })
+
+  it('多行宫格按列数切显式行（真机 2026-11-04：多行 wrap 高度只结算前两行）', async () => {
+    const { container } = render({
+      setup: () => () => h(Grid, { column: 5 }, {
+        default: () => Array.from({ length: 12 }, (_, index) => h(GridItem, { key: index, text: String(index) }))
+      })
+    })
+    await flush()
+    const rows = Array.from(container.querySelectorAll('.wd-grid__row'))
+    expect(rows, '12 项 / 5 列应切成 3 行').toHaveLength(3)
+    expect(rows.map((row) => row.children.length)).toEqual([5, 5, 2])
+    // 行内子项宽度仍按列数百分比（宽度基准是行容器 = 宫格内容宽）
+    expect((container.querySelector('.wd-grid-item') as HTMLElement).style.width).toBe('20%')
+
+    // column 缺省（0 = 自动）：全部排一行，与参考源一致
+    const auto = render({
+      setup: () => () => h(Grid, null, {
+        default: () => Array.from({ length: 6 }, (_, index) => h(GridItem, { key: index, text: String(index) }))
+      })
+    })
+    await flush()
+    const autoRows = Array.from(auto.container.querySelectorAll('.wd-grid__row'))
+    expect(autoRows).toHaveLength(1)
+    expect(autoRows[0].children.length).toBe(6)
+    // 自动列数 = 子项数 → 每项等分
+    expect((auto.container.querySelector('.wd-grid-item') as HTMLElement).style.width).toBe(`${100 / 6}%`)
   })
 
   it('自动列数随子项数量更新；指定列数的边框位置对齐参考源', async () => {

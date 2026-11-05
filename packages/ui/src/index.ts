@@ -92,7 +92,7 @@ export { useConfigProvider, mapThemeVarsToCSSVars } from './composables/useConfi
 export { useGlobalConfig } from './composables/useGlobalConfig'
 export { useFormDisabled, FORM_KEY, FORM_ITEM_DISABLED_KEY } from './composables/useFormDisabled'
 export type { FormItemDisabledProvide, FormProvide } from './composables/useFormDisabled'
-export { useLockScroll } from './composables/useLockScroll'
+export { useLockScroll, usePageScrollLock } from './composables/useLockScroll'
 export { useDeviceInfo } from './composables/useDeviceInfo'
 export { usePopover } from './composables/usePopover'
 export { useRadioGroup, RADIO_GROUP_KEY } from './composables/useRadioGroup'
