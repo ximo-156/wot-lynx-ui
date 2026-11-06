@@ -44,7 +44,9 @@ const PALETTE_MAP = {
 
 /** 单值常量：theme.ts 导出名 → SCSS 变量名 */
 const SCALAR_MAP = {
-  PRIMARY_COLOR: '--wot-brand-6',
+  // PRIMARY_COLOR 是「亮色主题主色」（light.scss 的 --wot-primary-6），因 AA
+  // 对比度取 brand-7（brand-6 上白字/作强调文字均仅 4.35:1）；brand-6 仍是品牌色。
+  PRIMARY_COLOR: '--wot-brand-7',
   SECONDARY_COLOR: '--wot-brand-5',
   TEXT_MAIN_COLOR: '--wot-brand-text-main',
   TEXT_SECONDARY_COLOR: '--wot-brand-text-secondary'

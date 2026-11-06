@@ -58,7 +58,7 @@ const emit = defineEmits<{
 
 .checklist__box-tick {
   font-size: 10px;
-  color: #ffffff;
+  color: var(--wot-text-white);
 }
 
 .checklist__body {

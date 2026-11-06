@@ -8,6 +8,11 @@
  * main-thread-bindtouch* worklet 跟手在真机与触发器 tap 合成互扰（展开 /
  * 收起点击无响应），与 wot-ui 对齐退回纯后台拖拽。gap/布局重新缓存边界，
  * draggable 实时下发。页面空白关闭仍依赖宿主 useQueue 点击链路。
+ *
+ * 动作菜单布局（2026-11 真机叠按钮缺陷修复）：根节点显式按度量尺寸定盒
+ * （ROOT_STYLE 的 width/height），菜单容器的百分比定位（bottom: 100% 等）
+ * 才有稳定基准；菜单内部防重叠契约（flex-start 排列、动作项 margin 间距、
+ * flex-shrink: 0 + min-width 防 CJK 折行）见 index.scss。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -127,12 +132,17 @@ function handleLayoutChange(event: any) {
   if (!dragging.value) void measureGeometry()
 }
 
-const ROOT_STYLE = defineStyleKeys({ top: '0px', left: '0px', transition: 'none', 'z-index': '' })
+const ROOT_STYLE = defineStyleKeys({ top: '0px', left: '0px', width: '0px', height: '0px', transition: 'none', 'z-index': '' })
 const rootStyle = computed(() => {
   void commitTick.value
   return {
     ...resolveStyle(ROOT_STYLE, {
       top: `${top.value}px`, left: `${left.value}px`,
+      // 根节点按度量到的触发器尺寸显式定盒：动作菜单的 bottom/top/left/
+      // right: 100% 与四边 gap 都基于这个盒结算，auto 盒在部分引擎下
+      // 结算不稳定（真机菜单整体压住触发器）。首帧用文档约定的 60px
+      // 回退几何，度量回来后由 measureGeometry 刷新。
+      width: `${fabSize.width}px`, height: `${fabSize.height}px`,
       transition: attractTransition.value ? 'all ease 0.3s' : 'none',
       'z-index': props.zIndex
     }),

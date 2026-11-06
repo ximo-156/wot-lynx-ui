@@ -11,7 +11,7 @@ import { demoImage } from '../assets/demo-images'
  * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
  * 真机排查第一时间看它，避免"改了没生效"的误判。
  */
-const buildTag = 'R8 · 弹层贴左上角修复（popup 定位 harness）'
+const buildTag = 'R11 · 滑动验证无滑块 / 永远不过（首屏度量补测）'
 
 /**
  * 全量渲染清单（component-checks.ts 的 6 组，共 106 条）。
@@ -217,7 +217,9 @@ const safeAreaText = computed(() => {
         </view>
         <view class="row">
           <wd-button disabled>禁用</wd-button>
-          <wd-button type="primary" loading loading-color="#fff">加载中</wd-button>
+          <!-- 不显式传 loading-color：loading 前景色跟随按钮文字色（暗色下随
+               --wot-button-main-color 翻成深色墨，白环压浅色主底会不可见） -->
+          <wd-button type="primary" loading>加载中</wd-button>
           <wd-button type="danger" round>圆角</wd-button>
           <wd-button type="primary" block>块级</wd-button>
         </view>
@@ -399,8 +401,11 @@ const safeAreaText = computed(() => {
         <text class="card__title">{{ testSections[7].title }}</text>
         <text class="card__hint">{{ testSections[7].hint }}</text>
         <view class="row">
-          <wd-button size="small" :type="themeMode === 'light' ? 'primary' : 'default'" @tap="themeMode = 'light'">亮色</wd-button>
-          <wd-button size="small" :type="themeMode === 'dark' ? 'primary' : 'default'" @tap="themeMode = 'dark'">暗色</wd-button>
+          <!-- 未选中态用 info（中性类型）而非 'default'：ButtonType 只有
+               primary/success/info/warning/danger，'default' 匹配不到任何类型
+               规则 → 无背景、无色文本，暗色下整粒按钮不可见（2026-11-05 截图） -->
+          <wd-button size="small" :type="themeMode === 'light' ? 'primary' : 'info'" @tap="themeMode = 'light'">亮色</wd-button>
+          <wd-button size="small" :type="themeMode === 'dark' ? 'primary' : 'info'" @tap="themeMode = 'dark'">暗色</wd-button>
           <text class="tag">当前：{{ themeMode }}</text>
         </view>
         <!-- themeVars 覆盖：嵌套 provider 需显式透传 theme，否则回退默认 light -->

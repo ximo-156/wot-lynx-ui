@@ -81,7 +81,10 @@ describe('theme.ts 色板镜像与 theme/base/color.scss 一致', () => {
   }
 
   it('语义色镜像与品牌主色、主次文字及暗色可读性一致', () => {
-    expect(normalizeHex(theme.PRIMARY_COLOR)).toBe('#755FFE')
+    // PRIMARY_COLOR = 亮色主题主色（light.scss 的 --wot-primary-6）。2026-11-05
+    // 因 AA 对比度从 brand-6(#755FFE，白字 4.35:1) 改取 brand-7(#5F48D9，6.17:1)；
+    // brand-6 仍是品牌色（logo 等非文字场景），BRAND[6] 本身未动。
+    expect(normalizeHex(theme.PRIMARY_COLOR)).toBe('#5F48D9')
     expect(normalizeHex(theme.SECONDARY_COLOR)).toBe('#9A89FF')
     // 次文字直接与 color.scss 对齐（不写死字面量）：此前钉的是 #979797，
     // 反而让「JS 侧与 SCSS 侧同源」这条守护失效。值已因 AA 对比度改为

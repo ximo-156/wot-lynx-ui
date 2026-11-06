@@ -42,31 +42,46 @@
   /* 中性色 */
   /* 文字 */
   --wot-text-main: var(--wot-coolgrey-1);
-  --wot-text-secondary: var(--wot-coolgrey-3);
+  /* 次文字：coolgrey-3 与 text-main（coolgrey-1）仅差 2 档，暗色下主/次层级
+     几乎拉不开（19:1 vs 17:1，亮色为 15.5:1 vs 4.9:1）。取 coolgrey-4
+     （#C9CBD4，对表面约 11:1）恢复与亮色一致的递减韵律。 */
+  --wot-text-secondary: var(--wot-coolgrey-4);
   --wot-text-auxiliary: var(--wot-coolgrey-5);
   --wot-text-disabled: var(--wot-coolgrey-7);
-  --wot-text-placeholder: var(--wot-coolgrey-6);
+  /* placeholder 并入 auxiliary（coolgrey-5）：原 coolgrey-6 对表面 #272B3B 仅
+     4.10:1，不达 AA；与亮色侧「auxiliary/placeholder 同档」的取舍一致。 */
+  --wot-text-placeholder: var(--wot-coolgrey-5);
   --wot-text-white: var(--wot-base-white);
   /* 图标 */
   --wot-icon-main: var(--wot-coolgrey-1);
-  --wot-icon-secondary: var(--wot-coolgrey-3);
+  /* 同 text-secondary：coolgrey-3 与 main 拉不开层级，取 coolgrey-4 */
+  --wot-icon-secondary: var(--wot-coolgrey-4);
   --wot-icon-auxiliary: var(--wot-coolgrey-5);
   --wot-icon-disabled: var(--wot-coolgrey-7);
   --wot-icon-placeholder: var(--wot-coolgrey-6);
   --wot-icon-white: var(--wot-base-white);
   /* 边框 */
-  --wot-border-extra-strong: var(--wot-coolgrey-3);
-  --wot-border-strong: var(--wot-coolgrey-5);
-  --wot-border-main: var(--wot-coolgrey-7);
-  --wot-border-light: var(--wot-coolgrey-9);
+  /* 暗色边框走「白色透明度」阶梯而非 coolgrey 实色：表面（filled-oppo）为
+     coolgrey-9，coolgrey 实色边框要么沉进表面（light 档）要么过重（main 档）。
+     白阶透明度与 divider/feedback 同源，叠在任意明暗底上都保持「亮色下
+     coolgrey-2/3/4/6 的轻→重」同一相对层级。 */
+  --wot-border-extra-strong: var(--wot-opacwhite-6_30);
+  --wot-border-strong: var(--wot-opacwhite-4_15);
+  --wot-border-main: var(--wot-opacwhite-3_08);
+  --wot-border-light: var(--wot-opacwhite-2_04);
   --wot-border-white: var(--wot-base-white);
   --wot-border-zero: var(--wot-base-transparent);
   /* 填充 */
+  /* 暗色填充阶梯按「海拔」排列：页面最暗（纯黑），控件轨道/凹陷次之，
+     表面（卡片、弹层）再次，强填充（hover/按压）最亮——与亮色的
+     「白页 > 灰轨 > 白卡」镜像对应。历史上 filled-oppo 直接取纯黑，
+     表面比页面还暗，卡片在页面里「沉底」而非「浮起」，且黑色半透明遮罩
+     （toast 气泡）叠在纯黑表面上整体消失。 */
   --wot-filled-extra-strong: var(--wot-coolgrey-7);
   --wot-filled-strong: var(--wot-coolgrey-8);
-  --wot-filled-content: var(--wot-coolgrey-9);
-  --wot-filled-bottom: var(--wot-coolgrey-10);
-  --wot-filled-oppo: var(--wot-base-black);
+  --wot-filled-content: var(--wot-coolgrey-10);
+  --wot-filled-bottom: var(--wot-base-black);
+  --wot-filled-oppo: var(--wot-coolgrey-9);
   --wot-filled-zero: var(--wot-base-transparent);
   /* 分割线 */
   --wot-divider-main: var(--wot-opacwhite-3_08);
@@ -78,7 +93,11 @@
   --wot-feedback-active: var(--wot-opacwhite-3_08);
   --wot-feedback-accent: var(--wot-brand-opac);
   /* 填充色-透明度 */
-  --wot-opacfilled-tooltip-toast-cover: var(--wot-opac-9_75);
+  /* toast / 滑块气泡的「悬浮面」：黑色半透明遮罩（opac-9_75）叠在纯黑页面
+     上整体不可见（2026-11-05 真机截图：暗色下 toast 只剩白色文字、没有底）。
+     暗色改取 coolgrey-8 实色——比表面（coolgrey-9）高一级、文字仍为白色，
+     对比度约 7:1；亮色保持黑遮罩不变（深色pill 是亮色下的既定视觉）。 */
+  --wot-opacfilled-tooltip-toast-cover: var(--wot-coolgrey-8);
   --wot-opacfilled-main-cover: var(--wot-opac-7_55);
   --wot-opacfilled-light-cover: var(--wot-opac-6_30);
   /* Picker View Mask */
@@ -90,6 +109,13 @@
   --wot-bg-color-disabled: var(--wot-filled-strong);
   --wot-border-color: var(--wot-border-main);
   --wot-border-color-light: var(--wot-border-light);
+  /* 主色底上的前景色：暗色下保持白字（2026-11-06 用户确认，勿再「修」）。
+     暗色主色阶梯是「提亮」取向（primary-6=brand-5、success/danger/warning-main
+     取 -5 档），白字压在这些浅色底上约 1.9–2.8:1——这是**有意的设计选择**：
+     用户要「彩色底 + 白字」的统一观感（亮色亦然），接受该对比度。
+     2026-11-05 曾把这批组件前景令牌翻成 coolgrey-10 深色墨以满足 WCAG AA，
+     已按用户要求撤销；若哪天要两者兼得，正确做法是把暗色实心底整体下沉一档
+     （如 dark.scss 的 primary-6 改指 brand-7），而不是翻前景色。 */
   /* 分类色 */
   /* 黄色 */
   --wot-classifyapplication-yellow-background: var(--wot-yellow-10);

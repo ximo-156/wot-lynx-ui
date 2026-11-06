@@ -72,6 +72,10 @@ const OPEN_TYPE_EVENTS: Partial<Record<ButtonOpenType, OpenTypeEvent>> = {
  * palette rather than treating every non-solid type as primary, or using the
  * plain-text token for a solid button (which makes its foreground equal its bg).
  * Arbitrary stylesheet overrides still need a concrete color via themeVars.
+ *
+ * 实心按钮前景恒为白字：暗色主色阶梯是提亮取向（-5 档），白字压浅色底约
+ * 2.8:1——2026-11-06 用户确认的「彩色底 + 白字」统一观感，有意接受该对比度
+ * （dark.scss 同处有说明，勿再翻成深色墨）。loading 圆环与图标走这条计算值。
  */
 const buttonTextColor = computed(() => {
   const themeVars = globalConfig.value.themeVars as Record<string, string>

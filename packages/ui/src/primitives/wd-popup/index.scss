@@ -79,7 +79,6 @@ $popup-radius: var(--wot-popup-radius, $radius-large) !default;
       border-radius: 0 $popup-radius $popup-radius 0;
     }
   }
-
   @include m(right) {
     @include when(round) {
       border-radius: $popup-radius 0 0 $popup-radius;
@@ -97,4 +96,15 @@ $popup-radius: var(--wot-popup-radius, $radius-large) !default;
       border-radius: $popup-radius $popup-radius 0 0;
     }
   }
+}
+
+/* 主轴占位（真机 2026-11-05 修复）：贴边弹层的位置由本空 view 的
+   flex-grow 吸收 harness 主轴剩余空间完成——真机上 justify-content 的
+   flex-start / flex-end 被按 center 处理（center 本身正常），写边值
+   定位又会撞上「缺边按 0 锚定」（CONVENTIONS §19 差异 #2）。flex-grow
+   是真机可用路径（wd-cell 的 __left / __right 同机制），故占位只声明
+   这一项；空内容 + basis 取默认 auto（= 0）即可吃掉全部剩余空间。
+   指针事件继承 harness 的 none，不拦截遮罩关闭点击。 */
+.wd-popup-spacer {
+  flex-grow: 1;
 }

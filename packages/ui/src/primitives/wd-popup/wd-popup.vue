@@ -118,6 +118,18 @@ const viewportHeight = ref(812)
  *
  * 注：过渡帧（slide-up / zoom-in 等）的 transform 必须留在面板上——若挂到
  * 全屏 harness，整屏都会跟着位移/缩放，动画语义就变了。
+ *
+ * 主轴摆位用「flex-grow 占位」而非 justify-content 边值（真机 2026-11-05
+ * 复测，用户截图反馈「适配太差」）：center 弹层（Dialog / Toast）经
+ * justify-content: center 正常居中，但 flex-start / flex-end 在真机上被
+ * 按 center 处理——贴边弹层（底部 Popup / Picker / 时间选择器 / 侧边抽屉）
+ * 整片贴在屏幕正中而非贴边。改为主轴放一个 `flex-grow: 1` 的空占位 view
+ * 吸收剩余空间，把面板挤到目标边；flex-grow 本身在真机可用（同页
+ * wd-cell 的 __left / __right flex: 1 两端对齐即证据），且不依赖
+ * 「单边 edge 定位」——真机对缺边按 0 锚定（CONVENTIONS §19 差异 #2），
+ * `bottom: 0` 单独使用会被缺省 top 的 0 值顶掉（pre-R8 贴左上角同源）。
+ * 占位在面板前 = 挤向主轴末端（bottom / right），在面板后 = 挤向主轴
+ * 起点（top / left）；center 两侧都不放，沿用已验证的 flex 居中。
  */
 const HARNESS_STYLE = defineStyleKeys({
   position: 'fixed',
@@ -139,7 +151,16 @@ const HARNESS_STYLE = defineStyleKeys({
   'z-index': '10'
 })
 
-/** 每个弹出位置的 harness 主轴对齐（键集恒定，只换值，Style Funnel §20） */
+/**
+ * 每个弹出位置的 harness 主轴对齐（键集恒定，只换值，Style Funnel §20）。
+ *
+ * 注：主轴**摆位**已改由 flex-grow 占位 view 承担（真机 2026-11-05 复测：
+ * justify-content 只有 center 生效，flex-start / flex-end 被按 center
+ * 处理，贴边弹层会贴在屏幕正中）。这里的边值保留为兜底——占位正常工作时
+ * 主轴已无剩余空间可分配，边值不起作用；占位万一失效时仍尽量靠边。
+ * 侧边抽屉把主轴换成横向：贴左/贴右由 justify-content 决定，高度由交叉轴
+ * （align-items: center + 面板定高）铺满。
+ */
 const HARNESS_ALIGNMENT: Record<PopupType, Record<string, string>> = {
   center: { 'justify-content': 'center' },
   top: { 'justify-content': 'flex-start' },
@@ -159,6 +180,16 @@ const harnessStyle = computed(() => resolveHarnessStyle(
     height: `${viewportHeight.value}px`
   }
 ))
+
+/**
+ * 主轴占位 view 的摆位（详见文件头「主轴摆位用 flex-grow 占位」注释）。
+ * bottom / right：占位在面板**前**，吸收主轴前段空间，把面板挤到末端；
+ * top / left：占位在面板**后**，吸收主轴后段空间，把面板顶到起点；
+ * center：不放占位，面板是 harness 唯一流式子项，由 justify-content:
+ * center 居中（真机已验证）。
+ */
+const spacerBefore = computed(() => props.position === 'bottom' || props.position === 'right')
+const spacerAfter = computed(() => props.position === 'top' || props.position === 'left')
 
 /**
  * 内层面板（过渡根）样式：全量键集防止 position/customStyle 变动后留下旧边、
@@ -276,6 +307,9 @@ function close() {
         @click="handleClickModal"
       />
       <view class="wd-popup-harness" :style="harnessStyle">
+        <!-- 主轴占位：贴边弹层把面板挤到目标边（flex-grow，真机可用）；
+             center 不渲染，面板经 justify-content: center 居中 -->
+        <view v-if="spacerBefore" class="wd-popup-spacer" />
         <WdTransition
           :lazy-render="lazyRender"
           :custom-class="rootClass"
@@ -295,6 +329,7 @@ function close() {
           <slot />
           <WdIcon v-if="closable" custom-class="wd-popup__close" name="close" @tap="close" />
         </WdTransition>
+        <view v-if="spacerAfter" class="wd-popup-spacer" />
       </view>
     </view>
   </WdRootPortal>
@@ -311,6 +346,9 @@ function close() {
       @click="handleClickModal"
     />
     <view class="wd-popup-harness" :style="harnessStyle">
+      <!-- 主轴占位：贴边弹层把面板挤到目标边（flex-grow，真机可用）；
+           center 不渲染，面板经 justify-content: center 居中 -->
+      <view v-if="spacerBefore" class="wd-popup-spacer" />
       <WdTransition
         :lazy-render="lazyRender"
         :custom-class="rootClass"
@@ -330,6 +368,7 @@ function close() {
         <slot />
         <WdIcon v-if="closable" custom-class="wd-popup__close" name="close" @tap="close" />
       </WdTransition>
+      <view v-if="spacerAfter" class="wd-popup-spacer" />
     </view>
   </view>
 </template>

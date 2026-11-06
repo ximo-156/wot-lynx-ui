@@ -517,7 +517,15 @@ describe('wot 2.3.2 scroll additional parity: sticky and box', () => {
 
 describe('wot 2.3.2 scroll additional parity: indexes', () => {
   it('duplicates map sidebar targets to the real child, numeric/string keys stay distinct and ids remain unique', async () => {
-    const query = mockQuery((selector) => selector.endsWith('-sidebar') ? rect(24, 100, 100) : rect(300, 30, 0))
+    // 锚点按唯一索引给不同内容坐标（B=100 / '0'=200）：实测几何下跳转走官方
+    // scrollTo，偏移即锚点内容坐标，可校验命中正确锚点（2026-11-05 原生 API 修复）
+    const query = mockQuery((selector) => {
+      if (selector.endsWith('-sidebar')) return rect(24, 100, 100)
+      const label = /-anchor-([A-Za-z0-9]+)(?:-\d+)?$/.exec(selector)?.[1]
+      if (label === 'B') return rect(300, 30, 100)
+      if (label === '0') return rect(300, 30, 200)
+      return rect(300, 30, 0)
+    })
     const indexes: Array<string | number> = ['A', 'A', 'B', 0, '0']
     const { container } = render({ setup: () => () => h('view', null, [
       h(IndexBar, { sticky: true }, { default: () => h(Fragment, null, indexes.map((index, key) => h(IndexAnchor, { index, key }))) }),
@@ -533,7 +541,12 @@ describe('wot 2.3.2 scroll additional parity: indexes', () => {
     fireEvent.touchstart(sidebar)
     fireEvent.touchmove(sidebar, { touches: [{ pageY: 135 }] }) // second unique entry B, not duplicate A
     await frames(1)
-    expect(query.jumps().slice(-1)[0].selector).toBe(`#${anchors[2].id}`)
+    // 官方 scrollTo：目标为内容 scroll-view，偏移 = 锚点 B 的内容坐标 100，跟手瞬时
+    const scroll = query.scrolls().slice(-1)[0]
+    expect(scroll.selector).toBe(`#${bars[0].querySelector('.wd-index-bar__content')!.id}`)
+    expect(scroll.params.params.offset).toBe(100)
+    expect(scroll.params.params.smooth).toBe(false)
+    expect(query.jumps(), '实测几何下不再依赖 scrollIntoView').toHaveLength(0)
     expect(bars[0].querySelector('.wd-index-bar__current-index')!.textContent).toBe('B')
     expect(anchors[2].classList.contains('is-sticky')).toBe(true)
     expect(anchors[1].classList.contains('is-sticky')).toBe(false)

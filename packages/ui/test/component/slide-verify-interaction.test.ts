@@ -236,3 +236,124 @@ describe('WdSlideVerify 实时验证', () => {
     restore()
   })
 })
+
+/**
+ * 真机 2026-11-05 缺陷回归：「向右滑动验证没有滑动按钮，又没有正常的效果」。
+ *
+ * 根因：容器尺寸只在 onMounted 经 getRect 度量一次，真机首帧布局未完成时
+ * 拿到 0（wd-slider 同款缺陷）。尺寸为 0 时：
+ *   1. 轨道内联宽度 = 0 + 0 = 0px——overflow:hidden 的轨道把 40×40 滑块
+ *      整块裁掉 → 没有滑动按钮；
+ *   2. maxPosition = 0——fail-closed 永远判不过 → 没有正常的效果。
+ * 修复：根节点 layoutchange 补度量 + 手势开始/落定前补测 + 轨道 CSS
+ * min-width 保底 + 几何经属性同步下发主线程。
+ */
+describe('WdSlideVerify 度量兜底（真机 2026-11-05）', () => {
+  it('首帧度量为 0：layoutchange 补度量后轨道宽 = 容器高（滑块不再被裁）', async () => {
+    // 不装 stub：getRect 在测试环境走 SelectorQuery 失败兜底 → 尺寸 0，
+    // 等价真机首帧「布局未完成」拿到 0
+    const { container } = render(SlideVerify, {} as any)
+    await pause(50)
+
+    const root = container.querySelector('.wd-slide-verify')!
+    const track = container.querySelector('.wd-slide-verify__track')!
+
+    // 首帧度量不可用：轨道内联宽度 0px（滑块被 overflow:hidden 裁掉）
+    expect(styleOf(track)).toMatch(/width:\s*0px/)
+
+    // 布局完成：原生 layoutchange 带上真实矩形
+    fireEvent.layoutchange(root, { detail: { layout: { width: 300, height: 44 } } })
+    await pause(20)
+
+    // 补度量后轨道宽 = 当前位置 0 + 容器高 44 → 44px 滑块完整可见
+    expect(styleOf(track)).toMatch(/width:\s*44px/)
+    // 几何经元素属性同步下发主线程（worklet 同步可取，见 mts 用例）
+    expect(track.getAttribute('container-width')).toBe('300')
+    expect(track.getAttribute('container-height')).toBe('44')
+
+    cleanup()
+  })
+
+  it('layoutchange 的 detail 直接为矩形时同样补度量', async () => {
+    const { container } = render(SlideVerify, {} as any)
+    await pause(50)
+
+    const root = container.querySelector('.wd-slide-verify')!
+    const track = container.querySelector('.wd-slide-verify__track')!
+    expect(styleOf(track)).toMatch(/width:\s*0px/)
+
+    fireEvent.layoutchange(root, { detail: { width: 300, height: 44 } })
+    await pause(20)
+    expect(styleOf(track)).toMatch(/width:\s*44px/)
+
+    cleanup()
+  })
+
+  it('度量缺失时落定前补测：拖到末端仍判通过（不误判 fail）', async () => {
+    const events: string[] = []
+    const { container } = render(SlideVerify, {
+      onSuccess: () => events.push('success'),
+      onFail: () => events.push('fail')
+    } as any)
+    await pause(50)
+
+    const button = container.querySelector('.wd-slide-verify__button')!
+    const track = container.querySelector('.wd-slide-verify__track')!
+
+    // 手势期间补测才落地（真机 onMounted 首帧 0，手势中 getRect 才回调）
+    const restore = stubRects()
+    fireEvent.touchstart(button, { touches: [{ clientX: 0, clientY: 0 }] })
+    await pause(20)
+    fireEvent.touchend(button, { touches: [], changedTouches: [{ clientX: 300, clientY: 0 }] })
+    await pause(50)
+
+    // 补测拿到 300×44 → maxPosition 256 → 拖到 300（clamp 256）判通过
+    expect(events).toContain('success')
+    expect(events).not.toContain('fail')
+    expect(styleOf(track)).toMatch(/width:\s*300px/)
+
+    restore()
+    cleanup()
+  })
+
+  it('layoutchange 迟到不冲掉已度量尺寸（0 矩形被忽略）', async () => {
+    const restore = stubRects()
+    const { container } = render(SlideVerify, {} as any)
+    await pause(50)
+
+    const root = container.querySelector('.wd-slide-verify')!
+    const track = container.querySelector('.wd-slide-verify__track')!
+    // onMounted 度量成功：0 + 44 = 44px
+    expect(styleOf(track)).toMatch(/width:\s*44px/)
+
+    // 布局未完成的首帧回调（0 矩形）不得把已度量尺寸冲掉
+    fireEvent.layoutchange(root, { detail: { layout: { width: 0, height: 0 } } })
+    await pause(20)
+    expect(styleOf(track)).toMatch(/width:\s*44px/)
+
+    restore()
+    cleanup()
+  })
+
+  it('layoutchange 声明为 emit 并转发（消费方监听不穿透合并成数组）', async () => {
+    // CONVENTIONS §14：根元素挂 @layoutchange 后，消费方的同名监听必须走
+    // emit 通道。否则穿透 $attrs 与根监听被 mergeProps 合并成数组，设备上
+    // 事件到达即抛 registry TypeError（event-registry 全覆盖测试守这条）。
+    const events: any[] = []
+    const { container } = render(SlideVerify, {
+      onLayoutchange: (e: any) => events.push(e)
+    } as any)
+    await pause(50)
+
+    const root = container.querySelector('.wd-slide-verify')!
+    fireEvent.layoutchange(root, { detail: { layout: { width: 300, height: 44 } } })
+    await pause(20)
+
+    // 转发到消费方 + 补度量生效
+    expect(events.length).toBe(1)
+    expect(events[0]?.detail?.layout).toEqual({ width: 300, height: 44 })
+    expect(styleOf(container.querySelector('.wd-slide-verify__track'))).toMatch(/width:\s*44px/)
+
+    cleanup()
+  })
+})

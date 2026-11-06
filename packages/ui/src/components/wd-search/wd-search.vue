@@ -11,8 +11,9 @@
  *   且 showPlaceHolder / showInput 双状态在中间态可同时为真 → 封面残留
  *   与原生 input 并存，双占位文字 + 图标叠印）；
  * - @click → @tap（CONVENTIONS §6：Lynx view/图标只派发 tap）；
- * - 原生 input 用 :value 受控绑定 + @input 回写（vue-lynx 运行时对原生
- *   元素不挂 vModel 指令），语义与参考源 v-model 一致；
+ * - 原生 input 用 :value 受控绑定 + @input 回写，语义与参考源 v-model
+ *   一致；程序化改写另经 useNativeInputValue 走原生 setValue 通道（真机上
+ *   :value 属性通道刷新不了用户已输入过的输入框，见该 composable 注释）；
  * - customStyle 经 parseStyle() 归一为对象后下发；
  * - 使用官方 search-line / close-circle-fill 图标，保留原始图形与尺寸；
  * - pause() 续写前经 useAlive() 判存活，避免卸载后晚到 patch（真机 9902）；
@@ -28,6 +29,7 @@ import { searchProps } from './types'
 import { pause, parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
+import { useNativeInputValue } from '../../composables/useNativeInputValue'
 
 const props = defineProps(searchProps)
 const emit = defineEmits(['update:modelValue', 'change', 'clear', 'search', 'focus', 'blur', 'cancel', 'click'])
@@ -38,6 +40,14 @@ const { translate } = useTranslate('search')
 const isFocused = ref<boolean>(false) // 是否聚焦中
 const showInput = ref<boolean>(false) // 是否显示输入框 用于实现聚焦的hack
 const inputValue = ref<string>('') // 输入框的值
+/**
+ * 原生输入框受控值同步（真机 setValue 通道）。
+ *
+ * 程序化改写 inputValue（清除 / 外部受控）必须经该通道推送，否则真机上
+ * 输入框文本不刷新——清除图标就是因此「点了没反应」。Web 预览的属性
+ * 通道全绿，该类缺陷只在真机暴露。
+ */
+const { inputId, markNativeValue } = useNativeInputValue(inputValue, 'wd-search')
 const clearing = ref<boolean>(false)
 let inputRequest = 0
 let focusRequest = 0
@@ -112,6 +122,9 @@ function handleInput(event: any) {
   // Lynx 适配：:value 受控绑定下用 detail.value 回写 inputValue
   //（参考源经 v-model 由运行时回写）
   inputValue.value = event.detail.value
+  // 原生输入框本就显示用户敲的内容，标记已同步避免重复 setValue 打扰
+  // IME 光标（程序化改写才需要推送，见 useNativeInputValue）
+  markNativeValue(inputValue.value)
   emit('update:modelValue', inputValue.value)
   emit('change', {
     value: inputValue.value
@@ -209,6 +222,7 @@ function handleClick() {
         <WdIcon v-if="placeholderLeft || showInput || inputValue" name="search-line" custom-class="wd-search__search-left-icon"></WdIcon>
         <input
           v-if="placeholderLeft || showInput || inputValue"
+          :id="inputId"
           :placeholder="placeholder || translate('search')"
           :placeholder-class="`wd-search__placeholder-txt ${placeholderClass}`"
           :placeholder-style="placeholderStyle"

@@ -6,6 +6,11 @@
   flex-direction: column;
   flex-shrink: 0;
   position: relative;
+  // 真机层序（CONVENTIONS §19 定位 FAQ）：列根是固定单元格
+  // （.wd-table__cell.is-fixed 的 sticky + z-index:1）的直接父级，必须自带
+  // 层叠上下文把列层级收在表体以内；缺这一层时真机不绘制整棵列子树
+  // （与 wd-slider __bar / wd-table __content 同款修法）。
+  z-index: 0;
   overflow: visible;
 
   @include when(fixed) {

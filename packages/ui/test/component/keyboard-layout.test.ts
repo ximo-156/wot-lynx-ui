@@ -119,6 +119,11 @@ describe('WdKeyboard 键盘布局与交互', () => {
     expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__row\{[^}]*display:flex[^}]*flex-direction:row/)
     expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__car-keys \.wd-key-wrapper\{flex-basis:10%/)
     expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__car-keys \.wd-key-wrapper--wider\{flex-basis:20%/)
+    // 侧栏（custom 模式）：删除 / 关闭两个大键各占半高（与 4 行键区的 2 行
+    // 对齐）——关闭键「占满下面两个」而不是缩成一格。wrapper 的 33% 是键区
+    // 横排基准，侧栏是纵向列，不改写会把两个键都压成 1 格多、底部空出一大片
+    // （2026-11-05 用户反馈）。DOM 断言看不到高度分配，只能锁 CSS 产物。
+    expect(KEYBOARD_CSS).toMatch(/\.wd-keyboard__sidebar \.wd-key-wrapper\{flex-basis:50%/)
     // wrapper 基准在 key/index.css（按键自身样式文件）
     expect(KEY_CSS).toMatch(/\.wd-key-wrapper\{[^}]*flex-basis:33%/)
     expect(KEY_CSS).toMatch(/\.wd-key-wrapper--wider\{flex-basis:66%/)

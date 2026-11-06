@@ -5,14 +5,16 @@
 $fab-trigger-width: var(--wot-fab-trigger-width, $n-60) !default;
 // 浮动按钮触发器高度
 $fab-trigger-height: var(--wot-fab-trigger-height, $n-60) !default;
-// 动作列表主轴内边距
-$fab-actions-padding: var(--wot-fab-actions-padding, $padding-extra-loose) !default;
 // 浮动按钮层级
 $fab-z-index: var(--wot-fab-z-index, 99) !default;
 // 动作按钮展开/收起动画偏移距离
 $fab-transition-offset: var(--wot-fab-transition-offset, $n-40) !default;
 // 浮动按钮触发器图标大小
 $fab-trigger-icon-size: var(--wot-fab-trigger-icon-size, $n-32) !default;
+// 动作项间距：同时是「动作项之间」与「菜单—触发器之间」的间距
+$fab-actions-gap: var(--wot-fab-actions-gap, $spacing-tight) !default;
+// 动作项最小宽度：CJK 文案的单行余量（压窄折行防护，见下方动作项规则）
+$fab-action-min-width: var(--wot-fab-action-min-width, $n-64) !default;
 
 @include b(fab) {
   position: fixed;
@@ -65,24 +67,20 @@ $fab-trigger-icon-size: var(--wot-fab-trigger-icon-size, $n-32) !default;
     // 动作菜单基础方向（column）：四个方向修饰类（--top / --bottom /
     // --left / --right）在后方同权重覆盖，DOM 恒定带其中一个
     flex-direction: column;
-    justify-content: center;
+    // 真机巡检（2026-11 叠按钮缺陷）：绝对定位容器的高度在部分引擎下
+    // 结算不足（甚至为 0），justify-content: center 会把全部动作项压到
+    // 同一行互相叠住。flex-start 下动作项按兄弟顺序从「锚定边」相邻
+    // 排布，位置只取决于容器被 bottom/top/left/right: 100% 钉住的那条
+    // 边，与容器自身高度结算无关。
+    justify-content: flex-start;
     align-items: center;
-    padding: $fab-actions-padding 0;
+    // 不用容器 padding 撑间距：绝对定位容器的 padding 在真机不参与高度
+    // 结算（动作项互相贴死、菜单压住触发器），间距改由动作项自身
+    // margin 承担（见文末动作项规则，wd-calendar-view 同款写法）。
 
     @include m(left, right) {
       height: 100%;
       top: 0;
-      padding: 0 $fab-actions-padding;
-    }
-
-    @include m(left) {
-      flex-direction: row-reverse;
-      right: 100%;
-    }
-
-    @include m(right) {
-      flex-direction: row;
-      left: 100%;
     }
 
     @include m(top, bottom) {
@@ -93,11 +91,54 @@ $fab-trigger-icon-size: var(--wot-fab-trigger-icon-size, $n-32) !default;
     @include m(top) {
       flex-direction: column-reverse;
       bottom: 100%;
+
+      .wd-button {
+        margin-bottom: $fab-actions-gap;
+      }
     }
 
     @include m(bottom) {
       flex-direction: column;
       top: 100%;
+
+      .wd-button {
+        margin-top: $fab-actions-gap;
+      }
+    }
+
+    @include m(left) {
+      flex-direction: row-reverse;
+      right: 100%;
+
+      .wd-button {
+        margin-right: $fab-actions-gap;
+      }
+    }
+
+    @include m(right) {
+      flex-direction: row;
+      left: 100%;
+
+      .wd-button {
+        margin-left: $fab-actions-gap;
+      }
+    }
+
+    // 动作项（默认插槽内容，文档约定为 wd-button）防压窄。
+    // 真机 2026-10-25 wd-tour 同款缺陷复盘：flex 子项被容器压窄后 CJK
+    // 文案逐字折行（按钮文字竖排）、第二行溢出盖住相邻按钮与触发器——
+    // 即「悬浮按钮样式全重叠」的根因。两道防护：
+    //   1) flex-shrink: 0 —— 不允许被容器收缩（图标按钮除外：其圆形
+    //      几何由 .wd-button.is-icon 的 width/min-width 维持）；
+    //   2) min-width —— 文案单行余量；宽度由内容撑开时它只是下限。
+    // 间距落在动作项自身（每个动作项在「朝向触发器的一侧」留 gap，
+    // 见上方各方向修饰类），不依赖绝对定位容器的 padding 结算。
+    .wd-button {
+      flex-shrink: 0;
+
+      &:not(.is-icon) {
+        min-width: $fab-action-min-width;
+      }
     }
   }
 

@@ -107,6 +107,15 @@ export type SlideVerifyEmits = {
   (e: 'success'): void
   /** 验证失败事件 */
   (e: 'fail'): void
+  /**
+   * 容器布局变化（原生 layoutchange 转发，参数为原生事件对象）。
+   *
+   * 根节点挂 @layoutchange 补度量（真机首帧 onMounted 度量可能拿到 0）。
+   * 同名事件必须声明为 emit 并转发：否则消费方的 @layoutchange 监听会
+   * 穿透 $attrs 与根元素自身监听被 mergeProps 合并成数组，设备上事件
+   * 到达即抛 registry TypeError（CONVENTIONS §14，wd-index-bar 同款）。
+   */
+  (e: 'layoutchange', event: any): void
 }
 
 export type SlideVerifyInstance = ComponentPublicInstance<SlideVerifyProps, SlideVerifyExpose>

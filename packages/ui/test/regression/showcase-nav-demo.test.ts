@@ -61,7 +61,9 @@ describe('Showcase Segmented/SwiperNav real demo contracts', () => {
       expect(host.style.height).toBe('88px')
       expect(host.style.width).toBe('100%')
       expect(host.style.display).toBe('flex')
-      expect(host.style.backgroundColor).toBe('rgb(117, 95, 254)')
+      // 演示宿主底色消费主色令牌（亮暗各自取值，暗色无亮色残留）；jsdom 不解析
+      // var()，断言的是令牌引用本身——非空即保证白色导航图标有可见底色。
+      expect(host.style.backgroundColor).toBe('var(--wot-primary-6)')
       expect(host.querySelector(`.wd-swiper-nav--${type}`)).not.toBeNull()
       expect(host.querySelectorAll('.wd-swiper-nav__btn')).toHaveLength(2)
     }

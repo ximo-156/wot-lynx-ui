@@ -21,7 +21,13 @@ export const BRAND = {
   10: '#251A60FF'
 } as const
 
-export const PRIMARY_COLOR = BRAND[6]
+/**
+ * 亮色主题主色（= light.scss 的 --wot-primary-6）。
+ * 取 brand-7 而非 brand-6：primary-6 是「承载白字/作为强调文字」的主色，
+ * brand-6(#755FFE) 上白字仅 4.35:1、对白底作文字同样 4.35:1，均不达 AA；
+ * brand-7(#5F48D9) 两项均 6.17:1。brand-6 仍是品牌色（logo 等非文字场景）。
+ */
+export const PRIMARY_COLOR = BRAND[7]
 export const SECONDARY_COLOR = BRAND[5]
 export const TEXT_MAIN_COLOR = '#2D273DFF'
 export const TEXT_SECONDARY_COLOR = '#6B7085FF'

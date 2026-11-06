@@ -129,5 +129,15 @@ $keyboard-close-padding: var(--wot-keyboard-close-padding, $padding-zero $paddin
     display: flex;
     flex-direction: column;
     flex: 1;
+
+    // 侧栏两个大键（删除 / 关闭）各占半高，即与 4 行键区的 2 行对齐——
+    // 关闭键「占满下面两个」而不是缩成一格。
+    // 注意：wrapper 的 flex-basis:33% 是给键区横排（一行 3 槽）用的，
+    // 侧栏是纵向列，同一基准会把两个键都压成 1 格多、底部空出一大片
+    // （真机 2026-11-05 用户反馈「关闭按钮只占一格」）。这里显式改写
+    // 为 50%，两个键各得 2 行、侧栏刚好撑满。
+    .wd-key-wrapper {
+      flex-basis: 50%;
+    }
   }
 }

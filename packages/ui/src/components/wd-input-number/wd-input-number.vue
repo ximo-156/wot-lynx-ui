@@ -6,17 +6,26 @@
  *   display:flex + flex-direction:row + align-items:center，「减号 /
  *   输入框 / 加号」横向排列且交叉轴居中；加减按钮为显式 flex row +
  *   justify-content:center 容器；
- * - 加减按钮 + 原生 input 元素；:value 受控绑定 + @input 回写（vue-lynx
- *   运行时对原生元素不挂 vModel 指令），语义与参考源 v-model 一致；
+ * - 加减按钮 + 原生 input 元素；:value 受控绑定 + @input 回写，程序化
+ *   改写（归一化 / 加减步进 / 外部受控）另经 useNativeInputValue 走原生
+ *   setValue 通道——真机上 :value 属性通道刷新不了「用户已输入过」的
+ *   输入框（IME 接管后属性更新被吞）：2026-11-05 真机复报，min=0/max=10
+ *   的步进器里键入 33，归一化与加减步进都不回显，表现为「加减没有鸟用」
+ *   （模型其实已变，只是输入框文本不动）。Web 预览的 XInput 属性处理器
+ *   直接写 input.value 所以全绿，该类缺陷只在真机暴露；
  * - @click → @tap（CONVENTIONS §6：Lynx view 只派发 tap）；
  * - 参考源减号/加号字形经 ::before / ::after 伪元素绘制（currentColor），
  *   Lynx 无伪元素，改为模板真实元素 wd-input-number__action-icon（横条）
- *   与 --vertical（竖条），背景取 currentColor，视觉与参考源一致；
+ *   与 --vertical（竖条），背景取具体令牌色，视觉与参考源一致；
  * - 长按连续步进经 touchstart/touchend + 定时器实现（不用 Main Thread
- *   Script，CONVENTIONS §10）；touchmove.stop.prevent 阻止长按拖动期间
- *   页面滚动；touchcancel 与 onUnmounted 兜底清理定时器（参考源仅依赖
- *   touchend，丢失时会无限步进——Lynx 上手势被系统接管时 touchend 可能
- *   丢失，故补兜底）；
+ *   Script，CONVENTIONS §10）；touchcancel 与 onUnmounted 兜底清理定时器
+ *   （参考源仅依赖 touchend，丢失时会无限步进——Lynx 上手势被系统接管时
+ *   touchend 可能丢失，故补兜底）；
+ * - 长按手势监听按 longPress 开关注册（见 useGestureHandlers）：关闭时
+ *   加减按钮上只剩 @tap，与 wd-switch 真机验证过的按钮结构一致——真机上
+ *   元素上的触摸监听与 tap 合成互相干扰（CONVENTIONS §19 差异 #4 同族：
+ *   wd-fab 展开收起点击失效），可选能力不能拖死默认路径；touchmove 只绑
+ *   .stop（catch 语义即「不冒泡 + 父级不滚动」），不绑 .prevent；
  * - 长按已步进时 tap 去重（部分平台长按抬起后仍补发 tap，否则每次长按
  *   结束都会额外步进一次）；去重标志为 setup 作用域 ref，每实例一份
  *   （模块级变量会跨实例串染）；
@@ -32,7 +41,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue-lynx'
+import { computed, nextTick, onUnmounted, ref, watch, withModifiers } from 'vue-lynx'
 import { inputNumberProps, type OperationType } from './types'
 import { addUnit, isDef, isEqual, parseStyle } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
@@ -40,6 +49,7 @@ import { useParent } from '../../composables/useParent'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { callInterceptor } from '../../common/interceptor'
 import { useAlive } from '../../composables/useAlive'
+import { useNativeInputValue } from '../../composables/useNativeInputValue'
 import { FORM_ITEM_VALIDATE_KEY } from '../../composables/useFormItemValidate'
 
 const props = defineProps(inputNumberProps)
@@ -82,6 +92,13 @@ const emit = defineEmits<{
 }>()
 
 const inputValue = ref<string | number>(getInitValue())
+/**
+ * 原生输入框受控值同步（真机 setValue 通道）。
+ *
+ * 程序化改写 inputValue（归一化 / 步进 / 外部受控）必须经该通道推送，
+ * 否则真机上输入框文本不刷新——用户视角就是「加减没有鸟用」。
+ */
+const { inputId, markNativeValue } = useNativeInputValue(inputValue, 'wd-input-number')
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
@@ -95,6 +112,34 @@ let longPressTimer: ReturnType<typeof setTimeout> | null = null
  * 时长按其一会吞掉另一个的 tap（跨实例状态串染）。
  */
 const longPressStepped = ref<boolean>(false)
+
+/**
+ * 长按手势监听——仅 longPress 开启时注册。
+ *
+ * 真机约束（CONVENTIONS §19 差异 #4 同族）：元素上常驻的触摸监听会与 tap
+ * 合成互相干扰（wd-fab「展开收起点击失效」即主线程触摸绑定踩中该条）。
+ * 长按是可选能力（默认关闭），不能让它拖死默认路径：关闭时本对象为空，
+ * 加减按钮上只剩 @tap，与 wd-switch 真机验证过的按钮结构一致。
+ *
+ * touchmove 只绑 .stop（CONVENTIONS §6：catchtouchmove → @touchmove.stop，
+ * Lynx 的 catch 语义即「不冒泡 + 父级滚动容器不滚动」）；vue-lynx 的
+ * withModifiers 对 .prevent 是 no-op（无浏览器默认行为可阻止），写上只会
+ * 误导读者以为在消耗手势。
+ */
+function useGestureHandlers(type: OperationType) {
+  return computed<Record<string, any>>(() => {
+    if (!props.longPress) return {}
+    return {
+      touchstart: () => handleTouchStart(type),
+      touchmove: withModifiers(() => preventTouchMove(), ['stop']),
+      touchend: () => handleTouchEnd(),
+      touchcancel: () => handleTouchEnd()
+    }
+  })
+}
+
+const subGestureHandlers = useGestureHandlers('sub')
+const addGestureHandlers = useGestureHandlers('add')
 
 onUnmounted(() => {
   clearLongPressTimer()
@@ -410,8 +455,10 @@ function handleInput(event: any) {
   const request = ++inputRequest
   const rawVal = String(event.detail?.value ?? '')
 
-  // 立即更新显示
+  // 立即更新显示；原生输入框本就显示用户敲的内容，标记已同步避免重复
+  // setValue 打扰 IME 光标（程序化改写才需要推送，见 useNativeInputValue）
   inputValue.value = rawVal
+  markNativeValue(rawVal)
 
   nextTick(() => {
     if (!isAlive() || request !== inputRequest || isDisabled.value || props.disableInput) return
@@ -460,15 +507,9 @@ function handleFocus(event: any) {
 }
 
 /**
- * 长按连续步进是否已执行过步进（tap 去重标志）。
- *
- * 部分平台在长按抬起后仍会补发一次 tap：@tap 与长按定时器叠加无去重时，
- * 每次长按结束都会额外步进一次。touchstart 重置标志，长按定时器首个步进
- * 置位，tap 消费后跳过当次。标志为 setup 作用域的 ref（每实例一份），
- * 定义见文件头附近。
+ * 加减按钮 tap：长按已步进过时跳过当次，避免重复步进
+ * （去重标志定义见文件头附近）。
  */
-
-/** 加减按钮 tap：长按已步进过时跳过当次，避免重复步进 */
 function handleActionTap(type: OperationType) {
   if (longPressStepped.value) {
     longPressStepped.value = false
@@ -477,7 +518,13 @@ function handleActionTap(type: OperationType) {
   handleClick(type)
 }
 
-/** 长按拖动期间阻止页面滚动（模板层 @touchmove.stop.prevent 承担） */
+/**
+ * 长按拖动期间阻止页面滚动。
+ *
+ * 经模板层 touchmove 的 .stop（catch 语义）承担——不碰 preventDefault：
+ * preventDefault 会消耗整个触摸手势，是 tap 被吞的直接嫌疑（见
+ * useGestureHandlers 注释）。
+ */
 function preventTouchMove() {}
 
 /** 长按连续步进 */
@@ -523,10 +570,7 @@ function clearLongPressTimer() {
     <view
       :class="`wd-input-number__action wd-input-number__sub ${minDisabled || disableMinus ? 'is-disabled' : ''}`"
       @tap="handleActionTap('sub')"
-      @touchstart="handleTouchStart('sub')"
-      @touchmove.stop.prevent="preventTouchMove"
-      @touchend.stop="handleTouchEnd"
-      @touchcancel.stop="handleTouchEnd"
+      v-on="subGestureHandlers"
     >
       <view class="wd-input-number__action-divider" />
       <!-- 减号字形（横条）：参考源为 ::before 伪元素，Lynx 无伪元素改真实元素 -->
@@ -536,6 +580,7 @@ function clearLongPressTimer() {
     <view v-if="!withoutInput" class="wd-input-number__inner" @tap.stop="">
       <input
         class="wd-input-number__input"
+        :id="inputId"
         :style="inputStyle"
         :type="inputType"
         :input-mode="precision ? 'decimal' : 'numeric'"
@@ -552,10 +597,7 @@ function clearLongPressTimer() {
     <view
       :class="`wd-input-number__action wd-input-number__add ${maxDisabled || disablePlus ? 'is-disabled' : ''}`"
       @tap="handleActionTap('add')"
-      @touchstart="handleTouchStart('add')"
-      @touchmove.stop.prevent="preventTouchMove"
-      @touchend.stop="handleTouchEnd"
-      @touchcancel.stop="handleTouchEnd"
+      v-on="addGestureHandlers"
     >
       <view class="wd-input-number__action-divider" />
       <!-- 加号字形（横条 + 竖条）：参考源为 ::before / ::after 伪元素，Lynx 无伪元素改真实元素 -->

@@ -6,9 +6,10 @@
  *   display:flex + flex-direction:row + align-items:center，「前缀图标 /
  *   原生输入框 / 后缀区」横向排列且交叉轴居中；__prefix / __suffix 同为
  *   显式 flex row 容器；
- * - 基于 Lynx 原生 input 元素；参考源用 v-model 双向绑定，vue-lynx 运行时
- *   对原生元素不挂 vModel 指令，故改 :value 受控绑定 + @input 回写
- *   inputValue 后再向上同步（语义与 v-model 一致）；
+ * - 基于 Lynx 原生 input 元素；参考源用 v-model 双向绑定，故改 :value
+ *   受控绑定 + @input 回写 inputValue 后再向上同步（语义与 v-model 一致）；
+ *   程序化改写另经 useNativeInputValue 走原生 setValue 通道（真机上
+ *   :value 属性通道刷新不了用户已输入过的输入框，见该 composable 注释）；
  * - @click → @tap（CONVENTIONS §6：Lynx view/图标只派发 tap）；
  * - customStyle 经 parseStyle() 归一为对象后下发（CONVENTIONS §19）；
  * - 根 view 绑 @tap 并在 emits 声明 'tap' 转发（CONVENTIONS §14：消费方
@@ -31,6 +32,7 @@ import { useTranslate } from '../../composables/useTranslate'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { FORM_ITEM_VALIDATE_KEY } from '../../composables/useFormItemValidate'
 import { useAlive } from '../../composables/useAlive'
+import { useNativeInputValue } from '../../composables/useNativeInputValue'
 
 const props = defineProps(inputProps)
 const emit = defineEmits([
@@ -60,6 +62,14 @@ const clearing = ref<boolean>(false) // 是否正在清空操作，避免重复�
 const focused = ref<boolean>(false) // 控制聚焦
 const focusing = ref<boolean>(false) // 当前是否激活状态
 const inputValue = ref<string | number>(getInitValue()) // 输入框的值
+/**
+ * 原生输入框受控值同步（真机 setValue 通道）。
+ *
+ * 程序化改写 inputValue（清除 / 外部受控 / maxlength 截断）必须经该通道
+ * 推送，否则真机上输入框文本不刷新——clearable 的清除按钮就是因此「点了
+ * 没反应」。Web 预览的属性通道全绿，该类缺陷只在真机暴露。
+ */
+const { inputId, markNativeValue } = useNativeInputValue(inputValue, 'wd-input')
 
 watch(
   () => props.focus,
@@ -202,6 +212,9 @@ function handleInput({ detail }: any) {
   // 不能让 TypeError 击穿事件注册表派发链
   inputRequest++
   inputValue.value = detail?.value ?? ''
+  // 原生输入框本就显示用户敲的内容，标记已同步避免重复 setValue 打扰
+  // IME 光标（程序化改写才需要推送，见 useNativeInputValue）
+  markNativeValue(inputValue.value)
   emit('update:modelValue', inputValue.value)
   emit('input', detail)
 }
@@ -247,6 +260,7 @@ function isValueEqual(value1: number | string, value2: number | string) {
         alignRight ? 'is-align-right' : '',
         customInputClass
       ]"
+      :id="inputId"
       :type="type"
       :password="showPassword && !isPwdVisible"
       :value="String(inputValue)"

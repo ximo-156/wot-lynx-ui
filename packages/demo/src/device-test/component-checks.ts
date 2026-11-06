@@ -44,7 +44,7 @@ export const componentSections: TestSection[] = [
     items: [
       { id: 'r-wd-form', name: 'Form 表单', expect: 'schema 校验错误提示出现在对应项下方；重置后错误态清空' },
       { id: 'r-wd-form-item', name: 'FormItem 表单项', expect: '标题宽度与右对齐正确；必填星号在；错误文案红色可见' },
-      { id: 'r-wd-input-number', name: 'InputNumber 步进器', expect: '减号与加号横竖条都可见（不是空白灰块）；数字居中；禁用态变灰' },
+      { id: 'r-wd-input-number', name: 'InputNumber 步进器', expect: '减号与加号横竖条都可见（不是空白灰块）；数字居中；禁用态变灰；点加减数字要跟着变（2026-11-05 用户复报「加减没有鸟用」：模型变了但输入框文本不刷新——value 属性通道刷不了 IME 接管后的输入框，必须走 setValue，见 CONVENTIONS §19 第 12 条）；键入越界值（如 max=10 时输 33）后点加减应回落到边界值' },
       { id: 'r-wd-search', name: 'Search 搜索框', expect: '只有一份「搜索」占位（封面与 input 不同时出现）；放大镜在框内居中；取消按钮不压输入框' },
       { id: 'r-wd-switch', name: 'Switch 开关', expect: '轨道是完整胶囊不是月牙；滑块圆在轨道内不溢出；开/关切换位移正确' },
       { id: 'r-wd-radio', name: 'Radio 单选框', expect: '未选中圆环可见；选中圆点可见；按钮模式下选中态形状不隐形' },
@@ -56,10 +56,10 @@ export const componentSections: TestSection[] = [
       { id: 'r-wd-segmented', name: 'Segmented 分段器', expect: '每段文字可见（不是空白灰块）；选中滑块位置与宽度贴合当前项' },
       { id: 'r-wd-keyboard', name: 'Keyboard 键盘', expect: '数字键/自定义/车牌三种模式的按键文字与删除键都可见；底部安全区适配' },
       { id: 'r-wd-password-input', name: 'PasswordInput 密码输入框', expect: '未输入的格子是空的（不显示圆点）；已输入的格子显示圆点；光标闪烁位置正确' },
-      { id: 'r-wd-slide-verify', name: 'SlideVerify 滑动验证', expect: '滑块可拖动；文字提示不溢出；成功/失败态颜色正确' },
+      { id: 'r-wd-slide-verify', name: 'SlideVerify 滑动验证', expect: '左侧白色圆角滑块按钮可见（双箭头图标）；按住拖到最右松手 → 轨道变绿 + 成功文案；拖到一半松手回弹；刷新后立刻拖动也要能通过（2026-11-05 用户复报「没有滑动按钮、又没有正常的效果」：首屏 onMounted 度量拿到 0，轨道内联宽度 0px 把滑块裁掉、maxPosition 为 0 永远判不过——已按 R11 补 layoutchange / 补测 / min-width 四层兜底）' },
       { id: 'r-wd-signature', name: 'Signature 签名', expect: '画布可绘制且笔迹跟手；清空按钮生效；画布尺寸不塌陷' },
       { id: 'r-wd-img-cropper', name: 'ImgCropper 图片裁剪', expect: '图片加载后不被拉伸；裁剪框可拖动缩放；确认后回传图片' },
-      { id: 'r-wd-upload', name: 'Upload 上传', expect: '已选图片缩略图可见；删除按钮可点；+ 唤起项不换行错位' },
+      { id: 'r-wd-upload', name: 'Upload 上传', expect: '点「+」弹系统相册；已选图片缩略图可见；删除按钮可点；+ 唤起项不换行错位（选图为 Lynx 原生 input[type=file]，只兼容真机；Web 预览不可用）' },
       { id: 'r-wd-calendar', name: 'Calendar 日历', expect: '月份标题不插进日期网格中间；日期按周对齐；选中/区间底色正确' },
       { id: 'r-wd-calendar-view', name: 'CalendarView 日历视图', expect: '每周一行、每行 7 格；月初空格对齐到正确星期列；月份标题独立成行' }
     ]

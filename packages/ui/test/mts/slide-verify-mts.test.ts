@@ -245,4 +245,41 @@ describe('wd-slide-verify MTS 跟手', () => {
 
     restore()
   })
+
+  it('属性缺失（后台度量未就绪）时回退主线程 invoke：跟手仍然生效', async () => {
+    // 后台 getRect 返回零矩形（真机首帧布局未完成），主线程 invoke 有真实几何
+    ;(globalThis as any).__wdRectStub = () => ({
+      id: '', left: 0, top: 0, right: CONTAINER_W, bottom: CONTAINER_H, width: CONTAINER_W, height: CONTAINER_H
+    })
+    const bgLynx = (globalThis as any).lynxTestingEnv.backgroundThread.globalThis.lynx
+    const origin = bgLynx.createSelectorQuery
+    bgLynx.createSelectorQuery = () => ({
+      select: () => ({
+        invoke: (params: any) => {
+          params.success?.({ id: '', left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 })
+          return { exec: () => {} }
+        }
+      })
+    })
+    const { container } = mount()
+    await pause(50)
+
+    const button = container.querySelector('.wd-slide-verify__button')!
+    const track = container.querySelector('.wd-slide-verify__track')!
+    // 后台度量不可用：容器属性为 0，初始内联宽度 0px
+    expect(track.getAttribute('container-width')).toBe('0')
+    expect(styleOf(track)).toMatch(/width:\s*0px/)
+
+    fireEvent.touchstart(button, { touches: [{ clientX: 0, clientY: 0 }] })
+    // 轨道 worklet：属性为 0 → 回退 invoke（__wdRectStub）拿真实几何
+    await armGesture(container, 0)
+
+    // 跟手到 25%：位置 64 → 轨道宽 64 + 44 = 108px
+    fireEvent.touchmove(button, { touches: [{ clientX: 64, clientY: 0 }] })
+    await pause(10)
+    expect(styleOf(track)).toMatch(/width:\s*108px/)
+
+    bgLynx.createSelectorQuery = origin
+    delete (globalThis as any).__wdRectStub
+  })
 })

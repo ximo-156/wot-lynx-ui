@@ -31,6 +31,8 @@
  * - 半径兜底：strokeWidth 超过 2 倍 size 时参考源 canvas 不绘制，本地
  *   负半径下 SVG 整环不渲染，故钳为 0 保持行为一致；
  * - 文本节点：参考源 view 内的裸文本已包 text，插槽内容由消费方保证。
+ * - 轨道颜色默认值按主题在 JS 侧解析（SVG content 不继承 CSS 变量）：
+ *   亮色 #F2F3F5 / 深色 #4E5369，见 trackColor。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -39,6 +41,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue-lynx'
 import { circleProps } from './types'
 import { isObj, parseStyle, sanitizeSvgContent } from '../../common/util'
 import { createStyleResolver } from '../../common/style'
+import { useGlobalConfig } from '../../composables/useGlobalConfig'
+import { COOLGREY } from '../../common/theme'
 
 // 保留官方 0–100 范围；非法数值归零，不生成 NaN SVG 或无限动画。
 function format(rate: number) {
@@ -50,6 +54,24 @@ const PERIMETER = 2 * Math.PI
 const STEP = 1
 
 const props = defineProps(circleProps)
+
+const globalConfig = useGlobalConfig()
+
+/**
+ * 轨道颜色：官方默认字面量 '#F2F3F5' 是亮色值，而 SVG content 不继承 CSS
+ * 变量 / currentColor，暗色下会原样画出一条亮灰轨道（亮色残留，2026-11-05
+ * 真机截图反馈）。组件内把该默认字面量按 theme 解析（亮色 coolgrey-2 /
+ * 深色 coolgrey-8，与 filled-bottom / filled-strong 的明暗关系一致）；
+ * 显式传入其它值原样使用，prop 默认值与官方保持一致。
+ */
+const OFFICIAL_LAYER_COLOR = '#F2F3F5'
+const trackColor = computed<string>(() => {
+  const raw = props.layerColor
+  if (!raw || raw.toLowerCase() === OFFICIAL_LAYER_COLOR) {
+    return globalConfig.value.theme === 'dark' ? COOLGREY[8] : COOLGREY[2]
+  }
+  return raw
+})
 
 // 进度条颜色（对象配置时取首档，渐变降级）
 const progressColor = computed<string>(() => {
@@ -141,7 +163,7 @@ function drawCircle() {
 function renderLayerCircle() {
   const c = canvasSize.value / 2
   const fill = props.fill ? ` fill="${props.fill}"` : ' fill="none"'
-  return `<circle cx="${c}" cy="${c}" r="${trackRadius.value}"${fill} stroke="${props.layerColor}" stroke-width="${trackWidth.value}"/>`
+  return `<circle cx="${c}" cy="${c}" r="${trackRadius.value}"${fill} stroke="${trackColor.value}" stroke-width="${trackWidth.value}"/>`
 }
 
 /**

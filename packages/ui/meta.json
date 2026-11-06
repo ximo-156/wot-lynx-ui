@@ -679,7 +679,7 @@
       {"name":"modelValue","type":"number","default":"0","description":"当前进度"},
       {"name":"size","type":"number","default":"120","description":"圆环直径，默认单位为 px"},
       {"name":"color","type":"string | Record<string, string>","default":"'#755FFE'","description":"进度条颜色，传入对象格式可以定义渐变色"},
-      {"name":"layerColor","type":"string","default":"'#F2F3F5'","description":"轨道颜色"},
+      {"name":"layerColor","type":"string","default":"'#F2F3F5'","description":"轨道颜色 默认值 #F2F3F5 为官方亮色字面量：SVG content 不继承 CSS 变量，组件内按 theme 解析该默认值（亮色 #F2F3F5 / 深色 #4E5369），显式传值原样使用"},
       {"name":"fill","type":"string","description":"填充颜色"},
       {"name":"speed","type":"number","default":"50","description":"动画速度（单位为 rate/s）"},
       {"name":"text","type":"string","description":"文字"},
@@ -1916,7 +1916,7 @@
     "layer": "components",
     "family": null,
     "modelValue": false,
-    "events": ["success","fail"],
+    "events": ["success","fail","layoutchange"],
     "slots": ["text","success-text","success-icon","icon"],
     "props": [
       {"name":"customStyle","type":"string | Record<string, any>","default":"''","description":"自定义根节点样式。 接受字符串（CSS 声明串）或对象两种语法：vue-lynx 的 patchProp 对 `:style` 只认对象（字符串形式会被静默丢弃，CONVENTIONS §19），组件 内部统一经 parseStyle() 归一为对象后下发，因此两种传入形式都支持。"},

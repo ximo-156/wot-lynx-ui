@@ -6,10 +6,13 @@
  *   `main-thread-bindtouchmove` 绑定 'main thread' worklet，触点经绝对
  *   定位公式（起始位置 + 触点位移）换算后 `setStyleProperty` 直改轨道
  *   宽度——零线程跨越，低端机跟手无滞后（CONVENTIONS §10）；
- * - **几何主线程自度量**：容器矩形由 worklet 在轨道 touchstart（主线程）
- *   时经 `MainThread.Element.invoke('boundingClientRect')` 获取并缓入
- *   MainThreadRef（geomRef），手势起点 clientX 同帧记录（dragRef）——
- *   不在 touchmove 热路径重复度量（CONVENTIONS §16）；
+ * - **几何经元素属性桥接（主线程同步可取）**：后台实测的容器宽高经
+ *   container-width / container-height 属性下发到轨道，worklet 在
+ *   touchstart 同步读取并缓入 MainThreadRef（geomRef），手势起点 clientX
+ *   同帧记录（dragRef）——不在 touchmove 热路径重复度量
+ *   （CONVENTIONS §16）；属性缺失（度量未就绪）时才回退
+ *   `MainThread.Element.invoke('boundingClientRect')` 一次性度量
+ *   （slider 的 gesture-size 同款分工）；
  * - **真机冒泡语义（跨元素分工）**：滑块（button）的 touchstart /
  *   touchend 为后台绑定（记录拖动态、提交判定），touchmove 为主线程
  *   worklet；轨道（track，滑块的父元素）另绑主线程 touchstart /
@@ -28,6 +31,14 @@
  *   后台，可单测；
  * - **fail-closed**：度量不可用（容器宽高为 0）时 worklet 不写样式、
  *   后台不判定通过（与 slider trackSize=0 不提交同一取舍）；
+ * - **度量三路兜底**（真机 2026-11-05 缺陷修复）：真机首帧的 onMounted
+ *   度量可能拿到 0（布局未完成，wd-slider 同款缺陷）——尺寸一旦为 0，轨道
+ *   内联宽度就是 0px，overflow:hidden 的轨道把 40×40 滑块整块裁掉（表现为
+ *   「没有滑动按钮」），maxPosition 也为 0，fail-closed 永远判不过（表现为
+ *   「没有正常的效果」）。故：① 根节点挂原生 layoutchange，布局完成后补
+ *   度量；② 手势开始即补测（落定前拿到真实尺寸）；③ 落定时尺寸仍缺失则
+ *   先补测再提交，避免把本可通过的手势误判为 fail；④ 轨道 CSS min-width
+ *   兜底滑块尺寸，度量缺失时滑块也不被裁掉；
  * - worklet 捕获的外层变量为渲染期快照；几何为 0 时守值不写 NaN；
  * - trackStyle 为 computed（依赖不变时返回同一引用）：拖动态引起的
  *   重渲染不会重写轨道内联样式，worklet 直改值不被冲刷（§20）；
@@ -105,18 +116,65 @@ const trackStyle = computed(() => {
 const containerWidth = ref<number>(0)
 const containerHeight = ref<number>(0)
 
+/** 度量请求代次：被新度量取代的晚到回调不写缓存 */
+let rectRequest = 0
+/** 手势代次：补测落定期间新手手势接管后，旧回调不再提交 */
+let gestureRequest = 0
+
+/**
+ * 写入容器尺寸（忽略 0 / 非有限值：布局未完成的首帧回调不能把已度量
+ * 的尺寸冲掉，wd-slider onTrackLayoutChange 同款守界）。
+ */
+function applyRect(rect: any): void {
+  const width = Number(rect?.width)
+  const height = Number(rect?.height)
+  if (Number.isFinite(width) && width > 0) containerWidth.value = width
+  if (Number.isFinite(height) && height > 0) containerHeight.value = height
+}
+
+/**
+ * 原生 layoutchange：布局完成后的真实矩形。
+ *
+ * 真机首帧的 onMounted 度量可能拿到 0（布局未完成，wd-slider 2026-11-05
+ * 同款缺陷）：尺寸为 0 时轨道内联宽度是 0px——overflow:hidden 的轨道把
+ * 滑块整块裁掉（「没有滑动按钮」），maxPosition 也为 0——fail-closed 永远
+ * 判不过（「没有正常的效果」）。布局完成由原生事件补度量。
+ *
+ * 事件同时声明为 emit 并转发（CONVENTIONS §14）：消费方在组件上绑
+ * @layoutchange 时，监听不会穿透 $attrs 与根元素自身监听合并成数组——
+ * 那种合并值被设备事件注册表原样调用会抛 registry TypeError。
+ */
+function onRootLayoutChange(event: any): void {
+  emit('layoutchange', event)
+  if (!isAlive()) return
+  const data = event?.detail?.layout ?? event?.detail
+  if (!data) return
+  applyRect(data)
+}
+
+/** getRect 兜底度量（Web 预览 / 未派发 layoutchange 的宿主） */
+function measure(): Promise<void> {
+  const request = ++rectRequest
+  return getRect(`#${slideVerifyId.value}`, false, proxy)
+    .then((rect) => {
+      // 回调晚于卸载落地时丢弃：在已销毁树上写 ref 会触发晚到的
+      // remove/insert（真机 9902 家族）
+      if (!isAlive() || request !== rectRequest) return
+      applyRect(rect)
+    })
+    .catch(() => {
+      // getRect 约定永不 reject；守界保持 fail-closed（尺寸 0 不放行）
+    })
+}
+
+/** 尺寸缺失时补测（手势开始 / 落定前）——wd-slider ensureTrackSize 同款 */
+function ensureSize(): Promise<void> {
+  if (containerWidth.value > 0 && containerHeight.value > 0) return Promise.resolve()
+  return measure()
+}
+
 const init = async () => {
-  try {
-    const rect = await getRect(`#${slideVerifyId.value}`, false, proxy)
-    // 回调晚于卸载落地时丢弃：在已销毁树上写 ref 会触发晚到的
-    // remove/insert（真机 9902 家族）
-    if (!isAlive()) return
-    containerWidth.value = rect.width || 0
-    containerHeight.value = rect.height || 0
-  } catch (e) {
-    containerWidth.value = 0
-    containerHeight.value = 0
-  }
+  await measure()
 }
 
 onMounted(async () => {
@@ -172,6 +230,9 @@ const onTouchStart = (event: any): void => {
   touch.touchStart(event)
   startPosition.value = currentPosition.value
   isDragging.value = true
+  gestureRequest++
+  // 首帧度量可能为 0：手势开始即补测，落定前拿到真实容器尺寸
+  if (maxPosition.value <= 0) void ensureSize()
 }
 
 // 控制回弹
@@ -183,25 +244,40 @@ const onTouchEnd = (event: any): void => {
 
   // 落定：同一公式由 changedTouches 重算终值（touchmove 跟手在主线程）
   const changed = event?.changedTouches?.[0] || event?.touches?.[0]
-  if (changed) {
-    updatePosition(pointerToPosition(Number(changed.clientX)))
+  const clientX = changed ? Number(changed.clientX) : NaN
+  // 补测落定期间新手手势接管后，旧回调不得再提交
+  const request = gestureRequest
+
+  const commit = (): void => {
+    if (!isAlive() || request !== gestureRequest) return
+    if (Number.isFinite(clientX)) {
+      updatePosition(pointerToPosition(clientX))
+    }
+
+    if (isComplete.value) {
+      // 完成
+      updatePosition(maxPosition.value)
+      isPass.value = true
+      emit('success')
+    } else {
+      isResetting.value = true
+      // 失败回到起点
+      updatePosition(0)
+      emit('fail')
+
+      timer.value = setTimeout(() => {
+        isResetting.value = false
+      }, 300)
+    }
   }
 
-  if (isComplete.value) {
-    // 完成
-    updatePosition(maxPosition.value)
-    isPass.value = true
-    emit('success')
-  } else {
-    isResetting.value = true
-    // 失败回到起点
-    updatePosition(0)
-    emit('fail')
-
-    timer.value = setTimeout(() => {
-      isResetting.value = false
-    }, 300)
+  // 度量缺失（首帧 0）：先补测再落定。否则 maxPosition 为 0 时
+  // updatePosition 会把终值钳到 0，本可通过的手势被误判成 fail。
+  if (maxPosition.value <= 0) {
+    void ensureSize().then(commit)
+    return
   }
+  commit()
 }
 
 onBeforeUnmount(() => {
@@ -219,6 +295,8 @@ const reset = () => {
     clearTimeout(timer.value)
     timer.value = null
   }
+  // 新手势代次：补测落定中的旧回调不得再提交（否则会把重置态又拖回去）
+  gestureRequest++
   isResetting.value = true
   currentPosition.value = 0
   startPosition.value = 0
@@ -262,24 +340,35 @@ const geomRef = useMainThreadRef<{ width: number; height: number } | null>(null)
 const dragRef = useMainThreadRef<{ startX: number } | null>(null)
 
 /**
- * 轨道触摸开始（主线程）：一次性度量容器几何并记录手势起点。
+ * 轨道触摸开始（主线程）：取容器几何并记录手势起点。
  *
  * 经轨道元素绑定：滑块的 touchstart 是后台绑定（记录拖动态），同名
  * 事件不能同时挂主线程与后台两个处理器；滑块与轨道自身的触摸都会
  * 冒泡到此处，度量的是同一个容器，语义正确（slider 范本同款分工）。
+ *
+ * 几何优先读后台经属性同步下发的实测尺寸（slider gesture-size 同款：
+ * 同步可取、无 Promise 时序）；属性缺失（后台度量未就绪）时才回退
+ * 主线程 invoke 一次性度量。
  */
 const onTrackTouchStartMt = (event: any) => {
   'main thread'
-  const root = rootRef.current
+  const track = trackRef.current
   const touch0 = event.touches && event.touches[0]
   if (!touch0) return
-  if (root && typeof root.invoke === 'function') {
-    root.invoke('boundingClientRect').then((rect: any) => {
-      geomRef.current = {
-        width: Number(rect.width) || 0,
-        height: Number(rect.height) || 0
-      }
-    })
+  const attrWidth = Number(track?.getAttribute('container-width'))
+  const attrHeight = Number(track?.getAttribute('container-height'))
+  if (attrWidth > 0 && attrHeight > 0) {
+    geomRef.current = { width: attrWidth, height: attrHeight }
+  } else {
+    const root = rootRef.current
+    if (root && typeof root.invoke === 'function') {
+      root.invoke('boundingClientRect').then((rect: any) => {
+        geomRef.current = {
+          width: Number(rect.width) || 0,
+          height: Number(rect.height) || 0
+        }
+      })
+    }
   }
   dragRef.current = { startX: touch0.clientX }
 }
@@ -321,7 +410,7 @@ const onTrackTouchEndMt = () => {
 </script>
 
 <template>
-  <view :id="slideVerifyId" :class="rootClass" :style="rootStyle" :main-thread-ref="rootRef">
+  <view :id="slideVerifyId" :class="rootClass" :style="rootStyle" :main-thread-ref="rootRef" @layoutchange="onRootLayoutChange">
     <!-- 背景提示文字 -->
     <view class="wd-slide-verify__text">
       <slot name="text">
@@ -331,13 +420,16 @@ const onTrackTouchEndMt = () => {
       </slot>
     </view>
     <!-- 滑过区域，包含滑块（main-thread-ref 供 worklet 跟手直改；
-         start-pos / drag-disabled 属性向主线程下发起始位置与禁用态） -->
+         start-pos / drag-disabled 向主线程下发起始位置与禁用态，
+         container-width / container-height 下发后台实测容器几何） -->
     <view
       class="wd-slide-verify__track"
       :style="trackStyle"
       :main-thread-ref="trackRef"
       :start-pos="String(currentPosition)"
       :drag-disabled="String(isDisabled)"
+      :container-width="String(containerWidth)"
+      :container-height="String(containerHeight)"
       :main-thread-bindtouchstart="onTrackTouchStartMt"
       :main-thread-bindtouchend="onTrackTouchEndMt"
       :main-thread-bindtouchcancel="onTrackTouchEndMt"

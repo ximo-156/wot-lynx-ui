@@ -14,6 +14,10 @@
  *   （avatar 的 customStyle 经 parseStyle 归一，对象原样透传）；
  * - 层叠间距 --wot-avatar-overlap 由头像侧消费（见 wd-avatar 的 is-first
  *   索引类名适配），group 自身不产生结构伪类 / 兄弟选择器。
+ * - 折叠头像不内联下发 bg-color / color：参考源的 #ebedf0/#969799 是亮色
+ *   字面量，暗色下会变成「亮灰 pill + 灰字」的亮色残留（2026-11-05 真机
+ *   截图反馈）。改由 avatar 自身样式表消费 filled-strong / text-auxiliary
+ *   语义令牌，亮暗各自取值（亮色观感与参考源一致）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -106,8 +110,6 @@ const collapseStyle = computed(() => {
       :text="collapseText"
       :shape="shape"
       :size="size"
-      bg-color="#ebedf0ff"
-      color="#969799ff"
     />
   </view>
 </template>

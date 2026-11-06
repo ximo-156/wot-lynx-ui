@@ -152,8 +152,21 @@ docs/public/_t3.html
 
 # wot-ui reference material (local only)
 .wot-ref/
-.changeset/initial-features.md
 docs/rendering-verification-2026-10-21.md
+
+# 变更描述草稿（本地留档，不入库）
+#
+# 仓库目前**没有** changesets 工作流：`@changesets/cli` 未安装（node_modules 与
+# pnpm-lock.yaml 均无）、没有 `release`/`version` 脚本、CI 里也没有 changeset 步骤，
+# ARCHITECTURE.md 第 6 节明确写着「硬门禁（必须配 changeset）等 `changesets` 就位后
+# 再接」。也就是说这些 .md 现在既不会被消费，也不会进 CHANGELOG，入库只是噪音。
+#
+# 逐个列出文件名而不是写 `.changeset/*.md`：等 changesets 真正就位、开始按 PR 收
+# changeset 时，通配忽略会把**真实**的变更描述一起静默吞掉（与 docs/adr 曾经误加
+# 通配规则同一类事故，见第 3 组）。`.changeset/config.json` 保持入库。
+.changeset/initial-features.md
+.changeset/fab-action-menu-overlap.md
+.changeset/popup-edge-anchor-spacer.md
 
 # API 变更清单与迁移计划（scripts/api-diff.mjs 的产物，按需生成，不入库）
 api-changes.md

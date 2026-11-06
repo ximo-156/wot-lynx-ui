@@ -6,8 +6,15 @@
   --wot-primary-3: var(--wot-brand-3);
   --wot-primary-4: var(--wot-brand-4);
   --wot-primary-5: var(--wot-brand-5);
-  --wot-primary-6: var(--wot-brand-6);
-  --wot-primary-7: var(--wot-brand-7);
+  /* primary-6 取 brand-7 而非 brand-6：它是「承载白字的主色」——按钮实心底、
+     选中态底都压在它上面，brand-6(#755FFE) 上白字仅 4.35:1（AA 需 4.5:1），
+     brand-7(#5F48D9) 为 6.17:1；同时作为强调文字色对白底也达标（原 4.35:1）。
+     与 text-secondary 当年因 AA 从 #979797 改取 coolgrey-7 同一手法。
+     注意连带：primary-7（clicked 槽，按钮 bg-active 等消费）随之下沉一档到
+     brand-8，保持「按压变更暗」的方向；primary-8 及往上无组件消费者，维持原位
+     （与新的 primary-7 同值属死槽位，不影响渲染）。 */
+  --wot-primary-6: var(--wot-brand-7);
+  --wot-primary-7: var(--wot-brand-8);
   --wot-primary-8: var(--wot-brand-8);
   --wot-primary-9: var(--wot-brand-9);
   --wot-primary-10: var(--wot-brand-10);
@@ -19,32 +26,46 @@
   --wot-primary-particular: var(--wot-primary-2);
   --wot-primary-surface: var(--wot-primary-1);
   /* 危险色 */
-  --wot-danger-main: var(--wot-red-6);
-  --wot-danger-hover: var(--wot-red-5);
-  --wot-danger-clicked: var(--wot-red-7);
+  /* main/hover/clicked 各下沉一档：白字需 ≥4.5:1——red-6 仅 3.68:1，
+     red-7 为 4.73:1（hover 为按压过渡态，瞬时 3.68:1 可接受） */
+  --wot-danger-main: var(--wot-red-7);
+  --wot-danger-hover: var(--wot-red-6);
+  --wot-danger-clicked: var(--wot-red-8);
   --wot-danger-disabled: var(--wot-red-3);
   --wot-danger-particular: var(--wot-red-2);
   --wot-danger-surface: var(--wot-red-1);
   /* 成功色 */
-  --wot-success-main: var(--wot-green-6);
-  --wot-success-hover: var(--wot-green-5);
-  --wot-success-clicked: var(--wot-green-7);
+  /* green-6 上白字仅 2.55:1，green-7 也只有 3.79:1——主色取 green-8（6.17:1） */
+  --wot-success-main: var(--wot-green-8);
+  --wot-success-hover: var(--wot-green-7);
+  --wot-success-clicked: var(--wot-green-9);
   --wot-success-disabled: var(--wot-green-3);
   --wot-success-particular: var(--wot-green-2);
   --wot-success-surface: var(--wot-green-1);
   /* 警告色 */
-  --wot-warning-main: var(--wot-orange-6);
-  --wot-warning-hover: var(--wot-orange-5);
-  --wot-warning-clicked: var(--wot-orange-7);
+  /* orange-6 上白字仅 2.65:1，orange-7 为 4.16:1——主色取 orange-8（5.88:1） */
+  --wot-warning-main: var(--wot-orange-8);
+  --wot-warning-hover: var(--wot-orange-7);
+  --wot-warning-clicked: var(--wot-orange-9);
   --wot-warning-disabled: var(--wot-orange-3);
   --wot-warning-particular: var(--wot-orange-2);
   --wot-warning-surface: var(--wot-orange-1);
   /* 文字 */
   --wot-text-main: var(--wot-brand-text-main);
+  /* 次文字：原 #979797 对白底仅 2.92:1（AA 要求 4.5:1），取 brand-text-secondary
+     （coolgrey-7 档位：白底 4.90:1 / 页面底 4.81:1）。 */
   --wot-text-secondary: var(--wot-brand-text-secondary);
-  --wot-text-auxiliary: var(--wot-coolgrey-6);
+  /* 辅助文字与 placeholder 2026-11-05 因 AA 并入 coolgrey-7：
+     原 auxiliary=coolgrey-6（白底 3.43:1）、placeholder=coolgrey-5（2.26:1）
+     均不达 4.5:1。coolgrey 阶 6→7 之间没有档位，且 AA 下限（近白底 L≤0.1696）
+     与 coolgrey-7（L=0.1553）只差 8% 色阶跨度——任何达标灰只能落在 coolgrey-7
+     前后几个/255 的窄带内，中间档视觉上不可分辨。故三档（secondary/auxiliary/
+     placeholder）合并同色，弱化层级改由字号与语境承担（AA 合规系统通用做法）；
+     若未来要可见灰阶，唯一杠杆是把 secondary 整体下沉到 coolgrey-8 让出空间。
+     disabled 不参与对比度要求，维持最浅档。 */
+  --wot-text-auxiliary: var(--wot-coolgrey-7);
   --wot-text-disabled: var(--wot-coolgrey-4);
-  --wot-text-placeholder: var(--wot-coolgrey-5);
+  --wot-text-placeholder: var(--wot-coolgrey-7);
   --wot-text-white: var(--wot-base-white);
   /* 图标 */
   --wot-icon-main: var(--wot-brand-text-main);

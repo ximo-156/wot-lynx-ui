@@ -8,6 +8,14 @@
  * - Popup 与其遮罩共享 owner，独立遮罩自己持有 lease；leave 完成/卸载才释放。
  * - fixed 全屏定位；customStyle 的字符串和对象均经 parseStyle 归一。
  * - 引擎 tap 双轨转发为 click / tap，保留官方 API 并防止监听透传合并。
+ * - **宽高按窗口像素显式下发**（真机 2026-11-05 修复）：`.wd-overlay` 是
+ *   `position: fixed` + `display: flex` 的节点，真机上按**内容尺寸**收缩、
+ *   四边 0 撑不开（CONVENTIONS §19 差异 #10——wd-toast 2026-11-01、
+ *   wd-popup 2026-11-05 同款缺陷）。2026-11-02 给遮罩补 `display: flex`
+ *   （让消费方插槽里的 `flex: 1` 内容能撑满居中）时把这条触发了：遮罩塌成
+ *   0×0 贴在屏幕左上角，于是「弹层没有全屏遮罩」「点遮罩关不掉」——键盘
+ *   （默认无关闭按钮，只靠遮罩关闭）会被卡在关不掉。修法与 toast/popup
+ *   相同：四边 0 保留在 CSS 类里，宽高经 Style Funnel 每帧显式下发。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -15,8 +23,8 @@ import './index.css'
 import { computed, inject, ref, watch } from 'vue-lynx'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import { overlayProps } from './types'
-import { parseStyle } from '../../common/util'
-import { createStyleResolver } from '../../common/style'
+import { getSystemInfo, parseStyle } from '../../common/util'
+import { createStyleResolver, defineStyleKeys } from '../../common/style'
 import { SCROLL_LOCK_OWNER_KEY, useLockScroll } from '../../composables/useLockScroll'
 
 const props = defineProps(overlayProps)
@@ -36,9 +44,40 @@ const inPlace = ref(props.show)
 watch(() => props.show, (show) => { if (show) inPlace.value = true }, { flush: 'sync' })
 useLockScroll(() => props.lockScroll && inPlace.value, inject(SCROLL_LOCK_OWNER_KEY, undefined))
 
-const resolveTransitionStyle = createStyleResolver({ 'z-index': '1' })
+/**
+ * 窗口尺寸（真机 2026-11-05 修复的下半场）。
+ *
+ * `position: fixed` + `display: flex` 的节点在真机上按内容尺寸收缩，四边 0
+ * 撑不开（CONVENTIONS §19 差异 #10）：wd-toast（2026-11-01）与 wd-popup
+ * （2026-11-05）都因此整片塌到屏幕左上角，修法都是「宽高按窗口尺寸显式
+ * 下发」。遮罩 2026-11-02 为插槽内容补 `display: flex` 后落入同一条差异，
+ * 却漏了这层修复：空插槽的遮罩塌成 0×0，带插槽的（image-preview /
+ * video-preview 的全屏底板）塌成内容尺寸——表现分别是「弹层没有全屏
+ * 遮罩、点遮罩关不掉」与「预览内容挤在左上角」。
+ *
+ * 重新展示时重读宿主信息，避免早期缺省值被 setup 快照固化（同 wd-popup）。
+ */
+const viewportWidth = ref(375)
+const viewportHeight = ref(812)
+watch(() => props.show, () => {
+  const info = getSystemInfo()
+  viewportWidth.value = info.windowWidth
+  viewportHeight.value = info.windowHeight
+}, { immediate: true, flush: 'sync' })
+
+const resolveTransitionStyle = createStyleResolver({
+  'z-index': '1',
+  // 中性值只在「某帧未下发」时兜底；正常每帧都写显式窗口像素（见上方注释）
+  width: '100%',
+  height: '100%'
+})
 const transitionStyle = computed(() => resolveTransitionStyle(
-  { 'z-index': String(props.zIndex) }, parseStyle(props.customStyle)
+  {
+    'z-index': String(props.zIndex),
+    width: `${viewportWidth.value}px`,
+    height: `${viewportHeight.value}px`
+  },
+  parseStyle(props.customStyle)
 ))
 
 function handleAfterLeave() {

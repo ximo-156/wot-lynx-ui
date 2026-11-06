@@ -227,6 +227,9 @@ describe('Fab device anchor and Button composition', () => {
     ] }) } as any)
     const root = container.querySelector('.wd-fab') as HTMLElement
     expect(root.style.left).toBe('314px'); expect(root.style.top).toBe('768px')
+    // 根节点显式定盒（Style Funnel 完整键集）：动作菜单的 bottom: 100%
+    // 等百分比定位以这个盒为基准，auto 盒在部分引擎结算不稳定
+    expect(root.style.width).toBe('60px'); expect(root.style.height).toBe('60px')
     expect((container.querySelector('.wd-fab__anchor') as HTMLElement).style.visibility).toBe('')
     await pause(40)
     const labels = Array.from(container.querySelectorAll('.wd-fab__actions .wd-button__text-content'))
@@ -237,6 +240,31 @@ describe('Fab device anchor and Button composition', () => {
       expect(label.getAttribute('text-maxline')).toBe('1')
     }
     expect(container.querySelectorAll('.wd-fab__trigger')).toHaveLength(1)
+  })
+
+  it('lays the action menu out from its anchored edge without centering pile-ups', () => {
+    const actions = rule('.wd-fab .wd-fab__actions', fabCss)
+    expect(actions.position).toBe('absolute')
+    // center 在容器高度结算不足时把全部动作项压到同一行互相叠住（真机叠按钮缺陷）
+    expect(actions['justify-content']).toBe('flex-start')
+    // 绝对定位容器的 padding 在真机不参与高度结算，间距走动作项 margin
+    expect(actions.padding).toBeUndefined()
+    for (const [dir, anchor] of [['top', 'bottom'], ['bottom', 'top'], ['left', 'right'], ['right', 'left']] as const) {
+      expect(rule(`.wd-fab .wd-fab__actions--${dir}`, fabCss)[anchor]).toBe('100%')
+    }
+  })
+
+  it('keeps action buttons unsqueezed with single-line label room and item-level spacing', () => {
+    const item = rule('.wd-fab .wd-fab__actions .wd-button', fabCss)
+    expect(item['flex-shrink']).toBe('0')
+    // CJK 文案单行余量：被压窄后逐字折行（文字竖排）是「样式全重叠」的根因
+    expect(rule('.wd-fab .wd-fab__actions .wd-button:not(.is-icon)', fabCss)['min-width']).toContain('--wot-fab-action-min-width')
+    // 图标按钮的圆形几何不受 min-width 影响
+    expect(rule('.wd-fab .wd-fab__actions .wd-button:not(.is-icon)', fabCss)['min-width']).toContain('64px')
+    // 每个动作项在朝向触发器的一侧留 gap：项间与菜单—触发器之间同距
+    for (const [dir, side] of [['top', 'margin-bottom'], ['bottom', 'margin-top'], ['left', 'margin-right'], ['right', 'margin-left']] as const) {
+      expect(rule(`.wd-fab .wd-fab__actions--${dir} .wd-button`, fabCss)[side]).toContain('--wot-fab-actions-gap')
+    }
   })
 
   it('does not create collapsed actions and destroys their text only after the 300ms leave', async () => {

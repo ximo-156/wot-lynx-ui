@@ -14,8 +14,12 @@ $overlay-bg: var(--wot-overlay-bg, $opac-7_55) !default;
   // `flex: 1` 只在父级 `display: flex` 上才生效。真机 2026-11-01 缺陷：
   // 遮罩插槽内容（消费方写 `flex: 1` 撑满 + 居中）在 linear 下 flex 失效，
   // 塌成内容尺寸贴在屏幕左上角——遮罩铺满、内容却挤在角上。
-  // 遮罩自身尺寸由四边 0 决定，这里只补布局声明，不影响定位与背景。
   display: flex;
   flex-direction: column;
   background: $overlay-bg;
+  // ⚠️ 宽高不要只靠四边 0：`position: fixed` + `display: flex` 的节点在
+  // 真机上按内容尺寸收缩（CONVENTIONS §19 差异 #10，wd-toast 2026-11-01 /
+  // wd-popup 2026-11-05 同款），空插槽会塌成 0×0、带插槽塌成内容尺寸。
+  // 尺寸由 wd-overlay.vue 经 Style Funnel 按 getSystemInfo() 显式下发
+  // （width/height 内联像素），四边 0 仅作 Web 兜底与定位基准。
 }

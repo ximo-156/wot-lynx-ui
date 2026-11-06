@@ -246,12 +246,16 @@ const handlePress = (text: string, type: NumberKeyType) => {
 </script>
 
 <template>
+  <!-- 隐形遮罩（无蒙层，仅接收「点外部收起」）：用透明底色而不是 opacity: 0。
+       命中测试与 opacity 的依赖关系在真机上没有保证，而 Lynx 自家 x-overlay
+       的隐形遮罩、wd-toast 的 cover 遮罩都用 background(-color): transparent
+       换取「不可见但可点」。视觉与 wot-ui 的 opacity: 0 完全一致。 -->
   <WdPopup
     v-model="show"
     position="bottom"
     :z-index="zIndex"
     :safe-area-inset-bottom="safeAreaInsetBottom"
-    :modal-style="modal ? '' : 'opacity: 0;'"
+    :modal-style="modal ? '' : 'background-color: transparent;'"
     :modal="hideOnClickOutside"
     :lock-scroll="lockScroll"
     :root-portal="rootPortal"

@@ -67,6 +67,11 @@ $slide-verify-success-icon-size: var(--wot-slide-verify-success-icon-size, $n-20
     left: 0;
     top: 0;
     width: 0;
+    // 真机 2026-11-05：容器度量首帧可能拿到 0（布局未完成），此时内联
+    // width 为 0px——overflow:hidden 会把滑块整块裁掉（「没有滑动按钮」）。
+    // 轨道真实宽度恒 ≥ 滑块尺寸（currentPosition + 容器高度），min-width
+    // 只是度量缺失时的保底，不改变任何已度量状态下的布局。
+    min-width: $slide-verify-button-size;
     height: 100%;
     background: $slide-verify-track-bg;
     border-radius: $slide-verify-radius;

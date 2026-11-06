@@ -87,7 +87,13 @@ Lynx 3.x 启用新 CSS 引擎后 **view 的默认布局是 Lynx 自研的 `linea
 - **不要使用 `display: inline-flex` / `inline-block`**（不被识别，回落纵向堆叠）；
   由 web 语义改写为 `flex` 时，记得补 `flex-direction: row`；
 - `align-items` / `justify-content` / `gap` 在 linear 下仍生效——"能居中、有间距、
-  但方向错"正是这类问题的典型现象。
+  但方向错"正是这类问题的典型现象；
+- **`justify-content` 只有 `center` 可用**（真机 2026-11-05 复测）：`flex-start` /
+  `flex-end` 被按 `center` 处理，`flex-direction` 两个方向都一样。需要"贴某条边"
+  时不要用主轴对齐，改用 `flex-grow: 1` 的空占位 view 把目标元素挤到该侧
+  （`flex-grow` 可用，wd-cell 的两端对齐即此机制）；`position: fixed` +
+  `display: flex` 的节点还会按内容尺寸收缩，宽高要按窗口像素显式下发
+  （组件库的 `.wd-popup-harness` / `.wd-overlay` 即这两条规则的产品化）。
 
 ```vue
 <template>
@@ -126,7 +132,7 @@ configureUniAdapter({
 | 组件 | 状态 | 说明 |
 | --- | --- | --- |
 | `WdImgCropper` 图片裁剪 | 接口保留 | Lynx 无 Canvas 2D API，裁剪能力需宿主提供 |
-| `WdUpload` 上传 | 基础可用 | 依赖宿主注入 `uni.chooseMedia` / `uni.uploadFile` |
+| `WdUpload` 上传 | 基础可用 | 依赖宿主注入 `uni.chooseMedia` / `uni.uploadFile`（或自定义 `uploadMethod`）。demo 的选图已改用 **Lynx 原生 `<input type="file">`**（`packages/demo/src/showcase/UploadEvokeButton.vue`，真机直接弹系统相册，只兼容原生端），上传走 `uploadMethod` 演示桩 |
 | `WdVideoPreview` | 基础可用 | 依赖 Lynx `<video>` 元素宿主能力 |
 | `WdSwiper` / `WdImagePreview` 轮播 | 自研实现 | `swiper` / `swiper-item` 并非 Lynx 引擎内置元素，其 BehaviorController 由宿主链接的 LynxUI 注册；宿主缺失时引擎抛 "No BehaviorController defined for class swiper"（错误码 9902）致命异常且 JS 侧无法捕获。故轮播改用引擎内置元素（scroll-view / view / image）+ scroll-left 分页自研实现，任何宿主均可用；`adjust-height` / `adjust-vertical-height`（支付宝小程序专有能力）随之失效 |
 | `WdTour` 富文本内容 | 纯文本 | `rich-text` 节点降级为 `<text>` 展示 |

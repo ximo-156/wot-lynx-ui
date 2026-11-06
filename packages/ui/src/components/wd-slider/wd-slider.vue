@@ -21,18 +21,28 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onMounted, ref, watch, useMainThreadRef } from 'vue-lynx'
+import { computed, onBeforeUnmount, onMounted, ref, watch, useMainThreadRef } from 'vue-lynx'
 import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { sliderProps, type SliderEmits, type SliderExpose, type SliderMarks, type SliderPopoverVisible, type SliderValue } from './types'
 import { deepClone, filterStyle, getRect, isArray, isDef, isEqual, parseStyle, uuid } from '../../common/util'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useAlive } from '../../composables/useAlive'
 import { useLockScroll } from '../../composables/useLockScroll'
+import { useGlobalConfig } from '../../composables/useGlobalConfig'
+import { COOLGREY } from '../../common/theme'
 
 const props = defineProps(sliderProps)
 const emit = defineEmits<SliderEmits>()
 const isDisabled = useFormDisabled(props)
 const isAlive = useAlive()
+const globalConfig = useGlobalConfig()
+
+/**
+ * 滑块握把内图标色：圆点底色为 filled-oppo（亮白 / 暗 coolgrey-9），硬编码的
+ * 亮色灰（#868a9c）不随主题走。按 theme 取 coolgrey-6 / coolgrey-5，
+ * 与圆点底色保持同等的「中灰握把」相对关系（2026-11-05 暗色适配）。
+ */
+const gripIconColor = computed(() => (globalConfig.value.theme === 'dark' ? COOLGREY[5] : COOLGREY[6]))
 
 const sliderId = ref<string>(`wd-slider-${uuid()}`)
 const trackId = ref<string>(`${sliderId.value}-track`)
@@ -74,6 +84,49 @@ const pendingModelEchoes = new Set<string>()
 /** 补发 tap 短窗：新的真实 touchstart 立即清除，不在首个补 tap 后提前解除。 */
 let tapSwallowUntil = 0
 const TAP_SWALLOW_WINDOW = 350
+
+/**
+ * 拖动静默兜底（真机 2026-11-05）。
+ *
+ * 真机现场：滑动松手后整页无法滚动、气泡一直挂着。根因是拖动的结束信号只有
+ * 圆点上的 `touchend` 一处——圆点只有 24px，手指沿轨道滑出去再松手时，原生
+ * 按**落点**派发事件就收不到 end，`isDragging` 便永久为 true：
+ * 1. `useLockScroll` 一直持有租约，页面 scroll-view 的 `scroll-enable` 被关死，
+ *    表现为「整个屏幕动不了」；
+ * 2. `showDotPopover` 依赖 `isDragging`，气泡与按压态常驻，表现为「回弹一直在」；
+ * 3. `onTouchStart` 开头的 `isDragging` 早退让滑块彻底不再响应。
+ *
+ * 修复分三层，任何一层生效都能自愈：
+ * - 后台 end 同时绑到整条轨道（`__bar`），手指落在滑块任意位置都能收到；
+ * - end 的归属判断只认「可识别的异号触点」，缺 id 时宁可结束也不卡住；
+ * - 最后用静默超时兜底：拖动期间只要超过 STUCK_DRAG_MS 没有任何 move/end，
+ *    就按 cancel 提交当前值并释放锁。1.2s 远大于正常拖动的帧间隔，正常手势
+ *    不会被打断（每帧 move 都会重置计时）。
+ */
+const STUCK_DRAG_MS = 1200
+let stuckDragTimer: ReturnType<typeof setTimeout> | undefined
+
+function clearStuckDragWatch() {
+  if (stuckDragTimer !== undefined) {
+    clearTimeout(stuckDragTimer)
+    stuckDragTimer = undefined
+  }
+}
+
+function armStuckDragWatch() {
+  clearStuckDragWatch()
+  stuckDragTimer = setTimeout(() => {
+    stuckDragTimer = undefined
+    // 期间已经正常结束（或换了手势）就不动
+    if (!isDragging.value) return
+    // 走 canceled 分支：提交当前值、发 dragend/change、释放滚动锁
+    onTouchEnd({ changedTouches: [] }, true)
+  }, STUCK_DRAG_MS)
+}
+
+// 卸载时必须撤掉计时器：否则回调会在组件销毁后触发拖动收尾
+onBeforeUnmount(clearStuckDragWatch)
+
 
 let rectRequest = 0
 let interactionRequest = 0
@@ -435,6 +488,14 @@ function readTouch(event: any, id?: string, changedFirst = false): any {
     if (id === undefined) return list[0]
     for (let i = 0; i < list.length; i++) if (touchId(list[i]) === id) return list[i]
   }
+  // 兜底（真机 2026-11-05）：start 带 identifier、end 的 changedTouches 却不带，
+  // 按 id 找不到时旧实现直接当「异号触点」丢掉——指针变 NaN，最后一帧不提交，
+  // 收尾时值停在开始的地方（拖动看起来被回弹）。只有一个候选触点时它就是本次
+  // 手势的触点；多指时仍按 id 严格匹配，避免误用另一根手指的坐标。
+  if (id !== undefined && changedFirst) {
+    const changed = event?.changedTouches
+    if (changed?.length === 1) return changed[0]
+  }
 }
 
 /** 坐标缺失/非有限数不能转成 0；client/page 优先于宿主兼容的 x/y。 */
@@ -564,17 +625,24 @@ function onTouchStart(event: any, index: number) {
   isDragging.value = true
   // 每个手势一次；有效长度不在拖动中变化，零尺寸则等本次结果补齐。
   initSlider()
+  armStuckDragWatch()
   emit('dragstart', { value: modelValue.value })
 }
 
 /** 同一触点的 end 可补齐未派发的最后一帧；取消、无标识或缺失终点守住当前值。 */
 function onTouchEnd(event: any, canceled = false) {
   if (!isDragging.value) return
-  const time = eventTime(event)
-  if (time !== undefined && gestureEventTime !== undefined && time < gestureEventTime) return
-  // 第二根手指抬起不能结束第一根手指的拖动。
-  if (activeTouchId !== undefined && event?.changedTouches?.length && !readTouch({ changedTouches: event.changedTouches }, activeTouchId, true)) return
-  if (time !== undefined) gestureEventTime = time
+  clearStuckDragWatch()
+  // 不能拿时间戳拦截 end：原生 start/end 的时间基准可能不同（相对时间 / 秒 /
+  // 毫秒），一旦判错，本次手势永远不会结束——真机就是整页被滚动锁锁死、
+  // 气泡常驻。时间戳只保留给 move 帧去拒绝上一手势的迟到坐标。
+  // 抬指归属改为「可识别的异号触点」判断：只有抬起的触点都带 id、且都不是
+  // 本手势的触点时才忽略；缺 id（原生常见）时宁可结束，绝不卡住。
+  const changed = event?.changedTouches
+  if (activeTouchId !== undefined && changed?.length) {
+    const ids = changed.map((touch: any) => touchId(touch)).filter((id: string | undefined) => id !== undefined)
+    if (ids.length > 0 && !ids.includes(activeTouchId)) return
+  }
   const request = interactionRequest
   const pointer = readPointer(event, activeTouchId, true)
   tapSwallowUntil = Date.now() + TAP_SWALLOW_WINDOW
@@ -582,8 +650,11 @@ function onTouchEnd(event: any, canceled = false) {
   isDragging.value = false
 
   const finish = () => {
-    if (!isAlive() || isDisabled.value || request !== interactionRequest) return
+    // 先无条件归零落定态并撤掉兜底计时：任何提前 return（失去活性 / 被新交互
+    // 抢占）都会把滚动锁与 MTS 样式所有权留在「落定中」，真机同样是整页卡住。
     isSettling.value = false
+    clearStuckDragWatch()
+    if (!isAlive() || isDisabled.value || request !== interactionRequest) return
     activeTouchId = undefined
     tapSwallowUntil = Date.now() + TAP_SWALLOW_WINDOW
     if (isEqual(props.modelValue, modelValue.value)) pendingModelEchoes.clear()
@@ -601,7 +672,12 @@ function onTouchEnd(event: any, canceled = false) {
     return
   }
   ensureTrackSize().then((size) => {
-    if (!isAlive() || isDisabled.value || request !== interactionRequest) return
+    // 异步度量回来时手势可能已被取消：同样必须显式收尾，不能只 return
+    if (!isAlive() || isDisabled.value || request !== interactionRequest) {
+      isSettling.value = false
+      clearStuckDragWatch()
+      return
+    }
     if (size > 0 && Number.isFinite(size)) {
       dragTrackSize.value = size
       updateValue(dragValue(pointer))
@@ -620,6 +696,9 @@ function onBarTouchStartBg() {
 
 /** MT move 不拦冒泡，后台只提交当前滑块/触点的连续值。 */
 function onBarTouchMove(event: any) {
+  // 任何一帧 move 都证明手势还活着，重置静默兜底（放在取值失败早退之前，
+  // 否则坐标缺失的帧不会续命，正常拖动会被误判成卡死）
+  if (isDragging.value) armStuckDragWatch()
   if (isDisabled.value || !isDragging.value || dragTrackSize.value <= 0 || !Number.isFinite(dragTrackSize.value)) return
   const time = eventTime(event)
   if (time !== undefined && gestureEventTime !== undefined && time < gestureEventTime) return
@@ -845,13 +924,18 @@ const lineBindings = computed(() => ({
       <text>{{ min }}</text>
     </view>
 
-    <!-- 轨道 -->
+    <!-- 轨道：end/cancel 同时挂在轨道上（真机 2026-11-05）——只绑圆点时，
+         手指沿轨道滑出去再松手，原生按落点派发事件就收不到 end，拖动状态
+         永久残留（整页滚动被锁死 + 气泡常驻）。子节点已先处理，重复调用由
+         onTouchEnd 开头的 isDragging 早退吃掉。 -->
     <view
       :id="sliderId"
       :class="barClass"
       :style="barStyle"
       @touchstart="onBarTouchStartBg"
       @touchmove="onBarTouchMove"
+      @touchend="onTouchEnd"
+      @touchcancel="(e: any) => onTouchEnd(e, true)"
       @tap.stop="onBarClick"
     >
       <!-- 可滑动有效轨道（用于尺寸测量与 marks 定位；默认主题下 2px 视觉轨道
@@ -904,7 +988,7 @@ const lineBindings = computed(() => ({
             <view class="wd-slider__dot-popover-arrow" />
           </view>
           <view class="wd-slider__dot-slider">
-            <WdIcon name="multiple-horizontal" size="14px" color="#868a9c" />
+            <WdIcon name="multiple-horizontal" size="14px" :color="gripIconColor" />
           </view>
         </view>
 
@@ -923,7 +1007,7 @@ const lineBindings = computed(() => ({
             <view class="wd-slider__dot-popover-arrow" />
           </view>
           <view class="wd-slider__dot-slider">
-            <WdIcon name="multiple-horizontal" size="14px" color="#868a9c" />
+            <WdIcon name="multiple-horizontal" size="14px" :color="gripIconColor" />
           </view>
         </view>
       </view>

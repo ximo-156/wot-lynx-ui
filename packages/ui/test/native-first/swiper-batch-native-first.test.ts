@@ -349,6 +349,30 @@ describe('原生优先：居中成对写全（NATIVE-REWRITE §3.2）', () => {
     expect(css).toMatch(/\.wd-table__cell\.is-center\s+\.wd-table__value\{[^}]*text-align:center/)
     expect(css).toMatch(/\.wd-table__cell\.is-right\s+\.wd-table__value\{[^}]*text-align:right/)
   })
+
+  it('wd-table：表头/固定列的 z-index 收在表内层叠上下文（真机绘制）', () => {
+    // 真机层序（CONVENTIONS §19 定位 FAQ）：带 z-index 的节点必须落在自带
+    // 层叠上下文的父级里，否则真机整棵子树不绘制——2026-11-05 缺陷即表头
+    // （z-index:2）挂在没有层叠上下文的 __content 上，真机上只剩表头高度
+    // 的空白（布局占位在、文字/边框/底色全不画），与 2026-11-03 wd-slider
+    // 滑轨不绘制同款。修法对齐 wd-picker-view __main：根节点先建立上下文，
+    // 直接父级再收口一层，子级 z-index 保留（表头要压在滚动表体之上）。
+    const root = ruleOf('wd-table', '.wd-table')
+    expect(root.position, '.wd-table 需要 position: relative').toBe('relative')
+    expect(root['z-index'], '.wd-table 根节点需要 z-index: 0 建立层叠上下文').toBe('0')
+
+    const content = ruleOf('wd-table', '.wd-table__content')
+    expect(content.position, '.wd-table__content 需要 position: relative').toBe('relative')
+    expect(content['z-index'], '.wd-table__content（表头直接父级）需要 z-index: 0').toBe('0')
+
+    const body = ruleOf('wd-table', '.wd-table__body')
+    expect(body.position, '.wd-table__body 需要 position: relative').toBe('relative')
+    expect(body['z-index'], '.wd-table__body（固定列直接父级）需要 z-index: 0').toBe('0')
+
+    // 表头自身层级保留：吸顶时要压在纵向滚动的表体之上
+    const header = ruleOf('wd-table', '.wd-table__header')
+    expect(header['z-index'], '.wd-table__header 需要保持 z-index: 2（压在表体之上）').toBe('2')
+  })
 })
 
 describe('原生优先：DOM 结构与 wot-ui 2.3.2 对齐不回退', () => {

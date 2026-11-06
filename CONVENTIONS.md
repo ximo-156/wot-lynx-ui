@@ -307,6 +307,24 @@ const onTouchMove = (e: any) => {
 测试环境经 `test/mts-worklet-shim.ts` 模拟 worklet 派发与主线程元素桩，
 MTS 交互在单测中可真实执行。
 
+**收尾必须可自愈**（真机 2026-11-05，wd-slider）：手势的结束信号不能只绑在
+小尺寸的触发元素上——手指滑出去再松手时，原生按**落点**派发 `touchend`，
+绑在圆点（24px）上的 handler 收不到，`isDragging` 就永久为 true。它连着三件
+事一起坏：`useLockScroll` 持续持锁（整页不能滚）、气泡/按压态常驻、下一次
+`touchstart` 被早退挡掉。约定：
+
+- `touchend` / `touchcancel` 至少同时绑到**包含该手势的较大容器**（轨道 /
+  根节点），子节点已处理时靠开头的 `isDragging` 早退吃掉重复调用；
+- 结束帧的归属只按「可识别的异号触点」判断；触点缺 `identifier` 时按单触点
+  兜底取值，宁可收尾也不丢帧（丢帧 = 值回弹到起点）；
+- 时间戳只用于拒绝上一手势的迟到 `move`，**不要用来拦截 end**：原生两端
+  时间基准可能不同，判错一次就是永久卡死；
+- 必须有静默兜底：超过约 1.2s 没有任何 move/end 就按 cancel 收尾并释放锁，
+  并保证任何提前 `return` 都先归零「落定中」状态（否则同样把锁留住）。
+
+回归：`test/regression/slider-drag-release.test.ts`（end 丢失 / 落在轨道上 /
+缺 id / 时间戳倒挂四条）。
+
 ## 11. 验证清单（每个组件完成后必须执行）
 
 ```bash
@@ -549,7 +567,7 @@ bg-color 头像曾因此整组白底白字不可见）。
   z-index 低于内容（真机按 z-index 绘制，两个平台才都不出问题）。
 
 **真机引擎行为差异清单**（2026-10-25 第二轮 + 2026-10-26 第三轮真机巡检
-沉淀，2026-11-05 补入第 10 条；Web 预览全绿、真机翻车的十类「静默差异」，
+沉淀，2026-11-05 补入第 10、11、12 条；Web 预览全绿、真机翻车的十二类「静默差异」，
 写组件前对照）：
 
 | # | 差异 | 真机表现 | 规则 |
@@ -563,7 +581,9 @@ bg-color 头像曾因此整组白底白字不可见）。
 | 7 | flex 子项上的 `display: block` 被丢弃（引擎只认 flex / none / linear） | 工具栏「取消」按钮宽度塌成 padding 宽，文字溢出压住居中的标题 | 横向排列的子项显式 `display: flex` + `flex-direction: row`；居中同时给 `justify-content` + `align-items`（`text-align` 只作 Web 兜底） |
 | 8 | flex 子项的内联 `min-width` 不生效 | wd-switch 轨道宽度塌成 padding 之和，圆角把 30px 高的轨道压成正圆 → 整组渲染成「紫色月牙」 | 宽度确定时内联下发 `width`；只有「有内部文案需要撑开」的场景才用 `min-width`（此时靠内容撑开，失效也不影响可读性） |
 | 9 | 圆角容器上的 `overflow: hidden` 会把内容整段裁空 | wd-segmented 只剩灰底无「日/周/月」；wd-slider 白底圆点上的手柄图标消失（滑块看起来完全没了） | 单行/多行省略走文本节点的原生 `text-maxline`，不要靠 `overflow: hidden` + `text-overflow` 裁剪；图标容器不需要裁剪就不要写 overflow |
-| 10 | `position: fixed` **且** `display: flex` 的节点按内容尺寸收缩，四边 `0` / `left`+`right` 撑不开 | wd-toast（2026-11-01）、wd-popup（2026-11-05）整片内容塌到屏幕左上角：时间选择器只剩半截、Dialog 内容缺失。Web 预览完全正常 | 定位与外观分两层：外层全屏 harness 用 `fixed` + 四边 `0px` + **显式窗口像素宽高**（`getSystemInfo()`）+ flex 对齐，`pointer-events: none`；内层可见面板只做背景/圆角/动画。参见 `wd-toast` / `wd-popup` |
+| 10 | `position: fixed` **且** `display: flex` 的节点按内容尺寸收缩，四边 `0` / `left`+`right` 撑不开 | wd-toast（2026-11-01）、wd-popup（2026-11-05）整片内容塌到屏幕左上角：时间选择器只剩半截、Dialog 内容缺失。wd-overlay（2026-11-05 用户反馈「输入面板没有全屏」）：遮罩塌成 0×0，弹层没有全屏遮罩、点遮罩关不掉，默认数字键盘（无关闭按钮）被卡在关不掉。Web 预览完全正常 | 定位与外观分两层：外层全屏 harness 用 `fixed` + 四边 `0px` + **显式窗口像素宽高**（`getSystemInfo()`）+ flex 对齐，`pointer-events: none`；内层可见面板只做背景/圆角/动画。单层固定节点（遮罩）则把宽高按窗口像素内联下发。参见 `wd-toast` / `wd-popup` / `wd-overlay` |
+| 11 | `justify-content` 只有 `center` 生效：`flex-start` / `flex-end` 被按 `center` 处理（`flex-direction` 两个方向都试过） | wd-popup 的 harness 按 position 下发 `flex-end` / `flex-start` 后，底部 Popup / Picker / 时间选择器 / 侧边抽屉整片贴在屏幕**正中**而不是目标边（2026-11-05 用户截图复测「适配太差」；同屏 `align-items: center` 的交叉轴居中正常，Dialog 仍居中） | 主轴**摆位**改用 `flex-grow: 1` 的空占位 view 吸收主轴剩余空间，把面板挤到目标边（占位在面板前 = 挤向末端 bottom/right，在面板后 = 挤向起点 top/left；center 不放、继续 flex 居中）。flex-grow 是真机可用路径（wd-cell `__left` / `__right` 同机制）；**不要**改用「单边 edge 定位」——缺边按 0 锚定（第 2 条）会把 `bottom: 0` 顶掉，且内容高度未知补不了显式 `top`。参见 `wd-popup` 的 `.wd-popup-spacer` |
+| 12 | 原生 input/textarea 的 `value` **属性**通道（`SET_PROP`）刷新不了「用户已输入过」的输入框：IME 接管后文本由输入法所有，后台下发的属性更新被吞 | wd-input-number（2026-11-05 用户复报「加减没有鸟用」）：min=0/max=10 的步进器里键入 33，归一化（应回落到 10）与加减步进都不回显——模型其实已经变了，只是输入框文本不动。同族：clearable 的清除按钮「点了没反应」（wd-input / wd-textarea / wd-search）。Web 预览的 XInput 属性处理器直接写 shadow root 里的 `input.value` 所以全绿 | 程序化改写输入框值必须走元素方法 `setValue`（官方 API，`SelectorQuery.select('#id').invoke({ method: 'setValue', params: { value } })`，与 getRect / scrollViewTo 同链），属性通道只负责创建期初值。统一入口 `composables/useNativeInputValue.ts`（实例唯一 id + 用户输入回声去重，避免重复 setValue 打扰 IME 光标）；**不要**改图省事用 `v-model`——动态 `:type` 会让编译器产出 `vModelDynamic`，vue-lynx 运行时未导出该指令，真机直接链接失败 |
 
 另：Lynx 定位 FAQ——absolute/fixed 元素带 z-index 时，父级需同时
 `z-index: 0`，否则真机绘制与命中测试层序可能不一致（demo 的 fab 包裹层

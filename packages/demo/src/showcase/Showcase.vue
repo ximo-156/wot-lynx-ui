@@ -11,9 +11,10 @@
  * 写页面骨架（config-provider / scroll-view 留在各自的入口里）。
  */
 <script setup lang="ts">
-import { computed, ref } from 'vue-lynx'
+import { computed, nextTick, ref } from 'vue-lynx'
 import { listIcons, useToast } from 'wot-lynx-ui'
 import { demoBrokenImage, demoImage } from '../assets/demo-images'
+import UploadEvokeButton from './UploadEvokeButton.vue'
 
 // 组件通过 wotLynxUI 插件全局注册（Tier 1：基础组件）
 const count = ref(0)
@@ -50,6 +51,73 @@ const carKeyboardValue = ref('')
 const verifyPassed = ref(false)
 const slideVerifyRef = ref<any>(null)
 const uploadFiles = ref<any[]>([])
+const uploadRef = ref<any>(null)
+// 手动入列时的 uid 计数器：绕过组件内部 chooseFile 流程直接 push 也需要唯一标识
+// （与组件内部 context.id 分开计数，避免撞号）
+let uploadUid = 10000
+
+/**
+ * 原生 <input type="file"> 选完图的落库（UploadEvokeButton.vue 回传）。
+ *
+ * 为什么手动 push 而不是让组件自己选：选图已由原生 input 直接完成，组件内部的
+ * chooseFile → uni.chooseMedia 链路在 Lynx 上没有对应原生能力，整条弃用。
+ * 这里按 pending 入列（受 limit 约束），再调组件 expose 的 submit() 上传。
+ *
+ * nextTick 是必须的：fileList 的 watch 是默认 pre flush（异步），push 后
+ * 同步调 submit() 时组件内部 uploadFiles 还没纳入新项，会空转。
+ */
+function onUploadPicked(files: Array<{ path: string; size: number; name: string }>) {
+  const remain = 3 - uploadFiles.value.length
+  const accepted = files.slice(0, Math.max(0, remain))
+  for (const file of accepted) {
+    uploadFiles.value.push({
+      uid: uploadUid++,
+      url: file.path,
+      thumb: file.path,
+      name: file.name,
+      size: file.size,
+      status: 'pending',
+      percent: 0
+    })
+  }
+  nextTick(() => {
+    uploadRef.value?.submit()
+  })
+}
+
+/**
+ * 演示上传方法（wd-upload 的 uploadMethod 扩展点）：模拟 0→100 进度后成功。
+ * demo 的 action="" 没有真实端点，不注入实现时上传会停在 fail 态并显示
+ * "uploadFile:fail not supported in lynx"——那是给真实宿主的降级语义，
+ * 不是演示效果。真实宿主请注入自己的上传实现（docs/guide/quick-start.md）。
+ */
+function demoUploadMethod(file: any, formData: any, options: any) {
+  console.warn('[demo] uploadMethod 为演示桩（模拟进度与成功），未发起真实网络请求')
+  let progress = 0
+  const timer = setInterval(() => {
+    progress = Math.min(100, progress + 20)
+    options.onProgress({ progress, totalBytesSent: progress, totalBytesExpectedToSend: 100 }, file)
+    if (progress >= 100) {
+      clearInterval(timer)
+      options.onSuccess({ statusCode: 200, data: { url: file.url } }, file, formData)
+    }
+  }, 150)
+  return {
+    abort: () => clearInterval(timer)
+  }
+}
+
+// chooseerror 只应作为诊断保留：选图已不走组件内部链路，它一旦触发说明
+// 原生 input 的 @tap.stop 没拦住冒泡（点击漏进了唤起槽外层 view）。
+function onUploadChooseError(e: any) {
+  const errMsg = String(e?.error?.errMsg || e?.error?.message || '')
+  console.warn('[demo] upload chooseerror（原生 input 未拦截点击？）', e)
+  if (errMsg.includes('cancel')) {
+    toast.info('已取消选择')
+    return
+  }
+  toast.error('选图链路异常：点击漏进了组件内部降级流程')
+}
 const tabValue = ref(0)
 const sidebarValue = ref('a')
 const progressValue = ref(60)
@@ -582,7 +650,21 @@ function onSubmitBar() {
             <wd-signature :style="{ flex: '1' }" />
           </view>
           <view class="demo-row">
-            <wd-upload v-model:file-list="uploadFiles" :limit="3" action="" />
+            <!-- 选图走 Lynx 原生 <input type="file">（见 UploadEvokeButton.vue）：
+                 真机点击直接弹系统相册，不经 uni 兼容层；上传走组件自带
+                 uploadMethod 扩展点。input[type=file] 只兼容原生端，Web 预览
+                 里选图不可用（真机验收为准）。 -->
+            <wd-upload
+              ref="uploadRef"
+              v-model:file-list="uploadFiles"
+              :limit="3"
+              action=""
+              :auto-upload="false"
+              :upload-method="demoUploadMethod"
+              @chooseerror="onUploadChooseError"
+            >
+              <UploadEvokeButton :count="uploadFiles.length" :limit="3" @picked="onUploadPicked" />
+            </wd-upload>
           </view>
         </view>
       </view>
@@ -596,6 +678,10 @@ function onSubmitBar() {
             <wd-password-input :model-value="payValue" :length="6" />
             <wd-button type="primary" size="small" @tap="keyboardVisible = true">弹出键盘</wd-button>
           </view>
+          <!-- 回显位数：键盘面板弹出时会盖住页面下行的密码框，没有这行就无法
+               确认「输入是否保留」。与下方自定义 / 车牌键盘的已输入回显同款，
+               密码场景只显位数不显明文。 -->
+          <text class="demo-tag">已输入 {{ payValue.length }}/6 位</text>
 
           <text class="demo-panel__label">自定义键盘（mode="custom"，extraKey 左侧小数点，右侧删除/关闭）</text>
           <view class="demo-row">
@@ -829,9 +915,9 @@ function onSubmitBar() {
             v-for="navType in swiperNavTypes"
             :key="navType"
             class="demo-swiper-nav-preview"
-            :style="{ position: 'relative', width: '100%', height: '88px', 'margin-top': '8px', 'z-index': 0, 'background-color': '#755FFE', 'border-radius': '8px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'center' }"
+            :style="{ position: 'relative', width: '100%', height: '88px', 'margin-top': '8px', 'z-index': 0, 'background-color': 'var(--wot-primary-6)', 'border-radius': '8px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'center' }"
           >
-            <text :style="{ color: '#ffffff', 'font-size': '14px' }">{{ navType }} · 第 {{ swiperNavIndex + 1 }} 项</text>
+            <text :style="{ color: 'var(--wot-text-white)', 'font-size': '14px' }">{{ navType }} · 第 {{ swiperNavIndex + 1 }} 项</text>
             <wd-swiper-nav :type="navType" :current="swiperNavIndex" :total="swiperNavTotal" show-controls @change="onSwiperNavChange" />
           </view>
           <view class="demo-row">
@@ -1065,20 +1151,20 @@ function onSubmitBar() {
         <view class="demo-panel">
           <text class="demo-panel__label">span 占据数（24 制）</text>
           <wd-row :style="{ 'margin-bottom': '8px' }">
-            <wd-col :span="24" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">span 24</text></wd-col>
+            <wd-col :span="24" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">span 24</text></wd-col>
           </wd-row>
           <wd-row :style="{ 'margin-bottom': '8px' }">
-            <wd-col :span="12" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">span 12</text></wd-col>
-            <wd-col :span="12" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">span 12</text></wd-col>
+            <wd-col :span="12" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">span 12</text></wd-col>
+            <wd-col :span="12" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">span 12</text></wd-col>
           </wd-row>
           <text class="demo-panel__label">offset 左侧偏移</text>
           <wd-row :style="{ 'margin-bottom': '8px' }">
-            <wd-col :span="6" :offset="6" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">offset 6</text></wd-col>
-            <wd-col :span="6" :offset="6" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">offset 6</text></wd-col>
+            <wd-col :span="6" :offset="6" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">offset 6</text></wd-col>
+            <wd-col :span="6" :offset="6" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">offset 6</text></wd-col>
           </wd-row>
           <wd-row>
-            <wd-col :span="4" :offset="4" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">4</text></wd-col>
-            <wd-col :span="4" :offset="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">4</text></wd-col>
+            <wd-col :span="4" :offset="4" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">4</text></wd-col>
+            <wd-col :span="4" :offset="8" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">4</text></wd-col>
           </wd-row>
         </view>
       </view>
@@ -1088,22 +1174,22 @@ function onSubmitBar() {
         <view class="demo-panel">
           <text class="demo-panel__label">gutter 列间距</text>
           <wd-row :gutter="12" :style="{ 'margin-bottom': '8px' }">
-            <wd-col :span="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">8</text></wd-col>
-            <wd-col :span="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">8</text></wd-col>
-            <wd-col :span="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">8</text></wd-col>
+            <wd-col :span="8" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">8</text></wd-col>
           </wd-row>
           <text class="demo-panel__label">justify 水平排列</text>
           <wd-row justify="space-between" :style="{ 'margin-bottom': '8px' }">
-            <wd-col :span="6" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">6</text></wd-col>
-            <wd-col :span="6" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">6</text></wd-col>
+            <wd-col :span="6" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">6</text></wd-col>
+            <wd-col :span="6" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">6</text></wd-col>
           </wd-row>
           <wd-row justify="center" :style="{ 'margin-bottom': '8px' }">
-            <wd-col :span="8" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">居中</text></wd-col>
+            <wd-col :span="8" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">居中</text></wd-col>
           </wd-row>
           <text class="demo-panel__label">align 垂直对齐</text>
-          <wd-row align="bottom" :style="{ height: '64px', background: '#f7f8fa' }">
-            <wd-col :span="12" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">底部对齐</text></wd-col>
-            <wd-col :span="12" :style="{ background: '#EEEBFF', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">align="bottom"</text></wd-col>
+          <wd-row align="bottom" :style="{ height: '64px', background: 'var(--wot-filled-bottom)' }">
+            <wd-col :span="12" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">底部对齐</text></wd-col>
+            <wd-col :span="12" :style="{ background: 'var(--wot-primary-1)', padding: '8px', 'border-radius': '6px' }"><text class="demo-tag">align="bottom"</text></wd-col>
           </wd-row>
         </view>
       </view>
@@ -1115,7 +1201,7 @@ function onSubmitBar() {
           <wd-resize @resize="onResize">
             <!-- 对象语法：字符串 :style 会被 vue-lynx 静默丢弃（CONVENTIONS §19），
                  高度变化必须真实生效才能触发 wd-resize -->
-            <view :style="{ height: `${resizeHeight}px`, background: '#EEEBFF', 'border-radius': '8px', padding: '12px' }">
+            <view :style="{ height: `${resizeHeight}px`, background: 'var(--wot-primary-1)', 'border-radius': '8px', padding: '12px' }">
               <text class="demo-tag">高度 {{ resizeHeight }}px · resize 触发 {{ resizeCount }} 次</text>
             </view>
           </wd-resize>
@@ -1132,19 +1218,19 @@ function onSubmitBar() {
           <text class="demo-panel__label">滚动容器内吸顶（zIndex / offsetTop）</text>
           <scroll-view scroll-orientation="vertical" :style="{ height: '200px' }">
             <view :style="{ padding: '12px' }">
-              <view :style="{ height: '32px', background: '#f7f8fa' }" />
+              <view :style="{ height: '32px', background: 'var(--wot-filled-bottom)' }" />
               <wd-sticky :offset-top="0" :z-index="10">
-                <view :style="{ background: '#755FFE', padding: '10px', 'border-radius': '8px' }">
-                  <text :style="{ color: '#ffffff', 'font-size': '13px' }">吸顶标题 A（offsetTop 0）</text>
+                <view :style="{ background: 'var(--wot-primary-6)', padding: '10px', 'border-radius': '8px' }">
+                  <text :style="{ color: 'var(--wot-text-white)', 'font-size': '13px' }">吸顶标题 A（offsetTop 0）</text>
                 </view>
               </wd-sticky>
-              <view :style="{ height: '260px', background: '#f7f8fa', padding: '12px' }"><text class="demo-tag">滚动内容区</text></view>
+              <view :style="{ height: '260px', background: 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">滚动内容区</text></view>
               <wd-sticky :offset-top="12" :z-index="9">
                 <view :style="{ background: '#ff8800', padding: '10px', 'border-radius': '8px' }">
-                  <text :style="{ color: '#ffffff', 'font-size': '13px' }">吸顶标题 B（offsetTop 12）</text>
+                  <text :style="{ color: 'var(--wot-text-white)', 'font-size': '13px' }">吸顶标题 B（offsetTop 12）</text>
                 </view>
               </wd-sticky>
-              <view :style="{ height: '260px', background: '#f7f8fa', padding: '12px' }"><text class="demo-tag">更多内容</text></view>
+              <view :style="{ height: '260px', background: 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">更多内容</text></view>
             </view>
           </scroll-view>
         </view>
@@ -1157,18 +1243,18 @@ function onSubmitBar() {
           <wd-sticky-box :style="{ height: '180px' }">
             <view :style="{ padding: '12px' }">
               <wd-sticky :offset-top="0" :z-index="10">
-                <view :style="{ background: '#755FFE', padding: '10px', 'border-radius': '8px' }">
-                  <text :style="{ color: '#ffffff', 'font-size': '13px' }">offsetTop 0</text>
+                <view :style="{ background: 'var(--wot-primary-6)', padding: '10px', 'border-radius': '8px' }">
+                  <text :style="{ color: 'var(--wot-text-white)', 'font-size': '13px' }">offsetTop 0</text>
                 </view>
               </wd-sticky>
               <view :style="{ height: '24px' }" />
-              <view :style="{ height: '220px', background: '#f7f8fa', padding: '12px' }"><text class="demo-tag">容器内滚动内容</text></view>
+              <view :style="{ height: '220px', background: 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">容器内滚动内容</text></view>
               <wd-sticky :offset-top="8">
                 <view :style="{ background: '#ff8800', padding: '10px', 'border-radius': '8px' }">
-                  <text :style="{ color: '#ffffff', 'font-size': '13px' }">offsetTop 8</text>
+                  <text :style="{ color: 'var(--wot-text-white)', 'font-size': '13px' }">offsetTop 8</text>
                 </view>
               </wd-sticky>
-              <view :style="{ height: '220px', background: '#f7f8fa', padding: '12px' }"><text class="demo-tag">继续滚动</text></view>
+              <view :style="{ height: '220px', background: 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">继续滚动</text></view>
             </view>
           </wd-sticky-box>
         </view>
@@ -1423,10 +1509,10 @@ function onSubmitBar() {
             <wd-button size="small" @tap="tourVisible = true">开始引导</wd-button>
           </view>
           <view class="demo-row">
-            <view id="tour-target-1" :style="{ padding: '8px 12px', 'background-color': '#EEEBFF', 'border-radius': '8px' }">
+            <view id="tour-target-1" :style="{ padding: '8px 12px', 'background-color': 'var(--wot-primary-1)', 'border-radius': '8px' }">
               <text class="demo-tag">引导目标 1</text>
             </view>
-            <view id="tour-target-2" :style="{ padding: '8px 12px', 'background-color': '#EEEBFF', 'border-radius': '8px' }">
+            <view id="tour-target-2" :style="{ padding: '8px 12px', 'background-color': 'var(--wot-primary-1)', 'border-radius': '8px' }">
               <text class="demo-tag">引导目标 2</text>
             </view>
           </view>
@@ -1454,7 +1540,7 @@ function onSubmitBar() {
             <text class="demo-tag">anchors: 120 / 200 / 280</text>
           </view>
           <!-- 固定浮层仅在用户打开此项时挂载，避免常驻遮挡图标画廊和分页。 -->
-          <view v-if="panelVisible" :style="{ 'border-width': '1px', 'border-style': 'solid', 'border-color': '#e4e7ed', 'border-radius': '12px', overflow: 'hidden' }">
+          <view v-if="panelVisible" :style="{ 'border-width': '1px', 'border-style': 'solid', 'border-color': 'var(--wot-border-main)', 'border-radius': '12px', overflow: 'hidden' }">
             <wd-floating-panel :height="panelHeight" :anchors="[120, 200, 280]" safe-area-inset-bottom @height-change="onPanelHeightChange">
               <view :style="{ padding: '12px' }">
                 <wd-button size="small" variant="text" @tap="panelVisible = false">关闭面板</wd-button>
@@ -1523,8 +1609,8 @@ function onSubmitBar() {
             <wd-button size="small" @tap="portalBarVisible = !portalBarVisible">{{ portalBarVisible ? '隐藏' : '显示' }}底部固定条</wd-button>
           </view>
           <wd-root-portal v-if="portalBarVisible">
-            <view :style="{ position: 'fixed', left: '0', right: '0', bottom: '0', padding: '12px', 'background-color': '#755FFE' }">
-              <text :style="{ color: '#ffffff', 'font-size': '13px' }">经 RootPortal 挂载的底部固定条</text>
+            <view :style="{ position: 'fixed', left: '0', right: '0', bottom: '0', padding: '12px', 'background-color': 'var(--wot-primary-6)' }">
+              <text :style="{ color: 'var(--wot-text-white)', 'font-size': '13px' }">经 RootPortal 挂载的底部固定条</text>
             </view>
           </wd-root-portal>
         </view>
@@ -1639,12 +1725,12 @@ function onSubmitBar() {
 .page__title {
   font-size: 28px;
   font-weight: 600;
-  color: #2D273D;
+  color: var(--wot-text-main);
 }
 
 .page__subtitle {
   font-size: 13px;
-  color: #979797;
+  color: var(--wot-text-auxiliary);
   margin-top: 4px;
 }
 
@@ -1655,22 +1741,22 @@ function onSubmitBar() {
 .demo-section__title {
   font-size: 15px;
   font-weight: 600;
-  color: #2D273D;
+  color: var(--wot-text-main);
   margin-bottom: 8px;
 }
 
 .demo-panel {
-  background: #ffffff;
+  background: var(--wot-filled-oppo);
   border-radius: 16px;
   border-width: 1px;
   border-style: solid;
-  border-color: #e4e7ed;
+  border-color: var(--wot-border-main);
   padding: 12px;
 }
 
 .demo-panel__label {
   font-size: 12px;
-  color: #979797;
+  color: var(--wot-text-auxiliary);
   margin: 8px 0;
 }
 
@@ -1689,20 +1775,20 @@ function onSubmitBar() {
 
 .demo-tag {
   font-size: 12px;
-  color: #755FFE;
-  background: #EEEBFF;
+  color: var(--wot-primary-6);
+  background: var(--wot-primary-1);
   border-radius: 6px;
   padding: 4px 8px;
 }
 
 .demo-transition-box {
-  background: #755FFE;
+  background: var(--wot-primary-6);
   border-radius: 12px;
   padding: 16px;
 }
 
 .demo-transition-box__text {
-  color: #ffffff;
+  color: var(--wot-text-white);
   font-size: 13px;
 }
 
@@ -1717,7 +1803,7 @@ function onSubmitBar() {
 
 .overlay-box {
   padding: 20px;
-  background-color: #ffffff;
+  background-color: var(--wot-filled-oppo);
   border-radius: 12px;
 }
 </style>

@@ -23,6 +23,8 @@ export const circleProps = {
   },
   /**
    * 轨道颜色
+   * 默认值 #F2F3F5 为官方亮色字面量：SVG content 不继承 CSS 变量，组件内按
+   * theme 解析该默认值（亮色 #F2F3F5 / 深色 #4E5369），显式传值原样使用
    */
   layerColor: makeStringProp('#F2F3F5'),
   /**

@@ -50,7 +50,7 @@ export const testSections: TestSection[] = [
     title: 'Slider 滑块',
     hint: '验证拖动跟手（核心）/气泡/步长刻度/双滑块',
     items: [
-      { id: 'slider-drag', name: '拖动跟手', expect: '拖动过程中滑块与气泡即时跟随手指，无回弹、无跳变' },
+      { id: 'slider-drag', name: '拖动跟手', expect: '拖动过程中滑块与气泡即时跟随手指，无回弹、无跳变；松手后气泡收起、页面仍可正常滚动（真机 2026-11-05：松手后整页卡死/气泡常驻）' },
       { id: 'slider-popover', name: '气泡显示时机', expect: '拖动时气泡常驻显示当前值；松手后按 popoverVisible 规则隐藏' },
       { id: 'slider-step', name: '步长与刻度', expect: 'step=10 时取值仅落在 0/10…/100；marks 刻度文字与位置对齐' },
       { id: 'slider-range', name: '双滑块', expect: 'range 模式两个滑块均可独立拖动，且不可相互穿越' }
@@ -74,10 +74,12 @@ export const testSections: TestSection[] = [
     items: [
       // 真机 2026-11-05：贴边弹层整片塌到屏幕左上角。单独成项——「弹层能开」
       // 和「弹层在自己该在的位置」是两件事，只勾动画项会把它漏掉。
+      // R10 续：justify-content 边值在真机失效，贴边弹层改为贴屏幕正中；
+      // 验收词补上「底部 Popup 贴底」，别只看 Picker。
       {
         id: 'overlay-anchor',
         name: '贴边定位',
-        expect: '时间选择器 / Picker 贴屏幕底部、Dialog 屏幕正中、notify 贴顶且左右各缩 12px；面板不得缩到左上角或只剩半截'
+        expect: '时间选择器 / Picker / 底部 Popup 贴屏幕底部、Dialog 屏幕正中、notify 贴顶且左右各缩 12px；面板不得缩到左上角、贴屏幕正中或只剩半截'
       },
       { id: 'overlay-mask', name: '遮罩关闭', expect: '点击遮罩关闭弹层；closeOnClickModal=false 时点击不关' },
       { id: 'overlay-anim', name: '弹出动画', expect: '各方向入场动画方向正确；round 圆角与 closable 关闭按钮正常' },

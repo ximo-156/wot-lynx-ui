@@ -34,6 +34,12 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
   // 为唯一流式子节点，纵向堆叠 + 交叉轴拉伸令其撑满宽度。
   display: flex;
   flex-direction: column;
+  // 真机层序（CONVENTIONS §19 定位 FAQ，2026-11-05 真机缺陷）：根节点先建立
+  // 层叠上下文，表头与固定列的 z-index 才能收在表内排序。缺这一层时表头
+  // （z-index:2）挂在没有层叠上下文的 __content 上，真机整棵表头子树不
+  // 绘制——只剩表头高度的空白，看起来就是「表头消失了」（与 2026-11-03
+  // wd-slider 滑轨不绘制同款：布局占位在、绘制整棵丢）。
+  z-index: 0;
 
   @include when(border) {
     border: $table-border-width solid $table-border-color;
@@ -46,6 +52,11 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
     flex-direction: column;
     flex-shrink: 0;
     min-width: 100%;
+    // 表头（z-index:2 + sticky）的直接父级：必须自带层叠上下文，否则真机
+    // 不绘制整棵表头（见根节点注释）。flex 子项上 z-index 即生成层叠上下文，
+    // position:relative 让语义与 wd-picker-view __main 的修法保持一致。
+    position: relative;
+    z-index: 0;
   }
 
   @include e(header) {
@@ -68,6 +79,10 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
     flex-direction: row;
     align-items: flex-start;
     width: 100%;
+    // 固定列（.wd-table-column.is-fixed 的 sticky + z-index:2）的直接父级：
+    // 同 __content，自带层叠上下文把列层级收在表体以内（真机层序）。
+    position: relative;
+    z-index: 0;
   }
 
   @include e(cell) {
