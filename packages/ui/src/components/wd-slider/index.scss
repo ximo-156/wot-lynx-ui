@@ -190,25 +190,15 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
 
   @include e(dot-popover) {
     position: absolute;
-    bottom: calc(100% + #{$slider-dot-popover-gap});
+    top: calc(0px - #{$slider-dot-popover-gap});
+    bottom: auto;
     left: 50%;
-    transform: translateX(-50%) scale(0);
-    transform-origin: center bottom;
-    opacity: 0;
-    /* 出场 transition：目标是隐藏态，所以写在这里 */
-    transition: opacity $slider-dot-popover-duration-exit $slider-dot-popover-easing-exit,
-      transform $slider-dot-popover-duration-exit $slider-dot-popover-easing-exit;
+    // 百分比位移基于气泡自身尺寸，字号/内边距/箭头令牌改变时仍不挡握把。
+    transform: translate(-50%, -100%);
+    pointer-events: none;
     display: flex;
     flex-direction: column;
     align-items: center;
-
-    @include when(visible) {
-      opacity: 1;
-      transform: translateX(-50%) scale(1);
-      /* 入场 transition：目标是可见态，所以写在这里 */
-      transition: opacity $slider-dot-popover-duration-enter $slider-dot-popover-easing-enter,
-        transform $slider-dot-popover-duration-enter $slider-dot-popover-easing-enter;
-    }
   }
 
   @include e(dot-popover-text) {
@@ -282,9 +272,24 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     }
   }
 
+  // 定位 view 不承担文字排版；Lynx text 直接取得字号/行高/颜色与单行契约。
+  @include e(scale-desc-text) {
+    font-size: $slider-scale-desc-font-size;
+    line-height: $slider-scale-desc-line-height;
+    color: $slider-scale-desc-color;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
   @include e(value) {
+    flex-shrink: 0;
+  }
+
+  @include e(value-text) {
     font-size: $slider-value-font-size;
+    line-height: $typography-body-line-height-size-main;
     color: $slider-value-color;
+    white-space: nowrap;
     flex-shrink: 0;
   }
 
@@ -298,10 +303,6 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
       top: $slider-marks-desc-spacing;
       left: 50%;
       transform: translateX(-50%);
-      font-size: $slider-scale-desc-font-size;
-      line-height: $slider-scale-desc-line-height;
-      color: $slider-scale-desc-color;
-      white-space: nowrap;
     }
 
     &.wd-slider--theme-capsule {
@@ -378,9 +379,10 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
       }
 
       @include m(right) {
-        right: 0;
-        left: auto;
-        transform: translateX(50%);
+        // 明确左锚点，避免原生将 left:auto 按 0 处理；仍相对 MTS 的进度盒。
+        left: 100%;
+        right: auto;
+        transform: translateX(-50%);
       }
     }
 
@@ -388,9 +390,9 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     @include me(line) {
       @include m(single) {
         @include me(dot) {
-          right: 0;
-          left: auto;
-          transform: translateX(50%);
+          left: 100%;
+          right: auto;
+          transform: translateX(-50%);
         }
       }
     }
@@ -525,8 +527,9 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
 
       @include m(single) {
         @include me(dot) {
-          bottom: 0;
-          transform: translate(-50%, 50%);
+          top: 100%;
+          bottom: auto;
+          transform: translate(-50%, -50%);
         }
       }
 
@@ -538,9 +541,9 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
         }
 
         @include m(right) {
-          bottom: 0;
-          top: auto;
-          transform: translate(-50%, 50%);
+          top: 100%;
+          bottom: auto;
+          transform: translate(-50%, -50%);
         }
       }
     }
@@ -549,14 +552,9 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
       bottom: auto;
       top: 50%;
       left: calc(100% + #{$slider-dot-popover-gap});
-      transform: translateY(-50%) scale(0);
-      transform-origin: left center;
+      transform: translateY(-50%);
       flex-direction: row-reverse;
       align-items: center;
-
-      @include when(visible) {
-        transform: translateY(-50%) scale(1);
-      }
     }
 
     @include me(dot-popover-arrow) {
@@ -581,12 +579,13 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
     @include me(scale-desc) {
       position: absolute;
       top: 50%;
-      left: auto;
-      right: $slider-marks-desc-spacing;
-      font-size: $slider-scale-desc-font-size;
-      line-height: $slider-scale-desc-line-height;
-      color: $slider-scale-desc-color;
-      transform: translateY(-50%);
+      // 等价于原 right 间距：tick 的 100% 减间距，再退回 label 自身宽度。
+      left: calc(100% - #{$slider-marks-desc-spacing});
+      right: auto;
+      transform: translate(-100%, -50%);
+    }
+
+    @include me(scale-desc-text) {
       text-align: right;
     }
 
@@ -597,7 +596,7 @@ $slider-opacity-disabled: var(--wot-slider-opacity-disabled, $opacity-disabled) 
       }
 
       .wd-slider__scale-desc {
-        right: $slider-marks-desc-capsule-spacing;
+        left: calc(100% - #{$slider-marks-desc-capsule-spacing});
       }
     }
   }

@@ -11,7 +11,7 @@ import { demoImage } from '../assets/demo-images'
  * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
  * 真机排查第一时间看它，避免"改了没生效"的误判。
  */
-const buildTag = 'R11 · 滑动验证无滑块 / 永远不过（首屏度量补测）'
+const buildTag = 'R12 · Slider 局部手势 / 松手释放'
 
 /**
  * 全量渲染清单（component-checks.ts 的 6 组，共 106 条）。
@@ -230,11 +230,11 @@ const safeAreaText = computed(() => {
       <view class="card">
         <text class="card__title">{{ testSections[1].title }}</text>
         <text class="card__hint">{{ testSections[1].hint }}</text>
-        <view class="row">
+        <view class="row slider-row">
           <wd-slider v-model="sliderValue" :style="{ flex: '1' }" />
-          <text class="tag">当前 {{ sliderValue }}</text>
+          <text class="tag slider-value" text-maxline="1">当前 {{ sliderValue }}</text>
         </view>
-        <view class="row">
+        <view class="row slider-row">
           <wd-slider
             v-model="sliderStep"
             :step="10"
@@ -242,9 +242,9 @@ const safeAreaText = computed(() => {
             :style="{ flex: '1' }"
           />
         </view>
-        <view class="row">
+        <view class="row slider-row">
           <wd-slider v-model="sliderRange" range :style="{ flex: '1' }" />
-          <text class="tag">{{ sliderRange[0] }} ~ {{ sliderRange[1] }}</text>
+          <text class="tag slider-value" text-maxline="1">{{ sliderRange[0] }} ~ {{ sliderRange[1] }}</text>
         </view>
         <ChecklistBox :items="testSections[1].items" :checked="checked" @toggle="toggle" />
       </view>
@@ -554,6 +554,17 @@ const safeAreaText = computed(() => {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+/* Slider 独立成行：不改按钮等演示依赖的全局 row wrap。 */
+.slider-row {
+  flex-wrap: nowrap;
+}
+
+.slider-value {
+  flex-shrink: 0;
+  line-height: 16px;
+  white-space: nowrap;
 }
 
 .row--block {

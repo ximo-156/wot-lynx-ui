@@ -307,23 +307,37 @@ const onTouchMove = (e: any) => {
 测试环境经 `test/mts-worklet-shim.ts` 模拟 worklet 派发与主线程元素桩，
 MTS 交互在单测中可真实执行。
 
-**收尾必须可自愈**（真机 2026-11-05，wd-slider）：手势的结束信号不能只绑在
-小尺寸的触发元素上——手指滑出去再松手时，原生按**落点**派发 `touchend`，
-绑在圆点（24px）上的 handler 收不到，`isDragging` 就永久为 true。它连着三件
-事一起坏：`useLockScroll` 持续持锁（整页不能滚）、气泡/按压态常驻、下一次
-`touchstart` 被早退挡掉。约定：
+**手势不能持有全页模态滚动锁**（2026-11-06，wd-slider 复报订正）：
+Slider 等内联手势组件使用局部原生仲裁，不把瞬态 dragging/settling 接到
+`useLockScroll`。按下即设置全页 `enable-scroll=false` 会阻断交叉轴滚页，
+任何收尾遗漏又会扩大为整页故障；Popup/Overlay 的模态租约仍保留。
 
-- `touchend` / `touchcancel` 至少同时绑到**包含该手势的较大容器**（轨道 /
-  根节点），子节点已处理时靠开头的 `isDragging` 早退吃掉重复调用；
-- 结束帧的归属只按「可识别的异号触点」判断；触点缺 `identifier` 时按单触点
-  兜底取值，宁可收尾也不丢帧（丢帧 = 值回弹到起点）；
-- 时间戳只用于拒绝上一手势的迟到 `move`，**不要用来拦截 end**：原生两端
-  时间基准可能不同，判错一次就是永久卡死；
-- 必须有静默兜底：超过约 1.2s 没有任何 move/end 就按 cancel 收尾并释放锁，
-  并保证任何提前 `return` 都先归零「落定中」状态（否则同样把锁留住）。
+- 官方 [TouchEvent 契约](https://lynxjs.org/api/lynx-api/event/touch-event.md) 指定
+  move/end/cancel 的 target 延续 start，**不是按松手落点派发**。容器同时接
+  end/cancel 是容错，不能拿测试里手动 end(bar) 证明原生会按落点派发。
+- [consume-slide-event](https://lynxjs.org/api/elements/built-in/view.md#consume-slide-event)
+  按角度仅阻止同轴平台手势，Lynx touch 继续派发；横向使用
+  `[[-180,-135],[-45,45],[135,180]]`，纵向使用 `[[-135,-45],[45,135]]`。
+  Android 仲裁节点保留 `flatten=false`；Web 使用 `touch-action: pan-y/pan-x`
+  作浏览器默认行为兼容，不能拿 passive 监听的 stopPropagation 当 preventDefault。
+- MT/BG 使用相同触点、方向及时间校验。单个无标识触点可降级；明确的异号
+  触点不能借坐标或取消当前手势。已知同一时基、早于新 start 的 end 应拒绝；
+  缺失/非数值时间则允许收尾。
+- 先判断事件归属，再取消计时器。只有当前有效帧可续命；旧 query/watchdog
+  必须先校验交互代次，不准无条件清理新 isSettling 或新计时器。
+- BG 结束/取消同步失效旧 MT 段，但带 owner/revision 的握手不能误杀更晚的 MT start；
+  正常握把的位置所有权跨 end/idle 留在 MT，旧 BG 落定不覆盖新拖动位置。
+  直接 BG 容错、无初始几何、轨道 tap 与真实外部/配置替换才交还后台位置控制。
+  新单指 start 可立即接管丢失 end 的旧手势，多指 start 不抢占。
+- 静默不等于抬指：1.2s 故障兜底会结束当前段，但保留其原始几何映射；
+  合法的同触点 move 可另起续拖段，并以该帧时间拒绝旧 terminal。
+  真正 end/cancel（含退休期间）、新 start、外部值、配置或卸载必须撤销续拖资格。
+  尺寸落定不锁滚、不显示正常气泡。
 
-回归：`test/regression/slider-drag-release.test.ts`（end 丢失 / 落在轨道上 /
-缺 id / 时间戳倒挂四条）。
+回归：`test/regression/slider-drag-release.test.ts`、
+`test/regression/slider-gesture-protocol.test.ts`、`test/regression/slider-device-layout.test.ts`；
+含原生式单事件冒泡、BG 延迟、反复暂停/范围跨越、未知触点和直接文字排版断言。
+这些测试仍不替代 Android/iOS 真机与 Web 真实触摸验收。
 
 ## 11. 验证清单（每个组件完成后必须执行）
 

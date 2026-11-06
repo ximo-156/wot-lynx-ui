@@ -5,7 +5,7 @@
  * expect 为真机上的预期结果，供测试人员对照。
  *
  * 两类分组：
- * 1. **交互清单**（本文件，8 组 / 36 项）：手势跟手、弹层回调、主题切换
+ * 1. **交互清单**（本文件，8 组 / 39 项）：手势跟手、弹层回调、主题切换
  *    等「必须动手操作」的场景，只覆盖 28 个组件；
  * 2. **全量渲染清单**（`component-checks.ts`，6 组 / 106 项）：一个组件
  *    一条，铺满全部 106 个组件，expect 指向该组件最可能翻车的真机行为。
@@ -48,12 +48,15 @@ export const testSections: TestSection[] = [
   {
     id: 'slider',
     title: 'Slider 滑块',
-    hint: '验证拖动跟手（核心）/气泡/步长刻度/双滑块',
+    hint: '验证局部轴向手势/松手释放/气泡/步长刻度/双滑块',
     items: [
       { id: 'slider-drag', name: '拖动跟手', expect: '拖动过程中滑块与气泡即时跟随手指，无回弹、无跳变；松手后气泡收起、页面仍可正常滚动（真机 2026-11-05：松手后整页卡死/气泡常驻）' },
-      { id: 'slider-popover', name: '气泡显示时机', expect: '拖动时气泡常驻显示当前值；松手后按 popoverVisible 规则隐藏' },
-      { id: 'slider-step', name: '步长与刻度', expect: 'step=10 时取值仅落在 0/10…/100；marks 刻度文字与位置对齐' },
-      { id: 'slider-range', name: '双滑块', expect: 'range 模式两个滑块均可独立拖动，且不可相互穿越' }
+      { id: 'slider-popover', name: '气泡显示时机', expect: '拖动时气泡显示当前值且位于握把之外，不遮挡滑块；松手后按 popoverVisible 规则隐藏' },
+      { id: 'slider-step', name: '步长与刻度', expect: 'step=10 时取值仅落在 0/10…/100；marks 的 0/50/100 完整单行显示并与刻度对齐，不逐字换行' },
+      { id: 'slider-range', name: '双滑块', expect: 'range 模式两个滑块均可独立拖动，且不可相互穿越' },
+      { id: 'slider-page-scroll', name: '竖滑滚页', expect: '在横向 Slider 的轨道或圆点上竖滑，页面正常滚动且不误改滑块值；松手后页面和滑块仍可继续操作' },
+      { id: 'slider-pause-resume', name: '暂停再拖', expect: '拖动中按住停顿超过 1.2 秒后继续移动同一根手指，值仍持续跟手；松手后气泡收起、页面可滚动，下一次拖动也正常' },
+      { id: 'slider-repeat', name: '连续多次拖动', expect: '单滑块及范围两端各连续拖动松手至少 5 次，交替方向并触及边界；每次松手气泡收起，可滚动页面且下一次仍能拖动' }
     ]
   },
   {

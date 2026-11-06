@@ -318,20 +318,16 @@ describe('controlled controls, official continuous gestures and instance isolati
       onDragend: (value: any) => order.push(['end', value]), onChange: (value: any) => order.push(['change', value])
     })
     await flush()
-    const dot = node(mounted.container, '.wd-slider__dot'), bar = node(mounted.container, '.wd-slider__bar')
-    const line = node(mounted.container, '.wd-slider__line')
-    fireEvent.touchstart(dot, { touches: [{ clientX: 45 }] }) // grab slightly off-center: value is still 20
-    // 几何度量的 MT worklet 挂在 __line（不带 @tap），真机上从滑块冒泡上来
-    fireEvent.touchstart(line, { touches: [{ clientX: 45 }] })
+    const grip = node(mounted.container, '.wd-slider__dot-slider')
+    fireEvent.touchstart(grip, { touches: [{ clientX: 45 }], bubbles: true }) // grab slightly off-center: value is still 20
     await flush()
     for (const x of [85, 105]) {
-      fireEvent.touchmove(dot, { touches: [{ clientX: x }] })
-      fireEvent.touchmove(bar, { touches: [{ clientX: x }] })
+      fireEvent.touchmove(grip, { touches: [{ clientX: x }], bubbles: true })
       await flush()
     }
     expect(updates).toEqual([40, 50])
     expect(order.map((item) => item[0])).toEqual(['start', 'move', 'move'])
-    fireEvent.touchend(dot, { touches: [], changedTouches: [{ clientX: 195 }] })
+    fireEvent.touchend(grip, { touches: [], changedTouches: [{ clientX: 195 }], bubbles: true })
     await flush()
     expect(updates).toEqual([40, 50])
     expect(order.slice(-2)).toEqual([['end', { value: 50 }], ['change', 50]])
@@ -345,14 +341,11 @@ describe('controlled controls, official continuous gestures and instance isolati
     mounted.props.value = { modelValue: 40, min: 0, max: 200, step: 20, vertical: true, 'onUpdate:modelValue': update }
     await flush()
     update.mockClear()
-    const dot = node(mounted.container, '.wd-slider__dot'), bar = node(mounted.container, '.wd-slider__bar')
-    const line = node(mounted.container, '.wd-slider__line')
-    fireEvent.touchstart(dot, { touches: [{ clientY: 20 }] })
-    fireEvent.touchstart(line, { touches: [{ clientY: 20 }] })
+    const grip = node(mounted.container, '.wd-slider__dot-slider')
+    fireEvent.touchstart(grip, { touches: [{ clientY: 20 }], bubbles: true })
     await flush()
-    fireEvent.touchmove(dot, { touches: [{ clientY: 60 }] })
+    fireEvent.touchmove(grip, { touches: [{ clientY: 60 }], bubbles: true })
     expect(node(mounted.container, '.wd-slider__line').getAttribute('style')).toContain('height: 60%')
-    fireEvent.touchmove(bar, { touches: [{ clientY: 60 }] })
     await flush()
     expect(update).toHaveBeenLastCalledWith(120)
   })

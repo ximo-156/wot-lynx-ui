@@ -9,9 +9,9 @@
  * 主线程 worklet 事件（main-thread-bind*）：ElementPAPI 以
  * `Object.assign({}, evt)` 拷贝事件后调 runWorklet——jsdom 的
  * target/currentTarget 是 Event.prototype 访问器，不在自有属性里，拷贝即丢失。
- * 真机 Lynx 事件对象自带 currentTarget（绑定元素），故派发前把元素挂到
- * WD_EVENT_TARGET_EL Symbol 自有属性上（Object.assign 会复制 Symbol 键），
- * 由 mts-worklet-shim 的 runWorklet 还原为 currentTarget/target。
+ * 真机 Lynx 事件自带绑定元素 currentTarget；测试用可枚举 Symbol getter 在
+ * Object.assign 的时刻采样 event.currentTarget，而不是固定在派发的图标落点。
+ * mts-worklet-shim 据此恢复每一层实际的绑定元素，支持真实冒泡链的索引判断。
  */
 import { createEvent, fireEvent as domFireEvent } from '@testing-library/dom'
 import { WD_EVENT_TARGET_EL } from './mts-worklet-shim'
@@ -72,7 +72,10 @@ for (const key of Object.keys(eventMap)) {
     const customProps = Object.fromEntries(Object.entries(eventInit).filter(([k]) => !EVENT_INIT_KEYS.has(k)))
     Object.assign(event, customProps)
     // worklet 事件的 currentTarget/target 桥接（Symbol 自有属性，见文件头）
-    ;(event as any)[WD_EVENT_TARGET_EL] = elem
+    Object.defineProperty(event, WD_EVENT_TARGET_EL, {
+      enumerable: true,
+      get: () => event.currentTarget || elem
+    })
     const ans = domFireEvent(elem, event)
 
     if (isMainThread) {
