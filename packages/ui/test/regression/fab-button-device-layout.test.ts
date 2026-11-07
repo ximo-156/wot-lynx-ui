@@ -94,12 +94,16 @@ describe('Button explicit native content and geometry', () => {
       expect(declarations.overflow).toBeUndefined()
     }
     expect(rule('.wd-button__text-content')['text-align']).toBe('center')
-    // One direct-parent color hop is intentional; no intervening unstyled view.
-    expect(rule('.wd-button__text-content').color).toBe('inherit')
+    // A native text cannot rely on the label view's inherited foreground.
+    expect(rule('.wd-button__text-content').color).toBeUndefined()
     for (const type of ['primary', 'success', 'info', 'warning', 'danger']) {
-      expect(rule(`.wd-button.is-${type} .wd-button__text`).color).not.toBe('inherit')
+      const selector = `.wd-button.is-${type}`
+      expect(rule(`${selector} .wd-button__text-content`).color).toBe(rule(`${selector} .wd-button__text`).color)
+      expect(rule(`${selector} .wd-button__text-content`).color).not.toBe('inherit')
       for (const variant of ['plain', 'dashed', 'soft', 'subtle', 'text']) {
-        expect(rule(`.wd-button.is-${variant}.is-${type} .wd-button__text`).color).not.toBe('inherit')
+        const variantSelector = `.wd-button.is-${variant}.is-${type}`
+        expect(rule(`${variantSelector} .wd-button__text-content`).color).toBe(rule(`${variantSelector} .wd-button__text`).color)
+        expect(rule(`${variantSelector} .wd-button__text-content`).color).not.toBe('inherit')
       }
     }
   })

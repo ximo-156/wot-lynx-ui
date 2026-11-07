@@ -205,6 +205,24 @@ $dialog-action-text-border: var(--wot-dialog-action-text-border, $stroke-light) 
       font-weight: $dialog-actions-confirm-font-weight;
     }
 
+    /* Lynx 适配（真机 2026-11-06 用户截图复测「弹窗适配程度不一样」）：
+       wd-button 基础样式带 flex-shrink: 0（CONVENTIONS §19 附注：防止按钮
+       在行内被按比例压缩），而本组按钮走 is-block（width: 100%）——两个
+       100% 按钮放进 flex 行后谁都不缩，「取消」独占整行宽度，「确定」被
+       挤到弹窗右侧、被 __container 的 overflow: hidden 裁得只剩一条色带。
+       Web 端 wot-ui 的按钮无 flex-shrink: 0，两个 100% 按钮默认各缩一半，
+       所以只有真机翻车。这里显式 flex: 1 让按钮等分按钮行（flex-grow 是
+       真机可用路径，CONVENTIONS §19 差异 #11；按钮行由 __container 的
+       align-items 拉伸定宽，不存在 basis: 0 按内容塌缩的问题）。
+       仅横向多按钮行生效：--vertical 与 --block 均为 column 容器、高度按
+       内容结算，basis: 0 会把按钮高度算没（wd-password-input 2026-11-01
+       同源缺陷），故用 :not(.wd-dialog__actions--vertical) 排除。 */
+    &.wd-dialog__flex:not(.wd-dialog__actions--vertical) {
+      .wd-dialog__actions-btn {
+        flex: 1;
+      }
+    }
+
     @include m(vertical) {
       flex-direction: column;
       padding: $dialog-actions-padding-vertical;

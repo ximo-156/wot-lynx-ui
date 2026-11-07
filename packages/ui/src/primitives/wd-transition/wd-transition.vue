@@ -12,6 +12,7 @@
  *     落地后由框架卸载（懒渲染天然成立；初始挂载即展示时播放入场）；
  *   - 其余组合（lazyRender=false 或 destroy=false）：子视图常驻，
  *     v-show 控制显隐，leave 落地后由 vShow 指令置 display:none；
+ *     同时仅在完全关闭时裁剪根视图，防 Lynx 把文字子树缩成 0×0 后仍在原点绘制；
  *     lazyRender=true 时内容首次展示后才渲染（slot 门控）；
  * - 模板不能用 Transition 内建组件 / v-show 内建立法：二者是编译器内建，
  *   在非 vue-lynx 编译环境（vitest / Web 预览）会解析到 @vue/runtime-dom
@@ -71,6 +72,14 @@ onBeforeUnmount(() => {
   alive.value = false
 })
 
+/**
+ * 仍在场（含完整的 leave 动画）。不能直接用 !show 裁剪：show=false 只是
+ * 开始离场；退场完成才允许把保活文字子树裁到零尺寸。入场由框架钩子撤销
+ * 保护，不能 watch(show) 提前撤销：style patch 会先于 vShow.updated 下发，
+ * 此时渲染器仍强制 display:none，提前解除裁剪会漏出一帧原点文字。
+ */
+const inPlace = ref(props.show)
+
 /** 是否曾展示过（v-show 分支 + lazyRender 时的内容门控） */
 const initiallyShown = props.show
 const everShown = ref(false)
@@ -84,6 +93,9 @@ watch(
 
 /** v-if 分支条件：随 show 挂载 / leave 后卸载（懒渲染 + 销毁语义） */
 const useVif = computed(() => props.destroy && props.lazyRender)
+// 分支变更会替换原生根。旧根可能仍在离场，新建的 v-show 根却已经关闭，
+// 不能继承旧根的 inPlace；使用 pre 时机，读取本轮完整 props 而非中途状态。
+watch(useVif, () => { if (!props.show) inPlace.value = false })
 
 /**
  * name 历史支持数组（框架 Transition 仅接受单 name，取首个元素）。
@@ -157,11 +169,32 @@ const rootClass = computed(() => `wd-transition ${props.customClass}`)
  * 让 el._style 常带可见值，vShow 重发时即可覆盖残留（取值与 .wd-transition
  * 的 display:flex 类声明一致；customStyle 仍可覆盖）。
  */
-const ROOT_STYLE = defineStyleKeys({ display: 'flex', 'transition-duration': '0ms' })
+const ROOT_STYLE = defineStyleKeys({
+  display: 'flex',
+  'transition-duration': '0ms',
+  overflow: '',
+  'overflow-x': '',
+  'overflow-y': ''
+})
 const resolveRootStyle = createStyleResolver(ROOT_STYLE)
-const rootStyle = computed(() => resolveRootStyle(
-  { 'transition-duration': `${phaseDuration.value}ms` }, parseStyle(props.customStyle)
-))
+const rootStyle = computed<Record<string, string>>(() => {
+  const style = resolveRootStyle(
+    { 'transition-duration': `${phaseDuration.value}ms` }, parseStyle(props.customStyle)
+  )
+  // Lynx display:none 只将后代尺寸归零，文字仍可能绘制在 (0,0)。官方要求
+  // 对应父级 overflow:hidden：https://lynxjs.org/api/css/properties/display.md
+  // 保护落在真正显隐的根，而非 fixed 节点之外的祖先；不销毁保活的 slot。
+  const hidden = !inPlace.value || style.display === 'none'
+  return {
+    ...style,
+    // 后于 customStyle，避免 overflow:visible 或两轴定制击穿闭态保护。
+    // 开态显式清空覆盖以恢复 CSS 类；不能省略键，否则 SET_STYLE 会残留 hidden。
+    overflow: hidden ? 'hidden' : style.overflow,
+    // 恢复 shorthand 时把它展开到未显式定制的轴，避免轴的空值冲掉 shorthand。
+    'overflow-x': hidden ? 'hidden' : style['overflow-x'] || style.overflow,
+    'overflow-y': hidden ? 'hidden' : style['overflow-y'] || style.overflow
+  }
+})
 
 type PhaseEvent = 'before-enter' | 'enter' | 'after-enter' | 'before-leave' | 'leave' | 'after-leave'
 
@@ -170,8 +203,21 @@ type PhaseEvent = 'before-enter' | 'enter' | 'after-enter' | 'before-leave' | 'l
  * appear 钩子（初始挂载即展示）映射到同名 enter 事件——vue-lynx 的
  * Transition 不做 Vue DOM 那样的 appear→enter 回退，需显式接线。
  */
-function onPhase(event: PhaseEvent, phase: 'enter' | 'leave') {
+let currentRoot: unknown
+function onPhase(event: PhaseEvent, phase: 'enter' | 'leave', element: unknown) {
   if (!alive.value) return
+  if (event === 'before-enter') {
+    // 分支替换时 BaseTransition 可能给新建的保活根执行 appear，即使 v-show
+    // 仍为 false。它不是一次打开，不能解除裁剪或抢走旧根的离场回调归属。
+    if (!props.show) return
+    currentRoot = element
+    inPlace.value = true
+  } else if (element !== currentRoot) {
+    // destroy/lazyRender 切换可能让两个根短暂共存。旧根收尾不能裁新根，
+    // 也不能经 after-leave 让 Popup/Overlay 提前释放新根的模态滚动锁。
+    return
+  }
+  if (event === 'after-leave' && !props.show) inPlace.value = false
   if (event === 'before-enter' || event === 'before-leave') {
     phaseDuration.value = phaseDurationOf(phase)
   }
@@ -211,15 +257,15 @@ const touchcancelLocked = computed(() => props.disableTouchMove ? touchcancelCat
     :leave-from-class="orUndefined(leaveFromClass)"
     :leave-active-class="orUndefined(leaveActiveClass)"
     :leave-to-class="orUndefined(leaveToClass)"
-    @before-enter="onPhase('before-enter', 'enter')"
-    @enter="onPhase('enter', 'enter')"
-    @after-enter="onPhase('after-enter', 'enter')"
-    @before-leave="onPhase('before-leave', 'leave')"
-    @leave="onPhase('leave', 'leave')"
-    @after-leave="onPhase('after-leave', 'leave')"
-    @before-appear="onPhase('before-enter', 'enter')"
-    @appear="onPhase('enter', 'enter')"
-    @after-appear="onPhase('after-enter', 'enter')"
+    @before-enter="onPhase('before-enter', 'enter', $event)"
+    @enter="onPhase('enter', 'enter', $event)"
+    @after-enter="onPhase('after-enter', 'enter', $event)"
+    @before-leave="onPhase('before-leave', 'leave', $event)"
+    @leave="onPhase('leave', 'leave', $event)"
+    @after-leave="onPhase('after-leave', 'leave', $event)"
+    @before-appear="onPhase('before-enter', 'enter', $event)"
+    @appear="onPhase('enter', 'enter', $event)"
+    @after-appear="onPhase('after-enter', 'enter', $event)"
   >
     <!-- v-if 分支（destroy + lazyRender）：随 show 挂载，leave 落地后由框架卸载 -->
     <view

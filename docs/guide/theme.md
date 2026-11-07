@@ -44,6 +44,27 @@ wot-lynx-ui 保留 **wot-ui 2.3.2 的设计令牌命名与度量体系**（`--wo
 - **透明度**：`--wot-opacity-disabled`(0.4) / `-dimmer`(0.6) / `-overlay`(0.75) / `-backdrop`(0.3)。
 - **选择器视图遮罩**：`--wot-picker-view-mask-start-color` / `-end-color`。
 
+## 按钮与选中态形状
+
+普通按钮默认使用胶囊形；`round` 未传时继承全局 `button.round`，显式
+`:round="false"` 或全局 `button.round: false` 可恢复普通圆角。只调整按钮形状，
+不会把卡片、弹层等组件的基础圆角一起放大。
+
+日历的单选、多选及范围起止日期使用居中的圆形高亮，多选的相邻日期也保持独立圆形；
+范围选择则在圆形后方保留浅色连接带。月份选择默认同样为圆形。完整日期格的
+点击区域与行距不变，上下辅助信息在圆形之外显示，避免白字落在白底上。
+
+可通过样式表中的组件变量定制（也支持具备变量下发能力的宿主使用 `themeVars`）：
+
+| CSS 变量 | 默认值 | 用途 |
+| --- | --- | --- |
+| `--wot-calendar-view-day-size` | `40px` | 日期圆形直径、范围连接带高度 |
+| `--wot-calendar-view-day-size-with-info` | `28px` | 带顶部或底部辅助信息时的圆形直径 |
+| `--wot-calendar-view-border-radius-active` | `var(--wot-radius-full)` | 日期与月份高亮的圆角；可覆盖为普通圆角 |
+
+`calendarViewDaySize` / `calendarViewDaySizeWithInfo` 对应上面的两个尺寸变量。
+自定义尺寸时请保持圆形能放入日期列宽与行高，带辅助信息时需为上下说明留出空间。
+
 ## 暗色模式
 
 ```vue
@@ -80,7 +101,7 @@ wot-lynx-ui 保留 **wot-ui 2.3.2 的设计令牌命名与度量体系**（`--wo
 
 ## 对照范围与品牌例外
 
-运行时 props 对照使用官方 2.3.2 的 101 个顶层组件目录（含空占位）与 5 个内部模块，共 1,402 个 prop 契约（`test/fixtures/wot-ui-2.3.2-props.json`）；当前没有未豁免的运行时差异，另有 6 个本地扩展组件（不对应官方目录）。例外仅为 `customStyle` 接受字符串和对象，以及 `WdCircle.color` 默认 `#1C64FD` → `#755FFE` 的品牌调整。设计令牌的品牌定制不改变官方组件的布局、尺寸或状态色；TypeScript 泛型 / 别名 / 联合类型不由该运行时守卫验证，这也不是全量测试通过或视觉完全一致的声明。
+运行时 props 对照使用官方 2.3.2 的 101 个顶层组件目录（含空占位）与 5 个内部模块，共 1,402 个 prop 契约（`test/fixtures/wot-ui-2.3.2-props.json`）；当前没有未豁免的运行时差异，另有 6 个本地扩展组件（不对应官方目录）。props 例外为 `customStyle` 接受字符串和对象，以及 `WdCircle.color` 默认 `#1C64FD` → `#755FFE` 的品牌调整。视觉默认值另外采用胶囊按钮与圆形日历选中态（见上文），不改写通用圆角刻度，现有主题变量与显式形状配置仍可覆盖。TypeScript 泛型 / 别名 / 联合类型不由该运行时守卫验证，这也不是全量测试通过或视觉完全一致的声明。
 
 ## SCSS 深度定制
 

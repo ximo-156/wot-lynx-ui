@@ -98,7 +98,7 @@ const inputValue = ref<string | number>(getInitValue())
  * 程序化改写 inputValue（归一化 / 步进 / 外部受控）必须经该通道推送，
  * 否则真机上输入框文本不刷新——用户视角就是「加减没有鸟用」。
  */
-const { inputId, markNativeValue } = useNativeInputValue(inputValue, 'wd-input-number')
+const { inputId, markNativeValue, syncNativeValue } = useNativeInputValue(inputValue, 'wd-input-number', () => !props.withoutInput)
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
@@ -516,6 +516,7 @@ function handleActionTap(type: OperationType) {
     return
   }
   handleClick(type)
+  void syncNativeValue()
 }
 
 /**
@@ -572,9 +573,9 @@ function clearLongPressTimer() {
       @tap="handleActionTap('sub')"
       v-on="subGestureHandlers"
     >
-      <view class="wd-input-number__action-divider" />
+      <view class="wd-input-number__action-divider" :user-interaction-enabled="false" />
       <!-- 减号字形（横条）：参考源为 ::before 伪元素，Lynx 无伪元素改真实元素 -->
-      <view class="wd-input-number__action-icon" />
+      <view class="wd-input-number__action-icon" :user-interaction-enabled="false" />
     </view>
     <!-- 输入框 -->
     <view v-if="!withoutInput" class="wd-input-number__inner" @tap.stop="">
@@ -599,10 +600,10 @@ function clearLongPressTimer() {
       @tap="handleActionTap('add')"
       v-on="addGestureHandlers"
     >
-      <view class="wd-input-number__action-divider" />
+      <view class="wd-input-number__action-divider" :user-interaction-enabled="false" />
       <!-- 加号字形（横条 + 竖条）：参考源为 ::before / ::after 伪元素，Lynx 无伪元素改真实元素 -->
-      <view class="wd-input-number__action-icon" />
-      <view class="wd-input-number__action-icon wd-input-number__action-icon--vertical" />
+      <view class="wd-input-number__action-icon" :user-interaction-enabled="false" />
+      <view class="wd-input-number__action-icon wd-input-number__action-icon--vertical" :user-interaction-enabled="false" />
     </view>
   </view>
 </template>

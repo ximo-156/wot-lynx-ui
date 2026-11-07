@@ -55,6 +55,7 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
   display: flex;
   flex-direction: row;
   align-items: center;
+  flex-shrink: 0;
   line-height: 1;
 
   @include e(action) {
@@ -66,7 +67,17 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
     justify-content: center;
     width: $input-number-action-size;
     height: $input-number-action-size;
+    flex-shrink: 0;
     box-sizing: border-box;
+
+    &:not(.is-disabled):active {
+      opacity: $opacity-dimmer;
+    }
+  }
+
+  .wd-input-number__action-divider,
+  .wd-input-number__action-icon {
+    pointer-events: none;
   }
 
   // 分割线：贴按钮内侧（sub 在右、add 在左），高度撑满按钮。
@@ -153,6 +164,10 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
   }
 
   @include e(inner) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
     position: relative;
     box-sizing: border-box;
     height: $input-number-input-height;
@@ -162,12 +177,10 @@ $input-number-action-primary-sub-color: var(--wot-input-number-action-primary-su
 
   @include e(input) {
     position: relative;
-    // display: block 为参考源声明：Lynx 引擎只识别 flex / none / linear，
-    // 该值被静默忽略（原生 input 的内部布局由引擎接管，无视觉影响），
-    // 保留以对齐 wot-ui 样式计算值（与 wd-progress / wd-cell 同处理）
-    display: block;
+    // 原生 input 显式定高，避免首轮 auto / 百分比测量得到 0 高度。
+    display: flex;
     width: $input-number-input-width;
-    height: 100%;
+    height: $input-number-input-height;
     border: none;
     text-align: center;
     color: $input-number-input-color;

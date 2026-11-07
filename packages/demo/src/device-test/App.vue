@@ -11,7 +11,7 @@ import { demoImage } from '../assets/demo-images'
  * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
  * 真机排查第一时间看它，避免"改了没生效"的误判。
  */
-const buildTag = 'R12 · Slider 局部手势 / 松手释放'
+const buildTag = 'R15 · 步进器原生值通道 / 搜索取消即响应'
 
 /**
  * 全量渲染清单（component-checks.ts 的 6 组，共 106 条）。
@@ -56,6 +56,36 @@ function resetAll() {
 const sliderValue = ref(50)
 const sliderStep = ref(50)
 const sliderRange = ref<number[]>([20, 80])
+
+// 仅用户展开时采样；原生 row 监听不与 Slider 内部事件合并，也不拦冒泡/滚动。
+const sliderDiagnostics = ref(false)
+const sliderProbe = reactive({ phase: '未开始', rawMoves: 0, acceptedMoves: 0, firstId: '-', lastId: '-', x: '-', width: '-', target: '-' })
+function sampleSliderLayout(event: any) {
+  // 此处记录演示中单滑块的控件宽度；不是伪造组件内部缓存的轨道度量结果。
+  const layout = event?.detail?.layout ?? event?.detail
+  const width = Number(layout?.width)
+  sliderProbe.width = Number.isFinite(width) && width > 0 ? `${Math.round(width)}px` : '未布局'
+}
+function toggleSliderDiagnostics() {
+  sliderDiagnostics.value = !sliderDiagnostics.value
+}
+function sampleSliderTouch(event: any, phase: 'start' | 'move' | 'end' | 'cancel') {
+  if (!sliderDiagnostics.value) return
+  const point = event?.changedTouches?.[0] ?? event?.touches?.[0]
+  const id = String(point?.identifier ?? point?.id ?? '无 ID')
+  sliderProbe.phase = phase
+  sliderProbe.lastId = id
+  sliderProbe.x = String(point?.clientX ?? point?.pageX ?? event?.detail?.x ?? '无坐标')
+  if (phase === 'start') {
+    sliderProbe.rawMoves = 0
+    sliderProbe.acceptedMoves = 0
+    sliderProbe.firstId = id
+    sliderProbe.target = String(event?.target?.id || '(目标无 id)')
+  } else if (phase === 'move') sliderProbe.rawMoves++
+}
+function sampleSliderDragMove() {
+  if (sliderDiagnostics.value) sliderProbe.acceptedMoves++
+}
 
 // ---------- 3. SwipeAction ----------
 const swipeCells = ref([
@@ -230,9 +260,24 @@ const safeAreaText = computed(() => {
       <view class="card">
         <text class="card__title">{{ testSections[1].title }}</text>
         <text class="card__hint">{{ testSections[1].hint }}</text>
-        <view class="row slider-row">
-          <wd-slider v-model="sliderValue" :style="{ flex: '1' }" />
+        <view
+          id="slider-native-probe"
+          class="row slider-row"
+          @touchstart="(e: any) => sampleSliderTouch(e, 'start')"
+          @touchmove="(e: any) => sampleSliderTouch(e, 'move')"
+          @touchend="(e: any) => sampleSliderTouch(e, 'end')"
+          @touchcancel="(e: any) => sampleSliderTouch(e, 'cancel')"
+        >
+          <wd-slider v-model="sliderValue" :style="{ flex: '1' }" @dragmove="sampleSliderDragMove" @layoutchange="sampleSliderLayout" />
           <text class="tag slider-value" text-maxline="1">当前 {{ sliderValue }}</text>
+        </view>
+        <view class="row">
+          <wd-button size="small" type="info" @tap="toggleSliderDiagnostics">{{ sliderDiagnostics ? '收起滑块诊断' : '显示滑块诊断' }}</wd-button>
+        </view>
+        <view v-if="sliderDiagnostics">
+          <text class="tag">{{ sliderProbe.phase }} · 原生移动 {{ sliderProbe.rawMoves }} / 有效移动 {{ sliderProbe.acceptedMoves }} · 控件宽 {{ sliderProbe.width }}</text>
+          <text class="tag">ID {{ sliderProbe.firstId }} → {{ sliderProbe.lastId }} · x {{ sliderProbe.x }}</text>
+          <text class="tag">目标 {{ sliderProbe.target }}</text>
         </view>
         <view class="row slider-row">
           <wd-slider

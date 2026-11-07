@@ -9,10 +9,10 @@
  * - __day-top / __day-bottom 为绝对定位 + flex 居中的文本容器，用
  *   「view + 内部 text」承载（Lynx 的 text 不保证按 flex 容器布局）；
  * - 日期格与内容盒显式定高，行高/字号/颜色只落到 text；范围装饰
- *   仅在起止格的局部层叠上下文内绘制，普通日期不升层；
+ *   仅在区间格的局部层叠上下文内绘制，普通日期不升层；
  * - 月初偏移由空位格承载，每周固定七格，不依赖 flex-wrap；
- * - __day-container 以 justify-content + align-items 成对 flex 居中
- *   承载日期文本，选中态背景仍铺满整个日期格。
+ * - __day-container 仍占满点击区域，内部 __day-value 用等宽高盒绘制
+ *   圆形高亮；辅助信息独立排布，区间带在圆形之后绘制，多选不连带。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -409,15 +409,21 @@ function getFormatterDate(date: number, day: string | number, type?: CalendarDay
                 <view class="wd-month__day-top">
                   <text class="wd-month__day-info">{{ cell.item.topInfo }}</text>
                 </view>
-                <text class="wd-month__day-text">
-                  {{ cell.item.text }}
-                </text>
+                <view :class="['wd-month__day-value', cell.item.topInfo || cell.item.bottomInfo ? 'has-info' : '']">
+                  <text class="wd-month__day-text" text-maxline="1">
+                    {{ cell.item.text }}
+                  </text>
+                </view>
                 <view class="wd-month__day-bottom">
                   <text class="wd-month__day-info">{{ cell.item.bottomInfo }}</text>
                 </view>
               </view>
-              <!-- Lynx 适配：wot-ui 用 ::after 绘制范围态背景，此处为真实元素 -->
-              <view v-if="cell.item.type === 'start' || cell.item.type === 'end'" class="wd-month__day-range" />
+              <!-- 装饰排在内容之后且不参与命中；dates 多选不绘制区间带。 -->
+              <view
+                v-if="type !== 'dates' && (cell.item.type === 'start' || cell.item.type === 'middle' || cell.item.type === 'end')"
+                class="wd-month__day-range"
+                :user-interaction-enabled="false"
+              />
             </template>
           </view>
         </view>

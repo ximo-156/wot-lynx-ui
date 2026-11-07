@@ -17,7 +17,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, useMainThreadRef, useSlots } from 'vue-lynx'
+import { computed, getCurrentInstance, useMainThreadRef, useSlots } from 'vue-lynx'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import { buttonProps, type ButtonOpenType } from './types'
@@ -32,6 +32,10 @@ import { GREEN, ORANGE, PRIMARY_COLOR, RED, SECONDARY_COLOR, THEME_TEXT_COLOR } 
 
 const props = defineProps(buttonProps)
 const slots = useSlots()
+// Only normalized labels opt into hover coloring. Caller-owned text/views and
+// labels belonging to nested Buttons must remain untouched.
+const nativeTextSelector = `.wd-button__native-text-${getCurrentInstance()!.uid}`
+const textClass = `wd-button__text-content ${nativeTextSelector.slice(1)}`
 
 const globalConfig = useGlobalConfig()
 
@@ -49,7 +53,7 @@ const effectiveType = computed(() => {
 
 const effectiveRound = computed(() => {
   if (isUndefined(props.round)) {
-    return isUndefined(globalConfig.value.button?.round) ? false : globalConfig.value.button?.round
+    return isUndefined(globalConfig.value.button?.round) ? true : globalConfig.value.button?.round
   }
   return props.round
 })
@@ -147,6 +151,7 @@ const iconStyle = computed(() => { hoverVersion.value; return { color: buttonTex
 const resolveRootStyle = createStyleResolver({ 'background-color': '', color: '' })
 const resolveTextStyle = createStyleResolver({ color: '', 'font-size': '', 'line-height': '', 'font-weight': '' })
 const textStyle = computed(() => {
+  hoverVersion.value
   const custom = parseStyle(props.customStyle)
   return resolveTextStyle({
     color: custom.color,
@@ -174,6 +179,7 @@ const customHoverColor = computed(() => !!parseStyle(props.customStyle).color)
 interface HoverElement {
   setStyleProperty(name: string, value: string): void
   getAttribute(name: string): string | null
+  querySelectorAll?(selector: string): HoverElement[]
 }
 interface HoverPress {
   element: HoverElement
@@ -210,6 +216,12 @@ const handleHoverStart = () => {
     active: !!previous && previous.element === element && previous.version === element.getAttribute('hover-version') && previous.active,
     step: () => {}
   }
+  // MainThread.Element queries are synchronous. Query only on color transitions,
+  // not while waiting each frame, and use the instance marker rather than text.
+  const setTextColor = (color: string) => {
+    const label = labelRef.current
+    for (const text of label?.querySelectorAll?.(nativeTextSelector) || []) text.setStyleProperty('color', color)
+  }
   const step = () => {
     if (pressRef.current !== press) return
     const current = buttonRef.current
@@ -219,6 +231,7 @@ const handleHoverStart = () => {
       if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', '')
       if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', '')
       if (labelRef.current) labelRef.current.setStyleProperty('color', '')
+      setTextColor(current.getAttribute('hover-custom-color') === 'true' ? current.getAttribute('hover-foreground') || '' : '')
       if (iconRef.current) iconRef.current.setStyleProperty('color', current.getAttribute('hover-foreground') || '')
       if (borderRef.current) borderRef.current.setStyleProperty('border-color', '')
       return
@@ -232,6 +245,7 @@ const handleHoverStart = () => {
         if (current.getAttribute('hover-custom-color') !== 'true') {
           current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
           if (labelRef.current) labelRef.current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
+          setTextColor('var(--wot-button-current-text-active)')
           if (iconRef.current) iconRef.current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
         }
         if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', 'var(--wot-button-plain-border-active)')
@@ -247,6 +261,7 @@ const handleHoverStart = () => {
     if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', '')
     if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', '')
     if (labelRef.current) labelRef.current.setStyleProperty('color', '')
+    setTextColor(current.getAttribute('hover-custom-color') === 'true' ? current.getAttribute('hover-foreground') || '' : '')
     if (iconRef.current) iconRef.current.setStyleProperty('color', current.getAttribute('hover-foreground') || '')
     if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', '')
     pressRef.current = null
@@ -271,6 +286,8 @@ const handleHoverCancel = () => {
   if (element.getAttribute('hover-custom-background') !== 'true') element.setStyleProperty('background-color', '')
   if (element.getAttribute('hover-custom-color') !== 'true') element.setStyleProperty('color', '')
   if (labelRef.current) labelRef.current.setStyleProperty('color', '')
+  const color = element.getAttribute('hover-custom-color') === 'true' ? element.getAttribute('hover-foreground') || '' : ''
+  for (const text of labelRef.current?.querySelectorAll?.(nativeTextSelector) || []) text.setStyleProperty('color', color)
   if (iconRef.current) iconRef.current.setStyleProperty('color', element.getAttribute('hover-foreground') || '')
   if (borderRef.current) borderRef.current.setStyleProperty('border-color', '')
 }
@@ -332,8 +349,8 @@ function handleClick(event: any) {
         :main-thread-ref="iconRef"
       />
       <view v-if="$slots.default || text" class="wd-button__text" :style="labelStyle" :main-thread-ref="labelRef">
-        <WdTextSlot text-class="wd-button__text-content" :text-style="textStyle" :text-maxline="1">
-          <slot><text class="wd-button__text-content" :style="textStyle" text-maxline="1">{{ text }}</text></slot>
+        <WdTextSlot :text-class="textClass" :text-style="textStyle" :text-maxline="1">
+          <slot><text :class="textClass" :style="textStyle" text-maxline="1">{{ text }}</text></slot>
         </WdTextSlot>
       </view>
     </view>

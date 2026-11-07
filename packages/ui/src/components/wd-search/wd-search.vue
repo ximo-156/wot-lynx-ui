@@ -23,10 +23,10 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onMounted, ref, watch } from 'vue-lynx'
+import { computed, nextTick, onMounted, ref, watch } from 'vue-lynx'
 import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { searchProps } from './types'
-import { pause, parseStyle } from '../../common/util'
+import { parseStyle } from '../../common/util'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
 import { useNativeInputValue } from '../../composables/useNativeInputValue'
@@ -47,7 +47,8 @@ const inputValue = ref<string>('') // 输入框的值
  * 输入框文本不刷新——清除图标就是因此「点了没反应」。Web 预览的属性
  * 通道全绿，该类缺陷只在真机暴露。
  */
-const { inputId, markNativeValue } = useNativeInputValue(inputValue, 'wd-search')
+const nativeInputVisible = computed(() => props.placeholderLeft || showInput.value || !!inputValue.value)
+const { inputId, markNativeValue, setNativeFocus } = useNativeInputValue(inputValue, 'wd-search', () => nativeInputVisible.value)
 const clearing = ref<boolean>(false)
 let inputRequest = 0
 let focusRequest = 0
@@ -58,7 +59,10 @@ watch(() => props.modelValue, (value) => {
 }, { flush: 'sync' })
 watch(() => props.disabled, () => {
   inputRequest++; focusRequest++; blurRequest++; clearing.value = false
-  if (props.disabled) isFocused.value = false
+  if (props.disabled) {
+    setNativeFocus(false)
+    isFocused.value = false
+  }
 }, { flush: 'sync' })
 
 watch(
@@ -84,6 +88,8 @@ watch(
     if (newValue) {
       if (props.disabled) return
       closeCover()
+    } else {
+      hackFocus(false)
     }
   }
 )
@@ -102,29 +108,39 @@ const rootClass = computed(() => {
 
 async function hackFocus(focus: boolean) {
   const request = ++focusRequest
-  showInput.value = focus
-  await pause()
-  if (!isAlive() || request !== focusRequest || (focus && props.disabled)) return
-  isFocused.value = focus
+  if (!focus) {
+    // 原生 blur 必须在空值 input 卸载前发出；focus 属性并非原生契约。
+    setNativeFocus(false)
+    isFocused.value = false
+    showInput.value = !!inputValue.value
+    return
+  }
+  blurRequest++
+  showInput.value = true
+  // 只等节点真实挂载，不再人为等待 100ms + 一帧。
+  await nextTick()
+  if (!isAlive() || request !== focusRequest || props.disabled) return
+  isFocused.value = true
+  setNativeFocus(true)
 }
 
-async function closeCover() {
+function closeCover() {
   if (props.disabled) return
-  const request = ++focusRequest
-  await pause(100)
-  if (!isAlive() || request !== focusRequest || props.disabled) return
-  hackFocus(true)
+  clearing.value = false
+  void hackFocus(true)
 }
 
 function handleInput(event: any) {
   if (props.disabled) return
+  const value = String(event?.detail?.value ?? '')
+  // Android setValue 会再发 input；同值回声不能取消 clear 或重复发 change。
+  if (value === inputValue.value) {
+    markNativeValue(value)
+    return
+  }
   inputRequest++
-  // Lynx 适配：:value 受控绑定下用 detail.value 回写 inputValue
-  //（参考源经 v-model 由运行时回写）
-  inputValue.value = event.detail.value
-  // 原生输入框本就显示用户敲的内容，标记已同步避免重复 setValue 打扰
-  // IME 光标（程序化改写才需要推送，见 useNativeInputValue）
-  markNativeValue(inputValue.value)
+  inputValue.value = value
+  markNativeValue(value)
   emit('update:modelValue', inputValue.value)
   emit('change', {
     value: inputValue.value
@@ -135,35 +151,33 @@ async function handleClear() {
   if (props.disabled) return
   const request = ++inputRequest
   focusRequest++
+  blurRequest++
+  clearing.value = true
   inputValue.value = ''
-  if (props.focusWhenClear) {
-    clearing.value = true
-    isFocused.value = false
-  }
-  await pause()
+  isFocused.value = false
+  await nextTick()
   if (!isAlive()) return
   if (request !== inputRequest || props.disabled) { clearing.value = false; return }
-  if (props.focusWhenClear) {
-    hackFocus(true)
-  } else {
-    hackFocus(false)
-  }
+  void hackFocus(props.focusWhenClear)
   emit('change', { value: '' })
   emit('update:modelValue', '')
   emit('clear')
+  if (!props.focusWhenClear) clearing.value = false
 }
 
-function handleConfirm({ detail: { value } }: any) {
+function handleConfirm(event: any) {
   if (props.disabled) return
-  // 组件触发search事件
   emit('search', {
-    value
+    value: event?.detail?.value ?? inputValue.value
   })
 }
 
 function handleFocus() {
   if (props.disabled) return
   blurRequest++
+  clearing.value = false
+  showInput.value = true
+  isFocused.value = true
   emit('focus', {
     value: inputValue.value
   })
@@ -171,15 +185,10 @@ function handleFocus() {
 
 async function handleBlur() {
   const request = ++blurRequest
+  // 延后一轮渲染让同次 clear / 新 focus 有机会取消旧 blur；不等待固定 150ms。
+  await nextTick()
+  if (!isAlive() || request !== blurRequest || clearing.value) return
   focusRequest++
-  // 等待150毫秒，clear执行完毕
-  await pause(150)
-  if (!isAlive() || request !== blurRequest) return
-  if (clearing.value) {
-    clearing.value = false
-    return
-  }
-  // 组件触发blur事件：有值保留输入框，无值退回封面占位（showInput 是唯一真源）
   showInput.value = !!inputValue.value
   isFocused.value = false
   emit('blur', {
@@ -188,7 +197,15 @@ async function handleBlur() {
 }
 
 function handleCancel() {
+  // 取消必须同时失效待执行的 clear / focus，否则它们会在取消后重新弹键盘。
+  inputRequest++
   focusRequest++
+  blurRequest++
+  setNativeFocus(false)
+  clearing.value = false
+  isFocused.value = false
+  showInput.value = !!inputValue.value
+  // API 仍只通知取消，不擅自清空 v-model；清空 / 退出搜索由消费方决定。
   emit('cancel', {
     value: inputValue.value
   })
@@ -197,6 +214,8 @@ function handleCancel() {
 function handleClick() {
   if (props.disabled) {
     emit('click')
+  } else if (!clearing.value && !isFocused.value) {
+    closeCover()
   }
 }
 </script>
@@ -216,8 +235,8 @@ function handleClick() {
           class="wd-search__cover"
           @tap="closeCover"
         >
-          <WdIcon name="search-line" custom-class="wd-search__search-icon"></WdIcon>
-          <text :class="`wd-search__placeholder-txt ${placeholderClass}`">{{ placeholder || translate('search') }}</text>
+          <WdIcon name="search-line" custom-class="wd-search__search-icon" :user-interaction-enabled="false"></WdIcon>
+          <text :class="`wd-search__placeholder-txt ${placeholderClass}`" :user-interaction-enabled="false">{{ placeholder || translate('search') }}</text>
         </view>
         <WdIcon v-if="placeholderLeft || showInput || inputValue" name="search-line" custom-class="wd-search__search-left-icon"></WdIcon>
         <input
@@ -244,7 +263,7 @@ function handleClick() {
 
     <slot v-if="!hideCancel" name="suffix">
       <view class="wd-search__cancel" @tap="handleCancel">
-        <text>{{ cancelTxt || translate('cancel') }}</text>
+        <text class="wd-search__cancel-text" :user-interaction-enabled="false">{{ cancelTxt || translate('cancel') }}</text>
       </view>
     </slot>
   </view>

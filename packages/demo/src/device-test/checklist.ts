@@ -79,12 +79,16 @@ export const testSections: TestSection[] = [
       // 和「弹层在自己该在的位置」是两件事，只勾动画项会把它漏掉。
       // R10 续：justify-content 边值在真机失效，贴边弹层改为贴屏幕正中；
       // 验收词补上「底部 Popup 贴底」，别只看 Picker。
+      // 真机 2026-11-06（用户截图「适配程度不一样」）：Dialog 本体居中正常，
+      // 但确认弹窗按钮行里「取消」独占整行、「确定」被 overflow 裁得只剩一条
+      // 色带（按钮 flex-shrink: 0 + is-block 宽度 100% 不相让）。验收词补上
+      // 「Dialog 按钮行两按钮等分」——弹窗位置对不等于弹窗内部排版对。
       {
         id: 'overlay-anchor',
         name: '贴边定位',
-        expect: '时间选择器 / Picker / 底部 Popup 贴屏幕底部、Dialog 屏幕正中、notify 贴顶且左右各缩 12px；面板不得缩到左上角、贴屏幕正中或只剩半截'
+        expect: '时间选择器 / Picker / 底部 Popup 贴屏幕底部、Dialog 屏幕正中、notify 贴顶且左右各缩 12px；面板不得缩到左上角、贴屏幕正中或只剩半截；Dialog 确认弹窗的取消/确定按钮在按钮行内等分，不得一个独占整行、另一个被裁成色带'
       },
-      { id: 'overlay-mask', name: '遮罩关闭', expect: '点击遮罩关闭弹层；closeOnClickModal=false 时点击不关' },
+      { id: 'overlay-mask', name: '遮罩关闭与残留', expect: '点击遮罩关闭弹层；closeOnClickModal=false 时点击不关；时间选择器取消/确认/遮罩关闭及 Toast 加载自动关闭后，左上角不残留标题、加载文案或图形，页面可滚动；再次打开显示完整' },
       { id: 'overlay-anim', name: '弹出动画', expect: '各方向入场动画方向正确；round 圆角与 closable 关闭按钮正常' },
       { id: 'overlay-callback', name: '打开/关闭回调', expect: 'update:modelValue 与 enter/leave 过渡事件按序触发，事件日志实时刷新' },
       { id: 'overlay-stack', name: '弹层级联', expect: 'popup 之上再开 dialog：dialog 位于上层，确认/取消回调正确返回' }

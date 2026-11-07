@@ -60,8 +60,8 @@ export type ButtonScope = 'phoneNumber' | 'userInfo'
 export const buttonProps = {
   ...baseProps,
   /**
-   * 圆角按钮
-   * 不传则继承全局配置
+   * 圆角按钮（默认胶囊形）
+   * 不传则继承全局配置，未配置时为 true；显式 false 保留普通圆角
    */
   round: {
     type: Boolean,

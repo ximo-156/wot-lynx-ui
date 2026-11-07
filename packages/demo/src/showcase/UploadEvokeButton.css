@@ -1,0 +1,73 @@
+/* 显式导入的全局 CSS：使用 demo 命名空间，不依赖 SFC scoped/cssId。
+ * 原始回退链留在 custom property 中，避免生产 serializer 剥离 var() fallback。
+ */
+.demo-upload-evoke {
+  --demo-upload-evoke-resolved-radius: var(--wot-upload-radius, 8px);
+  --demo-upload-evoke-resolved-bg: var(--wot-upload-evoke-bg, var(--wot-filled-bottom, #f7f8fa));
+  --demo-upload-evoke-resolved-border-color: var(--wot-upload-border-color, var(--wot-border-main, #e5e6eb));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  border-radius: var(--demo-upload-evoke-resolved-radius);
+  background: var(--demo-upload-evoke-resolved-bg);
+  border-width: 1px;
+  border-style: dashed;
+  border-color: var(--demo-upload-evoke-resolved-border-color);
+  overflow: hidden;
+}
+
+.demo-upload-evoke__body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  /* 视觉层不吞点击，由后置的透明 input 承接选图。 */
+  pointer-events: none;
+}
+
+/* 高于 wd-icon 基础字号的选择器优先级，不依赖样式加载顺序。 */
+.demo-upload-evoke .demo-upload-evoke__icon {
+  --demo-upload-evoke-resolved-icon-size: var(--wot-upload-evoke-icon-size, 32px);
+  --demo-upload-evoke-resolved-icon-color: var(--wot-upload-evoke-icon-color, var(--wot-icon-auxiliary, #6b7085));
+  font-size: var(--demo-upload-evoke-resolved-icon-size);
+  color: var(--demo-upload-evoke-resolved-icon-color);
+}
+
+.demo-upload-evoke__num {
+  --demo-upload-evoke-resolved-num-color: var(--wot-upload-evoke-color, var(--wot-text-auxiliary, #868a9c));
+  --demo-upload-evoke-resolved-num-font-size: var(--wot-upload-evoke-font-size, 14px);
+  --demo-upload-evoke-resolved-num-line-height: var(--wot-upload-evoke-line-height, 20px);
+  color: var(--demo-upload-evoke-resolved-num-color);
+  font-size: var(--demo-upload-evoke-resolved-num-font-size);
+  line-height: var(--demo-upload-evoke-resolved-num-line-height);
+  text-align: center;
+}
+
+/* Web 的 x-input 强制 display:contents!important，opacity 必须落在真实 view 盒上。 */
+.demo-upload-evoke__input-wrap {
+  display: flex;
+  flex-direction: row;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+
+/* 命中层：铺满 + 全透明。不能 display:none，否则无法原生选图。 */
+.demo-upload-evoke__input {
+  display: flex;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}

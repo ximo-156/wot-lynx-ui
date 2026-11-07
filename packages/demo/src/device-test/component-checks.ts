@@ -44,8 +44,8 @@ export const componentSections: TestSection[] = [
     items: [
       { id: 'r-wd-form', name: 'Form 表单', expect: 'schema 校验错误提示出现在对应项下方；重置后错误态清空' },
       { id: 'r-wd-form-item', name: 'FormItem 表单项', expect: '标题宽度与右对齐正确；必填星号在；错误文案红色可见' },
-      { id: 'r-wd-input-number', name: 'InputNumber 步进器', expect: '减号与加号横竖条都可见（不是空白灰块）；数字居中；禁用态变灰；点加减数字要跟着变（2026-11-05 用户复报「加减没有鸟用」：模型变了但输入框文本不刷新——value 属性通道刷不了 IME 接管后的输入框，必须走 setValue，见 CONVENTIONS §19 第 12 条）；键入越界值（如 max=10 时输 33）后点加减应回落到边界值' },
-      { id: 'r-wd-search', name: 'Search 搜索框', expect: '只有一份「搜索」占位（封面与 input 不同时出现）；放大镜在框内居中；取消按钮不压输入框' },
+      { id: 'r-wd-input-number', name: 'InputNumber 步进器', expect: '冷启动直接显示 5（原生 input 无 value 属性通道，值必须经 setValue 方法下发且等主线程建树完成，2026-11-07 复报「加减没有鸟用」）；减号与加号横竖条都可见（不是空白灰块）；数字居中；禁用态变灰；点加号变 6、点减号回 5，输入框文本与「步进次数」标签同步变化；键入越界值（如 max=10 时输 33）后点加减应回落到边界值' },
+      { id: 'r-wd-search', name: 'Search 搜索框', expect: '只有一份「搜索」占位（封面与 input 不同时出现）；放大镜在框内居中；点封面/放大镜立即弹出键盘（不再等固定 100ms）；取消按钮整块可点、按下即收起键盘并把关键词清空（取消后不应再弹键盘）；取消按钮不压输入框' },
       { id: 'r-wd-switch', name: 'Switch 开关', expect: '轨道是完整胶囊不是月牙；滑块圆在轨道内不溢出；开/关切换位移正确' },
       { id: 'r-wd-radio', name: 'Radio 单选框', expect: '未选中圆环可见；选中圆点可见；按钮模式下选中态形状不隐形' },
       { id: 'r-wd-radio-group', name: 'RadioGroup 单选框组', expect: '同组互斥；横向排列不换行错位；禁用项不可点' },

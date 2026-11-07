@@ -5,7 +5,8 @@
  * - consume-slide-event 仅拦截滑块轴向的原生手势，不持有页面/弹层滚动锁；
  *   Web 用 touch-action 放行交叉轴，MT/BG 同步判定手势方向。
  * - 原生 move/end/cancel 的 target 延续 start；轨道上的 end 仅作容错。
- * - 触点按 identifier/id 追踪；仅单个无标识触点可降级，不使用已知异号坐标。
+ * - 多指按 identifier/id 追踪；同一固定握把的单指流兼容原生临时 ID，
+ *   两列表候选必须一致，出现多指后不再降级；未知目标不放宽归属校验。
  * - 手势内固定缓存几何；移动不做异步度量。落定查询与计时器均校验交互代次，
  *   旧回调不清理下一手势；终止 owner/revision 握手区分迟到 A 与更晚 B。
  * - MT 独立缓存视觉终值；1200ms timeout 结束当前段，合法同触点 move 可另起续拖段。
@@ -66,6 +67,8 @@ interface GestureOwner {
   revision: number
   startedAt?: number
   touchId?: string
+  /** 单指流的固定命中目标；不可用时仍严格按 ID 匹配。 */
+  target?: string
   pointer: number
   crossPointer?: number
   index: number
@@ -95,6 +98,7 @@ interface RetiredGesture {
   size: number
   lastTime?: number
   moved: boolean
+  multiTouchSeen: boolean
   axisClaimed: boolean
 }
 interface MtVisual {
@@ -123,6 +127,7 @@ interface MtGesture {
   timestamp?: number
   axisClaimed: boolean
   moved: boolean
+  multiTouchSeen: boolean
   activeSeen: boolean
   pendingResume: boolean
   write(event: any, phase: 'move' | 'end' | 'cancel'): boolean
@@ -153,6 +158,7 @@ let startPointer = 0
 let startCrossPointer = NaN
 let startValue: SliderValue = deepClone(modelValue.value)
 let dragMoved = false
+let multiTouchSeen = false
 let axisClaimed = false
 let pendingSettlement: { request: number; owner: GestureOwner } | undefined
 const pendingModelEchoes = new Set<string>()
@@ -538,6 +544,33 @@ function touchId(touch: any): string | undefined {
   return id == null ? undefined : String(id)
 }
 
+function touchTarget(event: any): string | undefined {
+  const target = event?.target
+  const id = typeof target?.id === 'string' && target.id !== ''
+    ? target.id : typeof target?.getAttribute === 'function' ? target.getAttribute('gesture-target') || target.getAttribute('id') : undefined
+  return typeof id === 'string' && id !== '' ? id : undefined
+}
+
+function observeTouchCount(event: any) {
+  const currentId = touchId(event?.touches?.[0])
+  const changedId = touchId(event?.changedTouches?.[0])
+  if (event?.touches?.length > 1 || event?.changedTouches?.length > 1 ||
+      (currentId !== undefined && changedId !== undefined && currentId !== changedId)) {
+    multiTouchSeen = true
+    if (retiredGesture.value) retiredGesture.value.multiTouchSeen = true
+  }
+}
+
+/** 同一命中目标、两列表各最多一指且互相一致，才允许单指 ID 漂移。 */
+function singleTouchForTarget(event: any, target?: string): any {
+  if (!target || touchTarget(event) !== target || event?.touches?.length > 1 || event?.changedTouches?.length > 1) return
+  const current = event?.touches?.[0]
+  const changed = event?.changedTouches?.[0]
+  if (current && changed && touchId(current) !== touchId(changed)) return
+  const candidate = changed ?? current
+  return candidate && typeof candidate === 'object' && !Array.isArray(candidate) ? candidate : undefined
+}
+
 function eventTime(event: any): number | undefined {
   const raw = event?.timestamp ?? event?.timeStamp
   if (raw == null || raw === '') return undefined
@@ -545,19 +578,20 @@ function eventTime(event: any): number | undefined {
   return Number.isFinite(time) ? time : undefined
 }
 
-function readTouch(event: any, id?: string, changedFirst = false): any {
+function readTouch(event: any, id?: string, changedFirst = false, singleTarget?: string): any {
   const lists = changedFirst ? [event?.changedTouches, event?.touches] : [event?.touches, event?.changedTouches]
   for (const list of lists) {
     if (!list?.length) continue
     if (id === undefined) return list[0]
     for (let i = 0; i < list.length; i++) if (touchId(list[i]) === id) return list[i]
-    // 只允许单个无标识触点降级；明确的异号 id 绝不能当成本手势的坐标。
     if (list.length === 1 && touchId(list[0]) === undefined && (!event?.touches?.length || event.touches.length === 1)) return list[0]
   }
+  return singleTouchForTarget(event, singleTarget)
 }
 
-/** 只有全部 changedTouches 都是明确的其他触点，才忽略事件。 */
-function isOtherTouch(event: any, id = activeTouchId): boolean {
+/** 多指仍按 ID；同目标单指不把 native 临时 identifier 误判为其他手指。 */
+function isOtherTouch(event: any, id = activeTouchId, singleTarget?: string): boolean {
+  if (singleTouchForTarget(event, singleTarget)) return false
   const changed = event?.changedTouches
   if (id === undefined || !changed?.length) return false
   for (let i = 0; i < changed.length; i++) {
@@ -568,13 +602,13 @@ function isOtherTouch(event: any, id = activeTouchId): boolean {
 }
 
 /** 坐标缺失/非有限数不能转成 0；client/page 优先于宿主兼容的 x/y。 */
-function readPointer(event: any, id?: string, changedFirst = false, vertical = props.vertical): number {
+function readPointer(event: any, id?: string, changedFirst = false, vertical = props.vertical, singleTarget?: string): number {
   const primary = changedFirst ? event?.changedTouches : event?.touches
   const secondary = changedFirst ? event?.touches : event?.changedTouches
   const candidatesList = primary?.length ? primary : secondary
   if (id === undefined && candidatesList?.length > 1) return NaN
-  const touch = readTouch(event, id, changedFirst)
-  if (id !== undefined && !touch) return NaN
+  const touch = readTouch(event, id, changedFirst, singleTarget)
+  if ((touch != null && (typeof touch !== 'object' || Array.isArray(touch))) || (id !== undefined && !touch)) return NaN
   const candidates = vertical
     ? [touch?.clientY, touch?.pageY, touch?.y, event?.detail?.y, event?.clientY, event?.pageY, event?.y]
     : [touch?.clientX, touch?.pageX, touch?.x, event?.detail?.x, event?.clientX, event?.pageX, event?.x]
@@ -662,15 +696,16 @@ function publishGestureStart(owner: GestureOwner, physicalOwner: GestureOwner, r
 /** BG start 的 owner 与 MT 握把 start 取同一事件字段；revision 只作有序确认。 */
 function onTouchStart(event: any, index: number) {
   if (isDisabled.value || !isAlive()) return
+  observeTouchCount(event)
   const touch = readTouch(event, undefined, true)
   const id = touchId(touch)
   const pointer = readPointer(event, id, true)
   const time = eventTime(event)
-  if (!Number.isFinite(pointer) || event?.touches?.length > 1) return
+  if (!Number.isFinite(pointer) || event?.touches?.length > 1 || event?.changedTouches?.length > 1) return
   const context = contextRevision.value
   if (isDragging.value) {
     if (event?.touches?.length !== 1 || touchId(event.touches[0]) !== id) return
-    if (time !== undefined && gestureEventTime !== undefined && time <= gestureEventTime) return
+    if (time !== undefined && gestureEventTime !== undefined && time < gestureEventTime) return
     // MT 已经记录更晚 B；结束 A 的 owner 随版本下发，B 可因果迁移，A 不可复活。
     onTouchEnd({ changedTouches: [], timestamp: time }, true, 'replaced')
   }
@@ -687,6 +722,7 @@ function onTouchStart(event: any, index: number) {
   startCrossPointer = readPointer(event, id, true, !props.vertical)
   dragTrackSize.value = trackSize.value
   dragMoved = false
+  multiTouchSeen = false
   axisClaimed = false
   const target = event?.target
   const bound = event?.currentTarget
@@ -698,7 +734,7 @@ function onTouchStart(event: any, index: number) {
   isSettling.value = false
   isDragging.value = true
   const owner: GestureOwner = {
-    revision: ++startRevision.value, startedAt: time, touchId: id,
+    revision: ++startRevision.value, startedAt: time, touchId: id, target: touchTarget(event),
     pointer, crossPointer: Number.isFinite(startCrossPointer) ? startCrossPointer : undefined, index
   }
   publishGestureStart(owner, owner)
@@ -710,9 +746,10 @@ function onTouchStart(event: any, index: number) {
 /** 真正 end/cancel 与静默 timeout 是不同原因；只有 timeout 留下续拖上下文。 */
 function onTouchEnd(event: any, canceled = false, reason: GestureEndReason = canceled ? 'cancel' : 'end') {
   const time = eventTime(event)
+  observeTouchCount(event)
   if (!isDragging.value) {
     const retired = retiredGesture.value
-    if (!retired || isOtherTouch(event, retired.owner.touchId)) return
+    if (!retired || isOtherTouch(event, retired.owner.touchId, retired.multiTouchSeen ? undefined : retired.owner.target)) return
     if (time !== undefined && retired.owner.startedAt !== undefined && time < retired.owner.startedAt) return
     // 退休期间真实抬指也会到达：不能因 isDragging=false 而保留续拖资格。
     retiredGesture.value = null
@@ -723,15 +760,16 @@ function onTouchEnd(event: any, canceled = false, reason: GestureEndReason = can
     }
     return
   }
-  if (isOtherTouch(event)) return
+  const singleTarget = multiTouchSeen ? undefined : bgStart.value?.owner.target
+  if (isOtherTouch(event, activeTouchId, singleTarget)) return
   if (time !== undefined && gestureStartTime !== undefined && time < gestureStartTime) return
   const start = bgStart.value
   if (!start) return
   clearStuckDragWatch()
   const request = interactionRequest
   const oldVersion = gestureVersion.value
-  const pointer = readPointer(event, activeTouchId, true)
-  const cross = readPointer(event, activeTouchId, true, !props.vertical)
+  const pointer = readPointer(event, activeTouchId, true, props.vertical, singleTarget)
+  const cross = readPointer(event, activeTouchId, true, !props.vertical, singleTarget)
   if (!axisClaimed && Number.isFinite(cross) && Number.isFinite(startCrossPointer)) {
     const distance = Math.abs(cross - startCrossPointer)
     if (distance > DIRECTION_THRESHOLD && distance > Math.abs(pointer - startPointer)) {
@@ -762,7 +800,7 @@ function onTouchEnd(event: any, canceled = false, reason: GestureEndReason = can
     version: oldVersion, endingVersion: gestureVersion.value, request,
     config: gestureConfigVersion.value, context: contextRevision.value, visual: visualResetRevision.value,
     pointer: startPointer, crossPointer: startCrossPointer, values: deepClone(startValue),
-    size: dragTrackSize.value, lastTime: gestureEventTime, moved: dragMoved, axisClaimed
+    size: dragTrackSize.value, lastTime: gestureEventTime, moved: dragMoved, multiTouchSeen, axisClaimed
   } : null
   pendingSettlement = { request, owner: start.owner }
   const finish = () => {
@@ -799,7 +837,8 @@ function onTouchEnd(event: any, canceled = false, reason: GestureEndReason = can
 }
 
 /** 新的轨道 start 不保留退休上下文；来自 dot 的 start 已被自己的 BG handler 消费。 */
-function onBarTouchStartBg() {
+function onBarTouchStartBg(event: any) {
+  observeTouchCount(event)
   if (isDragging.value) return
   abandonSettlement()
   retiredGesture.value = null
@@ -815,13 +854,14 @@ function resumeTimedOutGesture(event: any): boolean {
   const retired = retiredGesture.value
   if (!retired || retired.request !== interactionRequest || retired.config !== gestureConfigVersion.value ||
       retired.context !== contextRevision.value || retired.visual !== visualResetRevision.value ||
-      isOtherTouch(event, retired.owner.touchId)) return false
+      isOtherTouch(event, retired.owner.touchId, retired.multiTouchSeen ? undefined : retired.owner.target)) return false
   if (retired.owner.touchId === undefined && event?.touches?.length > 1) return false
   const time = eventTime(event)
   if (time !== undefined && retired.lastTime !== undefined && time < retired.lastTime) return false
-  const pointer = readPointer(event, retired.owner.touchId)
+  const singleTarget = retired.multiTouchSeen ? undefined : retired.owner.target
+  const pointer = readPointer(event, retired.owner.touchId, false, props.vertical, singleTarget)
   if (!Number.isFinite(pointer)) return false
-  const cross = readPointer(event, retired.owner.touchId, false, !props.vertical)
+  const cross = readPointer(event, retired.owner.touchId, false, !props.vertical, singleTarget)
   if (!retired.axisClaimed && Number.isFinite(cross) && Number.isFinite(retired.crossPointer)) {
     const crossDistance = Math.abs(cross - retired.crossPointer)
     if (crossDistance > Math.abs(pointer - retired.pointer)) {
@@ -840,13 +880,14 @@ function resumeTimedOutGesture(event: any): boolean {
   gestureStartTime = time
   gestureEventTime = time
   dragMoved = retired.moved
+  multiTouchSeen = retired.multiTouchSeen
   axisClaimed = retired.axisClaimed
   retiredGesture.value = null
   isSettling.value = false
   isDragging.value = true
   tapSwallowUntil = 0
   const owner: GestureOwner = {
-    revision: ++startRevision.value, startedAt: time, touchId: activeTouchId,
+    revision: ++startRevision.value, startedAt: time, touchId: activeTouchId, target: retired.owner.target,
     pointer, crossPointer: Number.isFinite(cross) ? cross : undefined, index: touchIndex.value
   }
   publishGestureStart(owner, retired.physicalOwner, {
@@ -860,15 +901,17 @@ function resumeTimedOutGesture(event: any): boolean {
 
 function onBarTouchMove(event: any) {
   if (isDisabled.value || !isAlive()) return
+  observeTouchCount(event)
   if (!isDragging.value && !resumeTimedOutGesture(event)) return
-  if (isOtherTouch(event)) return
+  const singleTarget = multiTouchSeen ? undefined : bgStart.value?.owner.target
+  if (isOtherTouch(event, activeTouchId, singleTarget)) return
   const time = eventTime(event)
   if (time !== undefined && gestureEventTime !== undefined && time < gestureEventTime) return
-  const pointer = readPointer(event, activeTouchId)
+  const pointer = readPointer(event, activeTouchId, false, props.vertical, singleTarget)
   if (!Number.isFinite(pointer)) return
   if (time !== undefined) gestureEventTime = time
   armStuckDragWatch()
-  const cross = readPointer(event, activeTouchId, false, !props.vertical)
+  const cross = readPointer(event, activeTouchId, false, !props.vertical, singleTarget)
   if (!axisClaimed && Number.isFinite(cross) && Number.isFinite(startCrossPointer)) {
     const mainDistance = Math.abs(pointer - startPointer)
     const crossDistance = Math.abs(cross - startCrossPointer)
@@ -931,7 +974,13 @@ const onGripTouchStart = (event: any) => {
   const line = lineRef.current
   const grip = event.currentTarget
   if (!line || line.getAttribute('gesture-disabled') === 'true' || !grip || typeof grip.getAttribute !== 'function') return
-  if (event.touches?.length > 1) return
+  const currentStartId = event.touches?.[0]?.identifier ?? event.touches?.[0]?.id
+  const changedStartId = event.changedTouches?.[0]?.identifier ?? event.changedTouches?.[0]?.id
+  if (event.touches?.length > 1 || event.changedTouches?.length > 1 ||
+      (currentStartId != null && changedStartId != null && String(currentStartId) !== String(changedStartId))) {
+    if (geomRef.current) geomRef.current.multiTouchSeen = true
+    return
+  }
   const config = line.getAttribute('gesture-config') || ''
   const context = line.getAttribute('gesture-context') || ''
   const visual = line.getAttribute('gesture-visual') || ''
@@ -941,12 +990,13 @@ const onGripTouchStart = (event: any) => {
   const previous = geomRef.current
   if (previous && previous.config === config && previous.context === context) {
     if (event.touches?.length !== 1) return
-    if (time !== undefined && previous.timestamp !== undefined && time <= previous.timestamp) return
+    if (time !== undefined && previous.timestamp !== undefined && time < previous.timestamp) return
   }
   const vertical = line.getAttribute('gesture-vertical') === 'true'
   const range = line.getAttribute('gesture-range') === 'true'
   const index = range && Number(grip.getAttribute('gesture-index')) === 1 ? 1 : 0
   const touch = event.changedTouches?.[0] ?? event.touches?.[0]
+  if (touch != null && (typeof touch !== 'object' || Array.isArray(touch))) return
   const read = (item: any, e: any, axisVertical: boolean) => {
     const candidates = axisVertical
       ? [item?.clientY, item?.pageY, item?.y, e.detail?.y, e.clientY, e.pageY, e.y]
@@ -957,6 +1007,12 @@ const onGripTouchStart = (event: any) => {
       if (Number.isFinite(value)) return value
     }
     return NaN
+  }
+  const readTarget = (e: any): string | undefined => {
+    const target = e?.target
+    const id = typeof target?.id === 'string' && target.id !== ''
+    ? target.id : typeof target?.getAttribute === 'function' ? target.getAttribute('gesture-target') || target.getAttribute('id') : undefined
+    return typeof id === 'string' && id !== '' ? id : undefined
   }
   const pointer = read(touch, event, vertical)
   if (!Number.isFinite(pointer)) return
@@ -973,7 +1029,7 @@ const onGripTouchStart = (event: any) => {
   const step = Number(line.getAttribute('gesture-step')) || 1
   const scopeValue = max - min
   const owner: GestureOwner = {
-    revision: 0, startedAt: time, touchId: id, pointer,
+    revision: 0, startedAt: time, touchId: id, target: readTarget(event), pointer,
     crossPointer: Number.isFinite(cross) ? cross : undefined, index
   }
   let startFloor = Number(line.getAttribute('gesture-start-revision')) || 0
@@ -987,13 +1043,14 @@ const onGripTouchStart = (event: any) => {
     owner, physicalOwner: owner, pointer, crossPointer: cross, left, right, index,
     size: Number(line.getAttribute('gesture-size')), version, config, context, visual,
     startRevisionFloor: startFloor,
-    ackRevision: 0, timestamp: time, axisClaimed: false, moved: false,
+    ackRevision: 0, timestamp: time, axisClaimed: false, moved: false, multiTouchSeen: false,
     activeSeen: false, pendingResume: false, write: () => false
   }
   visualRef.current = { config, context, visual, left, right, closedStartFloor: startFloor }
   const matchesOwner = (a: any, b: any) => {
     if (!a || !b || a.index !== b.index || a.pointer !== b.pointer) return false
-    if (a.touchId !== b.touchId) return false
+    // 同一原生 start 给 MT/BG 各自构造参数，临时 ID 不一定相等。
+    if (a.touchId !== b.touchId && !(!state.multiTouchSeen && a.target && a.target === b.target)) return false
     if (a.startedAt !== undefined && b.startedAt !== undefined && a.startedAt !== b.startedAt) return false
     return true
   }
@@ -1015,7 +1072,18 @@ const onGripTouchStart = (event: any) => {
     // 旧/异号 terminal 不能清当前 geom；归属判断先于版本迁移与所有状态写入。
     if (timestamp !== undefined && state.owner.startedAt !== undefined && timestamp < state.owner.startedAt) return false
     if (phase === 'move' && timestamp !== undefined && state.timestamp !== undefined && timestamp < state.timestamp) return false
-    if (state.owner.touchId !== undefined && e.changedTouches?.length) {
+    const currentSingle = e.touches?.[0]
+    const changedSingle = e.changedTouches?.[0]
+    const currentId = currentSingle?.identifier ?? currentSingle?.id
+    const changedId = changedSingle?.identifier ?? changedSingle?.id
+    if (e.touches?.length > 1 || e.changedTouches?.length > 1 ||
+        (currentId != null && changedId != null && String(currentId) !== String(changedId))) state.multiTouchSeen = true
+    const soleCandidate = changedSingle ?? currentSingle
+    const compatibleSingle = !state.multiTouchSeen && state.owner.target && readTarget(e) === state.owner.target &&
+      soleCandidate && typeof soleCandidate === 'object' && !Array.isArray(soleCandidate) &&
+      !(currentSingle && changedSingle && (currentSingle.identifier ?? currentSingle.id) !== (changedSingle.identifier ?? changedSingle.id))
+      ? soleCandidate : undefined
+    if (!compatibleSingle && state.owner.touchId !== undefined && e.changedTouches?.length) {
       let allOther = true
       for (const changed of e.changedTouches) {
         const changedId = changed?.identifier ?? changed?.id
@@ -1045,6 +1113,8 @@ const onGripTouchStart = (event: any) => {
       if (!currentTouch && list.length === 1 && (list[0]?.identifier ?? list[0]?.id) == null && (!e.touches?.length || e.touches.length === 1)) currentTouch = list[0]
       if (currentTouch) break
     }
+    if (!currentTouch) currentTouch = compatibleSingle
+    if (currentTouch != null && (typeof currentTouch !== 'object' || Array.isArray(currentTouch))) return phase !== 'move'
     const point = state.owner.touchId !== undefined && !currentTouch ? NaN : read(currentTouch, e, vertical)
     if (!Number.isFinite(point)) return phase !== 'move'
     const crossPoint = read(currentTouch, e, !vertical)
@@ -1096,7 +1166,7 @@ const onGripTouchStart = (event: any) => {
         state.version = currentVersion
         state.physicalOwner = retired.physicalOwner
         state.owner = {
-          revision: 0, startedAt: timestamp, touchId: state.owner.touchId,
+          revision: 0, startedAt: timestamp, touchId: state.owner.touchId, target: state.owner.target,
           pointer: point, crossPointer: Number.isFinite(crossPoint) ? crossPoint : undefined, index: state.index
         }
         state.startRevisionFloor = retired.owner.revision
@@ -1291,6 +1361,9 @@ const lineBindings = computed(() => ({
             <view class="wd-slider__dot-popover-arrow" />
           </view>
           <view
+            :id="`${sliderId}-grip-0`"
+            :gesture-target="`${sliderId}-grip-0`"
+            :flatten="false"
             class="wd-slider__dot-slider"
             gesture-index="0"
             :main-thread-bindtouchstart="onGripTouchStart"
@@ -1298,7 +1371,7 @@ const lineBindings = computed(() => ({
             :main-thread-bindtouchend="onGripTouchEnd"
             :main-thread-bindtouchcancel="onGripTouchCancel"
           >
-            <WdIcon name="multiple-horizontal" size="14px" :color="gripIconColor" />
+            <WdIcon name="multiple-horizontal" size="14px" :color="gripIconColor" :user-interaction-enabled="false" :custom-style="{ 'pointer-events': 'none' }" />
           </view>
         </view>
         <view
@@ -1315,6 +1388,9 @@ const lineBindings = computed(() => ({
             <view class="wd-slider__dot-popover-arrow" />
           </view>
           <view
+            :id="`${sliderId}-grip-1`"
+            :gesture-target="`${sliderId}-grip-1`"
+            :flatten="false"
             class="wd-slider__dot-slider"
             gesture-index="1"
             :main-thread-bindtouchstart="onGripTouchStart"
@@ -1322,7 +1398,7 @@ const lineBindings = computed(() => ({
             :main-thread-bindtouchend="onGripTouchEnd"
             :main-thread-bindtouchcancel="onGripTouchCancel"
           >
-            <WdIcon name="multiple-horizontal" size="14px" :color="gripIconColor" />
+            <WdIcon name="multiple-horizontal" size="14px" :color="gripIconColor" :user-interaction-enabled="false" :custom-style="{ 'pointer-events': 'none' }" />
           </view>
         </view>
       </view>

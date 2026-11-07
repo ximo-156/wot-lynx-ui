@@ -210,7 +210,7 @@ function getFormatterDate(date: number, month: number, type?: CalendarDayType) {
           </view>
         </view>
         <!-- Lynx 适配：wot-ui 用 ::after 绘制范围态背景，此处为真实元素 -->
-        <view v-if="item.type === 'start' || item.type === 'end'" class="wd-year__month-range" />
+        <view v-if="item.type === 'start' || item.type === 'end'" class="wd-year__month-range" :user-interaction-enabled="false" />
       </view>
     </view>
   </view>

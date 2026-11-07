@@ -121,6 +121,14 @@ $search-cancel-color: var(--wot-search-cancel-color, $primary-6) !default;
     // 会让真机按双行盒各绘一遍（§19 差异清单第 3 条），此处不写行高。
     font-size: $search-input-font-size;
     border-radius: $search-input-radius;
+
+    &:active {
+      opacity: $opacity-dimmer;
+    }
+  }
+  .wd-search__cover .wd-search__search-icon,
+  .wd-search__cover .wd-search__placeholder-txt {
+    pointer-events: none;
   }
   // Lynx 适配：参考源为 @include edeep(...)（:deep 后代选择器），Lynx 无
   // shadow DOM，:deep() 直接写成后代选择器
@@ -145,9 +153,24 @@ $search-cancel-color: var(--wot-search-cancel-color, $primary-6) !default;
     margin-left: $search-clear-icon-margin-left;
   }
   @include e(cancel) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    height: $search-input-height;
+    padding: 0 $padding-tight;
+    box-sizing: border-box;
+
+    &:active {
+      opacity: $opacity-dimmer;
+    }
+  }
+  @include e(cancel-text) {
     line-height: $search-cancel-line-height;
     font-size: $search-cancel-font-size;
     color: $search-cancel-color;
+    pointer-events: none;
   }
   @include when(light) {
     background: $search-light-bg;

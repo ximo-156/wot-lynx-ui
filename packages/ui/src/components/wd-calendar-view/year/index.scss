@@ -84,6 +84,15 @@
       }
     }
 
+    @include when(start, end) {
+      z-index: 0;
+
+      .wd-year__month-range {
+        z-index: 1;
+        pointer-events: none;
+      }
+    }
+
     @include when(start) {
       color: $calendar-view-color-selected;
 
@@ -93,9 +102,9 @@
 
       .wd-year__month-container {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         background: $calendar-view-color-active;
-        border-radius: $calendar-view-border-radius-active 0 0 $calendar-view-border-radius-active;
+        border-radius: $calendar-view-border-radius-active;
       }
 
       // Lynx 适配：wot-ui 用 ::after 绘制起点右半格的区间背景，Lynx 无伪元素，
@@ -126,9 +135,9 @@
 
       .wd-year__month-container {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         background: $calendar-view-color-active;
-        border-radius: 0 $calendar-view-border-radius-active $calendar-view-border-radius-active 0;
+        border-radius: $calendar-view-border-radius-active;
       }
 
       // Lynx 适配：同上，::after 改为真实元素 wd-year__month-range（左半边）。

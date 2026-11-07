@@ -6,13 +6,10 @@
  *   `main-thread-bindtouchmove` 绑定 'main thread' worklet，触点经绝对
  *   定位公式（起始位置 + 触点位移）换算后 `setStyleProperty` 直改轨道
  *   宽度——零线程跨越，低端机跟手无滞后（CONVENTIONS §10）；
- * - **几何经元素属性桥接（主线程同步可取）**：后台实测的容器宽高经
- *   container-width / container-height 属性下发到轨道，worklet 在
- *   touchstart 同步读取并缓入 MainThreadRef（geomRef），手势起点 clientX
- *   同帧记录（dragRef）——不在 touchmove 热路径重复度量
- *   （CONVENTIONS §16）；属性缺失（度量未就绪）时才回退
- *   `MainThread.Element.invoke('boundingClientRect')` 一次性度量
- *   （slider 的 gesture-size 同款分工）；
+ * - **几何绑定到每段手势**：container-width / container-height 属性供首帧
+ *   同步使用，touchstart 再经根元素 invoke 一次补测真实矩形；即使旧缓存
+ *   非零也刷新，避免首屏短宽度把终点截在中途。度量期间记录最新触点，
+ *   回调只补到本段，旧段 / reset 后的回调不再写样式；move 热路径不查询；
  * - **真机冒泡语义（跨元素分工）**：滑块（button）的 touchstart /
  *   touchend 为后台绑定（记录拖动态、提交判定），touchmove 为主线程
  *   worklet；轨道（track，滑块的父元素）另绑主线程 touchstart /
@@ -50,13 +47,14 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref, useMainThreadRef } from 'vue-lynx'
+import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref, useMainThreadRef, watch, withModifiers } from 'vue-lynx'
 import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { slideVerifyProps, type SlideVerifyEmits, type SlideVerifyExpose } from './types'
 import { useTouch } from '../../composables/useTouch'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
-import { getRect, uuid, isDef, filterStyle, parseStyle, type CSSProperties } from '../../common/util'
+import { getRect, uuid, isDef, parseStyle, type CSSProperties } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
 
 const props = defineProps(slideVerifyProps)
 const emit = defineEmits<SlideVerifyEmits>()
@@ -89,37 +87,40 @@ const rootClass = computed(() => {
   ]
 })
 
-const rootStyle = computed(() => {
-  const style: CSSProperties = {}
-  if (isDef(props.backgroundColor)) {
-    style.background = props.backgroundColor
-  }
-  // Lynx：customStyle 为字符串，经 parseStyle 归一为对象后合并（§19）
-  return { ...filterStyle(style), ...parseStyle(props.customStyle) }
-})
+// 只仲裁横向原生滑动；纵向滚页继续交给外层 scroll-view。
+const consumeSlideEvent = computed(() => props.disabled ? [] : [[-180, -135], [-45, 45], [135, 180]])
+const resolveRootStyle = createStyleResolver({ 'background-color': '', 'touch-action': 'pan-y' })
+const rootStyle = computed(() => resolveRootStyle({
+  'background-color': props.backgroundColor,
+  'touch-action': props.disabled ? 'auto' : 'pan-y'
+}, parseStyle(props.customStyle)))
 
+let lastTrackStyle: CSSProperties | undefined
 const trackStyle = computed(() => {
-  // Style Funnel（§20）：background 任何一帧都必须显式输出。归零时写
-  // 'transparent'，滑走后若省略该键，transparent 会按 SET_STYLE 逐属性
-  // 合并语义永久残留——默认用法（不传 activeBackgroundColor）的滑过填充
-  // 色将永不显示。'' 为中性值：清除内联后回落类样式 $slide-verify-track-bg。
+  // 跟手期间宽度归 MT 所有。补测/布局事件只能刷新下次落定的几何，
+  // 不能拿 BG 的起始位置覆盖 MT 当前宽度；同值返回旧引用也避免重复 SET_STYLE。
+  const height = isDragging.value ? gestureHeight.value : containerHeight.value
   const style: CSSProperties = {
-    width: `${currentPosition.value + containerHeight.value}px`,
-    transition: isResetting.value ? 'all 0.3s ease' : 'none',
+    width: `${currentPosition.value + height}px`,
+    transition: isResetting.value ? 'width 0.3s ease' : 'none',
     'background-color': currentPosition.value === 0
       ? 'transparent'
       : (isDef(props.activeBackgroundColor) ? (props.activeBackgroundColor as string) : '')
   }
+  if (lastTrackStyle && Object.keys(style).every((key) => style[key] === lastTrackStyle![key])) return lastTrackStyle
+  lastTrackStyle = style
   return style
 })
 
 const containerWidth = ref<number>(0)
 const containerHeight = ref<number>(0)
+const gestureHeight = ref<number>(0)
 
 /** 度量请求代次：被新度量取代的晚到回调不写缓存 */
 let rectRequest = 0
 /** 手势代次：补测落定期间新手手势接管后，旧回调不再提交 */
 let gestureRequest = 0
+let activeMeasure: Promise<void> | undefined
 
 /**
  * 写入容器尺寸（忽略 0 / 非有限值：布局未完成的首帧回调不能把已度量
@@ -130,6 +131,7 @@ function applyRect(rect: any): void {
   const height = Number(rect?.height)
   if (Number.isFinite(width) && width > 0) containerWidth.value = width
   if (Number.isFinite(height) && height > 0) containerHeight.value = height
+  if (isPass.value) currentPosition.value = maxPosition.value
 }
 
 /**
@@ -149,6 +151,7 @@ function onRootLayoutChange(event: any): void {
   if (!isAlive()) return
   const data = event?.detail?.layout ?? event?.detail
   if (!data) return
+  if (Number(data.width) > 0 || Number(data.height) > 0) rectRequest++
   applyRect(data)
 }
 
@@ -225,18 +228,55 @@ function pointerToPosition(clientX: number): number {
 }
 
 const onTouchStart = (event: any): void => {
-  if (isDisabled.value || isDragging.value) return
+  const point = event?.touches?.[0]
+  if (!isAlive() || isDisabled.value || event?.touches?.length !== 1 || !Number.isFinite(point?.clientX)) return
 
+  if (timer.value !== null) {
+    clearTimeout(timer.value)
+    timer.value = null
+  }
+  isResetting.value = false
   touch.touchStart(event)
   startPosition.value = currentPosition.value
+  gestureHeight.value = containerHeight.value
   isDragging.value = true
   gestureRequest++
-  // 首帧度量可能为 0：手势开始即补测，落定前拿到真实容器尺寸
-  if (maxPosition.value <= 0) void ensureSize()
+  // Web 未必派发 layoutchange；不能把旧的非零首帧宽度永久当作终点。
+  // 每段只在 start 补一次度量，move 热路径不查询。
+  activeMeasure = measure()
 }
 
 // 控制回弹
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
+const gestureVersion = ref(0)
+
+function returnToStart(notify: boolean): void {
+  if (timer.value !== null) clearTimeout(timer.value)
+  gestureRequest++
+  gestureVersion.value++
+  activeMeasure = undefined
+  isDragging.value = false
+  isResetting.value = true
+  currentPosition.value = 0
+  startPosition.value = 0
+  const request = gestureRequest
+  if (notify) emit('fail')
+  timer.value = setTimeout(() => {
+    if (!isAlive() || request !== gestureRequest) return
+    isResetting.value = false
+    timer.value = null
+  }, 300)
+}
+
+const onTouchCancel = (): void => {
+  if (!isDragging.value) return
+  // cancel 不是成功落定，即使最后一个触点在终点也必须回弹。
+  returnToStart(true)
+}
+
+watch(() => props.disabled, (disabled) => {
+  if (disabled && (isDragging.value || activeMeasure)) returnToStart(false)
+})
 
 const onTouchEnd = (event: any): void => {
   if (isDisabled.value || !isDragging.value) return
@@ -249,7 +289,7 @@ const onTouchEnd = (event: any): void => {
   const request = gestureRequest
 
   const commit = (): void => {
-    if (!isAlive() || request !== gestureRequest) return
+    if (!isAlive() || isDisabled.value || request !== gestureRequest) return
     if (Number.isFinite(clientX)) {
       updatePosition(pointerToPosition(clientX))
     }
@@ -260,24 +300,22 @@ const onTouchEnd = (event: any): void => {
       isPass.value = true
       emit('success')
     } else {
-      isResetting.value = true
-      // 失败回到起点
-      updatePosition(0)
-      emit('fail')
-
-      timer.value = setTimeout(() => {
-        isResetting.value = false
-      }, 300)
+      returnToStart(true)
     }
   }
 
-  // 度量缺失（首帧 0）：先补测再落定。否则 maxPosition 为 0 时
-  // updatePosition 会把终值钳到 0，本可通过的手势被误判成 fail。
-  if (maxPosition.value <= 0) {
-    void ensureSize().then(commit)
-    return
+  const pending = activeMeasure
+  const finish = (): void => {
+    if (!isAlive() || request !== gestureRequest) return
+    if (activeMeasure === pending) activeMeasure = undefined
+    if (maxPosition.value <= 0) {
+      void ensureSize().then(commit)
+    } else {
+      commit()
+    }
   }
-  commit()
+  if (pending) void pending.then(finish)
+  else finish()
 }
 
 onBeforeUnmount(() => {
@@ -291,20 +329,8 @@ onBeforeUnmount(() => {
  * 重置验证组件到初始状态
  */
 const reset = () => {
-  if (timer.value !== null) {
-    clearTimeout(timer.value)
-    timer.value = null
-  }
-  // 新手势代次：补测落定中的旧回调不得再提交（否则会把重置态又拖回去）
-  gestureRequest++
-  isResetting.value = true
-  currentPosition.value = 0
-  startPosition.value = 0
   isPass.value = false
-  isDragging.value = false
-  timer.value = setTimeout(() => {
-    isResetting.value = false
-  }, 300)
+  returnToStart(false)
 }
 
 /**
@@ -314,7 +340,7 @@ const reset = () => {
  * wot-ui 按钮级 @touchmove.prevent 的 catch 语义按真机冒泡上移至轨道
  * （bugfix #10）；拖动计算全部在主线程 worklet 与后台 touchend 完成。
  */
-const onTrackTouchMove = (): void => {}
+const onTrackTouchMove = withModifiers((): void => {}, ['stop', 'prevent'])
 
 defineExpose<SlideVerifyExpose>({ reset, init })
 
@@ -334,69 +360,81 @@ interface MtElement {
 const rootRef = useMainThreadRef<MtElement | null>(null)
 /** 轨道元素：worklet 跟手直改宽度 */
 const trackRef = useMainThreadRef<MtElement | null>(null)
-/** 容器几何快照 { width, height }（worklet 内 .current 活值） */
-const geomRef = useMainThreadRef<{ width: number; height: number } | null>(null)
-/** 手势起点 { startX }（worklet 内 .current 活值，touchend 清尾） */
-const dragRef = useMainThreadRef<{ startX: number } | null>(null)
+/** 一段手势自持几何与最新坐标，异步度量只能更新它自己的段。 */
+interface MtDrag {
+  startX: number
+  lastX: number
+  startPos: number
+  width: number
+  height: number
+  version: string
+  started: number
+  write: () => void
+}
+const dragRef = useMainThreadRef<MtDrag | null>(null)
 
 /**
- * 轨道触摸开始（主线程）：取容器几何并记录手势起点。
- *
- * 经轨道元素绑定：滑块的 touchstart 是后台绑定（记录拖动态），同名
- * 事件不能同时挂主线程与后台两个处理器；滑块与轨道自身的触摸都会
- * 冒泡到此处，度量的是同一个容器，语义正确（slider 范本同款分工）。
- *
- * 几何优先读后台经属性同步下发的实测尺寸（slider gesture-size 同款：
- * 同步可取、无 Promise 时序）；属性缺失（后台度量未就绪）时才回退
- * 主线程 invoke 一次性度量。
+ * 轨道 start 由握把冒泡而来：属性先供首帧使用，再补一次真实根节点度量。
+ * 不能只在属性为 0 时度量，否则旧的非零首屏宽度会把终点截在中途。
+ * write 留在本段内；迟到查询、reset 后 move 都不能污染下一段。
  */
 const onTrackTouchStartMt = (event: any) => {
   'main thread'
   const track = trackRef.current
-  const touch0 = event.touches && event.touches[0]
-  if (!touch0) return
-  const attrWidth = Number(track?.getAttribute('container-width'))
-  const attrHeight = Number(track?.getAttribute('container-height'))
-  if (attrWidth > 0 && attrHeight > 0) {
-    geomRef.current = { width: attrWidth, height: attrHeight }
-  } else {
-    const root = rootRef.current
-    if (root && typeof root.invoke === 'function') {
-      root.invoke('boundingClientRect').then((rect: any) => {
-        geomRef.current = {
-          width: Number(rect.width) || 0,
-          height: Number(rect.height) || 0
-        }
-      })
-    }
+  const point = event?.touches?.[0]
+  if (!track || event?.touches?.length !== 1 || !Number.isFinite(point?.clientX)) return
+  if (track.getAttribute('drag-disabled') === 'true') return
+  const drag: MtDrag = {
+    startX: point.clientX,
+    lastX: point.clientX,
+    startPos: Number(track.getAttribute('start-pos')) || 0,
+    width: Number(track.getAttribute('container-width')) || 0,
+    height: Number(track.getAttribute('container-height')) || 0,
+    version: track.getAttribute('gesture-version') || '0',
+    started: Number(event.timestamp) || 0,
+    write: () => {}
   }
-  dragRef.current = { startX: touch0.clientX }
+  const write = () => {
+    if (dragRef.current !== drag || trackRef.current !== track) return
+    if (track.getAttribute('drag-disabled') === 'true' || drag.version !== track.getAttribute('gesture-version')) return
+    const maxPos = drag.width - drag.height
+    if (drag.width <= 0 || drag.height <= 0 || maxPos <= 0) return
+    const pos = Math.min(Math.max(drag.startPos + drag.lastX - drag.startX, 0), maxPos)
+    track.setStyleProperty('transition', 'none')
+    track.setStyleProperty('width', `${pos + drag.height}px`)
+    track.setStyleProperty('background-color', pos === 0 ? 'transparent' : track.getAttribute('active-background-color') || '')
+  }
+  drag.write = write
+  dragRef.current = drag
+  write()
+  const root = rootRef.current
+  if (root && typeof root.invoke === 'function') {
+    root.invoke('boundingClientRect').then((rect: any) => {
+      if (dragRef.current !== drag || rootRef.current !== root) return
+      const width = Number(rect?.width)
+      const height = Number(rect?.height)
+      if (Number.isFinite(width) && width > 0) drag.width = width
+      if (Number.isFinite(height) && height > 0) drag.height = height
+      // 度量期间已有 move 时，立即补到最新触点，不丢首段。
+      write()
+    }).catch(() => {})
+  }
 }
 
-/**
- * 滑块跟手移动（主线程）：绝对定位公式 + 轨道宽度直改。
- *
- * 起始位置与禁用态经轨道元素属性 start-pos / drag-disabled 实时读取
- * （后台随重渲染更新）；几何缺失（度量不可用）时守值返回，不写 NaN。
- */
+/** 跟手只读段内缓存；每帧不查询几何、不跨线程更新响应式位置。 */
 const onButtonTouchMoveMt = (event: any) => {
   'main thread'
   const track = trackRef.current
-  const geom = geomRef.current
   const drag = dragRef.current
-  if (!track || !geom || !drag) return
-  if (geom.width <= 0 || geom.height <= 0) return
-  if (track.getAttribute('drag-disabled') === 'true') return
-
-  const touch0 = event.touches && event.touches[0]
-  if (!touch0) return
-
-  const maxPos = geom.width - geom.height
-  if (maxPos <= 0) return
-
-  const startPos = Number(track.getAttribute('start-pos')) || 0
-  const pos = Math.min(Math.max(startPos + (touch0.clientX - drag.startX), 0), maxPos)
-  track.setStyleProperty('width', `${pos + geom.height}px`)
+  const point = event?.touches?.[0]
+  if (!track || !drag || event?.touches?.length !== 1 || !Number.isFinite(point?.clientX)) return
+  const timestamp = Number(event.timestamp) || 0
+  if (timestamp && drag.started && timestamp < drag.started) return
+  drag.lastX = point.clientX
+  // 首次查询未就绪时可用 BG 随 layoutchange 下发的尺寸，但不反复度量。
+  if (drag.width <= 0) drag.width = Number(track.getAttribute('container-width')) || 0
+  if (drag.height <= 0) drag.height = Number(track.getAttribute('container-height')) || 0
+  drag.write()
 }
 
 /**
@@ -407,14 +445,28 @@ const onTrackTouchEndMt = () => {
   'main thread'
   dragRef.current = null
 }
+
+// v-bind 对象走 FULL_PROPS，style 的同引用才真正不重发 SET_STYLE。
+// 单独 :style 会被编译为 STYLE 快速路径，布局重渲染时即使引用不变仍重写宽度。
+const trackBindings = computed(() => ({
+  class: 'wd-slide-verify__track',
+  style: trackStyle.value,
+  'main-thread-ref': trackRef,
+  'start-pos': String(currentPosition.value),
+  'drag-disabled': String(isDisabled.value),
+  'container-width': String(containerWidth.value),
+  'container-height': String(containerHeight.value),
+  'gesture-version': String(gestureVersion.value),
+  'active-background-color': props.activeBackgroundColor || ''
+}))
 </script>
 
 <template>
-  <view :id="slideVerifyId" :class="rootClass" :style="rootStyle" :main-thread-ref="rootRef" @layoutchange="onRootLayoutChange">
+  <view :id="slideVerifyId" :class="rootClass" :style="rootStyle" :main-thread-ref="rootRef" :flatten="false" :consume-slide-event="consumeSlideEvent" @layoutchange="onRootLayoutChange">
     <!-- 背景提示文字 -->
     <view class="wd-slide-verify__text">
       <slot name="text">
-        <text class="wd-slide-verify__text-inner">
+        <text class="wd-slide-verify__text-inner" text-maxline="1">
           {{ slideVerifyText }}
         </text>
       </slot>
@@ -423,26 +475,22 @@ const onTrackTouchEndMt = () => {
          start-pos / drag-disabled 向主线程下发起始位置与禁用态，
          container-width / container-height 下发后台实测容器几何） -->
     <view
-      class="wd-slide-verify__track"
-      :style="trackStyle"
-      :main-thread-ref="trackRef"
-      :start-pos="String(currentPosition)"
-      :drag-disabled="String(isDisabled)"
-      :container-width="String(containerWidth)"
-      :container-height="String(containerHeight)"
-      :main-thread-bindtouchstart="onTrackTouchStartMt"
-      :main-thread-bindtouchend="onTrackTouchEndMt"
-      :main-thread-bindtouchcancel="onTrackTouchEndMt"
-      @touchmove.stop.prevent="onTrackTouchMove"
+      v-bind="{
+        ...trackBindings,
+        'main-thread-bindtouchstart': onTrackTouchStartMt,
+        'main-thread-bindtouchend': onTrackTouchEndMt,
+        'main-thread-bindtouchcancel': onTrackTouchEndMt,
+        onTouchmove: onTrackTouchMove
+      }"
     >
-      <view class="wd-slide-verify__track-text">
+      <view v-if="isPass" class="wd-slide-verify__track-text">
         <slot name="success-text">
-          <text>{{ slideVerifySuccessText }}</text>
+          <text class="wd-slide-verify__track-text-inner" text-maxline="1">{{ slideVerifySuccessText }}</text>
         </slot>
       </view>
       <!-- 滑块：touchstart / touchend 后台（拖动态记录与落定提交），
            touchmove 主线程 worklet（跟手直改） -->
-      <view class="wd-slide-verify__button" @touchstart="onTouchStart" :main-thread-bindtouchmove="onButtonTouchMoveMt" @touchend="onTouchEnd">
+      <view class="wd-slide-verify__button" :flatten="false" @touchstart="onTouchStart" :main-thread-bindtouchmove="onButtonTouchMoveMt" @touchend="onTouchEnd" @touchcancel="onTouchCancel">
         <slot v-if="isPass" name="success-icon">
           <WdIcon
             custom-class="wd-slide-verify__button-icon wd-slide-verify__button-icon--success"
@@ -450,11 +498,13 @@ const onTrackTouchEndMt = () => {
             :size="successIconSize"
             :class-prefix="iconPrefix"
             :css-icon="cssIcon"
+            :user-interaction-enabled="false"
+            :custom-style="{ 'pointer-events': 'none' }"
           />
         </slot>
 
         <slot v-else name="icon">
-          <WdIcon custom-class="wd-slide-verify__button-icon" :name="icon" :size="iconSize" :class-prefix="iconPrefix" :css-icon="cssIcon" />
+          <WdIcon custom-class="wd-slide-verify__button-icon" :name="icon" :size="iconSize" :class-prefix="iconPrefix" :css-icon="cssIcon" :user-interaction-enabled="false" :custom-style="{ 'pointer-events': 'none' }" />
         </slot>
       </view>
     </view>

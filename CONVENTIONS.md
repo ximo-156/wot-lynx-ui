@@ -242,6 +242,7 @@ composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
   需要居中就撑满父级 + flex 居中。新增带显隐的 fixed 组件时，用 `custom-class` /
   `custom-style` 把定位下发到 `wd-transition` 根节点。
 - 全局单例（toast/notify）用模块级 `ref` + 条件渲染实现，参考 wot-ui 的 `useToast` 模式（`showToast(options)` 返回关闭函数）。
+- **保活弹层的 `display: none` 必须配套闭态裁剪**（2026-11-07）：[Lynx 官方 display 文档](https://lynxjs.org/api/css/properties/display.md) 明确说明 `none` 只把子树尺寸归零，内部 `text` 仍可能绘制；仅断言 `display:none` 不能证明关闭后无左上角残字。裁剪应落在真正显隐的 `WdTransition` 根上，而非 fixed 节点之外的祖先。只在初始关闭 / `after-leave` 完成时强制 `overflow` 与两轴 `hidden`；入场前显式清除保护、恢复调用方与 CSS 类的原值，退场过程中不提前裁剪。不要把 `hideWhenClose=false` 改为销毁，也不要给可见圆角面板常驻 `overflow:hidden`。回归需在同一实例验证关闭、保活内容更新、重开及退场取消，并检查主线程样式出口；jsdom/Web 隐藏检查不能替代真机绘制验收。
 
 ## 10. Main Thread Script（原生交互性能，声明式唯一形态）
 
@@ -320,9 +321,14 @@ Slider 等内联手势组件使用局部原生仲裁，不把瞬态 dragging/set
   `[[-180,-135],[-45,45],[135,180]]`，纵向使用 `[[-135,-45],[45,135]]`。
   Android 仲裁节点保留 `flatten=false`；Web 使用 `touch-action: pan-y/pan-x`
   作浏览器默认行为兼容，不能拿 passive 监听的 stopPropagation 当 preventDefault。
-- MT/BG 使用相同触点、方向及时间校验。单个无标识触点可降级；明确的异号
-  触点不能借坐标或取消当前手势。已知同一时基、早于新 start 的 end 应拒绝；
-  缺失/非数值时间则允许收尾。
+- MT/BG 使用相同触点、方向及时间校验。Lynx 3.4.0 的
+  [单指参数构造](https://github.com/lynx-family/lynx/blob/3.4.0/core/renderer/events/touch_event_handler.cc)
+  以局部变量地址生成 `identifier`，不能假设它在各帧、各线程恒定。
+  Slider 仅在**非空固定握把目标相同、两列表各最多一指且互相一致、未出现多指**时
+  兼容此 ID 漂移；装饰图标用 `user-interaction-enabled=false` 禁止子树抢命中，
+  Web 同时用 `pointer-events:none`。一旦见多指，直到下一次物理 start 都严格按 ID。
+  主后台 start 握手也要遵守同样边界，不能仅修 move 取点。
+  已知更早的时间戳仍拒绝；相等时间戳不代表重复 start（同毫秒或原生浮点时间桶）。
 - 先判断事件归属，再取消计时器。只有当前有效帧可续命；旧 query/watchdog
   必须先校验交互代次，不准无条件清理新 isSettling 或新计时器。
 - BG 结束/取消同步失效旧 MT 段，但带 owner/revision 的握手不能误杀更晚的 MT start；
@@ -335,7 +341,8 @@ Slider 等内联手势组件使用局部原生仲裁，不把瞬态 dragging/set
   尺寸落定不锁滚、不显示正常气泡。
 
 回归：`test/regression/slider-drag-release.test.ts`、
-`test/regression/slider-gesture-protocol.test.ts`、`test/regression/slider-device-layout.test.ts`；
+`test/regression/slider-gesture-protocol.test.ts`、`test/regression/slider-device-layout.test.ts`、
+`test/regression/slider-native-touch.test.ts`；
 含原生式单事件冒泡、BG 延迟、反复暂停/范围跨越、未知触点和直接文字排版断言。
 这些测试仍不替代 Android/iOS 真机与 Web 真实触摸验收。
 
@@ -581,8 +588,8 @@ bg-color 头像曾因此整组白底白字不可见）。
   z-index 低于内容（真机按 z-index 绘制，两个平台才都不出问题）。
 
 **真机引擎行为差异清单**（2026-10-25 第二轮 + 2026-10-26 第三轮真机巡检
-沉淀，2026-11-05 补入第 10、11、12 条；Web 预览全绿、真机翻车的十二类「静默差异」，
-写组件前对照）：
+沉淀，2026-11-05 补入第 10、11、12 条，2026-11-06 补入第 13 条；Web 预览全绿、
+真机翻车的十三类「静默差异」，写组件前对照）：
 
 | # | 差异 | 真机表现 | 规则 |
 | --- | --- | --- | --- |
@@ -597,7 +604,9 @@ bg-color 头像曾因此整组白底白字不可见）。
 | 9 | 圆角容器上的 `overflow: hidden` 会把内容整段裁空 | wd-segmented 只剩灰底无「日/周/月」；wd-slider 白底圆点上的手柄图标消失（滑块看起来完全没了） | 单行/多行省略走文本节点的原生 `text-maxline`，不要靠 `overflow: hidden` + `text-overflow` 裁剪；图标容器不需要裁剪就不要写 overflow |
 | 10 | `position: fixed` **且** `display: flex` 的节点按内容尺寸收缩，四边 `0` / `left`+`right` 撑不开 | wd-toast（2026-11-01）、wd-popup（2026-11-05）整片内容塌到屏幕左上角：时间选择器只剩半截、Dialog 内容缺失。wd-overlay（2026-11-05 用户反馈「输入面板没有全屏」）：遮罩塌成 0×0，弹层没有全屏遮罩、点遮罩关不掉，默认数字键盘（无关闭按钮）被卡在关不掉。Web 预览完全正常 | 定位与外观分两层：外层全屏 harness 用 `fixed` + 四边 `0px` + **显式窗口像素宽高**（`getSystemInfo()`）+ flex 对齐，`pointer-events: none`；内层可见面板只做背景/圆角/动画。单层固定节点（遮罩）则把宽高按窗口像素内联下发。参见 `wd-toast` / `wd-popup` / `wd-overlay` |
 | 11 | `justify-content` 只有 `center` 生效：`flex-start` / `flex-end` 被按 `center` 处理（`flex-direction` 两个方向都试过） | wd-popup 的 harness 按 position 下发 `flex-end` / `flex-start` 后，底部 Popup / Picker / 时间选择器 / 侧边抽屉整片贴在屏幕**正中**而不是目标边（2026-11-05 用户截图复测「适配太差」；同屏 `align-items: center` 的交叉轴居中正常，Dialog 仍居中） | 主轴**摆位**改用 `flex-grow: 1` 的空占位 view 吸收主轴剩余空间，把面板挤到目标边（占位在面板前 = 挤向末端 bottom/right，在面板后 = 挤向起点 top/left；center 不放、继续 flex 居中）。flex-grow 是真机可用路径（wd-cell `__left` / `__right` 同机制）；**不要**改用「单边 edge 定位」——缺边按 0 锚定（第 2 条）会把 `bottom: 0` 顶掉，且内容高度未知补不了显式 `top`。参见 `wd-popup` 的 `.wd-popup-spacer` |
-| 12 | 原生 input/textarea 的 `value` **属性**通道（`SET_PROP`）刷新不了「用户已输入过」的输入框：IME 接管后文本由输入法所有，后台下发的属性更新被吞 | wd-input-number（2026-11-05 用户复报「加减没有鸟用」）：min=0/max=10 的步进器里键入 33，归一化（应回落到 10）与加减步进都不回显——模型其实已经变了，只是输入框文本不动。同族：clearable 的清除按钮「点了没反应」（wd-input / wd-textarea / wd-search）。Web 预览的 XInput 属性处理器直接写 shadow root 里的 `input.value` 所以全绿 | 程序化改写输入框值必须走元素方法 `setValue`（官方 API，`SelectorQuery.select('#id').invoke({ method: 'setValue', params: { value } })`，与 getRect / scrollViewTo 同链），属性通道只负责创建期初值。统一入口 `composables/useNativeInputValue.ts`（实例唯一 id + 用户输入回声去重，避免重复 setValue 打扰 IME 光标）；**不要**改图省事用 `v-model`——动态 `:type` 会让编译器产出 `vModelDynamic`，vue-lynx 运行时未导出该指令，真机直接链接失败 |
+| 12 | 原生 input/textarea 的 `value` **属性**通道（`SET_PROP`）刷新不了「用户已输入过」的输入框：IME 接管后文本由输入法所有，后台下发的属性更新被吞；且 Android 原生 input 根本没有 `value` / `default-value` 以外的 value 属性通道（官方属性表只有 type / placeholder / readonly / disabled / maxlength 等，LynxUIBaseInput 无 value @LynxProp），Web XInput 的 value setter 是 Web 专有行为 | wd-input-number（2026-11-05 用户复报「加减没有鸟用」）：min=0/max=10 的步进器里键入 33，归一化（应回落到 10）与加减步进都不回显——模型其实已经变了，只是输入框文本不动。**2026-11-07 复报「点击加和减没有任何反应」且冷启动输入框空白**：旧 `useNativeInputValue` 在 `onMounted` 直接 invoke、不等主线程建树 ack，节点还不存在就失败，却先把值记成「已同步」，之后同值不再重推 → 初值 5 永远不上屏，加减时模型变了但框里始终空白，看起来就是点了没反应。同族：clearable 的清除按钮「点了没反应」（wd-input / wd-textarea / wd-search）。Web 预览的 XInput 属性处理器直接写 shadow root 里的 `input.value` 所以全绿 | 程序化改写/初始化输入框值必须走元素方法 `setValue`（`SelectorQuery.select('#id').invoke({ method: 'setValue', params: { value }, success, fail })`）。统一入口 `composables/useNativeInputValue.ts`，硬性要求四条：①**`nextTick()`（vue-lynx 的 tick 会等 MT flush ack）之后再 invoke**，`onMounted`/watch 里同步发查询在真机上节点尚未落地；②**只有 `success` 回调才算已同步**，`fail` 不缓存、最多重试一次；`invoke` 至少要带 `fail`（官方文档：缺少 fail 时原生失败会产生红屏）；③条件渲染的输入框用第三参数 `isVisible` 上报显隐，**重新挂载后同值也必须重推**（v-if 重建的是另一个原生节点）；④Android 的 `setValue` 会经 TextWatcher 回发 `input`，组件 `handleInput` 必须对同值回声只做 `markNativeValue` 后 return，不能重复 emit 或取消正在进行的 clear。程序化聚焦用 `setNativeFocus()`（原生 `focus`/`blur` 方法），`:focus` 属性同样不是跨平台保证；**不要**用 `v-model`——动态 `:type` 会让编译器产出 `vModelDynamic`，vue-lynx 运行时未导出该指令，真机直接链接失败。回归：`test/regression/native-input-sync-lifecycle.test.ts`（用与 DOM 属性完全独立的 nativeText + 可控 success/fail，测的是「原生文本真的变了」而不是「发出了 invoke」）、`test/regression/native-input-value-channel.test.ts`、`test/regression/search-tap-response.test.ts` |
+| 13 | flex 子项的 `flex-shrink: 0`（wd-button 基础样式，防按钮在行内被压扁）与 `width: 100%`（is-block）叠加时，两个 block 按钮在 flex 行里互不相让，后一个被挤出容器裁掉 | wd-dialog 确认弹窗（2026-11-06 用户截图「适配程度不一样」）：「取消」独占整行宽度，「确定」被 `__container` 的 `overflow: hidden` 裁得只剩一条色带。弹窗本体居中是正常的——翻车的只是按钮行。Web 端按钮无 `flex-shrink: 0`，两个 100% 按钮默认各缩一半，仅真机翻车 | 行内容器里多个 block 按钮显式 `flex: 1` 等分（flex-grow 为真机可用路径，见 #11）。注意只对**横向行**生效：`--vertical` / `--block` 等 column 容器高度按内容结算，`flex: 1`（basis: 0）会把按钮高度算没（wd-password-input 2026-11-01 同源缺陷），用 `:not(.wd-dialog__actions--vertical)` 排除。参见 `wd-dialog/index.scss` 的 `__actions` 注释 |
+| 14 | 交互「跟手感」被固定延时与未释放的原生焦点吃掉：`pause(100)` / `pause(150)` 这类**人为等待**换不来真机的任何保证，而原生 `focus` 属性又不等于真的弹了键盘 | wd-search（2026-11-07 用户反馈「旁边的搜索按钮取消也有点不跟手」）：点封面后要等 100ms + 一帧才置焦点；「取消」只 `emit('cancel')`，不释放原生焦点也不收起键盘，且 pending 的 focus 会在取消之后**再次弹键盘**；取消按钮本身没有独立样式/尺寸（只有继承的 text 样式），命中区小、文案靠祖先继承颜色 | ①去掉人为固定延时，改成 `await nextTick()` 等节点真实挂载；②取消 = 失效 pending 的 focus/clear 请求 + 主动调原生 `blur`（`setNativeFocus(false)`，必须在 input 卸载前发出）+ 复位显隐状态；③交互按钮（取消 / 封面 / 步进按钮）自己声明 `display:flex` + 定高 + 内边距 + `:active` 按压反馈，文案样式直写在 `<text>` 上（§19「text 不继承」）；④装饰性子节点（图标、字形横竖条、分割线）加 `user-interaction-enabled=false` / `pointer-events:none`，让命中由整块按钮承接。回归：`test/regression/search-tap-response.test.ts`（只派发一次叶子节点 tap，用真实冒泡链断言「一次点击一次 focus」，不推进任何定时器） |
 
 另：Lynx 定位 FAQ——absolute/fixed 元素带 z-index 时，父级需同时
 `z-index: 0`，否则真机绘制与命中测试层序可能不一致（demo 的 fab 包裹层

@@ -19,6 +19,13 @@
  * - ::-webkit-scrollbar 为 Web 专有伪元素，Lynx 不支持，删除（对应令牌保留）；
  * - display: block 在 Lynx 只认 flex / none / linear，__actions--block 改为
  *   flex + column（CONVENTIONS §15）；
+ * - 横向按钮行（__actions--flex 且非 --vertical）内的按钮显式 flex: 1：
+ *   wd-button 基础样式带 flex-shrink: 0（CONVENTIONS §19 附注），两个
+ *   is-block（width: 100%）按钮在 flex 行里谁都不缩——「取消」独占整行，
+ *   「确定」被 overflow: hidden 裁得只剩一条色带（真机 2026-11-06 用户截图）。
+ *   Web 端按钮无 flex-shrink: 0，默认各缩一半，仅真机翻车。纵向（--vertical）
+ *   与单按钮（--block）为 column 容器、高度按内容结算，不适用（basis: 0 会把
+ *   按钮高度算没，wd-password-input 2026-11-01 同源缺陷）；
  * - 内容区 __content：参考源为 view + overflow: auto（Lynx 普通 view 不产生
  *   原生滚动，超长消息会被容器 overflow:hidden 裁掉），按 NATIVE-REWRITE §3.3
  *   改用原生 scroll-view（scroll-y，类名与 DOM 层级不变）；

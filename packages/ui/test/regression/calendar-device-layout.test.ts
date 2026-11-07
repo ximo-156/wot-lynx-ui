@@ -17,13 +17,15 @@ import type { CalendarDayItem, CalendarType } from '../../src/components/wd-cale
 const stamp = (month: number, day: number) => new Date(2026, month - 1, day).getTime()
 const bounds = { minDate: stamp(6, 1), maxDate: stamp(7, 31) }
 const rules: Array<{ selector: string; specificity: number; declarations: Record<string, string> }> = []
-postcss.parse(compile(resolve(__dirname, '../../src/components/wd-calendar-view/month/index.scss')).css).walkRules((rule) => {
-  const declarations: Record<string, string> = {}
-  rule.walkDecls((decl) => { declarations[decl.prop] = decl.value })
-  for (const selector of rule.selectors) {
-    rules.push({ selector, specificity: (selector.match(/\.[\w-]+/g) || []).length, declarations })
-  }
-})
+for (const panel of ['month', 'year']) {
+  postcss.parse(compile(resolve(__dirname, `../../src/components/wd-calendar-view/${panel}/index.scss`)).css).walkRules((rule) => {
+    const declarations: Record<string, string> = {}
+    rule.walkDecls((decl) => { declarations[decl.prop] = decl.value })
+    for (const selector of rule.selectors) {
+      rules.push({ selector, specificity: (selector.match(/\.[\w-]+/g) || []).length, declarations })
+    }
+  })
+}
 
 function resolveFallbacks(value: string, overrides: Record<string, string>): string {
   for (let depth = 0; depth < 30; depth++) {
@@ -133,28 +135,63 @@ describe('CalendarView 原生日期盒与行结构', () => {
           expect(ownStyle(cell.querySelector('.wd-month__day-container')!)).toMatchObject({
             display: 'flex', width: '100%', height: '100%', 'align-items': 'center', 'justify-content': 'center'
           })
+          const marker = cell.querySelector('.wd-month__day-value')!
+          expect(ownStyle(marker)).toMatchObject({
+            display: 'flex', width: '40px', height: '40px', 'align-items': 'center', 'justify-content': 'center', 'flex-shrink': '0'
+          })
           const text = cell.querySelector('.wd-month__day-text')!
-          expect(ownStyle(text)).toMatchObject({ 'font-size': '16px', 'line-height': '60px' })
+          expect(ownStyle(text)).toMatchObject({ 'font-size': '16px', 'line-height': '16px' })
           expect(ownStyle(text).color).toBeTruthy()
-          const custom = { '--wot-calendar-view-day-height': '72px' }
+          const custom = { '--wot-calendar-view-day-height': '72px', '--wot-calendar-view-day-size': '44px' }
           expect(ownStyle(cell, custom).height).toBe('72px')
-          expect(ownStyle(text, custom)['line-height']).toBe('72px')
+          expect(ownStyle(marker, custom)).toMatchObject({ width: '44px', height: '44px' })
+          expect(ownStyle(text, custom)['line-height']).toBe('16px')
         }
       }
     }
   })
 
-  it('普通日期不升层，范围装饰仅在日期格局部层叠且位于内容之后', () => {
+  it.each([
+    { type: 'date', value: stamp(6, 5), selected: [5] },
+    { type: 'datetime', value: stamp(6, 5), selected: [5] },
+    { type: 'dates', value: [stamp(6, 5), stamp(6, 6), stamp(6, 7), stamp(6, 10)], selected: [5, 6, 7, 10] },
+    { type: 'daterange', value: [stamp(6, 5), null], selected: [5] },
+    { type: 'daterange', value: [stamp(6, 5), stamp(6, 12)], selected: [5, 12] },
+    { type: 'daterange', value: [stamp(6, 5), stamp(6, 5)], selected: [5] },
+    { type: 'datetimerange', value: [stamp(6, 5), stamp(6, 12)], selected: [5, 12] },
+    { type: 'week', value: stamp(6, 15), selected: [14, 20] },
+    { type: 'weekrange', value: [stamp(6, 15), stamp(6, 22)], selected: [14, 27] }
+  ])('$type 选中数字用等宽高圆形，不把点击格一起缩小', ({ type, value, selected }) => {
+    const { container } = render(CalendarView, { ...bounds, type, modelValue: value, allowSameDay: true } as any)
+    for (const day of selected) {
+      const cell = dayAt(container, day)
+      const marker = cell.querySelector('.wd-month__day-value')!
+      expect(ownStyle(cell)).toMatchObject({ flex: '1', height: '60px' })
+      expect(ownStyle(marker)).toMatchObject({ width: '40px', height: '40px', 'border-radius': '9999px' })
+      expect(ownStyle(marker).background).toBeTruthy()
+      expect(ownStyle(cell.querySelector('.wd-month__day-container')!).background).toBeUndefined()
+      expect(ownStyle(marker, { '--wot-calendar-view-border-radius-active': '8px' })['border-radius']).toBe('8px')
+    }
+    if (type === 'dates') {
+      expect(dayAt(container, 6).classList.contains('is-multiple-middle')).toBe(true)
+      expect(container.querySelector('.wd-month__day-range')).toBeNull()
+    }
+  })
+
+  it('普通日期不升层，范围连接带居中且位于圆形内容之后', () => {
     const { container } = render(CalendarView, { ...bounds, type: 'daterange', modelValue: [stamp(6, 5), stamp(6, 12)] })
     expect(ownStyle(dayAt(container, 2).querySelector('.wd-month__day-container')!)['z-index']).toBeUndefined()
-    for (const day of [5, 12]) {
+    for (const day of [5, 8, 12]) {
       const cell = dayAt(container, day)
       const content = cell.querySelector('.wd-month__day-container')!
       const range = cell.querySelector('.wd-month__day-range')!
       expect(ownStyle(cell)).toMatchObject({ position: 'relative', 'z-index': '0' })
-      expect(ownStyle(range)).toMatchObject({ position: 'absolute', top: '0' })
+      expect(ownStyle(range)).toMatchObject({ position: 'absolute', top: '50%', height: '40px', transform: 'translateY(-50%)', 'pointer-events': 'none' })
+      expect(ownStyle(range, { '--wot-calendar-view-day-size': '44px' }).height).toBe('44px')
       expect(Number(ownStyle(content)['z-index'])).toBeGreaterThan(Number(ownStyle(range)['z-index']))
       expect(Array.from(cell.children).indexOf(content)).toBeLessThan(Array.from(cell.children).indexOf(range))
+      expect(ownStyle(range).left).toBe(day === 5 ? '50%' : '0')
+      expect(ownStyle(range).right).toBe(day === 12 ? '50%' : '0')
     }
   })
 
@@ -166,18 +203,48 @@ describe('CalendarView 原生日期盒与行结构', () => {
     await flush()
     const selectedColor = ownStyle(dayAt(mounted.container, 5).querySelector('.wd-month__day-text')!).color
     expect(selectedColor).not.toBe(normalColor)
+    const marker = dayAt(mounted.container, 5).querySelector('.wd-month__day-value')!
+    expect(ownStyle(marker)).toMatchObject({ width: '28px', height: '28px', 'border-radius': '9999px' })
+    expect(ownStyle(marker, { '--wot-calendar-view-day-size-with-info': '24px' })).toMatchObject({ width: '24px', height: '24px' })
     for (const selector of ['.wd-month__day-top', '.wd-month__day-bottom']) {
       const infoBox = dayAt(mounted.container, 5).querySelector(selector)!
       const infoText = infoBox.querySelector('text')!
       expect(ownStyle(infoBox)['line-height']).toBeUndefined()
-      expect(ownStyle(infoText).color).toBe(selectedColor)
+      expect(ownStyle(infoText).color).toBe(ownStyle(marker).background)
+      expect(ownStyle(infoText).color).not.toBe(selectedColor)
       expect(parseFloat(ownStyle(infoText)['font-size'])).toBeGreaterThan(0)
-      expect(parseFloat(ownStyle(infoText)['line-height'])).toBeGreaterThan(0)
+      const infoHeight = parseFloat(ownStyle(infoText)['line-height'])
+      const inset = parseFloat(ownStyle(infoBox)[selector.endsWith('top') ? 'top' : 'bottom'])
+      expect(inset + infoHeight).toBeLessThanOrEqual((60 - parseFloat(ownStyle(marker).height)) / 2)
     }
     const disabled = dayAt(mounted.container, 1)
     expect(disabled.classList.contains('is-disabled')).toBe(true)
     expect(ownStyle(disabled.querySelector('.wd-month__day-text')!).color).not.toBe(normalColor)
     expect(disabled.classList.contains('calendar-formatted')).toBe(true)
+  })
+
+  it.each([
+    { type: 'month', value: stamp(6, 1), selected: [6] },
+    { type: 'monthrange', value: [stamp(6, 1), null], selected: [6] },
+    { type: 'monthrange', value: [stamp(6, 1), stamp(8, 1)], selected: [6, 8] },
+    { type: 'monthrange', value: [stamp(6, 1), stamp(6, 1)], selected: [6] }
+  ])('$type 月份选中态和范围端点保持完整圆形', ({ type, value, selected }) => {
+    const { container } = render(CalendarView, {
+      type, modelValue: value, minDate: stamp(1, 1), maxDate: stamp(12, 31), allowSameDay: true
+    } as any)
+    const cells = Array.from(container.querySelectorAll('.wd-year__month'))
+    for (const month of selected) {
+      const cell = cells[month - 1]
+      const marker = cell.querySelector('.wd-year__month-container')!
+      expect(ownStyle(marker)).toMatchObject({ width: '60px', height: '60px', 'border-radius': '9999px' })
+      const range = cell.querySelector('.wd-year__month-range')
+      if (range) {
+        expect(ownStyle(cell)['z-index']).toBe('0')
+        expect(Number(ownStyle(marker)['z-index'])).toBeGreaterThan(Number(ownStyle(range)['z-index']))
+        expect(ownStyle(range)['pointer-events']).toBe('none')
+        if (cell.classList.contains('is-without-end')) expect(ownStyle(range).display).toBe('none')
+      }
+    }
   })
 
   it('空选择首次定位今天，不将 epoch 0 钳制到 minDate', async () => {

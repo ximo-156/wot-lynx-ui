@@ -61,43 +61,34 @@
       }
     }
 
-    @include when(selected, multiple-selected) {
-      .wd-month__day-container {
+    // 高亮只包住日期文字，不把七等分的整格拉成长椭圆。
+    // 多选连续日期仍保留各自的圆形，与区间选择的连接带区分。
+    @include when(selected, multiple-selected, multiple-middle, start, end, same) {
+      .wd-month__day-value {
         border-radius: $calendar-view-border-radius-active;
         background: $calendar-view-color-active;
       }
 
-      .wd-month__day-text,
-      .wd-month__day-info {
+      .wd-month__day-text {
         color: $calendar-view-color-selected;
+      }
+
+      // 辅助信息在圆形之外，不能沿用圆内白字。
+      .wd-month__day-info {
+        color: $calendar-view-color-active;
       }
     }
 
     @include when(middle) {
-      .wd-month__day-container {
-        background: $calendar-view-range-bg;
-      }
-
       .wd-month__day-text,
       .wd-month__day-info {
         color: $calendar-view-range-color;
       }
     }
 
-    @include when(multiple-middle) {
-      .wd-month__day-container {
-        background: $calendar-view-color-active;
-      }
-
-      .wd-month__day-text,
-      .wd-month__day-info {
-        color: $calendar-view-color-selected;
-      }
-    }
-
-    // 只有带范围装饰的格子才需要升层；其直接父级显式建立局部层叠上下文。
+    // 范围装饰仅在格子内局部层叠，普通日期不升层。
     // CONVENTIONS §19：带 z-index 的定位子节点要求父级同时 z-index: 0。
-    @include when(start, end) {
+    @include when(start, end, middle) {
       z-index: 0;
 
       .wd-month__day-container {
@@ -107,13 +98,7 @@
 
     @include when(start) {
       .wd-month__day-range {
-        position: absolute;
-        top: 0;
-        right: 0;
         left: 50%;
-        height: $calendar-view-day-height;
-        background: $calendar-view-range-bg;
-        z-index: 1;
       }
 
       &.is-without-end {
@@ -121,49 +106,11 @@
           display: none;
         }
       }
-
-      .wd-month__day-container {
-        background: $calendar-view-color-active;
-        border-radius: $calendar-view-border-radius-active 0 0 $calendar-view-border-radius-active;
-      }
-
-      .wd-month__day-text,
-      .wd-month__day-info {
-        color: $calendar-view-color-selected;
-      }
     }
 
     @include when(end) {
       .wd-month__day-range {
-        position: absolute;
-        top: 0;
-        left: 0;
         right: 50%;
-        height: $calendar-view-day-height;
-        background: $calendar-view-range-bg;
-        z-index: 1;
-      }
-
-      .wd-month__day-container {
-        background: $calendar-view-color-active;
-        border-radius: 0 $calendar-view-border-radius-active $calendar-view-border-radius-active 0;
-      }
-
-      .wd-month__day-text,
-      .wd-month__day-info {
-        color: $calendar-view-color-selected;
-      }
-    }
-
-    @include when(same) {
-      .wd-month__day-container {
-        background: $calendar-view-color-active;
-        border-radius: $calendar-view-border-radius-active;
-      }
-
-      .wd-month__day-text,
-      .wd-month__day-info {
-        color: $calendar-view-color-selected;
       }
     }
 
@@ -185,10 +132,38 @@
     justify-content: center;
   }
 
+  @include e(day-value) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: $calendar-view-day-size;
+    height: $calendar-view-day-size;
+
+    // 60px 行内同时容纳上下辅助信息，不裁字也不把圆形拉高。
+    &.has-info {
+      width: $calendar-view-day-size-with-info;
+      height: $calendar-view-day-size-with-info;
+    }
+  }
+
+  @include e(day-range) {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: $calendar-view-day-size;
+    transform: translateY(-50%);
+    background: $calendar-view-range-bg;
+    z-index: 1;
+    pointer-events: none;
+  }
+
   @include e(day-text) {
     color: $calendar-view-day-color;
     font-size: $calendar-view-day-font-size;
-    line-height: $calendar-view-day-height;
+    line-height: $calendar-view-day-font-size;
     font-weight: $calendar-view-day-font-weight;
     text-align: center;
   }

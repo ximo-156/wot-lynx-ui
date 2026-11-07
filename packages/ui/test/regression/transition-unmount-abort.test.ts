@@ -15,7 +15,7 @@
  * 3. AbortablePromise 被中止的链不产生未处理的 Promise 拒绝。
  */
 import { describe, it, expect, vi } from 'vitest'
-import { h, ref } from 'vue-lynx'
+import { h, ref, type Ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { pause } from '../../src/common/util'
 import WdTransition from '../../src/primitives/wd-transition/wd-transition.vue'
@@ -28,13 +28,13 @@ async function waitEnterFrames() {
   }
 }
 
-function renderTransition(show: Ref<boolean>, onAfterLeave: () => void) {
+function renderTransition(show: Ref<boolean>, hooks: { onAfterLeave?: () => void; onAfterEnter?: () => void }) {
   const App = {
     setup() {
       return () =>
         h(
           WdTransition,
-          { show: show.value, name: 'fade', duration: 100, onAfterLeave },
+          { show: show.value, name: 'fade', duration: 100, ...hooks },
           { default: () => h('view', { class: 'marker' }, 'x') }
         )
     }
@@ -46,7 +46,7 @@ describe('WdTransition 卸载中止（9902 removeNode 防护）', () => {
   it('leave 动画飞行中同步卸载：after-leave 不触发、无迟到写入', async () => {
     const onAfterLeave = vi.fn()
     const show = ref(true)
-    const { container, unmount } = renderTransition(show, onAfterLeave)
+    const { container, unmount } = renderTransition(show, { onAfterLeave })
 
     await waitEnterFrames()
     expect(container.querySelector('.marker'), '入场后内容应渲染').not.toBeNull()
@@ -68,7 +68,7 @@ describe('WdTransition 卸载中止（9902 removeNode 防护）', () => {
   it('enter 动画飞行中同步卸载：无异常、无未处理拒绝', async () => {
     const onAfterEnter = vi.fn()
     const show = ref(true)
-    const { unmount } = renderTransition(show, onAfterEnter)
+    const { unmount } = renderTransition(show, { onAfterEnter })
 
     // 不等 enter 完成，立刻卸载（enter 链仍挂起）
     unmount()
@@ -78,10 +78,19 @@ describe('WdTransition 卸载中止（9902 removeNode 防护）', () => {
     expect(onAfterEnter, '卸载后 after-enter 不得再触发').not.toHaveBeenCalled()
   })
 
+  it('未卸载时 enter 正常落地：确实监听 after-enter，而非误绑 after-leave', async () => {
+    const onAfterEnter = vi.fn()
+    renderTransition(ref(true), { onAfterEnter })
+    await pause(250)
+    // 本用例只证明 helper 真正订阅了 after-enter（旧 helper 会误绑 after-leave）。
+    expect(onAfterEnter).toHaveBeenCalled()
+    cleanup()
+  })
+
   it('未卸载时 leave 正常落地：after-leave 应触发（防止过度中止）', async () => {
     const onAfterLeave = vi.fn()
     const show = ref(true)
-    const { container } = renderTransition(show, onAfterLeave)
+    const { container } = renderTransition(show, { onAfterLeave })
 
     await waitEnterFrames()
     show.value = false

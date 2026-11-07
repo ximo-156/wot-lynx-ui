@@ -7,6 +7,7 @@
  */
 import { ref } from 'vue'
 import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdConfigProvider from 'wot-lynx-ui/components/wd-config-provider/wd-config-provider.vue'
 
 const count = ref(0)
 const loading = ref(false)
@@ -81,6 +82,23 @@ function toggleLoading() {
           <wd-button type="primary" hairline variant="plain">细线</wd-button>
           <wd-button type="primary" icon="picture" is-icon />
         </view>
+      </view>
+    </view>
+
+    <view class="wd-h5-demo__section">
+      <text class="wd-h5-demo__section-title">形状 round（默认胶囊）</text>
+      <view class="wd-h5-demo__panel">
+        <view class="wd-h5-demo__row">
+          <WdButton>默认胶囊</WdButton>
+          <WdButton :round="false">普通圆角</WdButton>
+        </view>
+        <text class="wd-h5-demo__panel-label">全局 button.round=false，仍可通过 round 单独开启</text>
+        <WdConfigProvider :button="{ round: false }">
+          <view class="wd-h5-demo__row">
+            <WdButton>全局关闭</WdButton>
+            <WdButton round>单独开启</WdButton>
+          </view>
+        </WdConfigProvider>
       </view>
     </view>
 

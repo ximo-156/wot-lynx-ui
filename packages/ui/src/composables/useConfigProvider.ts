@@ -33,9 +33,10 @@ export interface UseConfigProviderOptions {
 }
 export function useConfigProvider(options: UseConfigProviderOptions = {}) {
   const themeStyle = computed<Record<string, string>>(() => filterStyle(mapThemeVarsToCSSVars(unref(options.themeVars) || {}) || {}))
-  const globalConfig = computed<GlobalConfig>(() => mergeConfig(null, {
-    theme: unref(options.theme) || 'light', themeVars: unref(options.themeVars) || {},
-    button: unref(options.button) || {}, tag: unref(options.tag) || {}
-  } as ConfigProviderInput))
-  provide<ConfigProviderProvide>(USE_CONFIG_PROVIDER_KEY, { themeStyle, globalConfig })
+  const configInput = computed<ConfigProviderInput>(() => ({
+    theme: unref(options.theme), themeVars: unref(options.themeVars),
+    button: unref(options.button), tag: unref(options.tag)
+  }))
+  const globalConfig = computed<GlobalConfig>(() => mergeConfig(null, configInput.value))
+  provide<ConfigProviderProvide>(USE_CONFIG_PROVIDER_KEY, { themeStyle, globalConfig, configInput })
 }

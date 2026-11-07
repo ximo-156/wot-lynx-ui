@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import './UploadEvokeButton.css'
+
 /*
  * UploadEvokeButton — wd-upload 的原生唤起项（真机选图）。
  *
@@ -103,67 +105,23 @@ function onFileEvent(event: any) {
 </script>
 
 <template>
-  <!-- 布局：视觉层在下、命中层在上。input 绝对定位铺满唤起项且 opacity:0，
-       承接全部点击（ Lynx 命中测试按几何区域，不按透明度）；视觉层只负责
-       相机图标 + n/limit 计数，与组件内置唤起项外观一致。 -->
+  <!-- 布局：视觉层在下、命中层在上。透明 view 盒覆盖唤起项，input 填满盒子。
+       Web 的 x-input 强制 display:contents，不能只靠 input 自身 opacity 隐藏；
+       view 盒负责透明合成，两端仍由原生 input 承接点击与选图。 -->
   <view class="demo-upload-evoke">
     <view class="demo-upload-evoke__body">
       <wd-icon name="camera" custom-class="demo-upload-evoke__icon" />
       <text class="demo-upload-evoke__num">（{{ count }}/{{ limit }}）</text>
     </view>
-    <input
-      class="demo-upload-evoke__input"
-      type="file"
-      accept="image/*"
-      @tap.stop
-      @change="onFileEvent"
-      @input="onFileEvent"
-    />
+    <view class="demo-upload-evoke__input-wrap">
+      <input
+        class="demo-upload-evoke__input"
+        type="file"
+        accept="image/*"
+        @tap.stop
+        @change="onFileEvent"
+        @input="onFileEvent"
+      />
+    </view>
   </view>
 </template>
-
-<style scoped>
-.demo-upload-evoke {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 88px;
-  height: 88px;
-  border-radius: var(--wot-upload-radius, 8px);
-  background: var(--wot-upload-evoke-bg, var(--wot-filled-bottom, #f7f8fa));
-  border-width: 1px;
-  border-style: dashed;
-  border-color: var(--wot-upload-border-color, var(--wot-border-main, #e5e6eb));
-  overflow: hidden;
-}
-
-.demo-upload-evoke__body {
-  /* 视觉层永不吞点击：命中层（input）失效时点击继续下穿，
-     最终冒泡到 wd-upload 唤起槽触发 chooseerror——可见的诊断信号 */
-  pointer-events: none;
-}
-
-.demo-upload-evoke__icon {
-  font-size: var(--wot-upload-evoke-icon-size, 32px);
-  color: var(--wot-upload-evoke-icon-color, var(--wot-icon-auxiliary, #6b7085));
-}
-
-.demo-upload-evoke__num {
-  color: var(--wot-upload-evoke-color, var(--wot-text-auxiliary, #868a9c));
-  font-size: var(--wot-upload-evoke-font-size, 14px);
-  line-height: var(--wot-upload-evoke-line-height, 20px);
-  text-align: center;
-}
-
-/* 命中层：铺满 + 全透明。声明顺序在视觉层之后即绘制在上层，无需 z-index */
-.demo-upload-evoke__input {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-}
-</style>

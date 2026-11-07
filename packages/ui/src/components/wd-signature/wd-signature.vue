@@ -738,17 +738,11 @@ const onDrawEndMt = () => {
         :history-list="lines"
       >
         <template v-if="enableHistory">
-          <WdButton custom-class="wd-signature__button" size="small" plain @tap="revoke" :disabled="lines.length <= 0">
-            <text>{{ revokeText || undoText || translate('revokeText') }}</text>
-          </WdButton>
-          <WdButton custom-class="wd-signature__button" size="small" plain @tap="restore" :disabled="redoLines.length <= 0">
-            <text>{{ restoreText || redoText || translate('restoreText') }}</text>
-          </WdButton>
+          <WdButton custom-class="wd-signature__button" size="small" variant="plain" :text="revokeText || undoText || translate('revokeText')" @tap="revoke" :disabled="lines.length <= 0" />
+          <WdButton custom-class="wd-signature__button" size="small" variant="plain" :text="restoreText || redoText || translate('restoreText')" @tap="restore" :disabled="redoLines.length <= 0" />
         </template>
-        <WdButton custom-class="wd-signature__button" size="small" plain @tap="clear"><text>{{ clearText || translate('clearText') }}</text></WdButton>
-        <WdButton custom-class="wd-signature__button" size="small" @tap="confirmSignature">
-          <text>{{ confirmText || translate('confirmText') }}</text>
-        </WdButton>
+        <WdButton custom-class="wd-signature__button" size="small" variant="plain" :text="clearText || translate('clearText')" @tap="clear" />
+        <WdButton custom-class="wd-signature__button" size="small" variant="base" :text="confirmText || translate('confirmText')" @tap="confirmSignature" />
       </slot>
     </view>
   </view>

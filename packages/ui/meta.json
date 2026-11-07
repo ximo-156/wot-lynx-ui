@@ -32,7 +32,7 @@
     "props": [
       {"name":"customStyle","type":"string | Record<string, any>","default":"''","description":"自定义根节点样式。 接受字符串（CSS 声明串）或对象两种语法：vue-lynx 的 patchProp 对 `:style` 只认对象（字符串形式会被静默丢弃，CONVENTIONS §19），组件 内部统一经 parseStyle() 归一为对象后下发，因此两种传入形式都支持。"},
       {"name":"customClass","type":"string","default":"''","description":"自定义根节点样式类"},
-      {"name":"round","type":"boolean","description":"圆角按钮 不传则继承全局配置"},
+      {"name":"round","type":"boolean","description":"圆角按钮（默认胶囊形） 不传则继承全局配置，未配置时为 true；显式 false 保留普通圆角"},
       {"name":"disabled","type":"boolean","default":"false","description":"禁用按钮"},
       {"name":"hairline","type":"boolean","default":"false","description":"是否细边框"},
       {"name":"block","type":"boolean","default":"false","description":"块状按钮"},

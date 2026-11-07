@@ -28,6 +28,7 @@ export interface ButtonConfig {
   size?: ButtonSize
   variant?: ButtonVariant
   type?: ButtonType
+  /** 默认 true（胶囊形）；设置 false 可保留普通圆角。 */
   round?: boolean
 }
 
@@ -60,7 +61,7 @@ export type ConfigProviderInput = Partial<GlobalConfig>
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = Object.freeze({
   theme: 'light',
   themeVars: {},
-  button: {},
+  button: { round: true },
   tag: {}
 }) as GlobalConfig
 
@@ -94,6 +95,8 @@ function omitUndefined<T extends object>(obj: T): Partial<T> {
 /** ConfigProvider 向下提供的上下文 */
 export type ConfigProviderProvide = {
   globalConfig: ComputedRef<GlobalConfig>
+  /** Hook 的显式输入；嵌套 Provider 合并时不将 globalConfig 的默认值视为覆盖。 */
+  configInput?: ComputedRef<ConfigProviderInput>
   /** themeVars 映射出的 --wot-* 变量（对象样式，CONVENTIONS §19） */
   themeStyle: ComputedRef<Record<string, string>>
 }

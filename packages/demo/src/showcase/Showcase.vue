@@ -26,8 +26,17 @@ const inputValue = ref('')
 // wd-search 的封面占位与原生 input 同时在场（双占位缺陷，组件侧已加复位，
 // demo 层仍拆开避免歧义）
 const searchValue = ref('')
+const searchStatus = ref('点击搜索框输入；取消可清空并收起键盘')
+function onSearchCancel() {
+  searchValue.value = ''
+  searchStatus.value = '已取消搜索'
+}
+function onSearch(event: { value: string }) {
+  searchStatus.value = event.value ? `搜索：${event.value}` : '请输入搜索关键词'
+}
 const textareaValue = ref('')
 const numberValue = ref(5)
+const numberChangeCount = ref(0)
 const sliderValue = ref(50)
 const rateValue = ref(3)
 const segmentedValue = ref('日')
@@ -595,9 +604,11 @@ function onSubmitBar() {
             <wd-textarea v-model="textareaValue" placeholder="多行输入" :show-word-limit="true" :maxlength="50" :style="{ flex: '1' }" />
           </view>
           <view class="demo-row">
-            <wd-input-number v-model="numberValue" :min="0" :max="10" />
-            <wd-search v-model="searchValue" placeholder="搜索" :style="{ flex: '1' }" />
+            <wd-input-number v-model="numberValue" :min="0" :max="10" @change="numberChangeCount++" />
+            <wd-search v-model="searchValue" placeholder="搜索" :style="{ flex: '1' }" @cancel="onSearchCancel" @search="onSearch" />
           </view>
+          <text class="demo-tag">步进次数 {{ numberChangeCount }} · 当前值 {{ numberValue }}</text>
+          <text class="demo-tag">{{ searchStatus }}</text>
 
           <text class="demo-panel__label">Slider / Rate / Segmented</text>
           <view class="demo-row">
@@ -644,7 +655,7 @@ function onSubmitBar() {
 
           <text class="demo-panel__label">SlideVerify / Signature / Upload</text>
           <view class="demo-row">
-            <wd-slide-verify ref="slideVerifyRef" @success="verifyPassed = true" @fail="verifyPassed = false" />
+            <wd-slide-verify ref="slideVerifyRef" :style="{ flex: '1' }" @success="verifyPassed = true" @fail="verifyPassed = false" />
           </view>
           <view class="demo-row">
             <wd-signature :style="{ flex: '1' }" />

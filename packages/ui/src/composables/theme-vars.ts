@@ -632,6 +632,8 @@ export type calendarViewThemeVars = {
   calendarViewDayFontSize?: string // 日期单元字号
   calendarViewDayFontWeight?: string // 日期单元字重
   calendarViewDayHeight?: string // 日期单元高度
+  calendarViewDaySize?: string // 日期圆形高亮直径（不影响点击区域）
+  calendarViewDaySizeWithInfo?: string // 带辅助信息时的日期圆形高亮直径
   calendarViewInfoFontSize?: string // 顶部/底部辅助信息字号
   calendarViewInfoLineHeight?: string // 顶部/底部辅助信息行高
   calendarViewInfoPosition?: string // 顶部/底部辅助信息偏移位置

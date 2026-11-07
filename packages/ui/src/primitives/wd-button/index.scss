@@ -158,7 +158,7 @@ $button-spacing-medium: var(--wot-button-spacing-medium, $spacing-extra-tight) !
 $button-spacing-large: var(--wot-button-spacing-large, $spacing-extra-tight) !default;
 // 块级按钮纵向间距
 $button-spacing-block: var(--wot-button-spacing-block, $spacing-tight) !default;
-// 默认圆角
+// 普通圆角（round=false 时使用）
 $button-radius-main: var(--wot-button-radius-main, $radius-main) !default;
 // 圆形圆角
 $button-radius-full: var(--wot-button-radius-full, $radius-full) !default;
@@ -341,7 +341,9 @@ $button-variants: (
       background: map.get($conf, "bg");
       color: map.get($conf, "text");
 
-      @include edeep(text) {
+      @include edeep(text, text-content) {
+        // Native text must receive its own foreground; view color inheritance
+        // is not reliable on device, even across a single label wrapper.
         color: map.get($conf, "text");
       }
     }
@@ -383,7 +385,7 @@ $button-variants: (
 
           color: map.get($type-conf, "plain-text");
 
-          @include edeep(text) {
+          @include edeep(text, text-content) {
             color: map.get($type-conf, "plain-text");
           }
 
@@ -404,13 +406,10 @@ $button-variants: (
           --wot-button-current-text-active: #{map.get($type-conf, "plain-text-active")};
         }
       }
-
-      @include when(round) {
-        border-radius: $button-radius-full;
-      }
     }
   }
 
+  // 所有变体共用圆角规则：不额外叠加变体特异性，让 Dialog text 等结构性圆角覆盖稳定生效。
   @include when(round) {
     border-radius: $button-radius-full;
   }
@@ -421,7 +420,7 @@ $button-variants: (
       padding: map.get($conf, "padding");
 
       // A native view must not create a second line box with the button height.
-      // Font metrics live on text; the direct parent supplies only its palette.
+      // Font metrics and foreground live on native text, never on both views.
       @include edeep(text-content) {
         font-size: map.get($conf, "font-size");
         line-height: 1.4;
@@ -478,9 +477,8 @@ $button-variants: (
   }
 
   @include e(text-content) {
-    // Exactly one color inheritance hop: __text has its own type/variant color.
-    // Font-size and line-height are explicit on this text, never on both views.
-    color: inherit;
+    // Type/variant rules above declare color directly on this native text.
+    // Font-size and line-height are explicit here, never on both views.
     text-align: center;
     // Single-line truncation belongs to native text-maxline, not overflow on a
     // rounded view (which can clip the entire foreground on device).

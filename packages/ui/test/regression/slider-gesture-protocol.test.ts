@@ -93,7 +93,9 @@ describe('Slider 局部手势与收尾', () => {
     const before = lock.value
     touch(m.grips[0], 'touchstart', point(100), 1000)
     await flush(700)
-    if (kind === 'other-end') touch(m.grips[0], 'touchend', point(120, 0, 2), 1100)
+    if (kind === 'other-end') fireEvent.touchend(m.grips[0], {
+      touches: [point(100)], changedTouches: [point(120, 0, 2)], timestamp: 1100, bubbles: true
+    })
     else fireEvent.touchmove(m.bar, {
       touches: [kind === 'invalid-move' ? { identifier: 1 } : point(150, 0, kind === 'other-move' ? 2 : 1)],
       timestamp: kind === 'old-move' ? 900 : 1100

@@ -44,13 +44,30 @@ $slide-verify-success-icon-size: var(--wot-slide-verify-success-icon-size, $n-20
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  width: $slide-verify-width;
+  // 普通声明的 var() fallback 会被 Lynx CSS serializer 剥离；先放进
+  // 样式表变量再引用，保证默认 100% 生效，且不覆盖父级的公开宽度令牌。
+  --wot-slide-verify-resolved-width: #{$slide-verify-width};
+  width: var(--wot-slide-verify-resolved-width);
+  flex-shrink: 0;
   height: $slide-verify-height;
   background: $slide-verify-bg;
   border-radius: $slide-verify-radius;
 
   @include when(disabled) {
     opacity: $slide-verify-disabled-opacity;
+  }
+
+  @include e(text) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
   }
 
   @include e(text-inner) {
@@ -80,15 +97,23 @@ $slide-verify-success-icon-size: var(--wot-slide-verify-success-icon-size, $n-20
 
   @include e(track-text) {
     position: absolute;
-    color: $slide-verify-success-text-color;
     left: 0;
+    top: 0;
+    width: 100%;
     height: 100%;
-    min-width: 100%;
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    word-break: keep-all;
+  }
+
+  @include e(track-text-inner) {
+    color: $slide-verify-success-text-color;
+    font-size: $slide-verify-text-font-size;
+    line-height: $slide-verify-text-line-height;
+    text-align: center;
+    white-space: nowrap;
   }
 
   @include e(button) {
@@ -110,6 +135,7 @@ $slide-verify-success-icon-size: var(--wot-slide-verify-success-icon-size, $n-20
   // 按钮图标
   @include edeep(button-icon) {
     font-size: $slide-verify-success-icon-size;
+    pointer-events: none;
 
     @include m(success) {
       color: $slide-verify-button-success-color;
