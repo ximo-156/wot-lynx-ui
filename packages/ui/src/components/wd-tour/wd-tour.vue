@@ -12,9 +12,10 @@
  *   二选一切换经 defineStyleKeys + resolveStyle 输出完整键集（Style Funnel，
  *   §20，避免切步时旧偏移残留）。
  * - 条件编译：参考源用 #ifdef MP / #ifndef MP 区分微信小程序菜单按钮获取，
- *   Lynx 无对应能力，统一走 uni.getMenuButtonBoundingClientRect 适配层
- *   （返回零矩形，topOffset 降级为 0）；条件编译残留已清除（PORTING §3.6）。
- * - uni.pageScrollTo 由宿主注入；缺少或失败时保留实际度量，不预测未发生的滚动。
+ *   Lynx 无对应能力，改为宿主原生模块的 `getMenuButtonRect`（缺省返回 null，
+ *   topOffset 降级为 0）；条件编译残留已清除（PORTING §3.6）。
+ * - 页面滚动改由宿主原生模块 `pageScrollTo` 提供；缺少或失败时保留实际度量，
+ *   不预测未发生的滚动。
  * - getRect 契约为「永不 reject」（未命中节点解析为零尺寸矩形），参考源依赖
  *   reject 进入 catch 派发 error 事件并执行 missingStrategy；这里对零尺寸结果
  *   显式抛出，保持错误分支行为一致。
@@ -30,7 +31,7 @@ import { addUnit, filterStyle, getRect, getSystemInfo, isDef, parseStyle } from 
 import { useRaf } from '../../composables/useRaf'
 import { useTranslate } from '../../composables/useTranslate'
 import { useAlive } from '../../composables/useAlive'
-import { uni } from '../../common/uni'
+import { getHost } from '../../common/host'
 import { getPlatform } from '../../common/platform'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 
@@ -219,7 +220,7 @@ async function updateElementInfo() {
     return
   }
   try {
-    const res = await getRect(element, false, props.scope)
+    const res = await getRect(element)
     if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value || element !== currentStep.value.element) return
     // Lynx 适配：本地 getRect 契约为「永不 reject」——选择器未命中时解析为
     // 零尺寸矩形；参考源（uni-app）此时会 reject 进入 catch。零尺寸即视为
@@ -336,17 +337,18 @@ function scrollDown(res: any) {
   requestScroll(lastScrollTop.value + bottom - windowHeight.value + padding + Number(props.bottomSafetyOffset))
 }
 function requestScroll(scrollTop: number) {
-  if (!getPlatform().capabilities.pageScroll) return
+  const host = getHost()
+  if (!getPlatform().capabilities.pageScroll || typeof host.pageScrollTo !== 'function') return
   const request = rectRequest
   const index = currentIndex.value
   const element = currentStep.value.element
-  uni.pageScrollTo({
+  host.pageScrollTo({
     scrollTop: Math.max(0, scrollTop),
     duration: Number(props.duration),
     success: async () => {
       if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value || !element) return
       lastScrollTop.value = Math.max(0, scrollTop)
-      const rect = await getRect(element, false, props.scope)
+      const rect = await getRect(element)
       if (!isAlive() || !props.modelValue || request !== rectRequest || index !== currentIndex.value || element !== currentStep.value.element || (!rect.width && !rect.height)) return
       initializeElementInfo(rect)
       calculateTipPosition(rect)
@@ -507,7 +509,9 @@ watch(
 )
 
 watch([() => props.customNav, () => props.topSafetyOffset], () => {
-  menuButtonInfo.value = props.customNav && !props.topSafetyOffset ? uni.getMenuButtonBoundingClientRect() || null : null
+  const host = getHost()
+  const capsule = typeof host.getMenuButtonRect === 'function' ? host.getMenuButtonRect() : null
+  menuButtonInfo.value = props.customNav && !props.topSafetyOffset ? capsule || null : null
   topOffset.value = Number(props.topSafetyOffset) || menuButtonInfo.value?.top || 0
 }, { immediate: true })
 defineExpose<TourExpose>({

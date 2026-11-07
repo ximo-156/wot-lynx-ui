@@ -197,7 +197,7 @@ const startDrawing = (e: any) => {
   emit('start', e)
   // Start synchronously: a quick end must not be followed by a late ghost stroke.
   const previous = { ...canvasOffset.value }
-  getRect('#' + canvasId.value, false, proxy).then((rect) => {
+  getRect('#' + canvasId.value).then((rect) => {
     if (!isAlive() || props.disabled || !drawing.value || request !== strokeRequest) return
     const offset = { left: Number(rect.left) || 0, top: Number(rect.top) || 0 }
     const current = currentLine.value
@@ -259,7 +259,7 @@ const init = (forceUpdate: boolean = false) => {
  */
 function measureCanvas() {
   const request = ++measureRequest
-  getRect(`#${canvasId.value}`, false, proxy).then((data) => {
+  getRect(`#${canvasId.value}`).then((data) => {
     // 回调晚于卸载落地时丢弃：在已销毁树上写 ref 会触发 vue-lynx 继续
     // patch，产生晚到的 remove/insert（真机 9902 removeNode 家族）
     if (!isAlive() || request !== measureRequest) return

@@ -1,5 +1,5 @@
 import { AbortablePromise } from './AbortablePromise'
-import { getUniAdapter } from './uniAdapter'
+import { createSelectorQuery } from './native'
 import { getViewportOverride } from './viewport-state'
 
 /**
@@ -294,15 +294,14 @@ function warnSelectorQueryUnavailable(): void {
 }
 
 /**
- * 获取节点信息（基于 Lynx SelectorQuery）
+ * 获取节点信息（基于 Lynx 原生 SelectorQuery）
+ *
  * @param selector 节点选择器 #id,.class
  * @param all 是否返回所有 selector 对应的节点
- * @param scope 兼容参数（uni-app 组件实例作用域），Lynx 下忽略
- * @param useFields 兼容参数，Lynx 下忽略
  * @param selectors 批量查询不可用时，按渲染顺序逐项度量的稳定选择器
  * @returns 节点信息或节点信息数组
  */
-export function getRect(selector: string, all: boolean = false, scope?: any, useFields?: boolean, selectors?: readonly string[]): Promise<any> {
+export function getRect(selector: string, all: boolean = false, selectors?: readonly string[]): Promise<any> {
   return new Promise<any>((resolve) => {
     /**
      * 度量不可用时的统一兜底：解析为零尺寸矩形（all 模式为空数组）并 warning 一次。
@@ -330,7 +329,7 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
         // Lynx Web 的 selectAll.invoke 返回 code 5；保留支持批量的宿主，
         // 失败时才按明确 ID 走 single invoke。Promise.all 保序，失败项不移位。
         Promise.all(selectors.map((itemSelector) =>
-          getRect(itemSelector, false, scope, useFields).then((rect) => isMeasuredRect(rect) ? rect : zeroRect())
+          getRect(itemSelector, false).then((rect) => isMeasuredRect(rect) ? rect : zeroRect())
         )).then(settle)
         return
       }
@@ -374,22 +373,16 @@ export function getRect(selector: string, all: boolean = false, scope?: any, use
       return false
     }
 
-    const lynx = (globalThis as any).lynx
-    const queryAdapter = getUniAdapter('createSelectorQuery')
-    const createQuery = queryAdapter || (typeof lynx?.createSelectorQuery === 'function' ? () => lynx.createSelectorQuery() : undefined)
+    const createQuery = createSelectorQuery
     if (!createQuery) {
       if (!domMeasure()) resolveUnavailable()
       return
     }
     let query: any
     try {
+      // 原生 SelectorQuery 以页面根节点为根，直接使用即可；
+      // 不再存在 uni 的 in(scope) 组件作用域语义。
       query = createQuery()
-      // Lynx SelectorQuery.in(scope) 实际调用 scope.createSelectorQuery(this)。
-      // Vue 的组件 proxy 没有这个原生方法；传入它会在 select 前抛错，使尺寸恒为 0。
-      // 明确注入的 uni-compatible 查询适配器仍保留其原有 in(scope) 语义。
-      if (scope && typeof query.in === 'function' && (queryAdapter || typeof scope.createSelectorQuery === 'function')) {
-        query = query.in(scope) || query
-      }
     } catch {
       if (!domMeasure()) resolveUnavailable()
       return
@@ -485,11 +478,10 @@ export function filterStyle(styleObj: Record<string, any>): Record<string, strin
  * @param smooth 是否平滑滚动
  */
 export function scrollViewTo(selector: string, offset: number, smooth: boolean = true): void {
-  const lynx = (globalThis as any).lynx
-  const createQuery = getUniAdapter('createSelectorQuery') || (typeof lynx?.createSelectorQuery === 'function' ? () => lynx.createSelectorQuery() : undefined)
-  if (!createQuery) return
+  const query = createSelectorQuery()
+  if (!query) return
   try {
-    createQuery().select(selector).invoke({ method: 'scrollTo', params: { offset, smooth } }).exec()
+    query.select(selector).invoke({ method: 'scrollTo', params: { offset, smooth } }).exec()
   } catch {
     // 没有 invoke 时保留 scroll-left / scroll-top 的瞬时定位兜底。
   }
@@ -497,11 +489,10 @@ export function scrollViewTo(selector: string, offset: number, smooth: boolean =
 
 /** 用原生滚入可见区 API 避免自行累计跨容器偏移。 */
 export function scrollIntoViewById(selector: string, block: 'start' | 'center' | 'end' = 'start'): void {
-  const lynx = (globalThis as any).lynx
-  const createQuery = getUniAdapter('createSelectorQuery') || (typeof lynx?.createSelectorQuery === 'function' ? () => lynx.createSelectorQuery() : undefined)
-  if (!createQuery) return
+  const query = createSelectorQuery()
+  if (!query) return
   try {
-    createQuery().select(selector).invoke({ method: 'scrollIntoView', params: { scrollIntoViewOptions: { block, inline: 'start' } } }).exec()
+    query.select(selector).invoke({ method: 'scrollIntoView', params: { scrollIntoViewOptions: { block, inline: 'start' } } }).exec()
   } catch {
     // 宿主必须提供 scrollIntoView 才能实际滚动，不伪造成功回执。
   }
@@ -959,8 +950,8 @@ export function getBrowserViewport(): { width: number; height: number } | null {
  * screenWidth/screenHeight stay physical-screen logical pixels for safe-area APIs.
  */
 export function getSystemInfo(): SystemInfo {
-  const adapter = getUniAdapter('getSystemInfoSync')
-  const info = { ...((globalThis as any).SystemInfo || {}), ...(adapter ? adapter() : {}) }
+  // 只读 Lynx 原生 `SystemInfo` 全局对象；宿主不再经 uni 适配器覆盖。
+  const info = { ...((globalThis as any).SystemInfo || {}) }
   const positive = (value: unknown, fallback: number) => {
     const number = Number(value)
     return Number.isFinite(number) && number > 0 ? number : fallback

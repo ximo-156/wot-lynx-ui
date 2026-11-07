@@ -165,7 +165,7 @@ async function finishGesture(event: any, canceled: boolean) {
     // Some native touchcancel/end payloads omit coordinates. Query once at
     // release (never on move) so cancellation settles the rendered MT position.
     try {
-      const rect = await getRect(`.${instanceId}`, false, proxy)
+      const rect = await getRect(`.${instanceId}`)
       if (disposed.value || revision !== gestureRevision.value) return
       if (Number(rect?.height) > 0 && Number.isFinite(Number(rect?.top))) finalHeight = windowHeight.value - Number(rect.top)
     } catch {

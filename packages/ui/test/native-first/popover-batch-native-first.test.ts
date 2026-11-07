@@ -27,7 +27,8 @@ import path from 'node:path'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { pause } from '../../src/common/util'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
+import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
 import { fireEvent } from '../fire-event'
 import Popover from '../../src/components/wd-popover/wd-popover.vue'
 import Tooltip from '../../src/components/wd-tooltip/wd-tooltip.vue'
@@ -88,8 +89,9 @@ const BATCH_CSS = [
 describe('原生优先重写 · 气泡/浮层/预览布局居中契约（popover / tooltip / curtain / floating-panel / tour / image-preview / video-preview）', () => {
   afterEach(() => {
     cleanup()
-    // 文件隔离关闭：本套件注入的视频宿主不能泄漏给后续能力降级测试。
-    configureUniAdapter({ createVideoContext: undefined })
+    // 文件隔离关闭：本套件覆盖的引擎能力（video 元素 / SystemInfo）不能泄漏给后续用例。
+    restoreNativeStubs()
+    configureHost(null)
   })
 
   it('编译产物不含 Lynx 静默丢失的 Web 专有写法', () => {
@@ -352,8 +354,8 @@ describe('原生优先重写 · 气泡/浮层/预览布局居中契约（popover
       }
     } as any)
     await pause(50)
-    // 未声明视频能力（宿主未注入 createVideoContext，如未注册 video XElement
-    // 的 Lynx 引擎）：不得创建 <video> 节点（真机 990200/60301），降级为封面占位
+    // 未声明视频能力（引擎 < 4.1 且宿主未注册 video XElement，如未注册 video
+    // 元素的 Lynx 引擎）：不得创建 <video> 节点（真机 990200/60301），降级为封面占位
     videoRef.value.open({ url: 'https://example.com/a.mp4', poster: 'https://example.com/poster.png', title: '示例视频' })
     await pause(100)
     expect(video.container.querySelector('.wd-video-preview'), '视频预览遮罩应渲染').not.toBeNull()
@@ -363,8 +365,8 @@ describe('原生优先重写 · 气泡/浮层/预览布局居中契约（popover
     expect(video.container.querySelector('.wd-video-preview__close'), '关闭按钮应渲染').not.toBeNull()
     cleanup()
 
-    // 声明能力后（configureUniAdapter 注入 createVideoContext）挂载原生 video
-    configureUniAdapter({ createVideoContext: () => ({}) })
+    // 引擎提供原生 <video>（Lynx 4.1+）后挂载真实 video 元素
+    setSystemInfo({ engineVersion: '4.1' })
     const nativeVideoRef = ref<any>(null)
     const nativeVideo = render({
       setup() {

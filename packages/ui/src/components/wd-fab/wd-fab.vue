@@ -90,7 +90,7 @@ async function measureGeometry() {
   const revision = ++geometryRevision.value
   await nextTick()
   if (disposed.value || revision !== geometryRevision.value) return
-  const rect = await getRect(`.${triggerId}`, false, proxy)
+  const rect = await getRect(`.${triggerId}`)
   if (disposed.value || revision !== geometryRevision.value) return
   fabSize.width = Number(rect.width) > 0 ? Number(rect.width) : fabSize.width
   fabSize.height = Number(rect.height) > 0 ? Number(rect.height) : fabSize.height
@@ -206,7 +206,7 @@ async function finishGesture(event: any, canceled: boolean) {
   if (!props.draggable || props.disabled || !inited.value) return
   const revision = ++gestureRevision.value
   const epoch = configEpoch.value
-  const rect = await getRect(`.${triggerId}`, false, proxy)
+  const rect = await getRect(`.${triggerId}`)
   if (disposed.value || revision !== gestureRevision.value || epoch !== configEpoch.value || !props.draggable || props.disabled) return
   if (hadGesture && !moved) return
   // getRect 的失败兜底是全零矩形；0 坐标有限并不代表度量有效。

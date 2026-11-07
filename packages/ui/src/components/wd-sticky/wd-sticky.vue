@@ -17,7 +17,7 @@ import { useParent } from '../../composables/useParent'
 import { useAlive } from '../../composables/useAlive'
 import { addUnit, getRect, parseStyle, uuid } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
-import { uni } from '../../common/uni'
+import { createIntersectionObserver } from '../../common/native'
 import { getPlatform } from '../../common/platform'
 
 const props = defineProps(stickyProps)
@@ -93,7 +93,9 @@ async function measure() {
   await nextTick()
   if (!isAlive() || version !== measureVersion) return
   if (observerSupported && getPlatform().capabilities.intersectionObserver && stickyState.height > 0) {
-    const nextObserver = uni.createIntersectionObserver(instance.proxy, { thresholds: [0, 0.5] })
+    // 引擎原生交叉观察器（lynx.createIntersectionObserver）：真机开箱即用，
+    // 不再依赖宿主注入任何适配器。
+    const nextObserver = createIntersectionObserver([0, 0.5])
     observer = nextObserver
     nextObserver?.relativeToViewport?.({ top: -(props.offsetTop + stickyState.height) })
     nextObserver?.observe?.(`#${stickyId}-probe`, (result: any) => {

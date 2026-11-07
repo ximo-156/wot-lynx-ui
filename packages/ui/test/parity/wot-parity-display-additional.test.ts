@@ -9,7 +9,7 @@ import { createEvent } from '@testing-library/dom'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
 import { pause } from '../../src/common/util'
-import { uni } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
 import Avatar from '../../src/components/wd-avatar/wd-avatar.vue'
 import AvatarGroup from '../../src/components/wd-avatar-group/wd-avatar-group.vue'
 import Badge from '../../src/primitives/wd-badge/wd-badge.vue'
@@ -175,7 +175,8 @@ describe('official display additional: img / empty', () => {
   })
 
   it('img preview is success-only and uses previewSrc; round corners come from the image node, never from overflow clipping', async () => {
-    const preview = vi.spyOn(uni, 'previewImage').mockImplementation(() => undefined as any)
+    const preview = vi.fn()
+    configureHost({ previewImage: preview })
     const width = ref<number | undefined>(120), radius = ref<number | undefined>(8), round = ref(false)
     const { container } = render({ setup: () => () => h(Img, { src: 'image.png', previewSrc: 'preview.png', enablePreview: true, width: width.value, radius: radius.value, round: round.value }) } as any)
     const root = container.querySelector('.wd-img')!
@@ -183,7 +184,7 @@ describe('official display additional: img / empty', () => {
     expect(preview).not.toHaveBeenCalled()
     nativeEvent(container.querySelector('image')!, 'load')
     fireEvent.tap(root)
-    expect(preview).toHaveBeenCalledWith({ urls: ['preview.png'] })
+    expect(preview).toHaveBeenCalledWith({ urls: ['preview.png'], current: 'preview.png' })
     round.value = true; radius.value = undefined; width.value = undefined
     await settle()
     expect(style(root).borderRadius).toBe('')

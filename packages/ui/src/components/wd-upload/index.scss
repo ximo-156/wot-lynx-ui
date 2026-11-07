@@ -73,6 +73,15 @@ $upload-row-spacing: var(--wot-upload-row-spacing, $spacing-tight) !default;
   flex-direction: row;
   flex-wrap: wrap;
 
+  @include e(measure) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
   @include e(evoke) {
     position: relative;
     // Lynx 适配：参考源 display: inline-flex 不被引擎识别（只认

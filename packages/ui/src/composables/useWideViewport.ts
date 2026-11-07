@@ -4,7 +4,7 @@ import { getBrowserViewport, getSystemInfo } from '../common/util'
 
 // Some runtimes expose the SDK as a script binding rather than an own global property.
 declare const lynx: any
-import { getUniAdapter } from '../common/uniAdapter'
+import { getHost } from '../common/host'
 import { getViewportSize, isWideViewport } from '../common/viewport'
 import { normalizeViewportSize, setViewportOverride, subscribeViewportChange, VIEWPORT_CHANGE_EVENT } from '../common/viewport-state'
 
@@ -47,8 +47,8 @@ export function useViewportSize(): ReactiveViewport {
     if (typeof emitter?.addListener === 'function') emitter.addListener(VIEWPORT_CHANGE_EVENT, hostChanged)
     const context = getSystemInfo().platform === 'web' ? runtime?.getCoreContext?.() : null
     context?.addEventListener?.(VIEWPORT_CHANGE_EVENT, hostChanged)
-    const onResize = getUniAdapter('onWindowResize')
-    const offResize = getUniAdapter('offWindowResize')
+    const onResize = getHost().onWindowResize
+    const offResize = getHost().offWindowResize
     onResize?.(hostChanged)
     const win = getBrowserViewport() ? g.window : null
     win?.addEventListener?.('resize', refresh)

@@ -37,7 +37,7 @@ function scrollToBottom() {
 async function measure() {
   if (!alive) return
   const version = ++revision
-  const rect = await getRect(`#${resizeId}`, false, instance.proxy)
+  const rect = await getRect(`#${resizeId}`)
   if (!alive || version !== revision) return
   const newWidth = Number(rect?.width)
   const newHeight = Number(rect?.height)

@@ -10,9 +10,10 @@
  *   默认继承按钮文字色，显式 loadingProps.color 优先于兼容 loadingColor；
  * - wot-ui 的 ::after 边框技巧（plain/dashed/hairline 描边）在 Lynx 无伪元素，
  *   改为不参与排版的真实绝对定位描边（hairline 为半线宽），见 index.scss；
- * - uni-app 开放能力 props 与回调事件保留；Lynx 无原生小程序授权按钮，
- *   仅当宿主显式 configureUniAdapter({ openType }) 时执行开放能力并回传事件，
- *   未注入时不自动授权或分享（普通 click / tap 仍正常）。
+ * - uni-app 开放能力 props 与回调事件保留；Lynx 无内置授权按钮，
+ *   仅当宿主注册了开放能力（Native Module / JS Module 的 `openType`）时
+ *   执行开放能力并回传事件，未注册时不自动授权或分享（普通 click / tap
+ *   仍正常）。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -21,7 +22,7 @@ import { computed, getCurrentInstance, useMainThreadRef, useSlots } from 'vue-ly
 import WdIcon from '../wd-icon/wd-icon.vue'
 import WdLoading from '../wd-loading/wd-loading.vue'
 import { buttonProps, type ButtonOpenType } from './types'
-import { hasUniAdapter, uni } from '../../common/uni'
+import { getHost } from '../../common/host'
 import { useAlive } from '../../composables/useAlive'
 import { isDef, isUndefined, omitBy, parseStyle } from '../../common/util'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
@@ -297,12 +298,14 @@ function handleClick(event: any) {
   emit('click', event)
   if (!isAlive()) return
   emit('tap', event)
-  if (!isAlive() || !props.openType || !hasUniAdapter('openType')) return
+  if (!isAlive() || !props.openType) return
+  const host = getHost()
+  if (typeof host.openType !== 'function') return
   const eventName = props.openType === 'getAuthorize'
     ? props.scope === 'phoneNumber' ? 'getphonenumber' : props.scope === 'userInfo' ? 'getuserinfo' : undefined
     : OPEN_TYPE_EVENTS[props.openType]
   let settled = false
-  uni.openType({
+  host.openType({
     openType: props.openType, scope: props.scope, lang: props.lang, buttonId: props.buttonId,
     sessionFrom: props.sessionFrom, sendMessageTitle: props.sendMessageTitle,
     sendMessagePath: props.sendMessagePath, sendMessageImg: props.sendMessageImg,

@@ -7,26 +7,26 @@
  * 复现。loop 的首尾程序翻页瞬移；scroll-view 不支持跨首尾的连续 circular 手势。
  * snapToEdge 在非循环模式去除首尾留白并钳制偏移；所有尺寸在挂载/布局变化时缓存。
  * adjustHeight/adjustVerticalHeight 是支付宝 swiper 能力，Lynx 不模拟自动高度。
- * 视频命令仅在宿主注入 createVideoContext 时调用；默认降级对象不视为真实播放器。
+ * 视频命令走引擎原生 UIMethod（SelectorQuery.invoke('pause' / 'play')），
+ * 不再依赖宿主注入 createVideoContext；引擎没有 video 元素时降级为封面占位。
  * Lynx 没有小程序码长按菜单；保留 API 与 long-press 通知，不承诺平台菜单。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue-lynx'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue-lynx'
 import WdSwiperNav from '../wd-swiper-nav/wd-swiper-nav.vue'
 import { swiperProps, type SwiperItem } from './types'
 import type { SwiperNavProps } from '../wd-swiper-nav/types'
 import { addUnit, getRect, isObj, isVideoUrl, parseStyle, scrollViewTo, uuid } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
-import { uni } from '../../common/uni'
+import { invokeNative } from '../../common/native'
 import { getPlatform } from '../../common/platform'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(swiperProps)
 const emit = defineEmits(['click', 'tap', 'change', 'animationfinish', 'update:current', 'long-press', 'layoutchange'])
 const slots = useSlots()
-const instance = getCurrentInstance()!
 const isAlive = useAlive()
 const uid = uuid()
 const swiperId = `wd-swiper-${uid}`
@@ -54,6 +54,11 @@ const contentSize = computed(() => itemSize.value * itemCount.value + edgePaddin
 const maxOffset = computed(() => Math.max(0, contentSize.value - viewportSize.value))
 const videoPlaying = computed(() => props.stopAutoplayWhenVideoPlay && playingVideos.value.has(currentValue.value))
 const shouldAutoplay = computed(() => props.autoplay && !videoPlaying.value && props.interval > 0 && itemCount.value > 1 && itemSize.value > 0 && (props.loop || currentValue.value < itemCount.value - 1))
+/**
+ * 引擎是否提供原生 <video> 元素（Lynx 4.1+；宿主未注册 XElement 时为 false）。
+ * 没有该元素时创建节点会抛引擎错误，因此视频项降级为封面图。
+ */
+const canUseVideo = computed(() => getPlatform().capabilities.videoElement)
 
 function normalizeCurrent(value: number): number {
   const count = props.list.length
@@ -133,13 +138,14 @@ function recordVideo(index: number, playing: boolean) {
   playingVideos.value = next
 }
 function handleVideoChange(previous: number, current: number) {
-  if (!getPlatform().capabilities.videoContext) return
+  if (!getPlatform().capabilities.videoElement) return
   if (props.stopPreviousVideo && props.list[previous] !== undefined && isVideo(props.list[previous])) {
-    uni.createVideoContext(`video-${previous}-${uid}`, instance.proxy)?.pause?.()
+    // 原生 UIMethod：直接命令引擎里的 <video> 节点，不经后台线程属性下发。
+    invokeNative(`#video-${previous}-${uid}`, 'pause')
     recordVideo(previous, false)
   }
   if (props.autoplayVideo && props.list[current] !== undefined && isVideo(props.list[current])) {
-    uni.createVideoContext(`video-${current}-${uid}`, instance.proxy)?.play?.()
+    invokeNative(`#video-${current}-${uid}`, 'play')
   }
 }
 function updateCurrent(index: number, source: string) {
@@ -228,6 +234,12 @@ async function measure() {
     if (isAlive() && version === measureVersion && itemSize.value > 0) scrollViewTo(`#${swiperId}`, lastOffset, false)
   })
   startAutoplay()
+  // 原生 video 没有 autoplay 属性：挂载后对当前视频项下发 play UIMethod。
+  if (props.autoplayVideo && canUseVideo.value && itemCount.value > 0 && isVideo(props.list[currentValue.value])) {
+    void nextTick(() => {
+      if (isAlive()) invokeNative(`#video-${currentValue.value}-${uid}`, 'play')
+    })
+  }
 }
 function requestMeasure() {
   measureVersion++
@@ -317,23 +329,33 @@ function handleLongPress(index: number, item: string | SwiperItem) {
       <view class="wd-swiper__track-inner" :style="trackInnerStyle">
         <view v-for="(item, index) in list" :key="index" :class="getSwiperItemClass()" :style="itemStyle">
           <slot :item="item" :index="index">
-            <video
-              v-if="isVideo(item)"
-              :id="`video-${index}-${uid}`"
-              :style="mediaStyle"
-              :src="isObj(item) ? item[valueKey] : item"
-              :poster="isObj(item) ? item.poster : ''"
-              :class="`wd-swiper__video ${customItemClass} ${getCustomItemClass(currentValue, index, list)}`"
-              @play="recordVideo(index, true)"
-              @pause="recordVideo(index, false)"
-              @ended="recordVideo(index, false)"
-              :loop="videoLoop"
-              :muted="muted"
-              :autoplay="autoplayVideo"
-              object-fit="cover"
-              @tap="handleClick(index, item, $event)"
-              @longpress="handleLongPress(index, item)"
-            />
+            <template v-if="isVideo(item)">
+              <video
+                v-if="canUseVideo"
+                :id="`video-${index}-${uid}`"
+                :style="mediaStyle"
+                :src="isObj(item) ? item[valueKey] : item"
+                :class="`wd-swiper__video ${customItemClass} ${getCustomItemClass(currentValue, index, list)}`"
+                @playing="recordVideo(index, true)"
+                @paused="recordVideo(index, false)"
+                @ended="recordVideo(index, false)"
+                :loop="videoLoop"
+                :muted="muted"
+                object-fit="cover"
+                @tap="handleClick(index, item, $event)"
+                @longpress="handleLongPress(index, item)"
+              />
+              <!-- 引擎没有 video 元素时降级为封面图（Lynx 的 video 不支持 poster 属性） -->
+              <image
+                v-else
+                :src="(isObj(item) ? item.poster : '') || ''"
+                :class="`wd-swiper__image ${customImageClass} ${customItemClass} ${getCustomItemClass(currentValue, index, list)}`"
+                :style="mediaStyle"
+                :mode="imageMode"
+                @tap="handleClick(index, item, $event)"
+                @longpress="handleLongPress(index, item)"
+              />
+            </template>
             <image
               v-else
               :src="isObj(item) ? item[valueKey] : item"

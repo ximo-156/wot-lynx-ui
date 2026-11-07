@@ -10,6 +10,8 @@ import { LynxTestingEnv } from '@lynx-js/testing-environment'
 import { beforeEach } from 'vitest'
 import { installWorkletGlobals } from './mts-worklet-shim'
 import { __resetIconRegistry } from '../src/icons/registry'
+import { configureHost } from '../src/common/host'
+import { restoreNativeStubs } from './helpers/native-stubs'
 
 // url 必须给 http(s) origin：about:blank 是不透明 origin，jsdom 的
 // localStorage getter 会抛 SecurityError；断言失败时 vitest 序列化 DOM
@@ -166,5 +168,11 @@ console.warn = (...args: any[]) => {
 // ---------------------------------------------------------------------------
 beforeEach(() => {
   __resetIconRegistry()
+  // 宿主桥是模块级单例：测试文件之间会复用同一 worker（isolate: false），
+  // 任何注入都必须在下一条用例前撤回，否则结果依赖文件执行顺序。
+  configureHost(null)
+  // 引擎原生桩（SelectorQuery / IntersectionObserver / SystemInfo）同样是
+  // 模块级状态：上一个文件漏还原的桩会污染下一个文件。
+  restoreNativeStubs()
 })
 

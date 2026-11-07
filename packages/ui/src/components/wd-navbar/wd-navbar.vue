@@ -134,7 +134,7 @@ function setPlaceholderHeight() {
     return
   }
 
-  getRect(`#${navbarId}`, false, proxy).then((res) => {
+  getRect(`#${navbarId}`).then((res) => {
     if (!isAlive() || request !== heightRequest || !props.fixed || !props.placeholder) return
     height.value = res.height as number
   })

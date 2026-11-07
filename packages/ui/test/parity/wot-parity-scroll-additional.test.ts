@@ -5,7 +5,8 @@ import { Fragment, h, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { pause } from '../../src/common/util'
-import { configureUniAdapter, hasUniAdapter, uni } from '../../src/common/uni'
+import { configureHost, hasHostCapability } from '../../src/common/host'
+import { nativeRuntime, restoreNativeStubs, setSystemInfo, stubNativeObserver, stubNativeQuery } from '../helpers/native-stubs'
 import { hasWotRef } from '../helpers/wot-ref'
 import { swiperProps } from '../../src/components/wd-swiper/types'
 import { swiperNavprops } from '../../src/components/wd-swiper-nav/types'
@@ -30,31 +31,14 @@ const officialDir = join(__dirname, '../..', '../..', '.wot-ref', 'src-2.3.2', '
 async function frames(count = 2) { for (let index = 0; index < count; index++) await pause() }
 function rect(width = 0, height = 0, top = 0, left = 0) { return { width, height, top, left, right: left + width, bottom: top + height } }
 interface InvokeCall { selector: string; params: any }
-function mockQuery(resolver: (selector: string) => any = () => rect(), host = false) {
-  const calls: InvokeCall[] = []
-  const factory = () => {
-    const query = {
-      in: (_scope: any) => query,
-      select: (selector: string) => ({
-        invoke: (params: any) => ({ exec: () => {
-          calls.push({ selector, params })
-          if (params.method === 'boundingClientRect') params.success?.(resolver(selector))
-          else params.success?.({})
-        } })
-      }),
-      exec: () => {}
-    }
-    return query
-  }
-  if (host) {
-    configureUniAdapter({ createSelectorQuery: factory })
-    restoreFns.push(() => configureUniAdapter({ createSelectorQuery: undefined }))
-  } else {
-    const lynx = (globalThis as any).lynxTestingEnv.backgroundThread.globalThis.lynx
-    const original = lynx.createSelectorQuery
-    lynx.createSelectorQuery = factory
-    restoreFns.push(() => { lynx.createSelectorQuery = original })
-  }
+/**
+ * 引擎原生 SelectorQuery 桩（ADR-022：不再经宿主注入）。
+ *
+ * 组件调用链是 `lynx.createSelectorQuery().select(id).invoke({ method, params })`，
+ * 因此桩必须打在 background 线程的 `lynx` 上——`stubNativeQuery` 负责这件事。
+ */
+function mockQuery(resolver: (selector: string) => any = () => rect()) {
+  const { calls } = stubNativeQuery((selector) => resolver(selector))
   return { calls, scrolls: () => calls.filter((call) => call.params.method === 'scrollTo'), jumps: () => calls.filter((call) => call.params.method === 'scrollIntoView'), measures: () => calls.filter((call) => call.params.method === 'boundingClientRect') }
 }
 function nativeEvent(element: Element, name: string, detail?: any) {
@@ -82,25 +66,24 @@ function officialApi(component: string, filename = 'types.ts') {
   const defaults = [...block.matchAll(/^  (\w+): make(?:Boolean|Number|Numeric|String)Prop(?:<[^>]*>)?\(([^)]*)\)/gm)].map((match) => ({ key: match[1], value: match[2].replace(/^['"]|['"]$/g, '') }))
   return { keys, defaults }
 }
+/**
+ * 引擎原生交叉观察器桩：`lynx.createIntersectionObserver(undefined, { thresholds })`。
+ *
+ * scope 恒为 undefined（原生 API 的「全局检索」语义），不再是 uni 的组件作用域。
+ */
 function mockObservers() {
-  const observers: any[] = []
-  const factory = vi.fn((scope: any, options: any) => {
-    const observer = {
-      scope, options, selector: '', margin: null as any, callback: null as any,
-      relativeToViewport: vi.fn((margin: any) => { observer.margin = margin; return observer }),
-      observe: vi.fn((selector: string, callback: any) => { observer.selector = selector; observer.callback = callback }),
-      disconnect: vi.fn()
-    }
-    observers.push(observer)
-    return observer
-  })
-  configureUniAdapter({ createIntersectionObserver: factory })
-  return { factory, observers, latest: (test: (selector: string) => boolean) => [...observers].reverse().find((observer) => test(observer.selector) && !observer.disconnect.mock.calls.length) }
+  const stub = stubNativeObserver()
+  return {
+    factory: stub.factory,
+    observers: stub.observers,
+    latest: (test: (selector: string) => boolean) => [...stub.observers].reverse().find((observer) => test(observer.selector) && !observer.disconnect.mock.calls.length)
+  }
 }
 afterEach(() => {
   cleanup()
   for (const restore of restoreFns.splice(0)) restore()
-  configureUniAdapter({ createSelectorQuery: undefined, createIntersectionObserver: undefined, createVideoContext: undefined, pageScrollTo: undefined, getSystemInfoSync: undefined })
+  restoreNativeStubs()
+  configureHost(null)
   vi.useRealTimers()
   vi.restoreAllMocks()
 })
@@ -130,6 +113,8 @@ describe.skipIf(!hasWotRef())('wot 2.3.2 scroll additional parity: complete publ
 
 describe('wot 2.3.2 scroll additional parity: swiper and nav', () => {
   it('renders custom media keys/classes/title styles and forwards real tap payloads', async () => {
+    // 原生 <video> 元素按引擎版本判定（Lynx 4.1+），测试里显式声明。
+    setSystemInfo({ engineVersion: '4.1' })
     mockQuery(() => rect(300, 180))
     const clicks = vi.fn(), taps = vi.fn(), presses = vi.fn()
     const list = [{ src: 'cover.png', title: 'cover' }, { src: 'clip.mp4', type: 'video', poster: 'poster.png', title: 'video' }, { src: 'last.png', title: 'last' }]
@@ -147,7 +132,9 @@ describe('wot 2.3.2 scroll additional parity: swiper and nav', () => {
     expect(image.classList.contains('consumer-prev')).toBe(true)
     const video = container.querySelector('.wd-swiper__video') as HTMLElement
     expect(video.getAttribute('src')).toBe('clip.mp4')
-    expect(video.getAttribute('poster')).toBe('poster.png')
+    // Lynx 原生 <video> 没有 poster / autoplay 属性：封面只在降级占位里使用，
+    // 自动播放由挂载后的原生 play UIMethod 触发（见下方用例）。
+    expect(video.getAttribute('poster')).toBeNull()
     expect(video.style.height).toBe('180px')
     const title = video.parentElement!.querySelector('.wd-swiper__text') as HTMLElement
     expect(title.textContent).toBe('video')
@@ -176,8 +163,8 @@ describe('wot 2.3.2 scroll additional parity: swiper and nav', () => {
     expect(container.querySelector('.consumer-indicator')).toBeNull()
   })
   it('uses measured margins/multiple items, real native smooth navigation, snapToEdge and clearable radius', async () => {
-    const query = mockQuery(() => rect(300, 180), true)
-    configureUniAdapter({ getSystemInfoSync: () => ({ windowWidth: 375 }) })
+    const query = mockQuery(() => rect(300, 180))
+    setSystemInfo({ windowWidth: 375 })
     const current = ref(0), direction = ref<'horizontal' | 'vertical'>('horizontal'), snap = ref(false), radius = ref<number | undefined>(16), duration = ref(300)
     const changes = vi.fn(), finishes = vi.fn()
     const { container } = render({ setup: () => () => h(Swiper, { list: images, autoplay: false, current: current.value, direction: direction.value, loop: false, snapToEdge: snap.value, previousMargin: '40rpx', nextMargin: '20px', displayMultipleItems: 2, radius: radius.value, duration: duration.value, onChange: changes, onAnimationfinish: finishes }) } as any)
@@ -318,12 +305,13 @@ describe('wot 2.3.2 scroll additional parity: swiper and nav', () => {
   })
   it('tracks current video playback across stopAutoplay prop changes and list replacement', async () => {
     vi.useFakeTimers()
+    setSystemInfo({ engineVersion: '4.1' })
     mockQuery(() => rect(300, 180))
     const pauseVideo = ref(true), list = ref<any[]>([{ value: 'first.mp4', type: 'video' }, { value: 'second.mp4', type: 'video' }])
     const changes = vi.fn()
     const { container } = render({ setup: () => () => h(Swiper, { list: list.value, interval: 100, stopAutoplayWhenVideoPlay: pauseVideo.value, onChange: changes }) } as any)
     await vi.advanceTimersByTimeAsync(10)
-    nativeEvent(container.querySelector('.wd-swiper__video')!, 'play')
+    nativeEvent(container.querySelector('.wd-swiper__video')!, 'playing')
     await vi.advanceTimersByTimeAsync(250)
     expect(changes).not.toHaveBeenCalled()
     pauseVideo.value = false
@@ -331,7 +319,7 @@ describe('wot 2.3.2 scroll additional parity: swiper and nav', () => {
     expect(changes).toHaveBeenCalledExactlyOnceWith({ current: 1, source: 'autoplay' })
     const track = container.querySelector('.wd-swiper__track')!
     fireEvent.scrollend(track, { detail: { scrollLeft: 300 } })
-    nativeEvent(container.querySelectorAll('.wd-swiper__video')[1], 'play')
+    nativeEvent(container.querySelectorAll('.wd-swiper__video')[1], 'playing')
     pauseVideo.value = true
     await vi.advanceTimersByTimeAsync(220)
     expect(changes).toHaveBeenCalledTimes(1)
@@ -339,27 +327,26 @@ describe('wot 2.3.2 scroll additional parity: swiper and nav', () => {
     await vi.advanceTimersByTimeAsync(110)
     expect(changes.mock.calls[1]).toEqual([{ current: 0, source: 'autoplay' }])
   })
-  it('commands only injected video contexts with actual media id and scope, honoring play/pause flags', async () => {
-    mockQuery(() => rect(300, 180))
+  it('commands native video elements through the UIMethod channel with real media ids, honoring play/pause flags', async () => {
+    setSystemInfo({ engineVersion: '4.1' })
+    const query = mockQuery(() => rect(300, 180))
     const current = ref(0), autoplayVideo = ref(true), stopPreviousVideo = ref(true)
-    const actions: string[] = []
-    const host = vi.fn((id: string, scope: any) => ({ play: () => actions.push(`play:${id}`), pause: () => actions.push(`pause:${id}`) }))
-    configureUniAdapter({ createVideoContext: host })
     const { container } = render({ setup: () => () => h(Swiper, { list: ['first.mp4', 'second.mp4'], current: current.value, autoplay: false, autoplayVideo: autoplayVideo.value, stopPreviousVideo: stopPreviousVideo.value }) } as any)
     await frames()
     const videos = container.querySelectorAll('.wd-swiper__video')
+    expect(videos).toHaveLength(2)
+    const mediaCalls = () => query.calls.filter((call) => call.params.method === 'play' || call.params.method === 'pause')
+    // 挂载后对当前视频项下发一次原生 play（原生 video 没有 autoplay 属性）
+    expect(mediaCalls().map((call) => `${call.params.method}:${call.selector}`)).toEqual([`play:#${videos[0].id}`])
     current.value = 1
     await frames()
-    expect(actions).toEqual([`pause:${videos[0].id}`, `play:${videos[1].id}`])
-    expect(host.mock.calls.every((call) => call[1]?.$)).toBe(true)
+    // 原生 UIMethod：直接命令引擎里的 <video> 节点，选择器就是真实 media id
+    expect(mediaCalls().map((call) => `${call.params.method}:${call.selector}`)).toEqual([`play:#${videos[0].id}`, `pause:#${videos[0].id}`, `play:#${videos[1].id}`])
     autoplayVideo.value = false; stopPreviousVideo.value = false; current.value = 0
     await frames()
-    expect(actions).toHaveLength(2)
-    configureUniAdapter({ createVideoContext: undefined })
-    const fallback = vi.spyOn(uni, 'createVideoContext')
-    current.value = 1
-    await frames()
-    expect(fallback).not.toHaveBeenCalled()
+    expect(mediaCalls()).toHaveLength(3)
+    // 没有任何宿主上下文工厂参与：能力只来自引擎原生 <video>
+    expect(hasHostCapability('createVideoContext' as any)).toBe(false)
   })
   it('nav keeps minShowNum independent from controls and all direction/position/type classes', async () => {
     const type = ref<'dots' | 'dots-bar' | 'fraction'>('dots'), direction = ref<'horizontal' | 'vertical'>('horizontal'), position = ref<any>('bottom'), total = ref(1), min = ref(2)
@@ -393,7 +380,8 @@ describe('wot 2.3.2 scroll additional parity: sticky and box', () => {
   it('measures exposed width/height, updates layouts/offset and supplies a real out-of-flow placeholder', async () => {
     let size = rect(220, 40, 100)
     mockQuery(() => size)
-    const observerFallback = vi.spyOn(uni, 'createIntersectionObserver')
+    // 引擎没有 createIntersectionObserver 时保持纯 CSS position: sticky
+    expect(nativeRuntime().createIntersectionObserver).toBeUndefined()
     let exposed: any
     const offset = ref(12), zIndex = ref(3)
     const { container } = render({ setup: () => () => h(Sticky, { offsetTop: offset.value, zIndex: zIndex.value, customClass: 'consumer-sticky', ref: (value: any) => { exposed = value } }, { default: () => h('text', null, 'sticky') }) } as any)
@@ -403,7 +391,6 @@ describe('wot 2.3.2 scroll additional parity: sticky and box', () => {
     expect(exposed.stickyState.width).toBe(220)
     expect(exposed.stickyState.height).toBe(40)
     expect(exposed.offsetTop).toBe(12)
-    expect(observerFallback).not.toHaveBeenCalled()
     exposed.setPosition(true, 'absolute', 160)
     await frames(1)
     const placeholder = container.querySelector('.wd-sticky__placeholder') as HTMLElement
@@ -441,7 +428,7 @@ describe('wot 2.3.2 scroll additional parity: sticky and box', () => {
     const root = result.container.querySelector('.wd-sticky') as HTMLElement
     let observer = host.latest((selector) => selector.endsWith('-probe'))
     expect(result.container.querySelector(`[id="${observer.selector.slice(1)}"]`)).not.toBeNull()
-    expect(observer.scope.$).toBeTruthy()
+    expect(observer.scope).toBeUndefined()
     expect(observer.options.thresholds).toEqual([0, 0.5])
     expect(observer.margin).toEqual({ top: -45 })
     observer.callback({ boundingClientRect: rect(180, 35, 5) })
@@ -656,7 +643,7 @@ describe.skipIf(!hasWotRef())('wot 2.3.2 scroll additional parity: backtop and g
   it('only activates strictly above threshold, calls the host with duration and forwards native tap without listener arrays', async () => {
     const scrollTop = ref(300), duration = ref(245), shape = ref<'circle' | 'square'>('square'), bottom = ref(42), right = ref(17), zIndex = ref(22)
     const pageScroll = vi.fn(), clicks = vi.fn(), taps = vi.fn()
-    configureUniAdapter({ pageScrollTo: pageScroll })
+    configureHost({ pageScrollTo: pageScroll })
     const { container } = render({ setup: () => () => h(Backtop, { scrollTop: scrollTop.value, duration: duration.value, shape: shape.value, bottom: bottom.value, right: right.value, zIndex: zIndex.value, text: 'Up', iconStyle: 'font-size: 25px; color: rgb(10, 20, 30)', customStyle: 'margin-top: 6px', customClass: 'consumer-backtop', onClick: clicks, onTap: taps }) } as any)
     await frames(5)
     const root = container.querySelector('.wd-backtop') as HTMLElement
@@ -693,10 +680,8 @@ describe.skipIf(!hasWotRef())('wot 2.3.2 scroll additional parity: backtop and g
     expect(root.style.right).toBe('0px')
     fireEvent.tap(root)
     expect(pageScroll.mock.calls[1]).toEqual([{ scrollTop: 0, duration: 0 }])
-    configureUniAdapter({ pageScrollTo: undefined })
-    const fallback = vi.spyOn(uni, 'pageScrollTo')
+    configureHost({ pageScrollTo: undefined })
     fireEvent.tap(root)
-    expect(fallback).not.toHaveBeenCalled()
     expect(clicks).toHaveBeenCalledTimes(3)
     const registry = (globalThis as any).__VUE_LYNX_EVENT_REGISTRY__
     const handlers = registry instanceof Map ? registry : registry?.handlers
@@ -740,8 +725,9 @@ describe.skipIf(!hasWotRef())('wot 2.3.2 scroll additional parity: backtop and g
     const declaration = readFileSync(join(__dirname, '../..', '../..', 'node_modules', '.pnpm', '@lynx-js+web-elements@0.12.0_tslib@2.8.1', 'node_modules', '@lynx-js', 'web-elements', 'dist', 'elements', 'ScrollView', 'ScrollView.d.ts'), 'utf8')
     expect(declaration).toContain('smooth?: boolean')
     expect(declaration).not.toMatch(/duration|easing|circular/)
-    expect(hasUniAdapter('createIntersectionObserver')).toBe(false)
-    expect(hasUniAdapter('createVideoContext')).toBe(false)
-    expect(hasUniAdapter('pageScrollTo')).toBe(false)
+    // 原生能力只来自引擎：宿主桥里不存在观察器 / 视频上下文工厂，页面滚动仍走宿主模块
+    expect(nativeRuntime().createIntersectionObserver).toBeUndefined()
+    expect(hasHostCapability('createVideoContext' as any)).toBe(false)
+    expect(hasHostCapability('pageScrollTo')).toBe(false)
   })
 })

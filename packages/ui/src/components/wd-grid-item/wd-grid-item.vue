@@ -17,8 +17,8 @@
  *   resolveStyle 每帧输出完整键集——gutter 由有值变 0 时旧 padding-right /
  *   margin-top 不会残留；contentStyle 的 right/bottom/height 同样完整输出，
  *   以 SCSS 的 height: 100% 和无偏移作为中性值；
- * - url 跳转：参考源调用全局 uni.navigateTo 等，改为 common/uni 兼容层
- *   下发（宿主可注入路由，未注入时降级 warning）；
+ * - url 跳转：参考源调用全局 uni.navigateTo 等；本库改为宿主原生模块下发
+ *   （宿主未注册路由能力时回退为 `navigate` 事件，由应用自行导航）；
  * - 列数兜底：参考源 columnNum 为 0（无父级 grid 的独立使用场景）时会算出
  *   Infinity% 宽度，此处兜底为 1（grid 内使用时 column/childCount 恒 ≥ 1，
  *   行为不变）；
@@ -38,7 +38,7 @@ import { GRID_KEY } from '../wd-grid/types'
 import { addUnit, deepAssign, isDef, isString, isUndefined, omitBy, parseStyle, type CSSProperties } from '../../common/util'
 import { defineStyleKeys, resolveStyle, createStyleResolver } from '../../common/style'
 import { gridItemProps } from './types'
-import { uni } from '../../common/uni'
+import { getHost } from '../../common/host'
 import type { BadgeProps } from '../../primitives/wd-badge/types'
 
 /** GridItem 组件 Props 定义 */
@@ -47,6 +47,7 @@ const props = defineProps(gridItemProps)
 const emit = defineEmits<{
   (e: 'click', event?: any): void
   (e: 'tap', event?: any): void
+  (e: 'navigate', payload: { url: string; linkType: string }): void
 }>()
 
 /** 获取父级 Grid 组件实例及当前项在子组件中的索引 */
@@ -259,18 +260,23 @@ function click(event: any) {
   emit('tap', event)
   const { url, linkType } = props
   if (url) {
+    const host = getHost()
     switch (linkType) {
       case 'navigateTo':
-        uni.navigateTo({ url })
+        if (typeof host.navigateTo === 'function') host.navigateTo({ url })
+        else emit('navigate', { url, linkType })
         break
       case 'reLaunch':
-        uni.reLaunch({ url })
+        if (typeof host.reLaunch === 'function') host.reLaunch({ url })
+        else emit('navigate', { url, linkType })
         break
       case 'redirectTo':
-        uni.redirectTo({ url })
+        if (typeof host.redirectTo === 'function') host.redirectTo({ url })
+        else emit('navigate', { url, linkType })
         break
       case 'switchTab':
-        uni.switchTab({ url })
+        if (typeof host.switchTab === 'function') host.switchTab({ url })
+        else emit('navigate', { url, linkType })
         break
       default:
         console.error(`[wot-design] warning(wd-grid-item): linkType can not be ${linkType}`)

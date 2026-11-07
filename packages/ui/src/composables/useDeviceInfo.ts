@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue-lynx'
 import { getSystemInfo } from '../common/util'
-import { getUniAdapter } from '../common/uniAdapter'
+import { getHost } from '../common/host'
 
 interface SafeArea { left: number; right: number; top: number; bottom: number; width: number; height: number }
 interface CapsuleInfo { width: number; height: number; left: number; right: number; top: number; bottom: number }
@@ -33,7 +33,7 @@ function init() {
     } : { left: 0, right: 0, top: 0, bottom: info.screenHeight, width: info.screenWidth, height: info.screenHeight }
     statusBarHeight.value = info.statusBarHeight
     hostNavBarHeight.value = Math.max(0, Number(info.navBarHeight) || 0)
-    const capsuleInfo = getUniAdapter('getMenuButtonBoundingClientRect')?.()
+    const capsuleInfo = getHost().getMenuButtonRect?.()
     capsule.value = capsuleInfo && Number(capsuleInfo.height) > 0 ? {
       width: Number(capsuleInfo.width) || 0,
       height: Number(capsuleInfo.height) || 0,

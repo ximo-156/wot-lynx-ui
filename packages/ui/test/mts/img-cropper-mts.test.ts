@@ -18,14 +18,14 @@
  * 处理器，测试中向两个元素分别派发验证。
  *
  * 环境说明：jsdom 无布局，getSystemInfo 走默认值（375×812）；
- * uni.getImageInfo 经 configureUniAdapter 注入（图片 200×100）。
+ * uni.getImageInfo 经 configureHost 注入（图片 200×100）。
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { pause } from '../../src/common/util'
 import { fireEvent } from '../fire-event'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
 import ImgCropper from '../../src/components/wd-img-cropper/wd-img-cropper.vue'
 
 const IMG_W = 200
@@ -51,25 +51,31 @@ function parseTransform(el: Element | null) {
   return { x: Number(m[1]), y: Number(m[2]), scale: Number(m[3]), angle: Number(m[4]) }
 }
 
-/** 注入 getImageInfo 适配器（图片 200×100）并挂载组件 */
+/**
+ * 触发原生 <image> load 事件（图片原始像素 200×100）。
+ *
+ * ADR-022 之后组件不再调用宿主 `getImageInfo`：原生 load 事件的
+ * `detail.width / detail.height` 是唯一尺寸来源。
+ */
+function fireImgLoad(container: Element) {
+  const img = container.querySelector('.wd-img-cropper__img')
+  if (img) fireEvent.load(img, { detail: { width: IMG_W, height: IMG_H } })
+}
+
+/** 挂载组件并完成原生图片加载（图片 200×100） */
 function mount(extraProps: Record<string, unknown> = {}) {
-  configureUniAdapter({
-    getImageInfo: (opts: any) => opts.success({ width: IMG_W, height: IMG_H })
-  })
   const { container } = render(ImgCropper, {
     modelValue: true,
     imgSrc: 'https://example.com/a.png',
     aspectRatio: '1:1',
     ...extraProps
   } as any)
+  fireImgLoad(container)
   return container
 }
 
 /** 受控挂载（v-model 驱动）：验证 update:modelValue 与根节点卸载 */
 function mountControlled(extraProps: Record<string, unknown> = {}) {
-  configureUniAdapter({
-    getImageInfo: (opts: any) => opts.success({ width: IMG_W, height: IMG_H })
-  })
   const updates: boolean[] = []
   const { container } = render({
     setup() {
@@ -87,6 +93,7 @@ function mountControlled(extraProps: Record<string, unknown> = {}) {
         })
     }
   } as any)
+  fireImgLoad(container)
   return { container, updates }
 }
 
@@ -249,7 +256,7 @@ describe('wd-img-cropper MTS 跟手', () => {
   it('confirm 落定裁剪几何（x / y / scale / angle + 导出尺寸）', async () => {
     const confirms: any[] = []
     const drawCalls: any[] = []
-    configureUniAdapter({
+    configureHost({
       createCanvasContext: () => ({
         save() {}, restore() {}, clearRect() {}, translate() {}, rotate() {},
         drawImage(...args: any[]) { drawCalls.push(args) },
@@ -284,7 +291,7 @@ describe('wd-img-cropper MTS 跟手', () => {
     // 真宿主能力返回非空文件路径，原几何与关闭断言全部保留
     expect(confirms[0].tempFilePath).toBe('/crop.png')
     expect(drawCalls).toEqual([['https://example.com/a.png', -700, -350, 1400, 700]])
-    configureUniAdapter({ createCanvasContext: undefined, canvasToTempFilePath: undefined })
+    configureHost({ createCanvasContext: undefined, canvasToTempFilePath: undefined })
     // 确认后 modelValue 置 false → 根节点卸载
     expect(updates[updates.length - 1]).toBe(false)
     expect(container.querySelector('.wd-img-cropper')).toBeNull()
@@ -324,10 +331,7 @@ describe('wd-img-cropper MTS 跟手', () => {
     expect(img.getAttribute('style')).toMatch(/transition-duration:\s*0ms/)
   })
 
-  it('imgloaderror：宿主注入的 getImageInfo 失败时上报', async () => {
-    configureUniAdapter({
-      getImageInfo: (opts: any) => opts.fail({ errMsg: 'fail' })
-    })
+  it('imgloaderror：原生 image 加载失败 / 尺寸非法时上报', async () => {
     const errors: any[] = []
     const { container } = render(ImgCropper, {
       modelValue: true,
@@ -335,8 +339,9 @@ describe('wd-img-cropper MTS 跟手', () => {
       onImgloaderror: (e: any) => errors.push(e)
     } as any)
     await pause(50)
-    // modelValue 与 imgSrc 两个 immediate watch 均触发 loadImg（wot-ui 端口
-    // 既有行为）：失败回调至少一次，载荷正确
+    // 原生 error 事件（网络失败 / 解码失败）直接转发
+    fireEvent.error(container.querySelector('.wd-img-cropper__img')!, { detail: { src: 'https://example.com/a.png', errMsg: 'image:fail' } })
+    await pause(20)
     expect(errors.length).toBeGreaterThanOrEqual(1)
     expect(errors[0].src).toBe('https://example.com/a.png')
     expect(container.querySelector('.wd-img-cropper')).not.toBeNull()

@@ -13,7 +13,8 @@
  *   输出完整键集（Style Funnel，§20；中性值 auto 与 __content-img 类声明一致）。
  * - show-menu-by-longpress 为微信小程序专有属性，Lynx 无对应能力，按参考源
  *   绑定到 image 元素上但不产生效果（PORTING §2.3）。
- * - uni.navigateTo 经 common/uni 适配层转发，宿主未注入时降级告警不崩溃。
+ * - uni.navigateTo 改为宿主原生模块（`navigateTo`）；宿主未注册路由能力时
+ *   回退为 `navigate` 事件，由应用自行导航。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -24,7 +25,7 @@ import WdPopup from '../../primitives/wd-popup/wd-popup.vue'
 import { curtainProps } from './types'
 import { addUnit } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
-import { uni } from '../../common/uni'
+import { getHost } from '../../common/host'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(curtainProps)
@@ -43,6 +44,7 @@ const emit = defineEmits([
   'error',
   'click',
   'tap',
+  'navigate',
   'update:modelValue'
 ])
 
@@ -135,9 +137,9 @@ function imgErr() {
 function clickImage() {
   if (!isAlive()) return
   if (props.to) {
-    uni.navigateTo({
-      url: props.to
-    })
+    const host = getHost()
+    if (typeof host.navigateTo === 'function') host.navigateTo({ url: props.to })
+    else emit('navigate', { url: props.to })
   }
   emit('click')
   // CONVENTIONS §14：根 view 内部点击的 tap 转发

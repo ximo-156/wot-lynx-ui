@@ -24,7 +24,7 @@ ADR 的目的不是记录「做了什么」（代码里有），而是记录**�
 | [002](./002-phased-package-split.md) | 分阶段拆包 | 已采纳 |
 | [003](./003-no-domain-package-split.md) | 组件域包暂不拆 | 已采纳（前提修正） |
 | [004](./004-style-funnel.md) | Style Funnel 强制唯一出口 | 已采纳（已落地） |
-| [005](./005-platform-adapter.md) | PlatformAdapter 显式契约 | 已采纳（**范围收敛**，见 015） |
+| [005](./005-platform-adapter.md) | PlatformAdapter 显式契约 | **已取代**（被 022 取代） |
 | [006](./006-component-meta.md) | meta 作为契约单一来源 | 已采纳（改为推导式，见 017） |
 | [007](./007-dual-distribution.md) | 双轨分发（source + dist） | **已取代**（被 014 取代） |
 | [008](./008-generated-css-not-committed.md) | 生成物 `index.css` 不入库 | 已采纳 |
@@ -34,10 +34,11 @@ ADR 的目的不是记录「做了什么」（代码里有），而是记录**�
 | [012](./012-primitives-layer.md) | 引入 L3.5 Primitives 层 | 已采纳 |
 | [013](./013-declarative-families.md) | 组件族声明式化（`families.json` 单一来源） | 已采纳 |
 | [014](./014-dist-is-bridge-not-build.md) | `dist` 是入口桥接层，不是编译产物（取代 007） | 已采纳 |
-| [015](./015-platform-capabilities-scope.md) | PlatformAdapter 只落地 capabilities，方法层不做 | 已采纳 |
+| [015](./015-platform-capabilities-scope.md) | PlatformAdapter 只落地 capabilities，方法层不做 | **已取代**（被 022 取代） |
 | [016](./016-theme-presets-on-demand.md) | 预设主题按需引入，不进主包 | 已采纳 |
 | [017](./017-meta-derived-from-source.md) | 组件契约由源码推导，产物是 JSON | 已采纳 |
 | [018](./018-docs-generated-from-meta.md) | 文档由 meta 生成，侧边栏是唯一组件清单 | 已采纳 |
 | [019](./019-api-diff-and-codemod.md) | API 变更检测走语义 diff，codemod 只做等价改写 | 已采纳 |
 | [020](./020-visual-regression.md) | 视觉回归拍组件区域而非整页，基线按平台隔离 | 已采纳 |
 | [021](./021-test-isolation-and-sharding.md) | 测试环境复用（`isolate: false`）+ LPT 分片 | 已采纳（附顺序无关取证要求） |
+| [022](./022-native-capability-layer.md) | 移除 uni-app 兼容层，改为原生能力层 + 宿主模块契约（取代 005、015） | 已采纳 |

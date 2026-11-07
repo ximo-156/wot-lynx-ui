@@ -177,29 +177,35 @@ jsContext.dispatchEvent({ type: 'wot:viewport-change', data: { width, height } }
 
 也可在应用自己的宿主回调中调用 `setViewportOverride({ width, height })`；传 `null` 清除覆盖。媒体选择、真实网络上传、Canvas 等能力仍需按下节的宿主契约接入，不会因启用视口插件而假装可用。
 
-## 注入宿主能力（uni 兼容层）
+## 注入宿主能力（原生模块契约）
 
-Lynx 环境没有 `uni` 全局对象。组件库内部通过 `common/uni.ts` 兼容层安全降级；
-涉及宿主能力的 API（页面跳转、媒体选择、Toast、canvas 裁剪等）可通过
-`configureUniAdapter` 注入真实实现：
+Lynx 没有 `uni` 全局对象，本库也**不再提供任何 uni-app 兼容层**（ADR-022）。
+引擎自带的能力（节点度量、交叉观察、原生 `<video>`、`SystemInfo` 安全区）直接
+读取，开箱即用；只有引擎管不到的能力才需要宿主注册——按 Lynx 的标准扩展点：
+
+1. `NativeModules.WotLynxUI`（宿主注册的原生模块）；
+2. `lynx.getJSModule('WotLynxUI')`（宿主注册的 JS 模块）；
+3. `configureHost({ ... })` 显式注入（Web 预览 / 单测 / 特殊宿主）。
 
 ```ts
-import { configureUniAdapter } from 'wot-lynx-ui'
+import { configureHost } from 'wot-lynx-ui'
 
-configureUniAdapter({
-  // 页面跳转（WdCell 的 url / replaceUrl、WdGridItem 的 url 等）
+configureHost({
+  // 路由（WdCell / WdGridItem / WdCurtain 的 url）
   navigateTo: (options) => router.push(options.url),
   redirectTo: (options) => router.replace(options.url),
-  // 上传（WdUpload 依赖）
+  // 媒体选择与上传（WdUpload 依赖）
   chooseMedia: (options) => myPicker.pick(options),
   uploadFile: (options) => myUploader.upload(options),
-  // 图片裁剪（WdImgCropper 的像素裁剪依赖 canvas 能力）
+  // 图片裁剪的像素导出（Lynx 无内置 canvas，需宿主提供）
   createCanvasContext: (id) => myCanvas.create(id),
   canvasToTempFilePath: (options) => myCanvas.export(options)
 })
 ```
 
-未注入时相关 API 仅 warning 降级（不会崩溃），详见[与 wot-ui 的差异](./differences.md)。
+三项都缺失时，对应能力视为**不可用**：组件走原生降级路径（事件代替路由、
+SVG 代替 canvas、封面代替 video），只 warning 不崩溃。完整契约见
+`packages/ui/src/common/host.ts`，差异说明见[与 wot-ui 的差异](./differences.md)。
 
 ## 已知构建提示（不影响使用）
 

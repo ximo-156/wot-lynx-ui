@@ -13,9 +13,9 @@
  * - 事件映射：参考源 @click → @tap（CONVENTIONS §6，Lynx view 不派发 click）；
  *   根 view 交互组件在 emits 声明 'tap' 并在处理器转发（CONVENTIONS §14：
  *   消费方在组件上绑 @tap 不会落入合并崩溃）；
- * - 参考源的 uni.pageScrollTo 平台调用按 PORTING §3.9 降级：Lynx 页面滚动由
- *   宿主的 scroll-view 承载，宿主经 configureUniAdapter 注入 pageScrollTo 时
- *   走原生滚动（duration 生效），否则仅抛 click / tap 事件由消费方自行滚动；
+ * - 参考源的 uni.pageScrollTo 平台调用改为宿主原生模块：宿主注册了
+ *   `pageScrollTo` 时走原生滚动（duration 生效），否则仅抛 click / tap 事件
+ *   由消费方自行滚动（scroll-view 的 scroll-top 绑定）；
  * - customStyle / iconStyle 为字符串，经 parseStyle 归一为对象语法
  *   （CONVENTIONS §19：字符串 :style 会被 vue-lynx 静默丢弃）；
  * - 使用官方 to-top 字形；文字与 glyph 的尺寸/颜色在本组件样式直接声明；
@@ -33,7 +33,7 @@ import WdTransition from '../../primitives/wd-transition/wd-transition.vue'
 import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { backtopProps } from './types'
 import { addUnit, parseStyle } from '../../common/util'
-import { uni } from '../../common/uni'
+import { getHost } from '../../common/host'
 import { getPlatform } from '../../common/platform'
 
 const props = defineProps(backtopProps)
@@ -67,8 +67,9 @@ function handleBacktop(event: any) {
   // Lynx 页面滚动由宿主 scroll-view 承载：平台具备 pageScroll 能力时走原生
   // 滚动（与 wot-ui 的 uni.pageScrollTo 语义一致，duration 生效），否则仅抛
   // 事件由消费方自行滚动（scroll-view 的 scroll-top 绑定）。
-  if (getPlatform().capabilities.pageScroll) {
-    uni.pageScrollTo({ scrollTop: 0, duration: props.duration })
+  const host = getHost()
+  if (getPlatform().capabilities.pageScroll && typeof host.pageScrollTo === 'function') {
+    host.pageScrollTo({ scrollTop: 0, duration: props.duration })
   }
   emit('click')
 }

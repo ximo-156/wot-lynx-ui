@@ -83,7 +83,7 @@ function applyOffset(rect: any) {
 }
 async function updateOffset() {
   const request = ++foldRequest
-  const rect = await getRect(`#${dropMenuId}`, false, proxy)
+  const rect = await getRect(`#${dropMenuId}`)
   if (isAlive() && request === foldRequest && rect) applyOffset(rect)
 }
 function toggle(child: any) {
@@ -95,7 +95,7 @@ function toggle(child: any) {
 function fold(child?: any) {
   const request = ++foldRequest
   if (!child) return
-  getRect(`#${dropMenuId}`, false, proxy).then((rect) => {
+  getRect(`#${dropMenuId}`).then((rect) => {
     if (!isAlive() || request !== foldRequest || !rect || !children.includes(child) || headerFor(child).disabled) return
     applyOffset(rect)
     child.$?.exposed?.toggle?.()

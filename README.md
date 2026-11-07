@@ -11,7 +11,7 @@
 - **🧩 API 兼容** — 主入口公开 106 个组件：100 个有实际功能的官方对应组件 + 6 个本地扩展；官方空占位 `wot-ui` 不作为主入口公开组件计数
 - **📦 开箱即用** — 发布预编译 CSS，消费者无需安装 Sass 工具链；组件以源码分发，由 Rspeedy 直接编译，天然支持 Tree-shaking
 - **🌗 主题系统** — CSS 变量驱动亮色/暗色主题，`WdConfigProvider` 全局配置（`wot-theme-light` / `wot-theme-dark`）；暗色文字使用适配深色背景的中性色
-- **🧰 命令式 API** — `useToast` / `useDialog` / `useNotify` / `useImagePreview` 等弹层命令式调用；`uni` 兼容层支持宿主经 `configureUniAdapter` 注入路由等能力
+- **🧰 命令式 API** — `useToast` / `useDialog` / `useNotify` / `useImagePreview` 等弹层命令式调用；宿主专属能力按 Lynx 原生模块契约（`NativeModules.WotLynxUI` / `lynx.getJSModule` / `configureHost`）接入，**不含 uni-app 兼容层**
 - **🧪 可测试** — 纯函数守卫与基于 @lynx-js/testing-environment 的 Vue Lynx 双线程测试，覆盖组件渲染、交互回归与构建约束；全量状态以实际校验结果为准
 
 ## API 对照范围
@@ -264,8 +264,8 @@ Lynx 是原生渲染引擎，与 Web/小程序运行时有本质差异，以下�
 | 伪元素装饰 | `::before` / `::after` | 模板真实元素（`__bar` / `__hairline` 等类名） |
 | 弹层传送 | `root-portal` / teleport | `position: fixed` 节点自动提升至根节点 |
 | 圆环/二维码/条形码/签名/水印 | canvas 2D | SVG（path / rect / polyline / data URI） |
-| 页面跳转 | `uni.navigateTo` | `uni` 兼容层降级，宿主可经 `configureUniAdapter` 注入路由 |
-| 安全区 | `uni.getSystemInfoSync` | Lynx `SystemInfo`（安全区置零，可由宿主注入） |
+| 页面跳转 | `uni.navigateTo` | 原生 `navigate` 事件 + 宿主模块（`configureHost({ navigateTo })` 等），无宿主时只抛事件 |
+| 安全区 | `uni.getSystemInfoSync` | Lynx `SystemInfo.safeAreaInsets`（引擎原生读取） |
 
 ## 致谢
 

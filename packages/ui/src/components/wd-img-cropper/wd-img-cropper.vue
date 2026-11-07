@@ -39,9 +39,8 @@
  * - 内联样式一律对象语法（字符串 style 会被 vue-lynx 静默丢弃，
  *   CONVENTIONS §19）；imageStyle 的 width/height 恒写（auto 为中性值）、
  *   transition-duration 恒写（0ms 为中性值），满足 Style Funnel（§20）；
- * - 图片原始尺寸：优先 uni.getImageInfo（宿主可经 configureUniAdapter
- *   注入）；宿主未注入时降级读 image 元素 load 事件 detail 的宽高，
- *   不再视为加载失败；
+ * - 图片原始尺寸：直接用原生 image> 的 load 事件（detail.width / height
+ *   为图片原始像素），不依赖任何宿主 API；
  * - @click → @tap（CONVENTIONS §6）；根 view 的 @touchmove 按 §14 声明为
  *   emit 并转发，避免消费方同名监听穿透合并崩溃；
  * - customStyle 经 parseStyle 归一为对象；动画 / 节流定时器在卸载时清理，
@@ -55,7 +54,6 @@ import WdButton from '../../primitives/wd-button/wd-button.vue'
 import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { imgCropperProps, type ImgCropperEmits, type ImgCropperExpose } from './types'
 import { useTranslate } from '../../composables/useTranslate'
-import { uni, hasUniAdapter } from '../../common/uni'
 import { getPlatform } from '../../common/platform'
 import { createCanvasContext, canvasToTempFilePath } from '../../common/canvasHelper'
 import { useAlive } from '../../composables/useAlive'
@@ -150,7 +148,6 @@ const mtState = {
 watch(
   [() => props.modelValue, () => props.imgSrc, () => props.imgWidth, () => props.imgHeight, () => props.aspectRatio, () => props.exportScale],
   () => {
-    loadRequest++
     exportRequest++
     exporting.value = false
     imageVersion.value++
@@ -187,7 +184,6 @@ watch(
       picHeight.value = height
     }
     resetImg()
-    loadImg()
   },
   { immediate: true, flush: 'sync' }
 )
@@ -313,32 +309,6 @@ function resetImg() {
   imgAngle.value = 0
   imgLeft.value = windowWidth / 2
   imgTop.value = (windowHeight / 2) * TOP_PERCENT
-}
-
-/**
- * 加载图片资源文件，获取图片基本信息
- */
-function loadImg() {
-  if (!props.modelValue || !props.imgSrc) return
-  const request = ++loadRequest
-  const src = props.imgSrc
-  uni.getImageInfo({
-    src,
-    success: (res: any) => {
-      if (!isAlive() || request !== loadRequest || src !== props.imgSrc || !props.modelValue) return
-      if (!(Number(res.width) > 0 && Number(res.height) > 0)) {
-        emit('imgloaderror', { src, errMsg: 'getImageInfo:fail invalid image dimensions' })
-        return
-      }
-      imgInfo.value = res
-      resetImg()
-      computeImgSize()
-    },
-    fail: (error: any) => {
-      if (!isAlive() || request !== loadRequest || src !== props.imgSrc || !props.modelValue) return
-      if (hasUniAdapter('getImageInfo')) emit('imgloaderror', { ...error, src })
-    }
-  })
 }
 
 /**
@@ -608,8 +578,8 @@ function handleImgLoaded(res: any) {
   const source = res?.detail?.src ?? res?.src
   if (!isAlive() || !props.modelValue || !props.imgSrc || (source && source !== props.imgSrc)) return
   emit('imgloaded', res)
-  // Lynx 降级路径：uni.getImageInfo 不可用（宿主未注入）时，用 image 元素
-  // load 事件 detail 的宽高兜底计算图片尺寸
+  // 原生 image load 事件的 detail.width / detail.height 就是图片原始像素，
+  // 直接作为唯一的尺寸来源（不再调用宿主 getImageInfo）。
   if (!imgInfo.value) {
     const width = Number(res?.detail?.width ?? res?.width ?? 0)
     const height = Number(res?.detail?.height ?? res?.height ?? 0)
@@ -617,6 +587,8 @@ function handleImgLoaded(res: any) {
       imgInfo.value = { width, height }
       resetImg()
       computeImgSize()
+    } else {
+      emit('imgloaderror', { src: props.imgSrc, errMsg: 'image:fail invalid image dimensions' })
     }
   }
 }
@@ -628,7 +600,10 @@ function handleImgLoaded(res: any) {
 function handleImgLoadError(err: any) {
   const source = err?.detail?.src ?? err?.src
   if (!isAlive() || !props.modelValue || (source && source !== props.imgSrc)) return
-  emit('imgloaderror', err)
+  // 对外载荷保持 wot-ui 的 `{ src, errMsg }` 契约：原生 image 的 error 事件
+  // 把宿主错误信息放在 detail 里，这里归一化后再抛给消费方。
+  const detail = err?.detail ?? err ?? {}
+  emit('imgloaderror', { ...detail, src: props.imgSrc, errMsg: String(detail.errMsg ?? 'image:fail') })
 }
 
 /**
@@ -643,7 +618,6 @@ function handleRotate() {
  */
 function handleCancel() {
   exportRequest++
-  loadRequest++
   exporting.value = false
   moving.value = false
   imageVersion.value++
@@ -730,7 +704,6 @@ function preventTouchMove(event: any) {
 }
 
 onBeforeUnmount(() => {
-  loadRequest++
   exportRequest++
   // 清理延时动画与节流定时器，避免回调在卸载后写入已销毁的树
   if (timers.animation !== null) {

@@ -1,5 +1,5 @@
 import { nextTick, onBeforeUnmount, onMounted, watch, type Ref } from 'vue-lynx'
-import { getUniAdapter } from '../common/uniAdapter'
+import { createSelectorQuery } from '../common/native'
 import { uuid } from '../common/util'
 
 /**
@@ -35,10 +35,7 @@ export function useNativeInputValue(source: Ref<string | number>, idPrefix: stri
   }
 
   function createQuery() {
-    const lynx = (globalThis as any).lynx
-    const factory = getUniAdapter('createSelectorQuery') ||
-      (typeof lynx?.createSelectorQuery === 'function' ? () => lynx.createSelectorQuery() : undefined)
-    return factory?.()
+    return createSelectorQuery()
   }
 
   /** 同值但上一次同步失败时也可以显式请求；已经成功的输入回声不重复推送。 */

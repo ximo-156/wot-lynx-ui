@@ -3,7 +3,7 @@ import { h, nextTick } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
 import { pause } from '../../src/common/util'
-import { configureUniAdapter } from '../../src/common/uniAdapter'
+import { configureHost } from '../../src/common/host'
 import { setViewportOverride } from '../../src/common/viewport'
 import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
 import DropMenu from '../../src/components/wd-drop-menu/wd-drop-menu.vue'
@@ -21,7 +21,7 @@ function mountPopup(extra: Record<string, unknown> = {}) {
 }
 afterEach(() => {
   cleanup()
-  configureUniAdapter({ onWindowResize: undefined, offWindowResize: undefined })
+  configureHost({ onWindowResize: undefined, offWindowResize: undefined })
   setViewportOverride(null)
 })
 
@@ -84,7 +84,7 @@ describe('wide-screen popup and viewport regression', () => {
   it('accepts host resize events and unregisters every callback on unmount', async () => {
     setViewportOverride({ width: 390, height: 844 })
     const listeners = new Set<(event: unknown) => void>()
-    configureUniAdapter({ onWindowResize: (callback: any) => listeners.add(callback), offWindowResize: (callback: any) => listeners.delete(callback) })
+    configureHost({ onWindowResize: (callback: any) => listeners.add(callback), offWindowResize: (callback: any) => listeners.delete(callback) })
     const { container } = mountPopup()
     await frames()
     expect(listeners.size).toBeGreaterThan(0)

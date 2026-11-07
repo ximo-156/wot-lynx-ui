@@ -1,6 +1,6 @@
 # ADR-015 PlatformAdapter 只落地 capabilities，方法层不做
 
-- **状态**：已采纳
+- **状态**：**已被 [ADR-022](./022-native-capability-layer.md) 取代**（`uniAdapter` / `uni.ts` 已删除，能力改由引擎探测）
 - **日期**：2026-10-23
 - **相关**：`packages/ui/src/common/platform.ts`、`common/uniAdapter.ts`、`common/uni.ts`、`test/platform.test.ts`、ADR-005
 

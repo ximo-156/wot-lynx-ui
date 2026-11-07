@@ -45,8 +45,8 @@ Lynx 的百分比高度只相对「已确定高度」的父级解析：中间层
 | 二维码 / 条形码 | canvas 2D | SVG（矩阵 → `rect` / `circle` / `path`） |
 | 手写签名 | canvas 2D | SVG `polyline`（撤销/恢复栈，导出标准 SVG data URI） |
 | 水印 | canvas `toDataURL` | 平铺层（重复水印单元 + 旋转文本） |
-| 页面跳转 | `uni.navigateTo` | `uni` 兼容层降级，交由宿主注入路由（见下文） |
-| 安全区 | `uni.getSystemInfoSync` | Lynx `SystemInfo`（安全区数据置零，可由宿主注入） |
+| 页面跳转 | `uni.navigateTo` | 原生 `navigate` 事件 + 宿主模块（`configureHost({ navigateTo })` / `NativeModules.WotLynxUI`）；无宿主时只抛事件，由业务自行路由 |
+| 安全区 | `uni.getSystemInfoSync` | Lynx `SystemInfo.safeAreaInsets`（引擎原生读取，无需宿主注入） |
 | 小程序标签 | `<block>` / `<rich-text>` / `data-*` 属性 | `<template>` / `<text>`（Lynx `__SetAttribute` 不支持任意 `data-*`） |
 | 内联 CSS 变量 | `:style="{ '--x': v }"` 或字符串 | `ev.style[key]` 通道会丢弃 `--x`；主题变量改由**根节点 `style` 属性串**下发（见下节），普通样式仍走对象语法 |
 | 主线程 worklet | 无此概念 | 声明式 MTS（`'main thread'`），且 worklet 之间禁止互相引用（真机会 TDZ，见 `CONVENTIONS.md` §21） |
@@ -108,32 +108,40 @@ Lynx 3.x 启用新 CSS 引擎后 **view 的默认布局是 Lynx 自研的 `linea
 组件库内部已按同一规则整改（按钮根节点、评分星标、步骤条、开关轨道等）；
 详见仓库根目录 `CONVENTIONS.md` §14。
 
-## uni API 兼容层
+## 原生能力模型（没有 uni 兼容层）
 
-Lynx 环境不存在 `uni` 全局对象。组件库提供 `common/uni.ts` 兼容层：
+ADR-022 起，本库**删除了 `common/uni.ts` 兼容层**（`configureUniAdapter` 一并移除）。
+能力分两类，判定来源都是真实存在的实现，不做「假装可用」：
 
-- **系统信息**：`uni.getSystemInfoSync` / `getWindowInfo` 等映射到 Lynx `SystemInfo`；
-- **节点查询**：`uni.createSelectorQuery` 映射到 `lynx.createSelectorQuery`；
-- **媒体选择 / 路由 / Toast 等宿主能力**：默认降级（warning + `fail` 回调），
-  宿主可通过 `configureUniAdapter()` 注入真实实现：
+| 能力 | 来源 | 缺失时 |
+| --- | --- | --- |
+| 节点度量 / 原生 UIMethod | `lynx.createSelectorQuery()` | 零尺寸兜底 + 一次 warning |
+| 交叉观察（sticky） | `lynx.createIntersectionObserver()` | 退回纯 CSS `position: sticky` |
+| 屏幕信息 / 安全区 | `SystemInfo` 全局对象 | 使用引擎默认值 |
+| 原生 `<video>` | 引擎版本 ≥ 4.1，或宿主 `supportsVideoElement()` | 降级为封面占位 |
+| 路由 / 媒体选择 / 上传 / 页面滚动 / 振动 / 拨号 | `NativeModules.WotLynxUI`、`lynx.getJSModule('WotLynxUI')` 或 `configureHost()` | 只 warning + 事件，不伪造成功 |
+| Canvas 2D 导出 | 宿主 `createCanvasContext` + `canvasToTempFilePath` | 降级为 SVG / 直接失败回调 |
 
 ```ts
-import { configureUniAdapter } from 'wot-lynx-ui'
+import { configureHost } from 'wot-lynx-ui'
 
-configureUniAdapter({
+configureHost({
   navigateTo: (options) => router.push(options.url),
   chooseMedia: (options) => myMediaPicker.pick(options),
-  showToast: (options) => myToast.show(options)
+  uploadFile: (options) => myUploader.upload(options)
 })
 ```
+
+宿主专属能力的完整契约见 `packages/ui/src/common/host.ts`；`configureHost(null)`
+撤回注入，回到 Native Module 探测。
 
 ## 能力降级的组件
 
 | 组件 | 状态 | 说明 |
 | --- | --- | --- |
-| `WdImgCropper` 图片裁剪 | 接口保留 | Lynx 无 Canvas 2D API，裁剪能力需宿主提供 |
-| `WdUpload` 上传 | 基础可用 | 依赖宿主注入 `uni.chooseMedia` / `uni.uploadFile`（或自定义 `uploadMethod`）。demo 的选图已改用 **Lynx 原生 `<input type="file">`**（`packages/demo/src/showcase/UploadEvokeButton.vue`，真机直接弹系统相册，只兼容原生端），上传走 `uploadMethod` 演示桩 |
-| `WdVideoPreview` | 基础可用 | 依赖 Lynx `<video>` 元素宿主能力 |
+| `WdImgCropper` 图片裁剪 | 接口保留 | Lynx 无 Canvas 2D API，像素导出需宿主提供 `createCanvasContext` + `canvasToTempFilePath` |
+| `WdUpload` 上传 | 基础可用 | 依赖宿主模块 `chooseMedia` / `uploadFile`（或自定义 `uploadMethod`）。demo 的选图已改用 **Lynx 原生 `<input type="file">`**（`packages/demo/src/showcase/UploadEvokeButton.vue`，真机直接弹系统相册，只兼容原生端），上传走 `uploadMethod` 演示桩 |
+| `WdVideoPreview` | 基础可用 | 依赖引擎原生 `<video>`（Lynx 4.1+）；宿主未注册 video XElement 时降级为封面占位 |
 | `WdSwiper` / `WdImagePreview` 轮播 | 自研实现 | `swiper` / `swiper-item` 并非 Lynx 引擎内置元素，其 BehaviorController 由宿主链接的 LynxUI 注册；宿主缺失时引擎抛 "No BehaviorController defined for class swiper"（错误码 9902）致命异常且 JS 侧无法捕获。故轮播改用引擎内置元素（scroll-view / view / image）+ scroll-left 分页自研实现，任何宿主均可用；`adjust-height` / `adjust-vertical-height`（支付宝小程序专有能力）随之失效 |
 | `WdTour` 富文本内容 | 纯文本 | `rich-text` 节点降级为 `<text>` 展示 |
 | `WdWatermark` 文字宽度 | 近似换行 | Lynx 无 `measureText`，按字符宽度估算换行位置 |
@@ -145,7 +153,7 @@ configureUniAdapter({
 以下 wot-ui 的小程序专有 props **保留类型定义**（API 兼容，传入不报错）但**无实际效果**：
 
 - `WdButton`：`open-type`、`scope`、`lang`、`session-from`、`send-message-*`、`app-parameter`、`show-message-card`、`hover-start-time`、`hover-stay-time`、`hover-stop-propagation`
-- `WdCell`：`to`、`replace`（页面跳转请使用 `@click` + 宿主路由）
+- `WdCell`：`to`、`replace`（跳转改由 `navigate` 事件 + 宿主模块完成；无宿主时只抛事件）
 - `WdSignature`：`fileType`、`quality`（SVG 矢量导出下为位图概念，无意义）
 
 ## 已适配保留的能力

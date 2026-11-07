@@ -12,7 +12,7 @@ import { isDef, parseStyle } from '../../common/util'
 import { createStyleResolver } from '../../common/style'
 import { textProps } from './types'
 import { formatDate } from '../../common/formatDate'
-import { hasUniAdapter, uni } from '../../common/uni'
+import { getHost } from '../../common/host'
 
 const props = defineProps(textProps)
 const emit = defineEmits(['click', 'tap'])
@@ -46,7 +46,8 @@ const formattedText = computed(() => {
   return text
 })
 function handleClick(event: any) {
-  if (props.mode === 'phone' && props.call && hasUniAdapter('makePhoneCall')) uni.makePhoneCall({ phoneNumber: `${props.text}` })
+  // 拨号是宿主原生能力（Lynx 无内置电话 API）；宿主未注册时不执行、不伪造。
+  if (props.mode === 'phone' && props.call) getHost().makePhoneCall?.({ phoneNumber: `${props.text}` })
   emit('click', event)
   emit('tap', event)
 }

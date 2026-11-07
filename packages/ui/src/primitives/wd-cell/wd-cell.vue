@@ -1,7 +1,8 @@
 /*
  * wd-cell — 单元格
  *
- * Lynx 使用 tap 转发官方无参数 click；路由由宿主适配器执行。
+ * Lynx 使用 tap 转发官方无参数 click；路由由宿主原生模块执行，宿主未注册
+ * 路由能力时回退为 `navigate` 事件（由应用自己用原生导航处理）。
  * 真实分割线元素保留官方左右缩进；文本必须由 text 元素承载。
  * 标题宽度清除时显式下发空值，避免 Lynx 合并样式残留。
  */
@@ -15,12 +16,13 @@ import { useCell } from '../../composables/useCell'
 import { addUnit, isDef, parseStyle, type CSSProperties } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 import { WdTextSlot } from '../../common/textSlot'
-import { uni } from '../../common/uni'
+import { getHost } from '../../common/host'
 
 const props = defineProps(cellProps)
 const emit = defineEmits<{
   (e: 'click'): void
   (e: 'tap', event: any): void
+  (e: 'navigate', payload: { url: string; replace: boolean }): void
 }>()
 const slots = useSlots()
 const cell = useCell()
@@ -48,8 +50,10 @@ function onClick(event: any) {
     emit('tap', event)
   }
   if (props.to && props.isLink) {
-    if (props.replace) uni.redirectTo({ url: props.to })
-    else uni.navigateTo({ url: props.to })
+    const host = getHost()
+    const navigate = props.replace ? host.redirectTo : host.navigateTo
+    if (typeof navigate === 'function') navigate({ url: props.to })
+    else emit('navigate', { url: props.to, replace: props.replace })
   }
 }
 </script>

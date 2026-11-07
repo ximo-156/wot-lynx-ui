@@ -25,7 +25,7 @@ export const DIALOG_BUILTIN_ICON_MAP: Record<DialogBuiltinIconType, string> = {
  * OpenType 事件回调接口
  * 用于支持按钮开放能力的事件处理
  *
- * Lynx 通过 WdButton 事件转发宿主 configureUniAdapter({ openType }) 的结果。
+ * Lynx 通过 WdButton 事件转发宿主模块 `openType` 的结果。
  */
 export interface DialogButtonOpenTypeEvents {
   /** 获取用户信息回调 (open-type="getUserInfo") */

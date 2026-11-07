@@ -16,7 +16,7 @@ import { defineComponent, h, nextTick, ref, type Component, type Plugin } from '
 import UploadEvokeButton from '../../../demo/src/showcase/UploadEvokeButton.vue'
 import Upload from '../../src/components/wd-upload/wd-upload.vue'
 import WdIcon from '../../src/primitives/wd-icon/wd-icon.vue'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 
@@ -97,7 +97,7 @@ function mountUpload(initialCount = 0, initialLimit = 3, evoke: Component = Uplo
 
 afterEach(() => {
   cleanup()
-  configureUniAdapter({ chooseMedia: undefined })
+  configureHost({ chooseMedia: undefined })
   vi.restoreAllMocks()
 })
 
@@ -229,7 +229,7 @@ describe('UploadEvokeButton 样式与文件选择契约', () => {
 
   it('生产模板的 tap 注册为原生 catch，保留默认选图行为且不漏进 wd-upload 的 chooseMedia 链路', async () => {
     const chooseMedia = vi.fn((options: any) => options.fail({ errMsg: 'test: fallback chooser' }))
-    configureUniAdapter({ chooseMedia })
+    configureHost({ chooseMedia })
     const { container, chooseerror } = mountUpload(0, 3, productionEvoke())
     const input = container.querySelector('.demo-upload-evoke__input')! as Element & { eventMap: Record<string, unknown> }
     const slot = container.querySelector('.wd-upload__evoke-slot')!

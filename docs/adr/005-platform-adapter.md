@@ -1,6 +1,6 @@
 # ADR-005 PlatformAdapter 显式契约
 
-- **状态**：已采纳（**范围收敛**：只落地 `capabilities`，方法层不做，见 [ADR-015](./015-platform-capabilities-scope.md)）
+- **状态**：**已被 [ADR-022](./022-native-capability-layer.md) 取代**（uni 兼容层移除，能力改由引擎探测 + 宿主模块契约）
 - **日期**：2026-10-16 ／ 落地：2026-10-23
 - **相关**：`common/platform.ts`、`common/uniAdapter.ts`、`ARCHITECTURE.md §4.2`、ADR-015
 

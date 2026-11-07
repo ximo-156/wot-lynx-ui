@@ -63,7 +63,7 @@ function queueMeasure() {
     queued = false
     if (!alive || token !== request || isVirtual.value) return
     const configs = cellConfigs.value
-    const rects = await getRect(`.${contentClass}`, true, undefined, undefined, configs.map((config) => `#${contentClass}-${config.rowIndex}`))
+    const rects = await getRect(`.${contentClass}`, true, configs.map((config) => `#${contentClass}-${config.rowIndex}`))
     if (!alive || token !== request || isVirtual.value) return
     if (Array.isArray(rects)) configs.forEach((config, index) => {
       const height = Number(rects[index]?.height)

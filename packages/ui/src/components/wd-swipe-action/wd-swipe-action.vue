@@ -60,8 +60,8 @@ async function measureWidths() {
   await nextTick()
   if (disposed.value || revision !== measureRevision.value) return
   const [left, right] = await Promise.all([
-    getRect(`.${instanceId}__left`, false, proxy),
-    getRect(`.${instanceId}__right`, false, proxy)
+    getRect(`.${instanceId}__left`),
+    getRect(`.${instanceId}__right`)
   ])
   if (disposed.value || revision !== measureRevision.value) return
   leftWidth.value = Math.max(0, Number(left.width) || 0)

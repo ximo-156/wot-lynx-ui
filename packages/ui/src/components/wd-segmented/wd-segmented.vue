@@ -22,7 +22,7 @@ import { computed, getCurrentInstance, onMounted, reactive, watch } from 'vue-ly
 import { segmentedProps, type SegmentedExpose, type SegmentedOption } from './types'
 import { addUnit, getRect, isEqual, isObj, pause, parseStyle, uuid } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
-import { uni } from '../../common/uni'
+import { getHost } from '../../common/host'
 import { useAlive } from '../../composables/useAlive'
 
 const props = defineProps(segmentedProps)
@@ -74,7 +74,8 @@ watch(
     updateCurrentIndex()
     updateActiveStyle()
     if (props.vibrateShort) {
-      uni.vibrateShort({ fail: () => {} })
+      // 短震动是宿主原生能力（Lynx 无内置振动 API）。
+      getHost().vibrateShort?.({ fail: () => {} })
     }
   },
   {
@@ -109,7 +110,7 @@ function updateActiveStyle(animation: boolean = true) {
     return
   }
 
-  getRect(`#${segmentedId} .wd-segmented__item`, true, proxy, undefined, props.options.map((_, index) => `#${segmentedId}-item-${index}`)).then((rects: any[]) => {
+  getRect(`#${segmentedId} .wd-segmented__item`, true, props.options.map((_, index) => `#${segmentedId}-item-${index}`)).then((rects: any[]) => {
     // 度量回调晚于组件卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive() || request !== styleRequest) return
     const rect = rects[index]

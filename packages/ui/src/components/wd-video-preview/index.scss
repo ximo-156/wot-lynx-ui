@@ -123,4 +123,41 @@ $video-preview-fallback-icon-size: var(--wot-video-preview-fallback-icon-size, $
     color: $video-preview-close-color;
     text-align: center;
   }
+
+  // Lynx 的 video 元素没有 poster 属性：封面由 <image> 叠加承载
+  @include e(poster) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  // 播放 / 暂停按钮（原生 UIMethod 触发）
+  @include e(control) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include edeep(control-icon) {
+    font-size: $video-preview-fallback-icon-size;
+    line-height: $video-preview-fallback-icon-size;
+    color: $video-preview-close-color;
+  }
+
+  @include e(title) {
+    margin-top: $spacing-tight;
+    font-size: $typography-body-size-main;
+    color: $video-preview-close-color;
+    text-align: center;
+  }
 }

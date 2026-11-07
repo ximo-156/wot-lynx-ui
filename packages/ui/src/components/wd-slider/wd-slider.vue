@@ -454,7 +454,7 @@ function onTrackLayoutChange(event: any) {
 function initSlider() {
   const request = ++rectRequest
   const vertical = props.vertical
-  getRect(`#${trackId.value}`, false, proxy).then((data) => {
+  getRect(`#${trackId.value}`).then((data) => {
     // 度量回调晚于卸载落地时丢弃（真机 9902 晚到 patch 家族）
     if (!isAlive() || request !== rectRequest || vertical !== props.vertical) return
     const size = Number(vertical ? data.height : data.width)
@@ -525,7 +525,7 @@ function ensureTrackSize(): Promise<number> {
   if (trackSize.value > 0 && Number.isFinite(trackSize.value)) return Promise.resolve(trackSize.value)
   const request = ++rectRequest
   const vertical = props.vertical
-  return getRect(`#${trackId.value}`, false, proxy).then((data) => {
+  return getRect(`#${trackId.value}`).then((data) => {
     if (!isAlive() || request !== rectRequest || vertical !== props.vertical) return trackSize.value
     const size = Number(vertical ? data.height : data.width)
     const start = Number(vertical ? data.top : data.left)
@@ -936,7 +936,7 @@ function onBarClick(event: any) {
   const vertical = props.vertical
   const pointer = readPointer(event)
   if (!Number.isFinite(pointer)) return
-  getRect(`#${trackId.value}`, false, proxy).then((data) => {
+  getRect(`#${trackId.value}`).then((data) => {
     if (!isAlive() || isDisabled.value || request !== interactionRequest || vertical !== props.vertical) return
     const size = Number(props.vertical ? data.height : data.width)
     const start = Number(props.vertical ? data.top : data.left)

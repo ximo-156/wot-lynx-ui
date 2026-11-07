@@ -8,9 +8,11 @@ import type {
   UploadFileType,
   UploadFormData,
   UploadMethod,
+  UploadProgressResult,
   UploadSizeType,
   UploadSourceType,
-  UploadSuccessStatus
+  UploadSuccessStatus,
+  UploadTask
 } from '../../composables/useUpload'
 import type { LoadingType } from '../../primitives/wd-loading/types'
 import type { ImageMode } from '../../primitives/wd-img/types'
@@ -294,7 +296,7 @@ export type UploadExpose = {
    * 取消上传
    * @param task 上传任务
    */
-  abort: (task?: UniApp.UploadTask) => void
+  abort: (task?: UploadTask) => void
 }
 
 export type UploadErrorEvent = {
@@ -314,7 +316,7 @@ export type UploadSuccessEvent = {
 }
 
 export type UploadProgressEvent = {
-  response: UniApp.OnProgressUpdateResult
+  response: UploadProgressResult
   file: UploadFileItem
 }
 

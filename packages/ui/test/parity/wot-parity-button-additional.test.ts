@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
 import Button from '../../src/primitives/wd-button/wd-button.vue'
 import ConfigProvider from '../../src/components/wd-config-provider/wd-config-provider.vue'
 
@@ -12,7 +12,7 @@ const restores: Array<() => void> = []
 afterEach(() => {
   cleanup()
   restores.splice(0).reverse().forEach((restore) => restore())
-  configureUniAdapter({ openType: undefined })
+  configureHost({ openType: undefined })
   vi.restoreAllMocks()
 })
 function mount(initial: Record<string, any> = {}, slots?: any) {
@@ -145,7 +145,7 @@ describe('wot 2.3.2 button — additional contracts', () => {
 
   it.each(['disabled', 'loading'])('%s blocks tap, open-type host requests and native hover styling', (property) => {
     const clock = hoverClock(), click = vi.fn(), tap = vi.fn(), host = vi.fn()
-    configureUniAdapter({ openType: host })
+    configureHost({ openType: host })
     const mounted = mount({ [property]: true, openType: 'getUserInfo', hoverStartTime: 0, onClick: click, onTap: tap })
     fireEvent.tap(mounted.button()); hover(mounted.button(), 'touchstart'); clock.advance(200)
     expect(click).not.toHaveBeenCalled(); expect(tap).not.toHaveBeenCalled(); expect(host).not.toHaveBeenCalled()
@@ -250,7 +250,7 @@ describe('wot 2.3.2 button — additional contracts', () => {
     ['chooseAvatar', 'Chooseavatar'], ['agreePrivacyAuthorization', 'Agreeprivacyauthorization']
   ])('openType=%s maps one host success to the exact official event', (openType, eventName) => {
     const success = vi.fn(), error = vi.fn(), order: string[] = []
-    configureUniAdapter({ openType: (options: any) => { order.push('host'); options.success({ detail: 'result' }); options.success({ ignored: true }); options.fail({ ignored: true }) } })
+    configureHost({ openType: (options: any) => { order.push('host'); options.success({ detail: 'result' }); options.success({ ignored: true }); options.fail({ ignored: true }) } })
     const mounted = mount({ openType, [`on${eventName}`]: success, onError: error, onClick: () => order.push('click'), onTap: () => order.push('tap') })
     fireEvent.tap(mounted.button())
     expect(success).toHaveBeenCalledExactlyOnceWith({ detail: 'result' }); expect(error).not.toHaveBeenCalled()
@@ -259,7 +259,7 @@ describe('wot 2.3.2 button — additional contracts', () => {
 
   it.each([['phoneNumber', 'Getphonenumber'], ['userInfo', 'Getuserinfo']])('getAuthorize scope=%s forwards official scoped results', (scope, eventName) => {
     const success = vi.fn(), host = vi.fn((options: any) => options.success({ scoped: options.scope }))
-    configureUniAdapter({ openType: host })
+    configureHost({ openType: host })
     const mounted = mount({ openType: 'getAuthorize', scope, [`on${eventName}`]: success })
     fireEvent.tap(mounted.button())
     expect(success).toHaveBeenCalledExactlyOnceWith({ scoped: scope })
@@ -267,7 +267,7 @@ describe('wot 2.3.2 button — additional contracts', () => {
 
   it('contact/app/privacy fields are forwarded unchanged to the explicit host, and fail emits error once', () => {
     const error = vi.fn(), host = vi.fn((options: any) => { options.fail({ errMsg: 'denied' }); options.success({ ignored: true }); options.fail({ ignored: true }) })
-    configureUniAdapter({ openType: host })
+    configureHost({ openType: host })
     const fields = { openType: 'contact', lang: 'zh_TW', scope: 'userInfo', buttonId: 'id', sessionFrom: 'session', sendMessageTitle: 'title', sendMessagePath: '/path', sendMessageImg: 'image.png', appParameter: 'parameter', showMessageCard: true }
     const mounted = mount({ ...fields, onError: error })
     fireEvent.tap(mounted.button(), { detail: { native: true } })
@@ -285,7 +285,7 @@ describe('wot 2.3.2 button — additional contracts', () => {
 
   it('host callbacks and a click-triggered unmount do not emit late results or initiate capability requests', () => {
     const callbacks: any[] = [], success = vi.fn(), error = vi.fn(), host = vi.fn((options: any) => callbacks.push(options))
-    configureUniAdapter({ openType: host })
+    configureHost({ openType: host })
     const mounted = mount({ openType: 'getUserInfo', onGetuserinfo: success, onError: error })
     fireEvent.tap(mounted.button()); cleanup(); callbacks[0].success({ late: true }); callbacks[0].fail({ late: true })
     expect(success).not.toHaveBeenCalled(); expect(error).not.toHaveBeenCalled()

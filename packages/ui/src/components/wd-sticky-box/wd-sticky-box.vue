@@ -1,16 +1,16 @@
 /*
  * wd-sticky-box — 粘性容器
  *
- * 原生 sticky 的包含块；真实宿主 observer 可按官方父子契约在底边限制 fixed 子项。
- * 容器、子项尺寸变化重建监听，缓存的容器位置协调回调先后，卸载/移除立即清理。
- * 未注入 IntersectionObserver 时不调用降级空对象、不声称 JS 状态跟踪可用。
+ * 原生 sticky 的包含块；引擎原生 IntersectionObserver 可按官方父子契约在底边
+ * 限制 fixed 子项。容器、子项尺寸变化重建监听，缓存的容器位置协调回调先后，
+ * 卸载/移除立即清理。引擎不支持观察器时不调用降级空对象、不声称 JS 状态跟踪可用。
  */
 <script lang="ts" setup>
 import './index.css'
 
 import { getCurrentInstance, nextTick, onBeforeUnmount, onMounted, reactive, watch } from 'vue-lynx'
 import { getRect, parseStyle, uuid } from '../../common/util'
-import { uni } from '../../common/uni'
+import { createIntersectionObserver } from '../../common/native'
 import { getPlatform } from '../../common/platform'
 import { useChildren } from '../../composables/useChildren'
 import { useAlive } from '../../composables/useAlive'
@@ -66,7 +66,7 @@ function observerForChild(child: any) {
   removeObserver(uid)
   if (!getPlatform().capabilities.intersectionObserver || !exposed?.stickyState || boxStyle.height <= 0 || exposed.stickyState.height <= 0) return
   updateChildPosition(child)
-  const observer = uni.createIntersectionObserver(instance.proxy, { thresholds: [0, 0.5] })
+  const observer = createIntersectionObserver([0, 0.5])
   if (!observer) return
   observers.set(uid, observer)
   const offset = exposed.stickyState.height + (Number(exposed.offsetTop?.value ?? exposed.offsetTop) || 0)

@@ -106,7 +106,7 @@ async function updateExpand(useBeforeExpand: boolean = true) {
 /** 一次性度量并只应用仍与当前选择一致的结果。 */
 async function initRect(request: number) {
   const selected = isSelected.value
-  const rect = await getRect(`#${collapseId.value}`, false, proxy)
+  const rect = await getRect(`#${collapseId.value}`)
   if (!isAlive() || request !== rectRequest || selected !== isSelected.value) return
   const rectHeight = Number(rect && rect.height) || 0
   height.value = rectHeight > 0 ? rectHeight : ''

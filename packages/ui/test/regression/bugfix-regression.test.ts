@@ -21,7 +21,7 @@ import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { pause } from '../../src/common/util'
 import { fireEvent } from '../fire-event'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
 import Locale from '../../src/locale'
 import Keyboard from '../../src/components/wd-keyboard/wd-keyboard.vue'
 import PasswordInput from '../../src/components/wd-password-input/wd-password-input.vue'
@@ -188,7 +188,7 @@ describe('修复清单回归', () => {
   })
 
   it('#13 WdUpload beforeUpload 接收 { files, fileList }，返回 false 阻止整批入列', async () => {
-    configureUniAdapter({
+    configureHost({
       chooseMedia: (opts: any) => {
         opts.success({
           tempFiles: [
@@ -230,7 +230,7 @@ describe('修复清单回归', () => {
   })
 
   it('#13b WdUpload beforeUpload 返回 true 时整批入列', async () => {
-    configureUniAdapter({
+    configureHost({
       chooseMedia: (opts: any) => {
         opts.success({
           tempFiles: [

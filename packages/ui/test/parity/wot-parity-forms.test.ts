@@ -4,7 +4,7 @@ import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
 import { pause } from '../../src/common/util'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
 import Slider from '../../src/components/wd-slider/wd-slider.vue'
 import Switch from '../../src/components/wd-switch/wd-switch.vue'
 import Picker from '../../src/components/wd-picker/wd-picker.vue'
@@ -77,12 +77,12 @@ function installRects(width = 200) {
 const pickerColumns = [[{ label: 'A', value: 'a' }, { label: 'B', value: 'b' }]]
 
 function chooseImage(path = '/selected.jpg') {
-  configureUniAdapter({
+  configureHost({
     chooseMedia: (options: any) => options.success({
       tempFiles: [{ tempFilePath: path, fileType: 'image', size: 10 }]
     })
   })
-  restores.push(() => configureUniAdapter({ chooseMedia: undefined }))
+  restores.push(() => configureHost({ chooseMedia: undefined }))
 }
 
 describe('wot parity — slider 与尺寸状态', () => {

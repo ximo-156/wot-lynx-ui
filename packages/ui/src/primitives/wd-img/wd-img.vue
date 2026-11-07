@@ -1,8 +1,12 @@
 /*
  * wd-img — 图片
  * 保留官方 image/image-failloading 图标与 loading/error 插槽；tap 映射 click。
- * 预览通过宿主适配器下发。图片填充和小程序长按菜单仍依赖 Lynx 宿主能力。
- * src 变化重置加载态；圆角与尺寸用完整样式键避免动态更新残留。
+ *
+ * 原生实现说明（ADR-022：移除 uni 兼容层）：
+ * - 预览优先交给宿主系统预览（宿主原生模块 `previewImage`）；
+ * - 宿主没有该能力时，用**库内原生遮罩**预览：position:fixed 提升到页面根，
+ *   原生 image> 渲染，点击任意处关闭。不再依赖任何小程序 API。
+ * - src 变化重置加载态；圆角与尺寸用完整样式键避免动态更新残留。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -12,12 +16,16 @@ import WdIcon from '../wd-icon/wd-icon.vue'
 import { imgProps } from './types'
 import { addUnit, isDef, parseStyle } from '../../common/util'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
-import { uni } from '../../common/uni'
+import { getHost } from '../../common/host'
 
 const props = defineProps(imgProps)
-const emit = defineEmits(['load', 'error', 'click', 'tap'])
+const emit = defineEmits(['load', 'error', 'click', 'tap', 'preview'])
 const status = ref<'loading' | 'success' | 'error'>('loading')
 watch(() => props.src, () => { status.value = 'loading' })
+
+/** 库内原生预览遮罩的显示状态。 */
+const previewVisible = ref(false)
+const previewSource = ref('')
 
 const rootClass = computed(() => ['wd-img', { 'is-round': props.round }, props.customClass])
 /**
@@ -45,9 +53,27 @@ function handleError(event: any) {
   status.value = 'error'
   emit('error', event)
 }
+function openPreview() {
+  const source = props.previewSrc || props.src
+  if (!source) return
+  const host = getHost()
+  if (typeof host.previewImage === 'function') {
+    // 宿主系统预览（相册级体验，支持捏合缩放）。
+    host.previewImage({ urls: [source], current: source })
+    emit('preview', { src: source })
+    return
+  }
+  // 无宿主能力：库内原生遮罩预览。
+  previewSource.value = source
+  previewVisible.value = true
+  emit('preview', { src: source })
+}
+function closePreview() {
+  previewVisible.value = false
+}
 function handleClick(event: any) {
   if (props.enablePreview && props.src && status.value === 'success') {
-    uni.previewImage({ urls: [props.previewSrc || props.src] })
+    openPreview()
   }
   emit('click', event)
   emit('tap', event)
@@ -76,5 +102,9 @@ function handleClick(event: any) {
         <WdIcon name="image-failloading" custom-class="wd-img__error-icon" />
       </slot>
     </view>
+  </view>
+  <!-- 库内原生预览遮罩：fixed 节点由引擎提升到页面根，点击关闭 -->
+  <view v-if="previewVisible" class="wd-img__preview" @tap="closePreview">
+    <image class="wd-img__preview-image" :src="previewSource" mode="aspectFit" />
   </view>
 </template>

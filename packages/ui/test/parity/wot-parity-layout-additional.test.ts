@@ -5,7 +5,7 @@ import { h, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { addUnit, pause } from '../../src/common/util'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
 import { hasWotRef } from '../helpers/wot-ref'
 import Grid from '../../src/components/wd-grid/wd-grid.vue'
 import GridItem from '../../src/components/wd-grid-item/wd-grid-item.vue'
@@ -33,10 +33,13 @@ const css = (name: string) => compRead(name, 'index.css')
 // Testing PAPI uses Object.assign(CSSStyleDeclaration), storing CSS variables as own keys;
 // native PAPI receives the same object. Do not patch the runtime or pretend computed CSS.
 const inlineVariable = (node: HTMLElement, name: string) => (node.style as any)[name] ?? node.style.getPropertyValue(name)
+let restoreNativeQuery: (() => void) | undefined
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
-  configureUniAdapter({ navigateTo: undefined, redirectTo: undefined, createSelectorQuery: undefined })
+  configureHost(null)
+  restoreNativeQuery?.()
+  restoreNativeQuery = undefined
 })
 
 describe('wot 2.3.2 layout behavior (real Lynx dual-thread renderer, not native screenshots)', () => {
@@ -100,7 +103,7 @@ describe('wot 2.3.2 layout behavior (real Lynx dual-thread renderer, not native 
 
   it('emits grid no-argument click before navigation and rejects nonclickable parent taps', async () => {
     const order: any[] = [], clickable = ref(true)
-    configureUniAdapter({ navigateTo: (options) => { order.push(['navigate', options.url]) } })
+    configureHost({ navigateTo: (options) => { order.push(['navigate', options.url]) } })
     const click = vi.fn((...args) => order.push(['click', args]))
     const { container } = render({ setup: () => () => h('view', null, [h(Grid, { clickable: clickable.value }, { default: () => h(GridItem, { text: 'go', url: '/grid', onClick: click }) })]) } as any)
     fireEvent.tap(element(container, '.wd-grid-item'))
@@ -147,7 +150,7 @@ describe('wot 2.3.2 layout behavior (real Lynx dual-thread renderer, not native 
 
   it('emits cell no-argument click before redirect, and not for non-link passive cells', async () => {
     const order: any[] = [], link = ref(true)
-    configureUniAdapter({ redirectTo: (options) => { order.push(['route', options.url]) } })
+    configureHost({ redirectTo: (options) => { order.push(['route', options.url]) } })
     const { container } = render({ setup: () => () => h('view', null, [h(Cell, { title: 'cell', isLink: link.value, replace: true, to: '/cell', arrowDirection: 'left', onClick: (...args: any[]) => order.push(['click', args]) })]) } as any)
     fireEvent.tap(element(container, '.wd-cell')); expect(order).toEqual([['click', []], ['route', '/cell']])
     expect(element(container, '.wd-cell__arrow-right').className).toContain('left')
@@ -282,7 +285,10 @@ describe('table metadata, sorting, slots and shared row tracks', () => {
         } }
       }
     }))
-    configureUniAdapter({ createSelectorQuery: query })
+    const lynx = (globalThis as any).lynx
+    const originalQuery = lynx.createSelectorQuery
+    lynx.createSelectorQuery = query as any
+    restoreNativeQuery = () => { lynx.createSelectorQuery = originalQuery }
     const { container } = render({ setup: () => () => h('view', null, [h(Table, { data: [{ a: 'a0', b: 'b0' }, { a: 'a1', b: 'b1' }] }, { default: () => [h(TableColumn, { prop: 'a', label: 'A', width: widths.value, fixed: true }), h(TableColumn, { prop: 'b', label: 'B' })] })]) } as any)
     await frames()
     pending.splice(0).forEach((complete) => complete()); await frames()

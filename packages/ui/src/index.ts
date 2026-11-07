@@ -15,7 +15,6 @@
 import type { App, Plugin } from 'vue-lynx'
 import { allPrimitives } from './primitives'
 import { allComponents } from './components'
-import { configureUniAdapter, hasUniAdapter, uni } from './common/uni'
 
 // ---------------------------------------------------------------------------
 // 组件（barrel 为生成物，勿手工维护清单）
@@ -24,9 +23,11 @@ export * from './primitives'
 export * from './components'
 
 // ---------------------------------------------------------------------------
-// uni-app 兼容层：宿主可注入路由 / 媒体选择 / Toast 等能力
+// 宿主能力桥（ADR-022）：Lynx 原生扩展点（Native Module / JS Module）。
+// 本库不再提供 uni-app 兼容层；宿主专属能力按 WotLynxHost 契约注册。
 // ---------------------------------------------------------------------------
-export { configureUniAdapter, hasUniAdapter, uni }
+export { configureHost, getHost, hasHostCapability } from './common/host'
+export type { HostRect, HostUploadTask, WotLynxHost } from './common/host'
 
 // ---------------------------------------------------------------------------
 // 平台能力（ADR-005 / ADR-015）：能力判定统一走 getPlatform().capabilities

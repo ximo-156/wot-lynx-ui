@@ -158,7 +158,7 @@ function onRootLayoutChange(event: any): void {
 /** getRect 兜底度量（Web 预览 / 未派发 layoutchange 的宿主） */
 function measure(): Promise<void> {
   const request = ++rectRequest
-  return getRect(`#${slideVerifyId.value}`, false, proxy)
+  return getRect(`#${slideVerifyId.value}`)
     .then((rect) => {
       // 回调晚于卸载落地时丢弃：在已销毁树上写 ref 会触发晚到的
       // remove/insert（真机 9902 家族）

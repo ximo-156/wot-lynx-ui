@@ -15,7 +15,7 @@ export type ButtonLang = 'zh_CN' | 'zh_TW' | 'en'
 /**
  * 开放能力类型
  *
- * Lynx 通过 configureUniAdapter({ openType }) 请求宿主能力；无宿主实现时仅普通点击，
+ * Lynx 通过宿主模块 `openType`（NativeModules / configureHost）请求宿主能力；无宿主实现时仅普通点击，
  * 不自动授权或分享。结果按官方回调事件名转发。
  */
 export type ButtonOpenType =

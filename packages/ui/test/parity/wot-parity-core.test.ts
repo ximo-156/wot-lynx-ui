@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { pause } from '../../src/common/util'
-import { configureUniAdapter, uni } from '../../src/common/uni'
+import { configureHost, getHost } from '../../src/common/host'
 import { useUpload } from '../../src/composables/useUpload'
 import Text from '../../src/components/wd-text/wd-text.vue'
 import Avatar from '../../src/components/wd-avatar/wd-avatar.vue'
@@ -18,7 +18,7 @@ import Sticky from '../../src/components/wd-sticky/wd-sticky.vue'
 import { fireEvent } from '../fire-event'
 
 async function frames(count = 2) { for (let i = 0; i < count; i++) await pause() }
-afterEach(() => { cleanup(); vi.useRealTimers(); configureUniAdapter({ uploadFile: undefined, openType: undefined }) })
+afterEach(() => { cleanup(); vi.useRealTimers(); configureHost({ uploadFile: undefined, openType: undefined }) })
 
 describe('wot 2.3.2 core and display compatibility', () => {
   it('clears declared empty values, returning text to existing CSS/theme styles', async () => {
@@ -133,8 +133,9 @@ describe('wot 2.3.2 core and display compatibility', () => {
 
   it('retains a host upload task and its progress/abort contract', () => {
     const task = { abort: vi.fn(), onProgressUpdate: vi.fn<(callback: (res: any) => void) => void>() }
-    configureUniAdapter({ uploadFile: vi.fn(() => task) })
-    expect(uni.uploadFile({ filePath: 'file.png' })).toBe(task)
+    const uploadFile = vi.fn(() => task)
+    configureHost({ uploadFile })
+    expect(getHost().uploadFile!({ filePath: 'file.png' })).toBe(task)
     const upload = useUpload()
     const file = { uid: 1, url: 'file.png' }
     const progress = vi.fn()
@@ -204,7 +205,7 @@ describe('wot 2.3.2 core and display compatibility', () => {
       options.success({ detail: { userInfo: { name: 'test' } } })
       options.success({ detail: { ignored: true } })
     })
-    configureUniAdapter({ openType: host })
+    configureHost({ openType: host })
     const { container } = render(Button, { openType: 'getUserInfo', onGetuserinfo: getuserinfo, onError: error, onClick: click })
     fireEvent.tap(container.querySelector('.wd-button')!)
     expect(host).toHaveBeenCalledOnce()

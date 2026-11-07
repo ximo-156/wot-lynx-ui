@@ -43,7 +43,7 @@ wot-lynx-ui/  (pnpm monorepo, packageManager: pnpm@10.24.0, node>=20)
 ├── packages/ui/        组件库本体（源码分发 + dist 入口桥接层）
 │   ├── src/components/ 106 个 wd-* 目录（111 .vue + 111 types.ts + index.scss + 生成 index.css）
 │   ├── src/composables/ 23 个组合式函数（父子通信 / 触摸 / 弹层 / 表单 / 上传…）
-│   ├── src/common/      14 个基础模块（util / props / style / uni / uniAdapter / 日期 / 过渡 / 主题镜像…）
+│   ├── src/common/      14 个基础模块（util / props / style / native / host / 日期 / 过渡 / 主题镜像…）
 │   ├── src/styles/      三层令牌 + mixin + 3 套预设主题（brand-a / compact / high-contrast）
 │   ├── src/icons/       图标注册表（registry + sets + 字体 .ttf）
 │   ├── src/locale/      16 种语言
@@ -141,7 +141,7 @@ wot-lynx-ui/  (pnpm monorepo, packageManager: pnpm@10.24.0, node>=20)
 | 🟠 P1 | **tree-shaking 被关闭**：`sideEffects: true` 使 `import { WdButton }` 拉入全部组件 | `package.json`（v2.0 已修） |
 | 🟠 P1 | **契约无源**：`meta` 0 份；`gen-docs` 反解析 `.vue`，写法一变即失效 | ✅ `meta.json` 已建（ADR-017），`gen-docs` 已改读 meta（ADR-018） |
 | 🟠 P1 | **破坏性变更只能靠人**：无 API diff、无迁移工具，改契约靠人工排查 | ✅ `api-diff` + `codemod`（ADR-019） |
-| 🟠 P1 | **平台能力无声明**：`uniAdapter` 是 17 行 `Record<string, any>`，组件改动面 O(组件数) | `common/uniAdapter.ts` |
+| 🟠 P1 | **平台能力无声明**：`uniAdapter` 是 17 行 `Record<string, any>`，组件改动面 O(组件数) | ✅ 已删除 uni 层，改为 `native.ts` + `host.ts`（ADR-022） |
 | 🟡 P2 | **无脚手架**：新增组件需手改 `demo/App.vue`（1,623 行）与真机清单 | `gen-component` 缺失 |
 | 🟡 P2 | **无视觉回归**：`__web_preview` 截图靠人工核对 | ✅ `visual:check`（ADR-020），104 张组件基线 |
 | 🟡 P2 | **测试慢**：86 个测试文件，`environment` 是主要开销（每文件 ≈3s） | ✅ 环境复用 + LPT 分片（ADR-021），全量 110s → 33s |
@@ -284,27 +284,28 @@ createStyleResolver(neutral?) => (...sources) => Record<string, string>  // 动�
 
 **待办**：存量 59 处条件写样式迁移；迁移完成后规则收紧为 `error`。
 
-### 4.2 平台适配层（PlatformAdapter）— capabilities 已落地，方法层不做
+### 4.2 平台能力层（原生能力 + 宿主模块契约）— ADR-022
 
-`common/uniAdapter.ts` 是字符串键注册表（宿主可注入 `pageScrollTo` 等 API）。
-`common/platform.ts` 在其上提供**能力判定**，解决「两个组件对同一能力得出不同结论」：
+`common/native.ts` 只封装**引擎自带能力**（`lynx.createSelectorQuery` /
+`lynx.createIntersectionObserver` / `NativeModules` / `getJSModule` / 原生 rAF），
+`common/host.ts` 只封装**宿主专属能力**（路由 / 媒体选择 / 上传 / 页面滚动 /
+振动 / 拨号 / Canvas 导出）。uni-app 兼容层（`uni.ts` / `uniAdapter.ts`）已删除。
 
 ```ts
-getPlatform().capabilities.canvas2d      // 需要 createCanvasContext + canvasToTempFilePath
-getPlatform().capabilities.intersectionObserver
-getPlatform().capabilities.videoContext
-getPlatform().capabilities.pageScroll
+getPlatform().capabilities.canvas2d              // 宿主 createCanvasContext + canvasToTempFilePath
+getPlatform().capabilities.intersectionObserver  // 引擎 lynx.createIntersectionObserver
+getPlatform().capabilities.videoElement          // 引擎 SystemInfo.engineVersion >= 4（宿主可覆盖）
+getPlatform().capabilities.pageScroll            // 宿主 pageScrollTo
 ```
 
-- 能力是**派生值**：宿主注入 API 后自动为真，不另设一份「能力声明」——否则
-  注册表与声明必然漂移（本仓库反复出现的「声明与实现不一致」不能在代码里重演）。
-- 用 getter 而非快照：宿主可能在挂载后才注入。
-- `mockPlatform()` 强制能力为 false，**压过已注入的宿主能力**，用于覆盖降级分支。
-- 只抽象**有 ≥2 个消费者**的能力（ADR-005 自身的 YAGNI 条款）。单点能力
-  （`getImageInfo` / `makePhoneCall` / `openType`）继续用 `hasUniAdapter(key)`，
-  否则 capabilities 会退化成注册表的镜像。
-- `measure` / `navigate` / `pickMedia` 等**方法层不做**：它们只是 `uni.*` 的第二层
-  门面，零消费者。理由见 ADR-015。
+- 能力是**派生值**：引擎能力实时探测、宿主能力实时查注册表，不另设「能力声明」。
+- 用 getter 而非快照：宿主可能在挂载后才注册模块。
+- `mockPlatform()` 强制能力为 false，**压过引擎探测与宿主注册**，用于覆盖降级分支。
+- 宿主能力查找顺序：`configureHost()` 显式注入 → `NativeModules.WotLynxUI` →
+  `lynx.getJSModule('WotLynxUI')`；三者都没有时组件走原生降级，不伪造成功。
+- `measure` / `navigate` / `pickMedia` 等**方法层不做**：调用方直接用
+  `native.ts` / `host.ts` 的具名函数，避免同一能力两个入口（ADR-015 的结论保留，
+  但底座从 `uniAdapter` 换成了原生模块）。
 
 ### 4.3 组件元数据（Component Meta）— ✅ 已落地（P3.1）
 
@@ -595,6 +596,7 @@ import 'wot-lynx-ui/theme/presets/brand-a' // 按需
 | 2.2 | `uniAdapter` 降级为薄封装 → ✅ **反向决策**：`uniAdapter` 保持 17 行注册表原样，`platform` 叠在其上做语义层。方法层（measure/navigate/pickMedia）**不做**——它们只是 `uni.*` 的第二层门面，零消费者（ADR-015） |
 | 2.3 | 预设主题按需（不进主包） → ✅ 主主题从 20103 → 18259 字节；新增 `./theme/presets` 与 `./theme/presets/*` 两个 exports 子路径；类名规则下沉到各预设文件（单独编译即得可用 CSS）；`test/component/theme-presets.test.ts` 锁住「主包隔离 + 类名同源」（ADR-016） |
 | 2.4 | `dist` 真实产出 + 非 Rspeedy 消费者验证 → ✅ **重新定义为「入口桥接层」**（ADR-014）：`build-dist` 构建前清空；`exports` 的 `source` 子路径改为落到文件（原指向目录，主路径实为 `ERR_UNSUPPORTED_DIR_IMPORT`）；demo 去掉 `wot-lynx-ui$` 别名、启用 `source` 条件并加子路径探针；`check-exports` 新增「re-export 目标可解析」「通配符代入后解析到文件」「跨条件条目集合一致」三节，均过负向验证 |
+| 2.5 | uni 兼容层移除 → ✅ 删除 `uni.ts` / `uniAdapter.ts` / `shime-uni.d.ts`；新增 `common/native.ts`（引擎能力：SelectorQuery / IntersectionObserver / UIMethod / 原生模块）与 `common/host.ts`（宿主模块契约）；能力判定改为引擎探测；`wd-swiper` 视频改 UIMethod、`wd-sticky` 改原生 observer、`wd-img-cropper` 改 image load 尺寸、导航改 `navigate` 事件（ADR-022） |
 
 ### P3 — 契约生成与包拆分（4–6 周）
 

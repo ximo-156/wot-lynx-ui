@@ -1,9 +1,10 @@
 /** Independent wot-ui 2.3.2 behavioral regressions: real events, positive paths and cancellation. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
+import { createEvent } from '@testing-library/dom'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
 import PickerView from '../../src/components/wd-picker-view/wd-picker-view.vue'
 import Slider from '../../src/components/wd-slider/wd-slider.vue'
 import Rate from '../../src/components/wd-rate/wd-rate.vue'
@@ -25,12 +26,20 @@ const restores: Array<() => void> = []
 afterEach(() => {
   cleanup()
   restores.splice(0).forEach((restore) => restore())
-  configureUniAdapter({ createSelectorQuery: undefined, getImageInfo: undefined, createCanvasContext: undefined, canvasToTempFilePath: undefined })
+  configureHost(null)
   delete (globalThis as any).__wdRectStub
   vi.clearAllTimers()
   vi.useRealTimers()
   vi.restoreAllMocks()
 })
+
+/** 派发引擎原生事件（load / error 等不在 fireEvent 的预置表里）。 */
+function nativeEvent(el: Element, name: string, detail: Record<string, any> = {}) {
+  const event = createEvent(`bindEvent:${name}`, el, {})
+  Object.assign(event, { eventType: 'bindEvent', eventName: name, detail })
+  fireEvent(el, event)
+  return event
+}
 
 function mount(component: any, initial: Record<string, any>) {
   const props = ref(initial)
@@ -108,7 +117,9 @@ describe('official selection glyph regression', () => {
 const rect = (left = 0, width = 200, height = 100) => ({ id: '', left, top: 0, right: left + width, bottom: height, width, height })
 const stars = (left = 0, count = 5) => Array.from({ length: count }, (_, index) => rect(left + index * 30, 24, 24))
 function geometry(provider: (selector: string, all: boolean) => any = (_selector, all) => all ? stars() : rect()) {
-  configureUniAdapter({ createSelectorQuery: () => {
+  const lynx = (globalThis as any).lynx
+  const original = lynx.createSelectorQuery
+  lynx.createSelectorQuery = () => {
     const query: any = {
       in: () => query,
       select: (selector: string) => selected(selector, false),
@@ -119,7 +130,8 @@ function geometry(provider: (selector: string, all: boolean) => any = (_selector
       return { invoke: (options: any) => { options.success?.(provider(selector, all)); return query } }
     }
     return query
-  } })
+  }
+  restores.push(() => { lynx.createSelectorQuery = original })
   ;(globalThis as any).__wdRectStub = (element: any) => {
     if (element?.classList?.contains('wd-rate__item')) {
       const index = Array.prototype.indexOf.call(element.parentNode.children, element)
@@ -148,11 +160,13 @@ function canvasHost() {
   }
   ctx.draw = (_reserve: boolean, done: () => void) => done()
   const exports: any[] = []
-  configureUniAdapter({ createCanvasContext: () => ctx, canvasToTempFilePath: (options: any) => exports.push(options) })
+  configureHost({ createCanvasContext: () => ctx, canvasToTempFilePath: (options: any) => exports.push(options) })
   return { calls, exports }
 }
-function imageHost() {
-  configureUniAdapter({ getImageInfo: (options: any) => options.success({ width: 200, height: 100 }) })
+function loadCropperImage(container: Element, width = 200, height = 100, src?: string) {
+  const image = container.querySelector('.wd-img-cropper__img')
+  if (!image) throw new Error('cropper image not rendered')
+  nativeEvent(image, 'load', { width, height, src: src ?? image.getAttribute('src') ?? '' })
 }
 function confirmCrop(container: Element) {
   const buttons = container.querySelectorAll('.wd-img-cropper__footer .wd-button')
@@ -464,10 +478,10 @@ describe('controlled controls, official continuous gestures and instance isolati
 
 describe('real host media export and stale callback cancellation', () => {
   it('cropper without raster host reports the missing capability, never fake-confirms, and stays open', async () => {
-    imageHost()
     const confirm = vi.fn(), error = vi.fn(), update = vi.fn()
     const { container } = mount(ImgCropper, { modelValue: true, imgSrc: '/a.jpg', onConfirm: confirm, onImgloaderror: error, 'onUpdate:modelValue': update })
     await flush()
+    loadCropperImage(container)
     confirmCrop(container)
     expect(confirm).not.toHaveBeenCalled()
     expect(update).not.toHaveBeenCalled()
@@ -476,7 +490,6 @@ describe('real host media export and stale callback cancellation', () => {
   })
 
   it('cropper draws/exports the requested file type, quality and size, then confirm before controlled close', async () => {
-    imageHost()
     const host = canvasHost(), order: any[] = []
     const mounted = mount(ImgCropper, {
       modelValue: true, imgSrc: '/a.jpg', fileType: 'jpg', quality: 0.4, exportScale: 3,
@@ -484,6 +497,7 @@ describe('real host media export and stale callback cancellation', () => {
       'onUpdate:modelValue': (value: boolean) => { order.push(['update', value]); mounted.props.value.modelValue = value }
     })
     await flush()
+    loadCropperImage(mounted.container)
     const image = node(mounted.container, '.wd-img-cropper__img')
     const cutW = Number(image.getAttribute('cut-w')), cutH = Number(image.getAttribute('cut-h'))
     confirmCrop(mounted.container)
@@ -499,10 +513,10 @@ describe('real host media export and stale callback cancellation', () => {
   })
 
   it('cropper export failure keeps the panel open and emits no success', async () => {
-    imageHost()
     const host = canvasHost(), confirm = vi.fn(), error = vi.fn(), update = vi.fn()
     const { container } = mount(ImgCropper, { modelValue: true, imgSrc: '/a.jpg', onConfirm: confirm, onImgloaderror: error, 'onUpdate:modelValue': update })
     await flush()
+    loadCropperImage(container)
     confirmCrop(container)
     host.exports[0].fail({ errMsg: 'disk full' })
     expect(error).toHaveBeenCalledWith({ src: '/a.jpg', errMsg: 'disk full' })
@@ -512,10 +526,10 @@ describe('real host media export and stale callback cancellation', () => {
   })
 
   it.each(['source', 'close', 'unmount'])('cropper drops late export callbacks after %s', async (replacement) => {
-    imageHost()
     const host = canvasHost(), confirm = vi.fn(), error = vi.fn()
     const mounted = mount(ImgCropper, { modelValue: true, imgSrc: '/a.jpg', onConfirm: confirm, onImgloaderror: error })
     await flush()
+    loadCropperImage(mounted.container)
     confirmCrop(mounted.container)
     if (replacement === 'source') mounted.props.value.imgSrc = '/b.jpg'
     else if (replacement === 'close') mounted.props.value.modelValue = false
@@ -527,17 +541,16 @@ describe('real host media export and stale callback cancellation', () => {
     expect(error).not.toHaveBeenCalled()
   })
 
-  it('cropper only accepts current source image info; a late source callback cannot overwrite new dimensions', async () => {
-    const requests: any[] = []
-    configureUniAdapter({ getImageInfo: (options: any) => requests.push(options) })
+  it('cropper ignores a late load event from the previous source', async () => {
     const mounted = mount(ImgCropper, { modelValue: true, imgSrc: '/a.jpg' })
-    mounted.props.value.imgSrc = '/b.jpg'
     await flush()
-    expect(requests).toHaveLength(2)
-    requests[1].success({ width: 200, height: 100 })
+    loadCropperImage(mounted.container, 200, 100, '/a.jpg')
     await flush()
     const width = node(mounted.container, '.wd-img-cropper__img').getAttribute('pic-w')
-    requests[0].success({ width: 1, height: 2000 })
+    mounted.props.value.imgSrc = '/b.jpg'
+    await flush()
+    // 旧图片的晚到 load 事件带的是 /a.jpg：必须被忽略，不能覆盖新图尺寸。
+    nativeEvent(node(mounted.container, '.wd-img-cropper__img'), 'load', { width: 1, height: 2000, src: '/a.jpg' })
     await flush()
     expect(node(mounted.container, '.wd-img-cropper__img').getAttribute('pic-w')).toBe(width)
   })
@@ -585,9 +598,12 @@ describe('real host media export and stale callback cancellation', () => {
 
   it('signature disabled and clear cancel pending quick-stroke geometry without creating a ghost line', async () => {
     const queries: any[] = []
-    configureUniAdapter({ createSelectorQuery: () => ({
+    const lynx = (globalThis as any).lynx
+    const originalQuery = lynx.createSelectorQuery
+    lynx.createSelectorQuery = () => ({
       select: () => ({ invoke: (options: any) => { queries.push(options); return { exec() {} } } })
-    }) })
+    })
+    restores.push(() => { lynx.createSelectorQuery = originalQuery })
     const mounted = mount(Signature, {})
     const canvas = node(mounted.container, '.wd-signature__content-canvas')
     fireEvent.touchstart(canvas, { touches: [{ clientX: 50, clientY: 50 }] })

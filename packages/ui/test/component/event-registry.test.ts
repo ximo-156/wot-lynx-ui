@@ -42,6 +42,8 @@ describe('事件注册表', () => {
     }
   })
 
+  // 挂载整棵 Demo 树并对每个 view/text/scroll-view 派发事件：CPU 密集，
+  // 并行跑全量套件时会超过默认 5s（ADR-021 的分片/并发模型下必须显式放宽）。
   it('全量组件树注册的事件处理器均为函数', async () => {
     const errors: string[] = []
     const origPublish = (globalThis as any).publishEvent
@@ -87,5 +89,5 @@ describe('事件注册表', () => {
     expect(errors).toEqual([])
     expect(fired).toBeGreaterThan(0)
     cleanup()
-  })
+  }, 30_000)
 })

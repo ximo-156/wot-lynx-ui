@@ -1,4 +1,14 @@
-import { uni } from '../common/uni'
+/**
+ * 上传组合式函数（原生宿主能力版）。
+ *
+ * ADR-022 移除了 uni-app 兼容层：媒体选择与上传不再走 `uni.chooseMedia` /
+ * `uni.uploadFile`，而是走 Lynx 宿主原生模块（`NativeModules.WotLynxUI` /
+ * `lynx.getJSModule('WotLynxUI')`，或 Web/测试环境用 `configureHost` 注入）。
+ *
+ * 宿主未注册对应能力时，Promise 以可诊断的 `errMsg` 失败——不伪造成功，
+ * 也不返回空任务对象。
+ */
+import { getHost } from '../common/host'
 import { isArray, isDef, isFunction } from '../common/util'
 
 /* ===== 上传相关类型契约（composable 层自有，wd-upload 组件从这里导入） ===== */
@@ -9,7 +19,10 @@ export type UploadFileType = 'image' | 'video' | 'media' | 'all' | 'file'
 export type UploadCameraType = 'front' | 'back'
 export type UploadStatusType = 'pending' | 'loading' | 'success' | 'fail'
 export type UploadSuccessStatus = number | number[]
-export type UploadFormData = Record<string, any>
+
+export interface UploadFormData {
+  [key: string]: any
+}
 
 export interface ChooseFileOption {
   // 是否支持多选文件
@@ -61,6 +74,35 @@ export interface ChooseFile {
   thumb?: string // 缩略图地址
 }
 
+/** 宿主上传成功回执。 */
+export interface UploadSuccessResult {
+  data: string
+  statusCode: number
+  errMsg?: string
+  [key: string]: any
+}
+
+/** 宿主上传失败回执。 */
+export interface UploadErrorResult {
+  errMsg: string
+  [key: string]: any
+}
+
+/** 宿主上传进度。 */
+export interface UploadProgressResult {
+  progress: number
+  totalBytesSent?: number
+  totalBytesExpectedToSend?: number
+  [key: string]: any
+}
+
+/** 宿主上传任务（只需支持中断与进度订阅）。 */
+export interface UploadTask {
+  abort?: () => void
+  onProgressUpdate?: (callback: (result: UploadProgressResult) => void) => void
+  [key: string]: any
+}
+
 export type UploadMethod = (
   uploadFile: UploadFileItem,
   formData: UploadFormData,
@@ -74,14 +116,14 @@ export type UploadMethod = (
     // 是否自动中断之前的上传任务
     abortPrevious?: boolean
     onSuccess: (
-      res: UniApp.UploadFileSuccessCallbackResult,
+      res: UploadSuccessResult,
       file: UploadFileItem,
       formData: UploadFormData
     ) => void
-    onError: (res: UniApp.GeneralCallbackResult, file: UploadFileItem, formData: UploadFormData) => void
-    onProgress: (res: UniApp.OnProgressUpdateResult, file: UploadFileItem) => void
+    onError: (res: UploadErrorResult, file: UploadFileItem, formData: UploadFormData) => void
+    onProgress: (res: UploadProgressResult, file: UploadFileItem) => void
   }
-) => UniApp.UploadTask | void | Promise<void>
+) => UploadTask | void | Promise<void>
 
 export const UPLOAD_STATUS: Record<string, UploadStatusType> = {
   PENDING: 'pending',
@@ -92,9 +134,9 @@ export const UPLOAD_STATUS: Record<string, UploadStatusType> = {
 
 export interface UseUploadReturn {
   // 开始上传文件
-  startUpload: (file: UploadFileItem, options: UseUploadOptions) => UniApp.UploadTask | void | Promise<void>
+  startUpload: (file: UploadFileItem, options: UseUploadOptions) => UploadTask | void | Promise<void>
   // 中断上传
-  abort: (task?: UniApp.UploadTask) => void
+  abort: (task?: UploadTask) => void
   // 上传状态常量
   UPLOAD_STATUS: Record<string, UploadStatusType>
   // 选择文件
@@ -110,7 +152,7 @@ export interface UseUploadOptions {
   name?: string
   // 其它表单数据
   formData?: Record<string, any>
-  // 文件类型 仅支付宝支持且在支付宝平台必填
+  // 文件类型
   fileType?: 'image' | 'video' | 'audio'
   // 成功状态码
   statusCode?: UploadSuccessStatus
@@ -119,35 +161,45 @@ export interface UseUploadOptions {
   // 自定义上传方法
   uploadMethod?: UploadMethod
   // 上传成功回调
-  onSuccess?: (res: UniApp.UploadFileSuccessCallbackResult, file: UploadFileItem, formData: Record<string, any>) => void
+  onSuccess?: (res: UploadSuccessResult, file: UploadFileItem, formData: Record<string, any>) => void
   // 上传失败回调
-  onError?: (res: UniApp.GeneralCallbackResult, file: UploadFileItem, formData: Record<string, any>) => void
+  onError?: (res: UploadErrorResult, file: UploadFileItem, formData: Record<string, any>) => void
   // 上传进度回调
-  onProgress?: (res: UniApp.OnProgressUpdateResult, file: UploadFileItem) => void
+  onProgress?: (res: UploadProgressResult, file: UploadFileItem) => void
   // 是否自动中断之前的上传任务
   abortPrevious?: boolean
-  // 根据文件拓展名过滤(H5支持全部类型过滤,微信小程序支持all和file时过滤,其余平台不支持)
+  // 根据文件拓展名过滤
   extension?: string[]
 }
 
+function unsupported(api: string): Error {
+  return new Error(`[wot-lynx-ui] 宿主未注册 ${api} 能力（Native Module / JS Module 的 WotLynxUI）`)
+}
+
 export function useUpload(): UseUploadReturn {
-  let currentTask: UniApp.UploadTask | null = null
+  let currentTask: UploadTask | null = null
 
   // 中断上传
-  const abort = (task?: UniApp.UploadTask) => {
+  const abort = (task?: UploadTask) => {
     if (task) {
-      task.abort()
+      task.abort?.()
     } else if (currentTask) {
-      currentTask.abort()
+      currentTask.abort?.()
       currentTask = null
     }
   }
 
   /**
-   * 默认上传方法
+   * 默认上传方法：宿主原生模块 `uploadFile`。
    */
   const defaultUpload: UploadMethod = (file, formData, options) => {
-    const uploadTask = uni.uploadFile({
+    const host = getHost()
+    if (typeof host.uploadFile !== 'function') {
+      const failure = { errMsg: unsupported('uploadFile').message }
+      options.onError(failure, file, formData)
+      return
+    }
+    const uploadTask = host.uploadFile({
       url: options.action,
       header: options.header,
       name: options.name,
@@ -172,12 +224,8 @@ export function useUpload(): UseUploadReturn {
       }
     })
 
-    // 获取当前文件加载的百分比。
-    // Lynx 适配：宿主未经 configureUniAdapter 注入 uploadFile 时，common/uni
-    // 的降级实现返回 undefined（uni-app 中 uploadFile 恒返回任务对象）。
-    // 此处必须可选链兜底——否则 startUploadFiles 的 for 循环会在第一个文件处
-    // 抛 TypeError，同批其余文件全部无法入列（wd-upload 多选回归）。
-    uploadTask?.onProgressUpdate?.((res: any) => {
+    // 宿主未返回任务对象时允许调用方继续（多选时不会阻断同批其它文件）。
+    uploadTask?.onProgressUpdate?.((res: UploadProgressResult) => {
       options.onProgress(res, file)
     })
 
@@ -204,7 +252,7 @@ export function useUpload(): UseUploadReturn {
     // 设置上传中状态
     file[statusKey] = UPLOAD_STATUS.LOADING
 
-    let task: UniApp.UploadTask | null = null
+    let task: UploadTask | null = null
     let settled = false
     if (abortPrevious) abort()
     const clearTask = () => {
@@ -219,20 +267,20 @@ export function useUpload(): UseUploadReturn {
       fileType,
       statusCode,
       abortPrevious,
-      onSuccess: (res: UniApp.UploadFileSuccessCallbackResult, file: UploadFileItem, formData: Record<string, any>) => {
+      onSuccess: (res: UploadSuccessResult, file: UploadFileItem, formData: Record<string, any>) => {
         // 更新文件状态
         file[statusKey] = UPLOAD_STATUS.SUCCESS
         clearTask()
         options.onSuccess?.(res, file, formData)
       },
-      onError: (error: UniApp.GeneralCallbackResult, file: UploadFileItem, formData: Record<string, any>) => {
+      onError: (error: UploadErrorResult, file: UploadFileItem, formData: Record<string, any>) => {
         // 更新文件状态和错误信息
         file[statusKey] = UPLOAD_STATUS.FAIL
         file.error = error.errMsg
         clearTask()
         options.onError?.(error, file, formData)
       },
-      onProgress: (res: UniApp.OnProgressUpdateResult, file: UploadFileItem) => {
+      onProgress: (res: UploadProgressResult, file: UploadFileItem) => {
         // 更新上传进度
         file.percent = res.progress
         options.onProgress?.(res, file)
@@ -243,8 +291,8 @@ export function useUpload(): UseUploadReturn {
     const result = isFunction(uploadMethod)
       ? uploadMethod(file, formData, uploadOptions)
       : defaultUpload(file, formData, uploadOptions)
-    if (result && typeof (result as UniApp.UploadTask).abort === 'function' && !settled) {
-      task = result as UniApp.UploadTask
+    if (result && typeof (result as UploadTask).abort === 'function' && !settled) {
+      task = result as UploadTask
       currentTask = task
     }
     return result
@@ -253,51 +301,47 @@ export function useUpload(): UseUploadReturn {
   /**
    * 格式化图片信息
    */
-  function formatImage(res: UniApp.ChooseImageSuccessCallbackResult): ChooseFile[] {
-    // Lynx 适配：部分平台（如钉钉）文件在 files 字段中，保留防御性赋值，
-    // 移除 uni-app 条件编译注释（CONVENTIONS 第 3 节）。
-    res.tempFiles = isDef((res as any).files) ? (res as any).files : res.tempFiles
-    if (isArray(res.tempFiles)) {
-      return res.tempFiles.map((item: any) => ({
-        path: item.path || '',
+  function formatImage(res: any): ChooseFile[] {
+    // 宿主可能把文件放在 files 字段（部分平台差异），保留防御性赋值。
+    const files = isDef(res?.files) ? res.files : res?.tempFiles
+    if (isArray(files)) {
+      return files.map((item: any) => ({
+        path: item.path || item.tempFilePath || '',
         name: item.name || '',
         size: item.size,
         type: 'image' as ChooseFile['type'],
-        thumb: item.path || ''
+        thumb: item.path || item.tempFilePath || ''
       }))
     }
-    return [
-      {
-        path: (res.tempFiles as any).path || '',
-        name: (res.tempFiles as any).name || '',
-        size: (res.tempFiles as any).size,
-        type: 'image',
-        thumb: (res.tempFiles as any).path || ''
-      }
-    ]
+    return [{
+      path: files?.path || '',
+      name: files?.name || '',
+      size: files?.size,
+      type: 'image',
+      thumb: files?.path || ''
+    }]
   }
 
   /**
    * 格式化视频信息
    */
-  function formatVideo(res: UniApp.ChooseVideoSuccess): ChooseFile[] {
-    return [
-      {
-        path: res.tempFilePath || (res as any).filePath || '',
-        name: res.name || '',
-        size: res.size,
-        type: 'video',
-        thumb: (res as any).thumbTempFilePath || '',
-        duration: res.duration
-      }
-    ]
+  function formatVideo(res: any): ChooseFile[] {
+    return [{
+      path: res.tempFilePath || res.filePath || '',
+      name: res.name || '',
+      size: res.size,
+      type: 'video',
+      thumb: res.thumbTempFilePath || '',
+      duration: res.duration
+    }]
   }
 
   /**
    * 格式化媒体信息
    */
-  function formatMedia(res: UniApp.ChooseMediaSuccessCallbackResult): ChooseFile[] {
-    return res.tempFiles.map((item: any) => ({
+  function formatMedia(res: any): ChooseFile[] {
+    const files = isArray(res?.tempFiles) ? res.tempFiles : []
+    return files.map((item: any) => ({
       type: item.fileType,
       path: item.tempFilePath,
       thumb: item.fileType === 'video' ? item.thumbTempFilePath : item.tempFilePath,
@@ -307,7 +351,7 @@ export function useUpload(): UseUploadReturn {
   }
 
   /**
-   * 选择文件
+   * 选择文件：宿主原生模块 `chooseMedia` / `chooseMessageFile` / `chooseFile`。
    */
   function chooseFile({
     accept,
@@ -321,71 +365,35 @@ export function useUpload(): UseUploadReturn {
     extension
   }: ChooseFileOption): Promise<ChooseFile[]> {
     return new Promise((resolve, reject) => {
-      // Lynx 适配：uni-app 的条件编译分支（MP-WEIXIN / H5 / MP-DINGTALK）全部移除，
-      // 统一调用 common/uni 兼容层的 uni.*  API——宿主可通过 configureUniAdapter
-      // 注入真实的媒体选择能力；未注入时统一降级（warning + fail 回调）。
+      const host = getHost()
+      const count = multiple ? maxCount : 1
+      const fail = (error: any) => reject(error)
+      const api = accept === 'file'
+        ? 'chooseMessageFile'
+        : (accept === 'all' ? 'chooseFile' : 'chooseMedia')
+      const handler = host[api]
+      if (typeof handler !== 'function') {
+        reject(unsupported(api))
+        return
+      }
       switch (accept) {
         case 'image':
-          uni.chooseMedia({
-            count: multiple ? maxCount : 1,
-            mediaType: ['image'],
-            sourceType,
-            sizeType,
-            camera,
-            success: (res: any) => resolve(formatMedia(res)),
-            fail: reject
-          })
+          handler({ count, mediaType: ['image'], sourceType, sizeType, camera, success: (res: any) => resolve(formatMedia(res)), fail })
           break
         case 'video':
-          uni.chooseMedia({
-            count: multiple ? maxCount : 1,
-            mediaType: ['video'],
-            sourceType,
-            camera,
-            maxDuration,
-            success: (res: any) => resolve(formatMedia(res)),
-            fail: reject
-          })
+          handler({ count, mediaType: ['video'], sourceType, camera, maxDuration, success: (res: any) => resolve(formatMedia(res)), fail })
           break
         case 'media':
-          uni.chooseMedia({
-            count: multiple ? maxCount : 1,
-            sourceType,
-            sizeType,
-            camera,
-            maxDuration,
-            success: (res: any) => resolve(formatMedia(res)),
-            fail: reject
-          })
+          handler({ count, sourceType, sizeType, camera, maxDuration, compressed, success: (res: any) => resolve(formatMedia(res)), fail })
           break
         case 'file':
-          uni.chooseMessageFile({
-            count: multiple ? (isDef(maxCount) ? maxCount : 100) : 1,
-            type: accept,
-            extension,
-            success: (res: any) => resolve(res.tempFiles),
-            fail: reject
-          })
+          handler({ count: multiple ? (isDef(maxCount) ? maxCount : 100) : 1, type: accept, extension, success: (res: any) => resolve(res.tempFiles), fail })
           break
         case 'all':
-          uni.chooseFile({
-            count: multiple ? maxCount : 1,
-            type: accept,
-            extension,
-            success: (res: any) => resolve(res.tempFiles as ChooseFile[]),
-            fail: reject
-          })
+          handler({ count, type: accept, extension, success: (res: any) => resolve(res.tempFiles as ChooseFile[]), fail })
           break
         default:
-          uni.chooseMedia({
-            count: multiple ? maxCount : 1,
-            mediaType: ['image'],
-            sourceType,
-            sizeType,
-            camera,
-            success: (res: any) => resolve(formatMedia(res)),
-            fail: reject
-          })
+          handler({ count, mediaType: ['image'], sourceType, sizeType, camera, success: (res: any) => resolve(formatMedia(res)), fail })
           break
       }
     })

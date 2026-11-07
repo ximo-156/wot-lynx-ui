@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { configureUniAdapter } from '../../src/common/uniAdapter'
 import { getSystemInfo } from '../../src/common/util'
 import { getViewportSize, getViewportOverride, hasViewportOverride, isDesktopViewport, isWideViewport, setViewportOverride, VIEWPORT_BREAKPOINTS } from '../../src/common/viewport'
 import { subscribeViewportChange } from '../../src/common/viewport-state'
@@ -12,7 +11,6 @@ afterEach(() => {
     if (descriptor) Object.defineProperty(g, key, descriptor)
     else delete g[key]
   }
-  configureUniAdapter({ getSystemInfoSync: undefined })
   setViewportOverride(oldOverride)
 })
 
@@ -46,11 +44,10 @@ describe('application viewport source', () => {
     expect(Object.isFrozen(g.SystemInfo)).toBe(true)
   })
 
-  it('calls a host adapter once per read and honors its size', () => {
-    let calls = 0
-    configureUniAdapter({ getSystemInfoSync: () => { calls++; return { windowWidth: 680, windowHeight: 500 } } })
+  it('reads the native SystemInfo window dimensions directly', () => {
+    g.SystemInfo = { platform: 'iOS', windowWidth: 680, windowHeight: 500 }
     expect(getViewportSize()).toEqual({ width: 680, height: 500 })
-    expect(calls).toBe(1)
+    expect(getSystemInfo().windowWidth).toBe(680)
   })
 
   it('copies overrides and notifies only actual changes', () => {

@@ -217,7 +217,9 @@ describe('Button native text hover transitions', () => {
       hover(button, 'touchend')
       expect(text.style.color).toBe(''); expect(foreground(text)).toBe(original)
     }
-  })
+    // 5 类型 × 6 变体逐个解析源 SCSS 变量（纯 CPU，无定时器）：并行跑全量
+    // 套件时稳定超过默认 5s，显式放宽（与其它重负载用例一致）。
+  }, 30_000)
 
   it('honors hover delays, queries only at color transitions, and cancel/short taps do not leave active text', () => {
     const clock = hoverClock(), mounted = mount({ text: '延迟按压', variant: 'plain', hoverStartTime: 40, hoverStayTime: 90 })

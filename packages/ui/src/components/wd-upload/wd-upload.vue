@@ -9,9 +9,8 @@
  *   video-camera 图标）全部移除：视频预览统一走本地 wd-video-preview 组件
  *   （非 MP 分支的等价实现），文件图标按平台能力取舍；
  * - 事件映射：@click → @tap（CONVENTIONS §6，Lynx view 不派发 click）；
- * - uni.pageScrollTo / uni.previewImage / uni.openDocument / uni.previewMedia
- *   等平台调用经 common/uni 适配层下发（宿主可经 configureUniAdapter 注入
- *   真实能力，未注入时降级并 warning），getImageInfo 同理；
+ * - 预览（图片 / 文档）与媒体选择 / 上传经宿主原生模块下发（宿主未注册时
+ *   走库内降级：图片用原生遮罩预览、尺寸用原生 image> load 事件测量）；
  * - 文件选择 / 上传 / 中断经 composables/useUpload（宿主媒体能力适配层）；
  * - customStyle 为字符串，经 parseStyle 归一为对象语法（CONVENTIONS §19：
  *   字符串 :style 会被 vue-lynx 静默丢弃）；
@@ -45,7 +44,8 @@ import { useTranslate } from '../../composables/useTranslate'
 import { useFormDisabled } from '../../composables/useFormDisabled'
 import { useUpload } from '../../composables/useUpload'
 import { useAlive } from '../../composables/useAlive'
-import { uni } from '../../common/uni'
+import { getHost } from '../../common/host'
+import { getPlatform } from '../../common/platform'
 import { hasIcon } from '../../icons/registry'
 import {
   uploadProps,
@@ -86,6 +86,8 @@ const preparingUploads = new Set<number>()
 onUnmounted(() => abort())
 
 const showUpload = computed(() => !props.limit || uploadFiles.value.length < props.limit)
+/** 引擎是否提供原生 video 元素（Lynx 4.1+；未注册 XElement 时降级为文件占位）。 */
+const canUseVideo = computed(() => getPlatform().capabilities.videoElement)
 
 const videoPreviewId = ref<string>(`videoPreview${uuid()}`)
 const { previewVideo } = useVideoPreview(videoPreviewId.value)
@@ -181,21 +183,40 @@ function startUploadFiles() {
 }
 
 /**
- * 获取图片信息
- * @param img
+ * 获取图片原始尺寸（原生实现）
+ *
+ * Lynx 的 `<image>` 在加载成功时通过 load 事件回传图片的原始像素宽高
+ * （event.detail.width / event.detail.height），这是引擎原生能力，不需要
+ * 任何宿主适配器。这里用一个 1px 的隐藏 image 承接该事件来测量。
  */
-function getImageInfo(img: string) {
-  return new Promise<any>((resolve, reject) => {
-    uni.getImageInfo({
-      src: img,
-      success: (res: any) => {
-        resolve(res)
-      },
-      fail: (error: any) => {
-        reject(error)
-      }
-    })
+const measuringSrc = ref('')
+let measuringResolve: ((info: { width: number; height: number }) => void) | null = null
+let measuringReject: ((error: any) => void) | null = null
+
+function getImageInfo(img: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    measuringResolve = resolve
+    measuringReject = reject
+    measuringSrc.value = img
   })
+}
+
+function handleMeasureLoad(event: any) {
+  const resolve = measuringResolve
+  const width = Number(event?.detail?.width)
+  const height = Number(event?.detail?.height)
+  measuringResolve = null
+  measuringReject = null
+  measuringSrc.value = ''
+  if (resolve) resolve({ width: Number.isFinite(width) ? width : 0, height: Number.isFinite(height) ? height : 0 })
+}
+
+function handleMeasureError(error: any) {
+  const reject = measuringReject
+  measuringResolve = null
+  measuringReject = null
+  measuringSrc.value = ''
+  if (reject) reject(error)
 }
 
 /**
@@ -395,10 +416,10 @@ function removeFile(index: number) {
  * @param file
  */
 function handlePreviewFile(file: UploadFileItem) {
-  uni.openDocument({
-    filePath: file.url,
-    showMenu: true
-  })
+  const host = getHost()
+  if (typeof host.openDocument === 'function') {
+    host.openDocument({ filePath: file.url, showMenu: true })
+  }
 }
 
 /**
@@ -408,7 +429,14 @@ function handlePreviewFile(file: UploadFileItem) {
  */
 function handlePreviewImage(index: number, lists: string[]) {
   const { onPreviewFail } = props
-  uni.previewImage({
+  const host = getHost()
+  if (typeof host.previewImage !== 'function') {
+    // 宿主没有系统预览能力：按官方语义回调失败，不伪造成功。
+    if (onPreviewFail) onPreviewFail({ index, imgList: lists })
+    else console.warn('[wot-lynx-ui] wd-upload: 宿主未注册 previewImage 能力，无法预览图片')
+    return
+  }
+  host.previewImage({
     urls: lists,
     current: lists[index],
     fail() {
@@ -417,8 +445,6 @@ function handlePreviewImage(index: number, lists: string[]) {
           index,
           imgList: lists
         })
-      } else {
-        uni.showToast({ title: '预览图片失败', icon: 'none' })
       }
     }
   })
@@ -516,25 +542,19 @@ function resolveIconName(name: string) {
             <image :src="file.thumb" :mode="imageMode" class="wd-upload__picture" />
             <WdIcon :name="resolveIconName('play-circle-fill')" custom-class="wd-upload__video-play"></WdIcon>
           </view>
-          <view v-else class="wd-upload__video" @tap="onPreviewVideo(file)">
+          <view v-else-if="canUseVideo" class="wd-upload__video" @tap="onPreviewVideo(file)">
+            <!-- Lynx 原生 video 元素：只保留引擎支持的属性（src / object-fit），
+                 播放控制由原生 UIMethod 提供，没有 poster / controls 等小程序属性 -->
             <video
               :src="file.url"
-              :title="file.name || '视频' + index"
               object-fit="contain"
-              :controls="false"
-              :poster="file.thumb"
-              :autoplay="false"
-              :show-center-play-btn="false"
-              :show-fullscreen-btn="false"
-              :show-play-btn="false"
-              :show-loading="false"
-              :show-progress="false"
-              :show-mute-btn="false"
-              :enable-progress-gesture="false"
-              :enableNative="true"
               class="wd-upload__video"
             ></video>
             <WdIcon :name="resolveIconName('play-circle-fill')" custom-class="wd-upload__video-play"></WdIcon>
+          </view>
+          <view v-else class="wd-upload__file" @tap="onPreviewVideo(file)">
+            <WdIcon name="file" custom-class="wd-upload__file-icon"></WdIcon>
+            <text class="wd-upload__file-name">{{ file.name || file.url }}</text>
           </view>
         </template>
 
@@ -577,5 +597,13 @@ function resolveIconName(name: string) {
       </view>
     </template>
   </view>
+  <!-- 原生图片尺寸测量：1px 隐藏 image，load 事件回传原始像素宽高 -->
+  <image
+    v-if="measuringSrc"
+    class="wd-upload__measure"
+    :src="measuringSrc"
+    @load="handleMeasureLoad"
+    @error="handleMeasureError"
+  />
   <WdVideoPreview :selector="videoPreviewId"></WdVideoPreview>
 </template>

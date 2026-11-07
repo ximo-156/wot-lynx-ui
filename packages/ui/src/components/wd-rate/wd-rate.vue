@@ -293,7 +293,7 @@ function refreshRects(force = false): Promise<void> {
   if (rectsRequested.value) return pendingRects || Promise.resolve()
   const request = ++rectRequest
   rectsRequested.value = true
-  pendingRects = getRect(`#${rateId} .wd-rate__item`, true, proxy, undefined, rateList.value.map((_, index) => `#${rateId}-item-${index}`)).then((rects) => {
+  pendingRects = getRect(`#${rateId} .wd-rate__item`, true, rateList.value.map((_, index) => `#${rateId}-item-${index}`)).then((rects) => {
     if (!isAlive() || request !== rectRequest) return
     itemRects.value = Array.isArray(rects) ? rects.slice(0, props.num) : []
   })

@@ -124,9 +124,9 @@ async function setScrollIntoView() {
     await pause(2000 / 30)
     if (!isAlive() || !pickerShow.value || request !== confirmRequest) return
     const [scrollView, wraper, target] = await Promise.all([
-      getRect('.wd-select-picker__wrapper', false, proxy),
-      getRect(wraperSelector, false, proxy),
-      getRect(targetSelector, false, proxy)
+      getRect('.wd-select-picker__wrapper'),
+      getRect(wraperSelector),
+      getRect(targetSelector)
     ])
 
     if (!isAlive() || !pickerShow.value || request !== confirmRequest) return

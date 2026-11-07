@@ -5,7 +5,8 @@ import path from 'node:path'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { getSystemInfo, pause } from '../../src/common/util'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
+import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
 import Overlay from '../../src/primitives/wd-overlay/wd-overlay.vue'
 import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
 import Dialog from '../../src/components/wd-dialog/wd-dialog.vue'
@@ -28,8 +29,9 @@ const restores: Array<() => void> = []
 afterEach(() => {
   cleanup()
   restores.splice(0).reverse().forEach((restore) => restore())
+  restoreNativeStubs()
   resetNotifyDefaultOptions()
-  configureUniAdapter({ getSystemInfoSync: undefined, pageScrollTo: undefined, createVideoContext: undefined, getMenuButtonBoundingClientRect: undefined, navigateTo: undefined, openType: undefined })
+  configureHost(null)
   vi.restoreAllMocks()
 })
 async function frames(count = 4) { for (let index = 0; index < count; index++) await pause() }
@@ -100,7 +102,8 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
   })
 
   it('popup modal tap reports without closing, then closes in official event order when enabled', async () => {
-    configureUniAdapter({ getSystemInfoSync: () => ({ safeAreaInsets: { bottom: 27 } }) })
+    // 安全区来自引擎原生 SystemInfo：必须原地改对象，否则线程切换会覆盖
+    restores.push(setSystemInfo({ safeAreaInsets: { bottom: 27 } }))
     const events: any[] = []
     const visible = model()
     const mounted = mount(Popup, { modelValue: visible.value.value, closeOnClickModal: false, safeAreaInsetBottom: true, customStyle: 'border-radius: 17px', modalStyle: { opacity: '0.2' }, duration: 30,
@@ -234,7 +237,7 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
 
   it('dialog custom actions forward host open-type callbacks and cannot close a dialog opened in action.click', async () => {
     const authorized = vi.fn()
-    configureUniAdapter({ openType: (options: any) => options.success({ detail: { name: 'user' } }) })
+    configureHost({ openType: (options: any) => options.success({ detail: { name: 'user' } }) })
     const mounted = mount(Dialog)
     const result = mounted.exposed.value.alert({ actions: [{ text: 'Authorize', openType: 'getUserInfo', onGetuserinfo: authorized }] })
     await frames(2); fireEvent.tap(mounted.container.querySelector('.wd-dialog__actions .wd-button')!)
@@ -422,7 +425,7 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
 
   it('curtain image load derives aspect ratio, handles malformed native sizes, and clicks navigate/close once', async () => {
     const navigate = vi.fn(), click = vi.fn(), load = vi.fn(), error = vi.fn(), close = vi.fn()
-    configureUniAdapter({ navigateTo: navigate })
+    configureHost({ navigateTo: navigate })
     const mounted = mount(Curtain, { modelValue: true, src: 'https://example.com/a.png', width: 200, to: '/target', closeOnClick: false, onClick: click, onLoad: load, onError: error, onClose: close, 'onUpdate:modelValue': (v: boolean) => { mounted.props.value.modelValue = v } })
     await frames(2)
     const image = mounted.container.querySelector('image.wd-curtain__content-img')!
@@ -486,28 +489,35 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
     expect(mounted.container.querySelector('.wd-swiper')).toBeNull()
   })
 
-  it('video preview restores undefined options, forwards media attributes, requests host fullscreen and closes on exit', async () => {
-    const requestFullScreen = vi.fn(), factory = vi.fn(() => ({ requestFullScreen })), opened = vi.fn(), closed = vi.fn()
-    configureUniAdapter({ createVideoContext: factory })
+  it('video preview restores undefined options, renders native video/poster/title and drives native play', async () => {
+    const opened = vi.fn(), closed = vi.fn()
+    configureHost({ supportsVideoElement: () => true })
+    const playInvokes: any[] = []
+    const lynx = (globalThis as any).lynx
+    const originalQuery = lynx.createSelectorQuery
+    lynx.createSelectorQuery = () => ({ select: (selector: string) => ({ invoke: (options: any) => { playInvokes.push({ selector, ...options }); return { exec() {} } } }) })
+    restores.push(() => { lynx.createSelectorQuery = originalQuery })
     const mounted = mount(VideoPreview, { zIndex: 543, fullScreen: true, closePosition: 'right-top', onOpen: opened, onClose: closed })
     mounted.exposed.value.open({ url: 'a.mp4', poster: 'a.png', title: 'Title', zIndex: undefined, fullScreen: undefined, closePosition: undefined, onOpen: opened, onClose: closed })
-    await frames(3)
+    await frames(4)
     expect(opened).toHaveBeenCalledOnce()
     expect(mounted.container.querySelector('.wd-overlay')!.getAttribute('style')).toContain('z-index: 543')
     expect(mounted.container.querySelector('.wd-video-preview__close.is-right-top')).not.toBeNull()
     const video = mounted.container.querySelector('video')!
-    expect(video.getAttribute('src')).toBe('a.mp4'); expect(video.getAttribute('poster')).toBe('a.png'); expect(video.getAttribute('title')).toBe('Title')
-    expect(factory).toHaveBeenCalledOnce(); expect(factory.mock.calls[0][0]).toBe(video.id)
-    expect(requestFullScreen).toHaveBeenCalledExactlyOnceWith({ direction: 0 })
-    fireEvent(video, new (globalThis as any).lynxTestingEnv.jsdom.window.CustomEvent('bindEvent:fullscreenchange', { detail: { fullScreen: false } }))
-    await nextTick(); expect(closed).toHaveBeenCalledOnce(); await settled()
+    expect(video.getAttribute('src')).toBe('a.mp4')
+    // Lynx 的 video 没有 poster / title 属性：封面与标题由真实元素承载
+    expect(mounted.container.querySelector('.wd-video-preview__poster')!.getAttribute('src')).toBe('a.png')
+    expect(mounted.container.querySelector('.wd-video-preview__title')!.textContent).toBe('Title')
+    expect(playInvokes.some((item) => item.method === 'play' && item.selector === '#' + video.id), '全屏打开时下发原生 play').toBe(true)
+    mounted.exposed.value.close()
+    await settled()
     expect(mounted.container.querySelector('video')).toBeNull()
   })
 
   it('video preview close/reopen keeps the latest resource and cancels retained instance calls on unmount', async () => {
     // videoContext 能力决定是否挂载 <video>（缺失时降级封面占位，见
     // native-first/popover-batch 的降级用例），此处声明能力以覆盖 video 路径
-    configureUniAdapter({ createVideoContext: () => ({}) })
+    configureHost({ supportsVideoElement: () => true })
     const mounted = mount(VideoPreview)
     mounted.exposed.value.open({ url: 'old.mp4' }); await frames(2)
     mounted.exposed.value.close(); await frames(1); mounted.exposed.value.open({ url: 'new.mp4' }); await settled()
@@ -520,7 +530,7 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
   it('preview hooks initialize before children mount, isolate selectors, and ignore retained calls after unmount', async () => {
     let imageApi: ReturnType<typeof useImagePreview>, videoApi: ReturnType<typeof useVideoPreview>, imageOption: any, videoOption: any
     const Consumer = { setup() { imageOption = inject(getImagePreviewOptionKey('image-hook')); videoOption = inject(getVideoPreviewOptionKey('video-hook')); return () => [h(ImagePreview, { selector: 'image-hook' }), h(VideoPreview, { selector: 'video-hook' })] } }
-    configureUniAdapter({ createVideoContext: () => ({}) })
+    configureHost({ supportsVideoElement: () => true })
     const mounted = render({ setup() { imageApi = useImagePreview('image-hook'); videoApi = useVideoPreview('video-hook'); imageApi.previewImage(['hook.png']); videoApi.previewVideo({ url: 'hook.mp4' }); return () => h('view', null, [h(Consumer)]) } } as any)
     await frames(3)
     expect(mounted.container.querySelector('.wd-swiper__image')!.getAttribute('src')).toBe('hook.png')
@@ -586,7 +596,7 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
   it('tour scroll success remeasures target; canceled late measurement cannot overwrite the next step', async () => {
     let scrollOptions: any, scrolled = false
     const late: Array<(rect: any) => void> = []
-    configureUniAdapter({ pageScrollTo: (options: any) => { scrollOptions = options } })
+    configureHost({ pageScrollTo: (options: any) => { scrollOptions = options } })
     mockRects((selector, success) => {
       if (selector === '.old' && scrolled) late.push(success)
       else success(selector === '.old' ? rect(0, 900, 60, 40) : rect(20, 200, 80, 40))
@@ -609,20 +619,24 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
     expect(hidden(popup(mounted.container))).toBe(true)
   })
 
-  it('video replacement requests fullscreen and close cancels a queued host request', async () => {
-    const requestFullScreen = vi.fn(), factory = vi.fn(() => ({ requestFullScreen }))
-    configureUniAdapter({ createVideoContext: factory })
+  it('video replacement only queues native play for a live fullscreen request; close cancels it', async () => {
+    configureHost({ supportsVideoElement: () => true })
+    const playInvokes: any[] = []
+    const lynx = (globalThis as any).lynx
+    const originalQuery = lynx.createSelectorQuery
+    lynx.createSelectorQuery = () => ({ select: (selector: string) => ({ invoke: (options: any) => { playInvokes.push({ selector, ...options }); return { exec() {} } } }) })
+    restores.push(() => { lynx.createSelectorQuery = originalQuery })
     const mounted = mount(VideoPreview)
     mounted.exposed.value.open({ url: 'normal.mp4', fullScreen: false })
-    await frames(2)
-    expect(factory).not.toHaveBeenCalled()
+    await frames(4)
+    expect(playInvokes.filter((item) => item.method === 'play')).toHaveLength(0)
     mounted.exposed.value.open({ url: 'fullscreen.mp4', fullScreen: true })
-    await nextTick()
-    expect(requestFullScreen).toHaveBeenCalledExactlyOnceWith({ direction: 0 })
+    await nextTick(); await frames(1)
+    expect(playInvokes.filter((item) => item.method === 'play')).toHaveLength(1)
     mounted.exposed.value.open({ url: 'canceled.mp4', fullScreen: true })
     mounted.exposed.value.close()
     await nextTick()
-    expect(requestFullScreen).toHaveBeenCalledOnce()
+    expect(playInvokes.filter((item) => item.method === 'play')).toHaveLength(1)
   })
 
   it('tour HTML content falls back to decoded readable text, not literal markup', async () => {

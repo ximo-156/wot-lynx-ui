@@ -1,97 +1,118 @@
 /**
- * 平台能力探测（`common/platform.ts`，ADR-005 / ADR-015）。
+ * 平台能力探测（`common/platform.ts`，ADR-022）。
  *
  * 覆盖三件事：
  *
- * 1. **单一事实来源**：`capabilities` 是注册表的派生值，不另设一份声明。
- *    `canvas2d` 要求 `createCanvasContext` 与 `canvasToTempFilePath` **同时**存在
- *    —— 这个定义只写在 `CAPABILITY_APIS` 一处，组件不得自行组合字符串键。
- * 2. **mock 强制降级**：ADR-005 的原始诉求是「测试降级路径时无法注入全能力关闭的
- *    mock → 降级分支无覆盖」。因此 mock 必须能**压过已注入的宿主能力**，
- *    而不是简单地「不注入」。
+ * 1. **原生能力不依赖宿主注入**：`intersectionObserver` 直接来自
+ *    `lynx.createIntersectionObserver`，`videoElement` 来自引擎版本
+ *    （SystemInfo.engineVersion ≥ 4），宿主只对真正缺失的能力负责。
+ * 2. **mock 强制降级**：`mockPlatform()` 必须能**压过**已注册的宿主能力，
+ *    而不是简单地「不注册」。
  * 3. **能力真的驱动了组件分支**：`wd-backtop` 的 `pageScroll` 门禁在 mock 下
- *    必须拦住宿主注入的 `pageScrollTo`。
+ *    必须拦住宿主注册的 `pageScrollTo`。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { h } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { pause } from '../../src/common/util'
 import { fireEvent } from '../fire-event'
-import { configureUniAdapter } from '../../src/common/uni'
+import { configureHost } from '../../src/common/host'
 import { getPlatform, configurePlatform, mockPlatform } from '../../src/common/platform'
 import Backtop from '../../src/components/wd-backtop/wd-backtop.vue'
 import Signature from '../../src/components/wd-signature/wd-signature.vue'
 
-/** 本模块关心的注册表键；测试之间必须清干净，否则相互污染 */
-const ADAPTER_KEYS = [
-  'createCanvasContext',
-  'canvasToTempFilePath',
-  'createIntersectionObserver',
-  'createVideoContext',
-  'pageScrollTo'
-] as const
+/** 本模块关心的宿主能力键；测试之间必须清干净，否则相互污染 */
+const HOST_KEYS = ['createCanvasContext', 'canvasToTempFilePath', 'pageScrollTo', 'supportsVideoElement'] as const
 
-function resetAdapters(): void {
-  // configureUniAdapter 的既有契约：传 undefined 即撤回该能力
-  configureUniAdapter(Object.fromEntries(ADAPTER_KEYS.map((key) => [key, undefined])))
+function resetHost(): void {
+  // configureHost 的契约：传 undefined 即撤回该能力
+  configureHost(Object.fromEntries(HOST_KEYS.map((key) => [key, undefined])))
 }
 
-/** 注入一份「能力齐全」的宿主 */
+/** 注入一份「宿主能力齐全」的宿主 */
 function installFullHost(): void {
-  configureUniAdapter({
+  configureHost({
     createCanvasContext: () => ({}),
     canvasToTempFilePath: () => ({}),
-    createIntersectionObserver: () => ({}),
-    createVideoContext: () => ({}),
-    pageScrollTo: () => ({})
+    pageScrollTo: () => ({}),
+    supportsVideoElement: () => true
   })
 }
 
-// 既要退出时清理，也要在第一项执行前清理：测试 worker 会复用其它文件的模块。
-beforeEach(resetAdapters)
+/** 引擎原生交叉观察器：测试环境没有该实现，按真机能力补齐。 */
+function installNativeObserver(): () => void {
+  const lynx = (globalThis as any).lynx
+  const original = lynx.createIntersectionObserver
+  lynx.createIntersectionObserver = () => ({ disconnect() {} })
+  return () => { lynx.createIntersectionObserver = original }
+}
+
+/** 引擎版本：Lynx 4.1 起内置 <video> 元素。 */
+function installEngineVersion(version: string): () => void {
+  const info = (globalThis as any).SystemInfo
+  const original = info?.engineVersion
+  ;(globalThis as any).SystemInfo = { ...(info || {}), engineVersion: version }
+  return () => {
+    ;(globalThis as any).SystemInfo = original === undefined
+      ? info
+      : { ...(info || {}), engineVersion: original }
+  }
+}
+
+beforeEach(() => {
+  resetHost()
+  vi.restoreAllMocks()
+})
 
 afterEach(() => {
   cleanup()
-  resetAdapters()
+  resetHost()
 })
 
 describe('平台能力探测', () => {
-  it('未注入任何宿主能力时，四项能力全为 false', () => {
+  it('未注册宿主能力时：canvas2d / pageScroll 为 false，原生能力由引擎决定', () => {
+    const restoreVersion = installEngineVersion('3.9.0')
     const { capabilities } = getPlatform()
     expect(capabilities.canvas2d).toBe(false)
-    expect(capabilities.intersectionObserver).toBe(false)
-    expect(capabilities.videoContext).toBe(false)
     expect(capabilities.pageScroll).toBe(false)
+    expect(capabilities.videoElement, 'Lynx 3.x 没有内置 video 元素').toBe(false)
+    restoreVersion()
   })
 
-  it('能力由注册表派生：注入齐全后全为 true', () => {
-    installFullHost()
-    const { capabilities } = getPlatform()
-    expect(capabilities.canvas2d).toBe(true)
-    expect(capabilities.intersectionObserver).toBe(true)
-    expect(capabilities.videoContext).toBe(true)
-    expect(capabilities.pageScroll).toBe(true)
+  it('原生交叉观察器存在即为真，不需要宿主注册任何东西', () => {
+    const restoreObserver = installNativeObserver()
+    expect(getPlatform().capabilities.intersectionObserver, 'lynx.createIntersectionObserver 是引擎原生能力').toBe(true)
+    restoreObserver()
   })
 
-  it('canvas2d 要求两个 API 同时存在（缺一即为 false）', () => {
-    // 只注入一半：这正是「两个组件各自组合字符串键」会踩的分歧点
-    configureUniAdapter({ createCanvasContext: () => ({}) })
+  it('引擎版本 ≥ 4 时 videoElement 为真；宿主可显式覆盖', () => {
+    const restoreVersion = installEngineVersion('4.2.0')
+    expect(getPlatform().capabilities.videoElement).toBe(true)
+
+    configureHost({ supportsVideoElement: () => false })
+    expect(getPlatform().capabilities.videoElement, '宿主显式关闭优先于版本探测').toBe(false)
+    restoreVersion()
+  })
+
+  it('canvas2d 要求两个宿主 API 同时存在（缺一即为 false）', () => {
+    configureHost({ createCanvasContext: () => ({}) })
     expect(getPlatform().capabilities.canvas2d, '仅 createCanvasContext 不足以导出画布').toBe(false)
 
-    configureUniAdapter({ canvasToTempFilePath: () => ({}) })
+    // configureHost 是整体替换：必须同时注册两个 API
+    configureHost({ createCanvasContext: () => ({}), canvasToTempFilePath: () => ({}) })
     expect(getPlatform().capabilities.canvas2d).toBe(true)
   })
 
-  it('getPlatform 返回稳定实例，且能力是实时读取（宿主可后注入）', () => {
+  it('getPlatform 返回稳定实例，且能力是实时读取（宿主可后注册）', () => {
     const first = getPlatform()
     expect(getPlatform(), '同一对象，不要依赖两次调用返回新实例').toBe(first)
     expect(first.capabilities.pageScroll).toBe(false)
 
-    configureUniAdapter({ pageScrollTo: () => ({}) })
-    expect(first.capabilities.pageScroll, '能力不能是 setup 时快照，否则后注入的宿主能力读不到').toBe(true)
+    configureHost({ pageScrollTo: () => ({}) })
+    expect(first.capabilities.pageScroll, '能力不能是 setup 时快照，否则后注册的宿主能力读不到').toBe(true)
   })
 
-  it('mockPlatform 强制能力为 false，压过已注入的宿主能力', () => {
+  it('mockPlatform 强制能力为 false，压过已注册的宿主能力', () => {
     installFullHost()
     expect(getPlatform().capabilities.canvas2d).toBe(true)
 
@@ -99,6 +120,8 @@ describe('平台能力探测', () => {
     expect(getPlatform().name).toBe('mock')
     expect(getPlatform().capabilities.canvas2d).toBe(false)
     expect(getPlatform().capabilities.pageScroll).toBe(false)
+    expect(getPlatform().capabilities.intersectionObserver).toBe(false)
+    expect(getPlatform().capabilities.videoElement).toBe(false)
 
     restore()
     expect(getPlatform().capabilities.canvas2d, 'restore 后回到派生值').toBe(true)
@@ -135,7 +158,7 @@ describe('能力门禁真的驱动组件分支', () => {
 
   it('pageScroll 可用时，点击回到顶部会调用宿主 pageScrollTo', async () => {
     const scrollTo = vi.fn()
-    configureUniAdapter({ pageScrollTo: scrollTo })
+    configureHost({ pageScrollTo: scrollTo })
 
     let tapped = 0
     const container = await mountBacktop(() => tapped++)
@@ -147,9 +170,9 @@ describe('能力门禁真的驱动组件分支', () => {
     expect(scrollTo, '能力可用时必须走原生滚动').toHaveBeenCalledTimes(1)
   })
 
-  it('mockPlatform 关闭 pageScroll 后，即使宿主已注入也不调用', async () => {
+  it('mockPlatform 关闭 pageScroll 后，即使宿主已注册也不调用', async () => {
     const scrollTo = vi.fn()
-    configureUniAdapter({ pageScrollTo: scrollTo })
+    configureHost({ pageScrollTo: scrollTo })
     const restore = mockPlatform()
 
     let tapped = 0
@@ -159,7 +182,7 @@ describe('能力门禁真的驱动组件分支', () => {
     await pause(10)
 
     expect(tapped, '降级时仍抛事件，由消费方自行滚动').toBe(1)
-    expect(scrollTo, 'mock 必须压过宿主注入').not.toHaveBeenCalled()
+    expect(scrollTo, 'mock 必须压过宿主注册').not.toHaveBeenCalled()
 
     restore()
   })

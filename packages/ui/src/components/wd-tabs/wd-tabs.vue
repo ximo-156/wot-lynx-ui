@@ -383,8 +383,8 @@ async function updateLineStyle(animation: boolean = true) {
   const current = () => isAlive() && request === lineRequest && activeIndex === state.activeIndex
   try {
     const [rects, textRects] = await Promise.all([
-      getRect($item, true, proxy, undefined, navItems().map((_, index) => `#${tabsId}-item-${index}`)),
-      !isDef(lineWidth) && lineTheme === 'text' ? getRect($itemText, true, proxy, undefined, navItems().map((_, index) => `#${tabsId}-text-${index}`)) : Promise.resolve([])
+      getRect($item, true, navItems().map((_, index) => `#${tabsId}-item-${index}`)),
+      !isDef(lineWidth) && lineTheme === 'text' ? getRect($itemText, true, navItems().map((_, index) => `#${tabsId}-text-${index}`)) : Promise.resolve([])
     ])
     if (!current()) return
     const rect = rects[activeIndex]
@@ -427,7 +427,7 @@ function scrollIntoView() {
   const request = ++scrollRequest
   if (!state.inited || !isAlive()) return
   const activeIndex = state.activeIndex
-  Promise.all([getRect($item, true, proxy, undefined, navItems().map((_, index) => `#${tabsId}-item-${index}`)), getRect($container, false, proxy)]).then(([navItemsRects, navRect]) => {
+  Promise.all([getRect($item, true, navItems().map((_, index) => `#${tabsId}-item-${index}`)), getRect($container)]).then(([navItemsRects, navRect]) => {
     if (!isAlive() || request !== scrollRequest || activeIndex !== state.activeIndex) return
     const selectItem = navItemsRects[activeIndex]
     if (!selectItem) return

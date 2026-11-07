@@ -36,6 +36,9 @@ export const eventMap: Record<string, { defaultInit: Record<string, unknown> }> 
   input: { defaultInit: {} },
   confirm: { defaultInit: {} },
   layoutchange: { defaultInit: {} },
+  // 原生 <image> 生命周期事件（detail.width / height 是图片原始像素）
+  load: { defaultInit: {} },
+  error: { defaultInit: {} },
   transitionend: { defaultInit: {} },
   animationend: { defaultInit: {} }
 }
