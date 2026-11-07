@@ -12,12 +12,12 @@
 import DefaultTheme from 'vitepress/theme'
 import H5Preview from './H5Preview.vue'
 import { useRoute } from 'vitepress'
-import { computed, onMounted, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 
 const route = useRoute()
 
 /** 当前是否组件文档页（/components/button 或 /components/button.html） */
-const isComponentPage = computed(() => /^\/components\/[^/]+$/.test(route.path))
+const isComponentPage = computed(() => /^\/components\/[^/]+\/?$/.test(route.path))
 
 const slug = computed(() =>
   route.path.replace(/^\/components\//, '').replace(/\.html$/, '')
@@ -31,6 +31,7 @@ function syncBodyClass() {
 
 onMounted(syncBodyClass)
 watch(isComponentPage, syncBodyClass)
+onBeforeUnmount(() => { if (typeof document !== 'undefined') document.body.classList.remove('has-h5-preview') })
 </script>
 
 <template>

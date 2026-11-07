@@ -155,6 +155,7 @@ defineExpose({ showNotify, closeNotify })
 <template>
   <WdPopup
     v-model="state.visible"
+    :responsive="false"
     :custom-style="popupStyle"
     :position="state.position"
     :z-index="state.zIndex"

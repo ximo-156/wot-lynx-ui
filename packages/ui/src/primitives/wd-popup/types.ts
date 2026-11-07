@@ -95,6 +95,12 @@ export const popupProps = {
    */
   rootPortal: makeBooleanProp(false),
   /**
+   * 宽屏自适应：视口宽度 >= 768px 时底部弹层改为限宽居中模态框。
+   * 显式关闭可保留贴边/全宽布局（通知栏、锚定下拉菜单等）。
+   * 默认值：true
+   */
+  responsive: makeBooleanProp(true),
+  /**
    * 是否开启圆角,开启后根据弹出位置自动适配（底部弹出→上圆角，顶部弹出→下圆角，居中→四圆角）
    */
   round: makeBooleanProp(false)

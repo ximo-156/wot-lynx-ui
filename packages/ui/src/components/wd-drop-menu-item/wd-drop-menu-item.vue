@@ -52,7 +52,18 @@ const rootStyle = computed(() => ({
     : { top: '', bottom: '' }),
   ...parseStyle(props.customStyle)
 }))
-const popupStyle = computed(() => ({ 'max-height': props.popupHeight || '80%', ...parseStyle(props.customPopupStyle) }))
+/**
+ * 下拉面板样式。
+ *
+ * `width: 100%` 是**刻意覆盖** wd-popup 的宽屏 Sheet 封顶（480px）：本面板
+ * 是菜单栏的下拉层，要与整条菜单栏对齐，而不是变成居中的定宽卡片。customStyle
+ * 在 wd-popup 的 Style Funnel 里最后合并，优先级最高。
+ */
+const popupStyle = computed(() => ({
+  'max-height': props.popupHeight || '80%',
+  'width': '100%',
+  ...parseStyle(props.customPopupStyle)
+}))
 const scrollViewStyle = computed(() => ({ height: props.popupHeight || 'auto' }))
 watch(() => props.modelValue, (value) => {
   if (isDef(value) && typeof value !== 'number' && typeof value !== 'string') {
@@ -120,7 +131,7 @@ defineExpose<DropMenuItemExpose>({ getShowPop, open, close, toggle })
 <template>
   <view v-if="showWrapper" :class="`wd-drop-item ${customClass}`" :style="rootStyle">
     <WdPopup v-model="showPop" :z-index="zIndex" :duration="duration" :position="position" :custom-style="popupStyle"
-      :custom-class="`${customPopupClass} wd-drop-item__popup`" :modal="false" :close-on-click-modal="false" :root-portal="rootPortal"
+      :custom-class="`${customPopupClass} wd-drop-item__popup`" :responsive="false" :modal="false" :close-on-click-modal="false" :root-portal="rootPortal"
       @before-enter="beforeEnter" @after-enter="afterEnter" @before-leave="beforeLeave" @after-leave="afterLeave">
       <slot>
         <scroll-view :style="scrollViewStyle" scroll-y scroll-with-animation :show-scrollbar="true">

@@ -1,5 +1,6 @@
 import { AbortablePromise } from './AbortablePromise'
 import { getUniAdapter } from './uniAdapter'
+import { getViewportOverride } from './viewport-state'
 
 /**
  * 生成 uuid
@@ -940,25 +941,43 @@ export interface SystemInfo {
   [key: string]: any
 }
 
+/** Browser fallback only; native runtimes/test hosts may also expose a window. */
+export function getBrowserViewport(): { width: number; height: number } | null {
+  const g = globalThis as any
+  const platform = String(g.SystemInfo?.platform || '').toLowerCase()
+  if (platform ? platform !== 'web' : !!g.lynx) return null
+  const width = Number(g.window?.innerWidth)
+  const height = Number(g.window?.innerHeight)
+  return Number.isFinite(width) && width > 0
+    ? { width, height: Number.isFinite(height) && height > 0 ? height : 0 }
+    : null
+}
+
 /**
- * 获取系统信息（Lynx SystemInfo 全局对象）
+ * Window dimensions are application dimensions, not the physical display. Web
+ * Workers use the host-forwarded override; native hosts retain SystemInfo values.
+ * screenWidth/screenHeight stay physical-screen logical pixels for safe-area APIs.
  */
 export function getSystemInfo(): SystemInfo {
   const adapter = getUniAdapter('getSystemInfoSync')
   const info = { ...((globalThis as any).SystemInfo || {}), ...(adapter ? adapter() : {}) }
-  const pixelRatio = Number(info.pixelRatio) > 0 ? Number(info.pixelRatio) : 2
-  const physicalWidth = Number(info.pixelWidth) > 0 ? Number(info.pixelWidth) / pixelRatio : 375
-  const physicalHeight = Number(info.pixelHeight) > 0 ? Number(info.pixelHeight) / pixelRatio : 812
-  const screenWidth = Number(info.screenWidth) > 0 ? Number(info.screenWidth) : physicalWidth
-  const screenHeight = Number(info.screenHeight) > 0 ? Number(info.screenHeight) : physicalHeight
+  const positive = (value: unknown, fallback: number) => {
+    const number = Number(value)
+    return Number.isFinite(number) && number > 0 ? number : fallback
+  }
+  const pixelRatio = positive(info.pixelRatio, 2)
+  const screenWidth = positive(info.screenWidth, positive(info.pixelWidth, 375 * pixelRatio) / pixelRatio)
+  const screenHeight = positive(info.screenHeight, positive(info.pixelHeight, 812 * pixelRatio) / pixelRatio)
+  const browser = getBrowserViewport()
+  const viewport = getViewportOverride()
   return {
     ...info,
     pixelRatio,
     platform: String(info.platform || '').toLowerCase(),
     screenWidth,
     screenHeight,
-    windowWidth: Number(info.windowWidth) > 0 ? Number(info.windowWidth) : screenWidth,
-    windowHeight: Number(info.windowHeight) > 0 ? Number(info.windowHeight) : screenHeight,
+    windowWidth: viewport?.width ?? positive(info.windowWidth, browser?.width || screenWidth),
+    windowHeight: viewport?.height ?? positive(info.windowHeight, browser?.height || screenHeight),
     windowTop: Number(info.windowTop) || 0,
     statusBarHeight: Math.max(0, Number(info.statusBarHeight) || 0)
   }

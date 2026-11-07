@@ -32,10 +32,12 @@ import WdOverlay from '../../primitives/wd-overlay/wd-overlay.vue'
 import WdTransition from '../../primitives/wd-transition/wd-transition.vue'
 import { defaultOptions, getToastOptionKey, toastIcon } from '.'
 import { toastProps, type ToastDirection, type ToastLoadingType, type ToastOptions, type ToastProps } from './types'
-import { addUnit, getSystemInfo, isDef, isFunction } from '../../common/util'
+import { addUnit, isDef, isFunction } from '../../common/util'
+import { useViewportSize } from '../../composables/useWideViewport'
 import { defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(toastProps)
+const viewport = useViewportSize()
 
 const iconName = ref<string>('') // 图标类型
 const msg = ref<string>('') // 消息内容
@@ -106,14 +108,10 @@ const TOAST_ROOT_STYLE = defineStyleKeys({
  * 在一个内容大小的盒子里居中，于是 toast 贴在屏幕左上角、文字被上边缘裁掉。
  * 修法：宽高按窗口尺寸显式下发，不再依赖引擎对「四边 0 + flex」的尺寸推导。
  */
+watch(show, () => viewport.refresh(), { flush: 'sync' })
+
 function viewportSize(): { width: string; height: string } {
-  const info = getSystemInfo()
-  const w = Number(info?.windowWidth)
-  const h = Number(info?.windowHeight)
-  return {
-    width: Number.isFinite(w) && w > 0 ? `${w}px` : '100%',
-    height: Number.isFinite(h) && h > 0 ? `${h}px` : '100%'
-  }
+  return { width: `${viewport.width.value}px`, height: `${viewport.height.value}px` }
 }
 
 const transitionStyle = computed<Record<string, string>>(() => {
@@ -124,7 +122,7 @@ const transitionStyle = computed<Record<string, string>>(() => {
 const contentStyle = computed(() => {
   const offsets: Record<string, number> = { top: -0.4, 'middle-top': -0.188, bottom: 0.4 }
   const ratio = offsets[position.value]
-  return { transform: isDef(ratio) ? `translate3d(0, ${getSystemInfo().windowHeight * ratio}px, 0) translateY(50%)` : 'none' }
+  return { transform: isDef(ratio) ? `translate3d(0, ${viewport.height.value * ratio}px, 0) translateY(50%)` : 'none' }
 })
 
 const rootClass = computed(() => {

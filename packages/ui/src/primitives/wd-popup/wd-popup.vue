@@ -42,6 +42,7 @@ import type { TransitionName } from '../wd-transition/types'
 import { getSystemInfo, parseStyle } from '../../common/util'
 import { createStyleResolver, defineStyleKeys } from '../../common/style'
 import { SCROLL_LOCK_OWNER_KEY, useLockScroll } from '../../composables/useLockScroll'
+import { useIsWideViewport, useViewportSize } from '../../composables/useWideViewport'
 
 const props = defineProps(popupProps)
 const emit = defineEmits([
@@ -63,19 +64,19 @@ const transitionName = computed<TransitionName | TransitionName[]>(() => {
   if (props.transition) {
     return props.transition
   }
-  if (props.position === 'center') {
+  if (resolvedPosition.value === 'center') {
     return ['zoom-in', 'fade']
   }
-  if (props.position === 'left') {
+  if (resolvedPosition.value === 'left') {
     return 'slide-left'
   }
-  if (props.position === 'right') {
+  if (resolvedPosition.value === 'right') {
     return 'slide-right'
   }
-  if (props.position === 'bottom') {
+  if (resolvedPosition.value === 'bottom') {
     return 'slide-up'
   }
-  if (props.position === 'top') {
+  if (resolvedPosition.value === 'top') {
     return 'slide-down'
   }
   return 'slide-up'
@@ -92,8 +93,16 @@ useLockScroll(() => props.lockScroll && inPlace.value, scrollLockOwner)
 // 父层必须与弹窗同层；固定为 0 会把整个 fixed 面板压在背景滚轮的 z-index 下。
 const wrapperStyle = computed(() => ({ position: 'relative' as const, 'z-index': String(props.zIndex) }))
 const safeBottom = ref(0)
-const viewportWidth = ref(375)
-const viewportHeight = ref(812)
+/**
+ * 视口尺寸：浏览器端随窗口 `resize` 实时更新（Web 端拖动窗口时，Sheet 的
+ * 宽度与遮罩尺寸要跟着变，否则会停在打开那一刻的版式），原生端为宿主尺寸。
+ */
+const { width: viewportWidth, height: viewportHeight, refresh: refreshViewport } = useViewportSize()
+const isWide = useIsWideViewport(viewportWidth)
+const responsiveSheet = computed(() => props.responsive && isWide.value && props.position === 'bottom')
+const resolvedPosition = computed<PopupType>(() => responsiveSheet.value ? 'center' : props.position)
+// Limit sheets on wide screens without expanding controls to display width.
+const MAX_SHEET_WIDTH = 480
 
 /**
  * 全屏定位 harness（真机 2026-11-05 修复；结构照 wd-toast 的真机验收版）。
@@ -172,7 +181,7 @@ const HARNESS_ALIGNMENT: Record<PopupType, Record<string, string>> = {
 }
 const resolveHarnessStyle = createStyleResolver(HARNESS_STYLE)
 const harnessStyle = computed(() => resolveHarnessStyle(
-  HARNESS_ALIGNMENT[props.position],
+  HARNESS_ALIGNMENT[resolvedPosition.value],
   {
     'z-index': String(props.zIndex),
     // 真机不认「四边 0 + flex」的尺寸推导，宽高按窗口尺寸显式下发
@@ -188,8 +197,8 @@ const harnessStyle = computed(() => resolveHarnessStyle(
  * center：不放占位，面板是 harness 唯一流式子项，由 justify-content:
  * center 居中（真机已验证）。
  */
-const spacerBefore = computed(() => props.position === 'bottom' || props.position === 'right')
-const spacerAfter = computed(() => props.position === 'top' || props.position === 'left')
+const spacerBefore = computed(() => resolvedPosition.value === 'bottom' || resolvedPosition.value === 'right')
+const spacerAfter = computed(() => resolvedPosition.value === 'top' || resolvedPosition.value === 'left')
 
 /**
  * 内层面板（过渡根）样式：全量键集防止 position/customStyle 变动后留下旧边、
@@ -227,22 +236,34 @@ const POPUP_STYLE = defineStyleKeys({
   'flex-shrink': '0'
 })
 const resolvePopupStyle = createStyleResolver(POPUP_STYLE)
+
+/**
+ * 贴边 Sheet 的面板宽度：手机端等于视口宽，宽屏端封顶 `MAX_SHEET_WIDTH`
+ * 并由 harness 的 `align-items: center` 居中（两侧自然留白）。
+ *
+ * 只作用于 `position` 为 top/bottom 的 Sheet——侧边抽屉（left/right）本来就
+ * 不占满宽度，居中弹层（center）宽度由内容 / customStyle 决定。
+ */
+const sheetWidth = computed(() => props.responsive && isWide.value
+  ? Math.min(MAX_SHEET_WIDTH, Math.max(1, viewportWidth.value - 48))
+  : viewportWidth.value)
+
 const style = computed(() => {
-  // 贴边弹层定宽/定高（真机不认四边 0 的尺寸推导）；center 与侧边抽屉的
-  // 交叉轴随内容收缩包裹
-  const size: Record<string, string> =
-    props.position === 'top' || props.position === 'bottom'
-      ? { width: `${viewportWidth.value}px`, height: 'auto' }
-      : props.position === 'left' || props.position === 'right'
+  const size: Record<string, string> = responsiveSheet.value
+    ? { width: `${sheetWidth.value}px`, height: 'auto' }
+    : resolvedPosition.value === 'top' || resolvedPosition.value === 'bottom'
+      ? { width: `${sheetWidth.value}px`, height: 'auto' }
+      : resolvedPosition.value === 'left' || resolvedPosition.value === 'right'
         ? { width: 'auto', height: `${viewportHeight.value}px` }
         : { width: 'auto', height: 'auto' }
+  const margin = props.responsive && isWide.value && resolvedPosition.value === 'center' ? 48 : 0
   return resolvePopupStyle(
     size,
     {
       'z-index': String(props.zIndex),
       'padding-bottom': `${safeBottom.value}px`,
-      'max-width': `${viewportWidth.value}px`,
-      'max-height': `${viewportHeight.value}px`
+      'max-width': `${Math.max(1, viewportWidth.value - margin)}px`,
+      'max-height': `${Math.max(1, viewportHeight.value - margin)}px`
     },
     parseStyle(props.customStyle)
   )
@@ -251,27 +272,26 @@ const style = computed(() => {
 const rootClass = computed(() => {
   const classes = [
     'wd-popup',
-    `wd-popup--${props.position}`,
+    `wd-popup--${resolvedPosition.value}`,
     // 未显式指定 transition 的居中弹出使用更深的缩放（is-deep）
-    !props.transition && props.position === 'center' ? 'is-deep' : '',
+    !props.transition && resolvedPosition.value === 'center' ? 'is-deep' : '',
     props.round ? 'is-round' : '',
+    props.responsive && isWide.value ? 'is-wide' : '',
     props.customClass || ''
   ]
   return classes.filter(Boolean).join(' ')
 })
 
-watch([() => props.modelValue, () => props.safeAreaInsetBottom, () => props.position], () => {
-  // 重新打开时重读宿主信息，避免早期缺省值/安全区变动被 setup 快照固化。
+watch(() => props.modelValue, refreshViewport, { flush: 'sync' })
+watch([() => props.modelValue, () => props.safeAreaInsetBottom, () => resolvedPosition.value, viewportHeight], () => {
   const info = getSystemInfo()
-  viewportWidth.value = info.windowWidth
-  viewportHeight.value = info.windowHeight
   const inset = info.safeAreaInsets?.bottom
   const areaBottom = Number(info.safeArea?.bottom)
   const viewportBottom = info.windowTop + info.windowHeight
   const bottom = inset != null && Number.isFinite(Number(inset))
     ? Number(inset)
     : Number.isFinite(areaBottom) && areaBottom > 0 ? viewportBottom - areaBottom : 0
-  safeBottom.value = props.safeAreaInsetBottom
+  safeBottom.value = props.safeAreaInsetBottom && !responsiveSheet.value
     ? Math.min(info.windowHeight, Math.max(0, bottom))
     : 0
 }, { immediate: true, flush: 'sync' })

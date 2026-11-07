@@ -92,8 +92,10 @@ export { useConfigProvider, mapThemeVarsToCSSVars } from './composables/useConfi
 export { useGlobalConfig } from './composables/useGlobalConfig'
 export { useFormDisabled, FORM_KEY, FORM_ITEM_DISABLED_KEY } from './composables/useFormDisabled'
 export type { FormItemDisabledProvide, FormProvide } from './composables/useFormDisabled'
-export { useLockScroll, usePageScrollLock } from './composables/useLockScroll'
+export { useLockScroll, usePageScrollLock, SCROLL_LOCK_TARGET_KEY } from './composables/useLockScroll'
 export { useDeviceInfo } from './composables/useDeviceInfo'
+export { useViewportSize, useViewportWidth, useIsWideViewport } from './composables/useWideViewport'
+export type { ReactiveViewport } from './composables/useWideViewport'
 export { usePopover } from './composables/usePopover'
 export { useRadioGroup, RADIO_GROUP_KEY } from './composables/useRadioGroup'
 export type { RadioDirection, RadioGroupProvide, RadioPlacement, RadioType } from './composables/useRadioGroup'
@@ -112,6 +114,21 @@ export type {
   UploadSuccessStatus
 } from './composables/useUpload'
 export { Locale, useCurrentLang } from './locale'
+
+// ---------------------------------------------------------------------------
+// 响应式视口（宽屏 / Web 端适配）：Lynx 无 CSS 媒体查询，断点与视口口径统一从
+// 这里取。setViewportOverride 供宿主（如文档站预览）声明组件所在的画布尺寸。
+// ---------------------------------------------------------------------------
+export {
+  VIEWPORT_BREAKPOINTS,
+  getViewportSize,
+  getViewportOverride,
+  isWideViewport,
+  isDesktopViewport,
+  setViewportOverride,
+  hasViewportOverride
+} from './common/viewport'
+export type { ViewportSize } from './common/viewport'
 
 // ---------------------------------------------------------------------------
 // 工具函数

@@ -15,6 +15,9 @@ import { computed, nextTick, ref } from 'vue-lynx'
 import { listIcons, useToast } from 'wot-lynx-ui'
 import { demoBrokenImage, demoImage } from '../assets/demo-images'
 import UploadEvokeButton from './UploadEvokeButton.vue'
+import ShowcaseLayout from './ShowcaseLayout'
+
+const layoutProps = withDefaults(defineProps<{ columns?: number; contentWidth?: number }>(), { columns: 1, contentWidth: 0 })
 
 // 组件通过 wotLynxUI 插件全局注册（Tier 1：基础组件）
 const count = ref(0)
@@ -469,10 +472,10 @@ function onSubmitBar() {
 </script>
 
 <template>
-  <view class="showcase">
+  <ShowcaseLayout :columns="layoutProps.columns" :content-width="layoutProps.contentWidth">
       <view class="page__header">
         <text class="page__title">wot-lynx-ui</text>
-        <text class="page__subtitle">Vue Lynx 组件库 · 重写版 Tier 1 · {{ count }}</text>
+        <text class="page__subtitle">Vue Lynx 组件库 · Lynx / Web · {{ layoutProps.columns }} 列 · {{ count }}</text>
         <!-- 构建标记：真机上看到「R3」即第三批修复已生效；看不到说明加载了旧构建 -->
         <text class="demo-tag">build R3 · 1026 真机修复批（叠印 / 几何 / 隐形）</text>
       </view>
@@ -1718,7 +1721,7 @@ function onSubmitBar() {
       />
       <wd-image-preview ref="imagePreviewRef" selector="demo-image-preview" />
       <wd-video-preview ref="videoPreviewRef" selector="demo-video-preview" close-position="right-top" />
-  </view>
+  </ShowcaseLayout>
 </template>
 
 <style scoped>

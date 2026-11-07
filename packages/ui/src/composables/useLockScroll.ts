@@ -2,6 +2,7 @@ import {
   computed,
   getCurrentInstance,
   getCurrentScope,
+  inject,
   onActivated,
   onBeforeUnmount,
   onDeactivated,
@@ -14,12 +15,15 @@ import {
 
 /** Popup 与其遮罩共用一个 owner；嵌套 Popup 则建立自己的 owner。 */
 export const SCROLL_LOCK_OWNER_KEY: InjectionKey<symbol> = Symbol('wot-scroll-lock-owner')
+/** Embedded DOM previews lock their own canvas, not the outer document. */
+export const SCROLL_LOCK_TARGET_KEY: InjectionKey<() => HTMLElement | null> = Symbol('wot-scroll-lock-target')
 
 // 原生滚动是 scroll-view 自身的默认行为，BG 的 catch/stop 只停止事件冒泡。
 // 每个 useLockScroll 实例持有一个幂等 lease，同一 owner 的多个 lease 只计一层。
 const owners = new Map<symbol, Set<symbol>>()
 const ownerCount = ref(0)
 const pageScrollLocked = computed(() => ownerCount.value > 0)
+const scopedLocks = new WeakMap<HTMLElement, { leases: Set<symbol>; overflow: string; priority: string }>()
 
 let bodySnapshot: { body: HTMLElement; overflow: string; priority: string } | undefined
 
@@ -64,12 +68,29 @@ export function usePageScrollLock(): ComputedRef<boolean> {
  */
 export function useLockScroll(shouldLock: () => boolean, owner: symbol = Symbol('scroll-lock-owner')) {
   const lease = Symbol('scroll-lock-lease')
+  const targetFactory = getCurrentInstance() ? inject(SCROLL_LOCK_TARGET_KEY, undefined) : undefined
+  let target: HTMLElement | null = null
   let held = false
   let active = true
   let disposed = false
 
   function lock() {
     if (!active || disposed) return
+    if (targetFactory) {
+      const next = targetFactory()
+      if (held && next !== target) unlock()
+      if (!next?.style) return
+      target = next
+      let state = scopedLocks.get(target)
+      if (!state) {
+        state = { leases: new Set(), overflow: target.style.getPropertyValue('overflow'), priority: target.style.getPropertyPriority('overflow') }
+        scopedLocks.set(target, state)
+      }
+      state.leases.add(lease)
+      held = true
+      target.style.setProperty('overflow', 'hidden')
+      return
+    }
     if (!held) {
       let leases = owners.get(owner)
       if (!leases) owners.set(owner, (leases = new Set()))
@@ -83,6 +104,16 @@ export function useLockScroll(shouldLock: () => boolean, owner: symbol = Symbol(
   function unlock() {
     if (!held) return
     held = false
+    if (target) {
+      const state = scopedLocks.get(target)
+      state?.leases.delete(lease)
+      if (state && state.leases.size === 0) {
+        target.style.setProperty('overflow', state.overflow, state.priority)
+        scopedLocks.delete(target)
+      }
+      target = null
+      return
+    }
     const leases = owners.get(owner)
     leases?.delete(lease)
     if (leases?.size === 0) owners.delete(owner)

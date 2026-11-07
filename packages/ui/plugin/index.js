@@ -27,4 +27,5 @@ export function pluginWotLynxTags(options = {}) {
 export default pluginWotLynxTags
 
 export { pluginWotLynxWebFonts } from './web-fonts.js'
+export { pluginWotLynxWebViewport } from './web-viewport.js'
 export { pluginWotLynxAutoImport } from './auto-import.js'

@@ -94,12 +94,18 @@ $dialog-action-text-border: var(--wot-dialog-action-text-border, $stroke-light) 
   background: transparent;
 }
 
+// No media query: the popup's reactive viewport controls this state class.
+.wd-dialog.is-wide .wd-dialog__container {
+  width: var(--wot-dialog-wide-width, var(--wot-dialog-width, 420px));
+}
+
 @include b(dialog) {
   @include e(container) {
     background: $dialog-bg;
     border-radius: $dialog-radius;
     overflow: hidden;
     width: $dialog-width;
+    max-width: 100%;
     box-sizing: border-box;
     /* 根节点三件套（NATIVE-REWRITE §3.1）：关闭图标（绝对定位）+ body +
        actions 纵向排布；flex-shrink: 0 —— 居中弹层 .wd-popup 为 flex

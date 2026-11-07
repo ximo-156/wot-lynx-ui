@@ -23,7 +23,8 @@ import './index.css'
 import { computed, inject, ref, watch } from 'vue-lynx'
 import WdTransition from '../wd-transition/wd-transition.vue'
 import { overlayProps } from './types'
-import { getSystemInfo, parseStyle } from '../../common/util'
+import { parseStyle } from '../../common/util'
+import { useViewportSize } from '../../composables/useWideViewport'
 import { createStyleResolver, defineStyleKeys } from '../../common/style'
 import { SCROLL_LOCK_OWNER_KEY, useLockScroll } from '../../composables/useLockScroll'
 
@@ -57,13 +58,8 @@ useLockScroll(() => props.lockScroll && inPlace.value, inject(SCROLL_LOCK_OWNER_
  *
  * 重新展示时重读宿主信息，避免早期缺省值被 setup 快照固化（同 wd-popup）。
  */
-const viewportWidth = ref(375)
-const viewportHeight = ref(812)
-watch(() => props.show, () => {
-  const info = getSystemInfo()
-  viewportWidth.value = info.windowWidth
-  viewportHeight.value = info.windowHeight
-}, { immediate: true, flush: 'sync' })
+const { width: viewportWidth, height: viewportHeight, refresh: refreshViewport } = useViewportSize()
+watch(() => props.show, refreshViewport, { immediate: true, flush: 'sync' })
 
 const resolveTransitionStyle = createStyleResolver({
   'z-index': '1',

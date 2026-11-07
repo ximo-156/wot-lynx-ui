@@ -148,7 +148,10 @@ describe('wd-signature MTS 跟手', () => {
     expect(seg0).toMatch(/left:\s*29\.28/)
     expect(seg0).toMatch(/top:\s*148\.5px/)
 
-    // 第二段落在池中下一个元素（第一个元素不被覆盖）
+    // 第二段落在池中下一个元素（第一个元素不被覆盖）。
+    // write() 按同毫秒去重；waitFor 首段可同步成功，因此下一点必须跨帧，
+    // 不能把两次独立移动压进同一个 tick（整套运行时此前会偶发丢第二段）。
+    await frames(1)
     fireEvent.touchmove(canvas, { touches: [{ clientX: 260, clientY: 220 }] })
     await waitFor(() => /width:\s*100px/.test(styleOf(pool[1])))
     const seg1 = styleOf(pool[1])

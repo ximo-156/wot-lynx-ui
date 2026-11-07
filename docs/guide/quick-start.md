@@ -125,6 +125,58 @@ pnpm dev:demo
 
 启动后可访问 Web Preview 预览，或通过 Lynx Explorer 扫码在真机查看。
 
+## Web 与宽屏适配
+
+组件库同时支持 Lynx 原生渲染和 Lynx Web；宽屏不是把手机界面等比例放大。
+
+- Demo：小于 1024px 为单列，1024px 起为两列，1440px 起为三列；内容最大宽度为 1440px，宽屏居中。
+- 弹层：`WdPopup` 默认 `responsive=true`，视口达到 768px 后，底部面板改为限宽的居中模态框（默认最大 480px）。手机端仍为全宽底部面板。
+- 对话框：宽屏默认 420px，可用 `--wot-dialog-wide-width` 覆盖；原有 `--wot-dialog-width` 定制仍有效。
+- 定位通知、锚定菜单等保持原定位；自定义 `WdPopup` 可设 `:responsive="false"` 保留贴边/通栏行为，`customStyle` 仍可控制面板宽度。
+- 文档预览可切换手机与 Web 模式，并选择 768 / 1024 / 1280 / 1440px；窗口不足时会显示实际画布尺寸，不以缩放图片冒充宽屏布局。
+
+### Rspeedy Web 宿主
+
+Lynx Web 的组件逻辑运行在 Worker 中，不能直接读取浏览器 `window`；`SystemInfo` 的屏幕像素也不等于应用视口。启用宿主插件，把实际 `lynx-view` 尺寸传入组件库，并监听尺寸变化：
+
+```ts
+import { pluginWotLynxWebFonts, pluginWotLynxWebViewport } from 'wot-lynx-ui/plugin'
+
+export default defineConfig({
+  environments: { lynx: {}, web: {} },
+  plugins: [
+    pluginWotLynxWebFonts(),
+    pluginWotLynxWebViewport(),
+    pluginVueLynx({ enableCSSInheritance: true, enableCSSInlineVariables: true })
+  ]
+})
+```
+
+插件处理普通 Web 宿主 HTML 和 Rspeedy 的固定预览页；不修改原生端，也不需要轮询尺寸。
+
+应用布局可共用响应式视口，而不是在每个组件中各自猜测屏幕宽度：
+
+```ts
+import { computed } from 'vue-lynx'
+import { useViewportSize, isDesktopViewport } from 'wot-lynx-ui'
+
+const { width, height, refresh } = useViewportSize()
+const columns = computed(() => isDesktopViewport(width.value) ? 2 : 1)
+// 原生宿主没有尺寸通知时，可在宿主窗口变更后调用 refresh()。
+```
+
+自定义 Web 宿主应在创建 `lynx-view` 实例前设置 `browserConfig.windowWidth/windowHeight`；Vue Lynx Web 的尺寸消息通过主线程 SDK 的 JSContext 送至 Worker CoreContext：
+
+```ts
+view.browserConfig = { ...view.browserConfig, windowWidth: width, windowHeight: height }
+// jsContext 为 Web 运行时提供的主线程 lynx.getJSContext()。
+jsContext.dispatchEvent({ type: 'wot:viewport-change', data: { width, height } })
+```
+
+建议使用插件：它同时处理初始化、渲染就绪后的首次同步及后续尺寸变化；仅调用 `sendGlobalEvent` 在部分 Web SDK 中不足以唤起 Vue Lynx 的接收端。
+
+也可在应用自己的宿主回调中调用 `setViewportOverride({ width, height })`；传 `null` 清除覆盖。媒体选择、真实网络上传、Canvas 等能力仍需按下节的宿主契约接入，不会因启用视口插件而假装可用。
+
 ## 注入宿主能力（uni 兼容层）
 
 Lynx 环境没有 `uni` 全局对象。组件库内部通过 `common/uni.ts` 兼容层安全降级；

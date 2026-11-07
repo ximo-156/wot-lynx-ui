@@ -5,7 +5,7 @@ import { networkInterfaces } from 'node:os'
 import { pluginCssMinimizer } from '@rsbuild/plugin-css-minimizer'
 import { pluginQRCode } from '@lynx-js/qrcode-rsbuild-plugin'
 import { pluginVueLynx } from 'vue-lynx/plugin'
-import { pluginWotLynxTags, pluginWotLynxWebFonts } from 'wot-lynx-ui/plugin'
+import { pluginWotLynxTags, pluginWotLynxWebFonts, pluginWotLynxWebViewport } from 'wot-lynx-ui/plugin'
 
 /** 组件库源码内文件（相对 packages/ui/src 的路径）的绝对路径 */
 const uiSrc = (p: string) => fileURLToPath(new URL(`../ui/src/${p}`, import.meta.url))
@@ -76,6 +76,7 @@ export default defineConfig({
     }),
     pluginWotLynxTags(),
     pluginWotLynxWebFonts(),
+    pluginWotLynxWebViewport(),
     pluginQRCode({
       schema(url) {
         return `${url}?fullscreen=true`

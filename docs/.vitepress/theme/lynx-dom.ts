@@ -15,6 +15,10 @@
  * 3. **宿主全局**：注入 SystemInfo（屏幕尺寸），不注入 lynx 全局——
  *    让 getRect 走 common/util.ts 已有的 DOM 度量兜底路径。
  *
+ * 4. **画布尺寸声明**（setPreviewViewport）：预览里的组件渲染在一块手机框 /
+ * 桌面框内，而不是铺满浏览器窗口。弹层类组件按视口算尺寸，所以画布尺寸
+ * 必须由宿主显式告诉组件库，否则弹层会溢出预览框。
+ *
  * 该垫片只服务于文档预览，不进入组件库产物（CONVENTIONS.md §15 的
  * __web_preview 截图核对流程亦可复用本预览页）。
  */
@@ -25,6 +29,7 @@ import {
   type RendererElement,
   type RendererNode
 } from 'vue'
+import { getViewportOverride, normalizeViewportSize, setViewportOverride } from '../../../packages/ui/src/common/viewport-state'
 
 export * from 'vue'
 
@@ -402,6 +407,35 @@ export function installLynxGlobals(): void {
   installMouseToTouchBridge()
 }
 
+/** Restore pre-preview globals when the owning preview renderer is disposed. */
+export function capturePreviewViewport(): () => void {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'SystemInfo')
+  const override = getViewportOverride()
+  let restored = false
+  return () => {
+    if (restored) return
+    restored = true
+    if (previous) Object.defineProperty(globalThis, 'SystemInfo', previous)
+    else delete (globalThis as any).SystemInfo
+    setViewportOverride(override)
+  }
+}
+
+/** Canvas client dimensions (logical CSS pixels), never the outer browser size. */
+export function setPreviewViewport(width: number, height: number): void {
+  if (typeof window === 'undefined') return
+  const size = normalizeViewportSize({ width, height })
+  if (!size) return
+  const g = globalThis as any
+  const pixelRatio = Number(g.SystemInfo?.pixelRatio) > 0 ? Number(g.SystemInfo.pixelRatio) : 2
+  g.SystemInfo = {
+    ...(g.SystemInfo || {}), platform: 'web', pixelRatio,
+    pixelWidth: size.width * pixelRatio, pixelHeight: size.height * pixelRatio,
+    screenWidth: size.width, screenHeight: size.height,
+    windowWidth: size.width, windowHeight: size.height, windowTop: 0
+  }
+  setViewportOverride(size)
+}
 // ---------------------------------------------------------------------------
 // createApp —— 用自定义渲染器建树，供预览壳挂载真实组件
 // ---------------------------------------------------------------------------

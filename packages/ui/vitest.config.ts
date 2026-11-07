@@ -145,7 +145,9 @@ const PURE_TESTS = [
   'test/unit/theme-token-parity.test.ts',
   'test/unit/util-merge.test.ts',
   'test/unit/visual-diff.test.ts',
-  'test/unit/web-font-plugin.test.ts'
+  'test/unit/viewport.test.ts',
+  'test/unit/web-font-plugin.test.ts',
+  'test/unit/web-viewport-plugin.test.ts'
 ]
 
 export default defineConfig({

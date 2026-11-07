@@ -1,31 +1,44 @@
 <script setup lang="ts">
-import { usePageScrollLock, useQueue } from 'wot-lynx-ui'
+import { computed } from 'vue-lynx'
+import { usePageScrollLock, useQueue, useViewportSize, VIEWPORT_BREAKPOINTS } from 'wot-lynx-ui'
 import Showcase from './showcase/Showcase.vue'
 
 const pageScrollLocked = usePageScrollLock()
 const { closeOutside } = useQueue()
+const { width } = useViewportSize()
+const columns = computed(() => width.value >= 1440 ? 3 : width.value >= VIEWPORT_BREAKPOINTS.desktop ? 2 : 1)
+const padding = computed(() => columns.value > 1 ? 24 : 16)
+const contentWidth = computed(() => Math.max(1, Math.min(1440, width.value - padding.value * 2)))
+const pageStyle = computed(() => ({ padding: `${padding.value}px` }))
+const contentStyle = computed(() => ({
+  width: `${contentWidth.value}px`,
+  'margin-left': `${Math.max(0, (width.value - padding.value * 2 - contentWidth.value) / 2)}px`
+}))
 </script>
 
 <template>
-  <!-- app-root 显式挂 height:100%：Lynx 中百分比高度只相对「已确定高度」的父级解析，
-       若包裹层为 auto（内容高度），其下 scroll-view 的 height:100% 会解析成内容高度而非
-       屏幕高度——滚动容器与内容等高即无可滚动范围（页面无法滚动）。
-       链路：page 根(屏幕高，确定) > app-root(100%) > scroll-view.page(100%) > 内容。 -->
+  <!-- The explicit height chain keeps the native scroll viewport scrollable. -->
   <wd-config-provider theme="light" custom-class="app-root" @tap="closeOutside">
-    <scroll-view scroll-orientation="vertical" :scroll-enable="!pageScrollLocked" :enable-scroll="!pageScrollLocked" class="page">
-      <!-- 组件演示内容：与 device-test 入口共用同一份 Showcase（106/106 覆盖） -->
-      <Showcase />
+    <scroll-view scroll-orientation="vertical" :scroll-enable="!pageScrollLocked" :enable-scroll="!pageScrollLocked" class="page" :style="pageStyle">
+      <view class="page__content" :style="contentStyle">
+        <!-- Still the same 106-component catalog used by device-test. -->
+        <Showcase :columns="columns" :content-width="contentWidth" />
+      </view>
     </scroll-view>
   </wd-config-provider>
 </template>
 
 <style scoped>
 .app-root {
+  width: 100%;
   height: 100%;
 }
-
 .page {
+  width: 100%;
   height: 100%;
-  padding: 16px;
+  box-sizing: border-box;
+}
+.page__content {
+  flex-shrink: 0;
 }
 </style>
