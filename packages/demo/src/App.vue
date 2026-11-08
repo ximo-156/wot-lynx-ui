@@ -3,6 +3,7 @@ import { computed } from 'vue-lynx'
 import { usePageScrollLock, useQueue, useViewportSize, VIEWPORT_BREAKPOINTS } from 'wot-lynx-ui'
 import Showcase from './showcase/Showcase.vue'
 
+const demoProps = withDefaults(defineProps<{ stress?: boolean }>(), { stress: false })
 const pageScrollLocked = usePageScrollLock()
 const { closeOutside } = useQueue()
 const { width } = useViewportSize()
@@ -19,10 +20,10 @@ const contentStyle = computed(() => ({
 <template>
   <!-- The explicit height chain keeps the native scroll viewport scrollable. -->
   <wd-config-provider theme="light" custom-class="app-root" @tap="closeOutside">
-    <scroll-view scroll-orientation="vertical" :scroll-enable="!pageScrollLocked" :enable-scroll="!pageScrollLocked" class="page" :style="pageStyle">
+    <scroll-view id="main-demo-page" scroll-orientation="vertical" :scroll-enable="!pageScrollLocked" :enable-scroll="!pageScrollLocked" class="page" :style="pageStyle">
       <view class="page__content" :style="contentStyle">
-        <!-- Still the same 106-component catalog used by device-test. -->
-        <Showcase :columns="columns" :content-width="contentWidth" />
+        <!-- Same catalog; normal browsing mounts only the selected section. -->
+        <Showcase :columns="columns" :content-width="contentWidth" :browse="!demoProps.stress" scroll-target="#main-demo-page" />
       </view>
     </scroll-view>
   </wd-config-provider>

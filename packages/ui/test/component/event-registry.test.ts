@@ -55,7 +55,9 @@ describe('事件注册表', () => {
       }
     }
 
-    const { container } = render(DemoApp as any, {}, [wotLynxUI])
+    // Explicit stress mode keeps this test's all-component event coverage;
+    // the real entry defaults to one lazy section, guarded by demo-workload.
+    const { container } = render(DemoApp as any, { stress: true }, [wotLynxUI])
     await pause(300)
     // App 的真实入口才安装插件；只挂 App 而不安装，会把 wd-* 当未知标签，
     // 原测试虽然通过，却没有运行任何组件内部的事件处理器。

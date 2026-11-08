@@ -1,14 +1,10 @@
 /*
- * Showcase — 组件库全量演示（106/106 组件各有可渲染实例）。
+ * Showcase — 两个入口共用的全量目录（106/106 组件各有可访问的实例）。
  *
- * 为什么单独拆一个组件（2026-11-03）：真机测试页此前只渲染了 28 个组件的
- * 交互卡片，其余 78 个组件在真机上从来没有实例，用户扫 device-test 二维码
- * 时看到的就是「电脑上有的组件，真机上没有」。现在两个入口挂载**同一份**
- * 演示代码：main 入口（电脑 / Web 预览）与 device-test 入口（真机）看到的
- * 组件集合完全一致，任何「电脑能显示、真机不显示」的问题都能在同一页对比。
- *
- * 本文件内容由 App.vue 原样迁出，样式随之迁移（scoped），不要在这里
- * 写页面骨架（config-provider / scroll-view 留在各自的入口里）。
+ * 普通浏览只挂载一个 DemoSection，未选中的 slot 不求值；切换后卸载其
+ * 原生节点、定时器与观察器。填写值由本层保存，子组件临时状态不保活。
+ * 全量挂载仍可显式进入压力模式，不复制一份缩水的「性能演示」。
+ * 页面骨架（config-provider / scroll-view）保留在各自入口。
  */
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue-lynx'
@@ -16,8 +12,11 @@ import { listIcons, useToast } from 'wot-lynx-ui'
 import { demoBrokenImage, demoImage } from '../assets/demo-images'
 import UploadEvokeButton from './UploadEvokeButton.vue'
 import ShowcaseLayout from './ShowcaseLayout'
+import DemoSection from './DemoSection'
 
-const layoutProps = withDefaults(defineProps<{ columns?: number; contentWidth?: number }>(), { columns: 1, contentWidth: 0 })
+const layoutProps = withDefaults(defineProps<{
+  columns?: number; contentWidth?: number; browse?: boolean; scrollTarget?: string
+}>(), { columns: 1, contentWidth: 0, browse: false, scrollTarget: '' })
 
 // 组件通过 wotLynxUI 插件全局注册（Tier 1：基础组件）
 const count = ref(0)
@@ -469,20 +468,36 @@ const submitPrice = ref(12880)
 function onSubmitBar() {
   console.log('[demo] submit-bar submit')
 }
+
+// Values live in this catalog; transient surfaces must not reopen on return.
+// Sections themselves are not kept alive (offscreen timers/observers stop).
+function resetTransientDemos() {
+  for (const visible of [pickerVisible, datetimeVisible, calendarVisible, keyboardVisible,
+    customKeyboardVisible, carKeyboardVisible, asVisible, fabDemoVisible, fabActive, fabActiveLeft,
+    cascaderVisible, selectPickerVisible, cropperVisible, popupVisible, overlayVisible,
+    popoverVisible, tooltipVisible, tourVisible, curtainVisible, panelVisible, portalBarVisible, shareVisible]) {
+    visible.value = false
+  }
+  toast.close()
+  notifyRef.value?.closeNotify()
+  dialogRef.value?.close()
+  imagePreviewRef.value?.close()
+  videoPreviewRef.value?.close()
+}
 </script>
 
 <template>
-  <ShowcaseLayout :columns="layoutProps.columns" :content-width="layoutProps.contentWidth">
+  <ShowcaseLayout :columns="layoutProps.columns" :content-width="layoutProps.contentWidth" :browse="layoutProps.browse" :scroll-target="layoutProps.scrollTarget" initial-section="button" @section-change="resetTransientDemos">
       <view class="page__header">
         <text class="page__title">wot-lynx-ui</text>
         <text class="page__subtitle">Vue Lynx 组件库 · Lynx / Web · {{ layoutProps.columns }} 列 · {{ count }}</text>
-        <!-- 构建标记：真机上看到「R3」即第三批修复已生效；看不到说明加载了旧构建 -->
-        <text class="demo-tag">build R3 · 1026 真机修复批（叠印 / 几何 / 隐形）</text>
+        <text class="demo-tag">build R16 · 默认按项挂载；全量模式仅用于压力测试</text>
       </view>
 
       <!-- ConfigProvider 主题切换 -->
+      <DemoSection name="config-provider" title="ConfigProvider 全局配置" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">ConfigProvider 全局配置</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">主题（本页固定 light，暗色令牌见 theme）</text>
           <view class="demo-row">
@@ -491,10 +506,12 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
       <!-- Button -->
+      <DemoSection name="button" title="Button 按钮" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Button 按钮</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">类型</text>
           <view class="demo-row">
@@ -538,10 +555,12 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
       <!-- Icon / Loading -->
+      <DemoSection name="icon" title="Icon 图标 / Loading 加载" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Icon 图标 / Loading 加载</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">内置图标（{{ allIcons.length }} 个，wd-pagination 分页展示）</text>
           <wd-grid :column="5">
@@ -563,10 +582,12 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
       <!-- Cell / CellGroup -->
+      <DemoSection name="cell" title="Cell 单元格" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Cell 单元格</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <wd-cell-group title="基础用法" border>
             <wd-cell title="单元格" value="内容" />
@@ -579,10 +600,12 @@ function onSubmitBar() {
           </wd-cell-group>
         </view>
       </view>
+      </DemoSection>
 
       <!-- 表单体系（Tier 2） -->
+      <DemoSection name="form" title="Form 表单体系" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Form 表单体系</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">Switch / Radio / Checkbox</text>
           <view class="demo-row">
@@ -638,10 +661,12 @@ function onSubmitBar() {
           </wd-form>
         </view>
       </view>
+      </DemoSection>
 
       <!-- Picker / Datetime / Calendar（Tier 2b） -->
+      <DemoSection name="picker" title="Picker 选择器 / Datetime / Calendar" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Picker 选择器 / Datetime / Calendar</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <view class="demo-row">
             <wd-button type="primary" size="small" @tap="pickerVisible = true">单列选择</wd-button>
@@ -682,10 +707,33 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      <wd-picker
+        v-model="pickerValue"
+        v-model:visible="pickerVisible"
+        :columns="pickerColumns"
+        title="选择器"
+        @confirm="(e: any) => console.log('[demo] picker confirm', e)"
+      />
+      <wd-datetime-picker
+        v-model="datetimeValue"
+        v-model:visible="datetimeVisible"
+        type="datetime"
+        title="日期时间"
+        @confirm="(e: any) => console.log('[demo] datetime confirm', e)"
+      />
+      <wd-calendar
+        v-model="calendarValue"
+        v-model:visible="calendarVisible"
+        type="date"
+        title="日历"
+        @confirm="(e: any) => console.log('[demo] calendar confirm', e)"
+      />
+      </DemoSection>
 
       <!-- Keyboard 键盘（独立成节：数字 / 自定义 / 车牌三种模式） -->
+      <DemoSection name="keyboard" title="Keyboard 键盘" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Keyboard 键盘</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">默认数字键盘 + PasswordInput（支付密码场景，maxlength=6）</text>
           <view class="demo-row">
@@ -716,36 +764,23 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
-
-      <!-- 弹层类组件（Tier 2b） -->
-      <wd-picker
-        v-model="pickerValue"
-        v-model:visible="pickerVisible"
-        :columns="pickerColumns"
-        title="选择器"
-        @confirm="(e: any) => console.log('[demo] picker confirm', e)"
-      />
-      <wd-datetime-picker
-        v-model="datetimeValue"
-        v-model:visible="datetimeVisible"
-        type="datetime"
-        title="日期时间"
-        @confirm="(e: any) => console.log('[demo] datetime confirm', e)"
-      />
-      <wd-calendar
-        v-model="calendarValue"
-        v-model:visible="calendarVisible"
-        type="date"
-        title="日历"
-        @confirm="(e: any) => console.log('[demo] calendar confirm', e)"
-      />
       <wd-keyboard v-model="payValue" v-model:visible="keyboardVisible" />
       <wd-keyboard v-model="customKeyboardValue" v-model:visible="customKeyboardVisible" mode="custom" extra-key="." close-text="关闭" />
       <wd-keyboard v-model="carKeyboardValue" v-model:visible="carKeyboardVisible" mode="car" :maxlength="8" auto-switch-lang />
+      </DemoSection>
+
+
+
+
+
+
+
+
 
       <!-- 展示 / 布局 / 导航（Tier 3） -->
+      <DemoSection name="display" title="展示 / 布局 / 导航" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">展示 / 布局 / 导航</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">Tag / Badge / Avatar / Progress</text>
           <view class="demo-row">
@@ -789,10 +824,12 @@ function onSubmitBar() {
           </wd-grid>
         </view>
       </view>
+      </DemoSection>
 
       <!-- 图形码 / 弹层（Tier 3d/4） -->
+      <DemoSection name="graphics-feedback" title="图形码 / 弹层反馈" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">图形码 / 弹层反馈</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">QrCode / BarCode / Circle（SVG 方案）</text>
           <view class="demo-row">
@@ -828,15 +865,20 @@ function onSubmitBar() {
           </wd-collapse>
         </view>
       </view>
-
-      <!-- 命令式弹层实例 -->
       <wd-dialog ref="dialogRef" selector="demo-dialog" />
       <wd-action-sheet ref="actionSheetRef" v-model="asVisible" :actions="[{ name: '选项一' }, { name: '选项二' }]" cancel-text="取消" />
       <wd-notify ref="notifyRef" selector="demo-notify" />
+      </DemoSection>
+
+
+
+
+
 
       <!-- Text / Divider / Gap -->
+      <DemoSection name="text" title="Text 文本 / Divider 分割线 / Gap 间距" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Text 文本 / Divider 分割线 / Gap 间距</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <view class="demo-row">
             <wd-text text="主文本" />
@@ -856,10 +898,12 @@ function onSubmitBar() {
           <wd-gap height="12" bg-color="#F7F8FA" />
         </view>
       </view>
+      </DemoSection>
 
       <!-- Overlay / Transition / RootPortal -->
+      <DemoSection name="transition" title="Transition 过渡" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Transition 过渡</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">弹层三件套的组合用法随 Tier 3（Popup/Dialog）演示回归</text>
           <view class="demo-row">
@@ -871,10 +915,12 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
       <!-- 导航类组件（Tier 5 补齐） -->
+      <DemoSection name="navbar" title="Navbar 导航栏" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Navbar 导航栏</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">标题 + 左侧箭头 + 下边框</text>
           <wd-navbar title="标题" left-arrow bordered @click-left="() => console.log('[demo] navbar 左侧')" @click-right="() => console.log('[demo] navbar 右侧')" />
@@ -888,9 +934,11 @@ function onSubmitBar() {
           </wd-navbar>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="navbar-capsule" title="NavbarCapsule 导航胶囊" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">NavbarCapsule 导航胶囊</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">返回 + 首页 / 仅返回（show-home=false + border）</text>
           <view class="demo-row">
@@ -904,9 +952,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="sort-button" title="SortButton 排序按钮" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">SortButton 排序按钮</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <view class="demo-row">
             <wd-sort-button v-model="sortValue" title="价格" @change="(e: any) => console.log('[demo] sort change', e)" />
@@ -920,9 +970,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="swiper-nav" title="SwiperNav 轮播导航" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">SwiperNav 轮播导航</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">dots / dots-bar / fraction：点击左右按钮切换当前项</text>
           <view
@@ -940,9 +992,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="tabbar" title="Tabbar 标签栏" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Tabbar 标签栏</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">基础用法（v-model + bordered + change 事件）</text>
           <wd-tabbar v-model="tabbarValue" bordered @change="(e: any) => console.log('[demo] tabbar change', e)">
@@ -961,9 +1015,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="tabbar-item" title="TabbarItem 标签栏项" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">TabbarItem 标签栏项</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">icon / active-icon / value 徽标 / is-dot 圆点 / max 上限</text>
           <wd-tabbar v-model="tabbarItemValue">
@@ -978,9 +1034,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="loadmore" title="Loadmore 加载更多" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Loadmore 加载更多</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <view class="demo-row">
             <wd-button size="small" @tap="cycleLoadmoreState">切换状态</wd-button>
@@ -989,9 +1047,11 @@ function onSubmitBar() {
           <wd-loadmore :state="loadmoreState" loading-text="努力加载中..." finished-text="没有更多了" error-text="加载失败，点击重试" @reload="() => console.log('[demo] loadmore reload')" />
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="index-anchor" title="IndexAnchor 索引锚点" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">IndexAnchor 索引锚点</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">index 必填；无插槽内容时回退显示索引字符</text>
           <view :style="{ height: '300px' }">
@@ -1007,9 +1067,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="index-bar" title="IndexBar 索引栏" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">IndexBar 索引栏</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">城市列表（外层容器固定 300px，触摸右侧索引条跳转，sticky 吸顶）</text>
           <view :style="{ height: '300px' }">
@@ -1024,9 +1086,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="fab" title="Fab 悬浮按钮" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Fab 悬浮按钮</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <view class="demo-row">
             <wd-button size="small" @tap="fabDemoVisible = !fabDemoVisible">{{ fabDemoVisible ? '隐藏悬浮按钮' : '显示悬浮按钮' }}</wd-button>
@@ -1052,10 +1116,12 @@ function onSubmitBar() {
           </wd-fab>
         </view>
       </view>
+      </DemoSection>
 
       <!-- 展示 / 布局类组件（Tier 5 补齐） -->
+      <DemoSection name="img" title="Img 图片" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Img 图片</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">mode 裁剪模式</text>
           <view class="demo-row">
@@ -1077,9 +1143,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="empty" title="Empty 空状态" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Empty 空状态</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">基础用法</text>
           <wd-empty tip="暂无数据" />
@@ -1096,9 +1164,11 @@ function onSubmitBar() {
           </wd-empty>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="skeleton" title="Skeleton 骨架屏" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Skeleton 骨架屏</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">animation 动画类型</text>
           <view class="demo-row" :style="{ 'align-items': 'flex-start' }">
@@ -1119,9 +1189,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="count-to" title="CountTo 数字滚动" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">CountTo 数字滚动</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">type 主题 / prefix / suffix / decimals</text>
           <view class="demo-row">
@@ -1140,9 +1212,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="backtop" title="Backtop 回到顶部" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Backtop 回到顶部</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">scroll-view 滚动超过 top 阈值显示</text>
           <scroll-view scroll-orientation="vertical" :style="{ height: '220px' }" :scroll-top="backtopScrollTop" @scroll="onBacktopScroll">
@@ -1160,9 +1234,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="col" title="Col 列布局" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Col 列布局</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">span 占据数（24 制）</text>
           <wd-row :style="{ 'margin-bottom': '8px' }">
@@ -1183,9 +1259,11 @@ function onSubmitBar() {
           </wd-row>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="row" title="Row 行布局" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Row 行布局</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">gutter 列间距</text>
           <wd-row :gutter="12" :style="{ 'margin-bottom': '8px' }">
@@ -1208,9 +1286,11 @@ function onSubmitBar() {
           </wd-row>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="resize" title="Resize 尺寸监听" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Resize 尺寸监听</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">内容尺寸变化时触发 resize</text>
           <wd-resize @resize="onResize">
@@ -1226,9 +1306,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="sticky" title="Sticky 粘性布局" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Sticky 粘性布局</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">滚动容器内吸顶（zIndex / offsetTop）</text>
           <scroll-view scroll-orientation="vertical" :style="{ height: '200px' }">
@@ -1250,9 +1332,11 @@ function onSubmitBar() {
           </scroll-view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="sticky-box" title="StickyBox 粘性容器" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">StickyBox 粘性容器</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">offsetTop 偏移（容器高度由外层样式承担）</text>
           <wd-sticky-box :style="{ height: '180px' }">
@@ -1274,10 +1358,12 @@ function onSubmitBar() {
           </wd-sticky-box>
         </view>
       </view>
+      </DemoSection>
 
       <!-- 选择器 / 表单类组件（Tier 5 补齐） -->
+      <DemoSection name="cascader" title="Cascader 级联选择" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Cascader 级联选择</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">弹层形态（v-model:visible，三级选项）</text>
           <view class="demo-row">
@@ -1286,9 +1372,18 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      <wd-cascader
+        v-model="cascaderValue"
+        v-model:visible="cascaderVisible"
+        :options="cascaderOptions"
+        title="选择地区"
+        @confirm="(e: any) => console.log('[demo] cascader confirm', e)"
+      />
+      </DemoSection>
 
+      <DemoSection name="select-picker" title="SelectPicker 下拉选择" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">SelectPicker 下拉选择</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">多选弹层（type="checkbox"，v-model:visible）</text>
           <view class="demo-row">
@@ -1297,9 +1392,18 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      <wd-select-picker
+        v-model="selectPickerValue"
+        v-model:visible="selectPickerVisible"
+        :columns="selectPickerColumns"
+        title="选择分类"
+        @confirm="(e: any) => console.log('[demo] select-picker confirm', e)"
+      />
+      </DemoSection>
 
+      <DemoSection name="drop-menu" title="DropMenu 下拉菜单" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">DropMenu 下拉菜单</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <wd-drop-menu>
             <wd-drop-menu-item
@@ -1321,9 +1425,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="drop-menu-item" title="DropMenuItem 下拉菜单项" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">DropMenuItem 下拉菜单项</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <wd-drop-menu>
             <wd-drop-menu-item
@@ -1342,9 +1448,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="calendar-view" title="CalendarView 日历视图" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">CalendarView 日历视图</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">内嵌视图（type="date"，无弹层）</text>
           <wd-calendar-view v-model="calendarViewValue" :style="{ height: '400px' }" />
@@ -1353,9 +1461,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="date-time-picker-view" title="DateTimePickerView 日期时间视图" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">DateTimePickerView 日期时间视图</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">内嵌视图（type="datetime"，无弹层）</text>
           <view :style="{ height: '280px' }">
@@ -1366,9 +1476,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="img-cropper" title="ImgCropper 图片裁剪" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">ImgCropper 图片裁剪</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">基础裁剪（网络图，aspectRatio="1:1"）</text>
           <view class="demo-row">
@@ -1377,9 +1489,17 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      <wd-img-cropper
+        v-model="cropperVisible"
+        :img-src="demoImage"
+        aspect-ratio="1:1"
+        @confirm="onCropperConfirm"
+      />
+      </DemoSection>
 
+      <DemoSection name="avatar-group" title="AvatarGroup 头像组" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">AvatarGroup 头像组</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">层叠叠加（max-count=3 折叠，cascading 默认 left-up，超出收进折叠头像）</text>
           <view class="demo-row">
@@ -1397,9 +1517,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="swipe-action" title="SwipeAction 滑动操作" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">SwipeAction 滑动操作</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-tag">{{ swipeTip }}</text>
           <wd-swipe-action v-for="(cell, index) in swipeCells" :key="index" v-model="cell.status">
@@ -1416,9 +1538,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="table-column" title="TableColumn 表格列" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">TableColumn 表格列</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">作用域插槽自定义列（status 渲染为标签）</text>
           <!-- 自定义单元格：在具体列上写 #value 作用域插槽（row 为该行数据）；
@@ -1438,9 +1562,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="watermark" title="Watermark 水印" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Watermark 水印</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">文字水印（content，固定高度容器）</text>
           <view :style="{ height: '180px', 'border-radius': '12px', overflow: 'hidden' }">
@@ -1454,10 +1580,12 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
       <!-- 弹层反馈类组件（Tier 5 补齐） -->
+      <DemoSection name="popup" title="Popup 弹出层" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Popup 弹出层</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">弹出位置（v-model 受控，round + closable）</text>
           <view class="demo-row">
@@ -1473,9 +1601,17 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      <wd-popup v-model="popupVisible" :position="popupPosition" round closable>
+        <view :style="{ padding: '24px', 'min-width': '200px' }">
+          <text class="demo-panel__label">position = {{ popupPosition }}</text>
+          <text class="demo-panel__label">点击遮罩或关闭按钮退出</text>
+        </view>
+      </wd-popup>
+      </DemoSection>
 
+      <DemoSection name="overlay" title="Overlay 遮罩" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Overlay 遮罩</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">基础遮罩（:show 控制，点击遮罩关闭）</text>
           <view class="demo-row">
@@ -1484,9 +1620,21 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      <wd-overlay :show="overlayVisible" @click="overlayVisible = false">
+        <!-- 遮罩内容不能用 position: fixed：Lynx 会把 fixed 节点提升到页面根节点，
+             它就不再是遮罩的子节点——遮罩隐藏时它照样常驻、点击也不会冒泡到遮罩
+             （2026-10-19 演示页实测「点任意处关闭」失效）。这里用撑满 + flex 居中。 -->
+        <view class="overlay-center">
+          <view class="overlay-box">
+            <text class="demo-panel__label">遮罩内容（点击任意处关闭）</text>
+          </view>
+        </view>
+      </wd-overlay>
+      </DemoSection>
 
+      <DemoSection name="popover" title="Popover 气泡弹出" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Popover 气泡弹出</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">normal 模式（点击目标切换，Lynx 无 hover）</text>
           <view class="demo-row">
@@ -1502,9 +1650,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="tooltip" title="Tooltip 文字提示" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Tooltip 文字提示</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">纯文本提示（点击目标切换可见性）</text>
           <view class="demo-row">
@@ -1515,9 +1665,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="tour" title="Tour 新手引导" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Tour 新手引导</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">分步引导（steps: element / title / content）</text>
           <view class="demo-row">
@@ -1533,9 +1685,12 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      <wd-tour v-model="tourVisible" :steps="tourSteps" @finish="() => console.log('[demo] tour finish')" />
+      </DemoSection>
 
+      <DemoSection name="curtain" title="Curtain 幕帘" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Curtain 幕帘</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">横幅幕布广告（src + width + closePosition + to）</text>
           <view class="demo-row">
@@ -1544,9 +1699,18 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      <wd-curtain
+        v-model="curtainVisible"
+        :src="demoImage"
+        :width="260"
+        close-position="bottom"
+        to="/pages/demo/index"
+      />
+      </DemoSection>
 
+      <DemoSection name="floating-panel" title="FloatingPanel 浮动面板" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">FloatingPanel 浮动面板</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">拖动手柄改变高度，松手吸附到最近锚点</text>
           <view class="demo-row">
@@ -1566,9 +1730,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="toast" title="Toast 轻提示" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">Toast 轻提示</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">命令式 API：useToast(selector)（模块级注入单例）</text>
           <view class="demo-row">
@@ -1585,9 +1751,11 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      </DemoSection>
 
+      <DemoSection name="image-preview" title="ImagePreview 图片预览" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">ImagePreview 图片预览</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">命令式 API：ref.open({ images, startPosition })</text>
           <view class="demo-row">
@@ -1599,9 +1767,12 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
+      <wd-image-preview ref="imagePreviewRef" selector="demo-image-preview" />
+      </DemoSection>
 
+      <DemoSection name="video-preview" title="VideoPreview 视频预览" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">VideoPreview 视频预览</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">命令式 API：ref.open({ url, poster, title })</text>
           <view class="demo-row">
@@ -1615,9 +1786,12 @@ function onSubmitBar() {
           <text class="demo-panel__label">宿主未注入视频能力时显示封面占位（不创建 video 节点）</text>
         </view>
       </view>
+      <wd-video-preview ref="videoPreviewRef" selector="demo-video-preview" close-position="right-top" />
+      </DemoSection>
 
+      <DemoSection name="root-portal" title="RootPortal 根节点容器" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">RootPortal 根节点容器</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">fixed 内容经 RootPortal 提升至页面根节点，主题令牌保持继承</text>
           <view class="demo-row">
@@ -1630,11 +1804,13 @@ function onSubmitBar() {
           </wd-root-portal>
         </view>
       </view>
+      </DemoSection>
 
       <!-- 补充组件（全量覆盖）：这 6 个此前在主 demo 中从未出现，
            真机上一次都没被看过，因此单列一个区块，纳入真机巡检范围 -->
+      <DemoSection name="extras" title="补充组件（全量覆盖 · 真机必查）" v-slot="{ title }">
       <view class="demo-section">
-        <text class="demo-section__title">补充组件（全量覆盖 · 真机必查）</text>
+        <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">Icon 直接使用（此前仅经其它组件间接渲染）</text>
           <view class="demo-row">
@@ -1667,61 +1843,26 @@ function onSubmitBar() {
           </view>
         </view>
       </view>
-
-      <!-- 不可见弹层实例（命令式 / 受控显隐，集中在 scroll-view 末尾） -->
-      <wd-cascader
-        v-model="cascaderValue"
-        v-model:visible="cascaderVisible"
-        :options="cascaderOptions"
-        title="选择地区"
-        @confirm="(e: any) => console.log('[demo] cascader confirm', e)"
-      />
-      <wd-select-picker
-        v-model="selectPickerValue"
-        v-model:visible="selectPickerVisible"
-        :columns="selectPickerColumns"
-        title="选择分类"
-        @confirm="(e: any) => console.log('[demo] select-picker confirm', e)"
-      />
-      <wd-img-cropper
-        v-model="cropperVisible"
-        :img-src="demoImage"
-        aspect-ratio="1:1"
-        @confirm="onCropperConfirm"
-      />
-      <wd-popup v-model="popupVisible" :position="popupPosition" round closable>
-        <view :style="{ padding: '24px', 'min-width': '200px' }">
-          <text class="demo-panel__label">position = {{ popupPosition }}</text>
-          <text class="demo-panel__label">点击遮罩或关闭按钮退出</text>
-        </view>
-      </wd-popup>
-      <wd-overlay :show="overlayVisible" @click="overlayVisible = false">
-        <!-- 遮罩内容不能用 position: fixed：Lynx 会把 fixed 节点提升到页面根节点，
-             它就不再是遮罩的子节点——遮罩隐藏时它照样常驻、点击也不会冒泡到遮罩
-             （2026-10-19 演示页实测「点任意处关闭」失效）。这里用撑满 + flex 居中。 -->
-        <view class="overlay-center">
-          <view class="overlay-box">
-            <text class="demo-panel__label">遮罩内容（点击任意处关闭）</text>
-          </view>
-        </view>
-      </wd-overlay>
-      <wd-tour v-model="tourVisible" :steps="tourSteps" @finish="() => console.log('[demo] tour finish')" />
-      <wd-curtain
-        v-model="curtainVisible"
-        :src="demoImage"
-        :width="260"
-        close-position="bottom"
-        to="/pages/demo/index"
-      />
-      <wd-toast selector="demo-toast" />
       <wd-share-sheet
         v-model="shareVisible"
         :options="shareOptions"
         title="分享到"
         @select="(e: any) => console.log('[demo] share select', e)"
       />
-      <wd-image-preview ref="imagePreviewRef" selector="demo-image-preview" />
-      <wd-video-preview ref="videoPreviewRef" selector="demo-video-preview" close-position="right-top" />
+      </DemoSection>
+
+      <!-- 单份 Toast 宿主也服务于上传异常；其它弹层随所属项目挂载。 -->
+
+
+
+
+
+
+
+      <wd-toast selector="demo-toast" />
+
+
+
   </ShowcaseLayout>
 </template>
 

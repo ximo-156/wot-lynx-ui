@@ -5,13 +5,18 @@ import { useToast, usePageScrollLock, useQueue } from 'wot-lynx-ui'
 import { testSections, totalItems, type TestItem } from './checklist'
 import ChecklistBox from './ChecklistBox.vue'
 import Showcase from '../showcase/Showcase.vue'
+import ShowcaseLayout from '../showcase/ShowcaseLayout'
+import DemoSection from '../showcase/DemoSection'
 import { demoImage } from '../assets/demo-images'
+
+// Default entry is bounded; all-at-once remains an explicit stress test.
+const demoProps = withDefaults(defineProps<{ stress?: boolean }>(), { stress: false })
 
 /**
  * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
  * 真机排查第一时间看它，避免"改了没生效"的误判。
  */
-const buildTag = 'R15 · 步进器原生值通道 / 搜索取消即响应'
+const buildTag = 'R16 · 按项挂载 / 全量压力模式分离'
 
 /**
  * 全量渲染清单（component-checks.ts 的 6 组，共 106 条）。
@@ -52,6 +57,18 @@ function resetAll() {
   Object.keys(checked).forEach((k) => delete checked[k])
 }
 
+function resetTransientTests() {
+  popupVisible.value = false
+  overlayVisible.value = false
+  pickerVisible.value = false
+  datetimeVisible.value = false
+  notifyVisible.value = false
+  keyboardVisible.value = false
+  sliderDiagnostics.value = false
+  toast.close()
+  dialogRef.value?.close()
+}
+
 // ---------- 2. Slider ----------
 const sliderValue = ref(50)
 const sliderStep = ref(50)
@@ -60,6 +77,14 @@ const sliderRange = ref<number[]>([20, 80])
 // 仅用户展开时采样；原生 row 监听不与 Slider 内部事件合并，也不拦冒泡/滚动。
 const sliderDiagnostics = ref(false)
 const sliderProbe = reactive({ phase: '未开始', rawMoves: 0, acceptedMoves: 0, firstId: '-', lastId: '-', x: '-', width: '-', target: '-' })
+// Use a binding object, not an inline v-on ternary: Vue wraps inline expressions
+// in an always-registered function, even when the expression returns undefined.
+const sliderProbeBindings = computed(() => sliderDiagnostics.value ? {
+  onTouchstart: (event: any) => sampleSliderTouch(event, 'start'),
+  onTouchmove: (event: any) => sampleSliderTouch(event, 'move'),
+  onTouchend: (event: any) => sampleSliderTouch(event, 'end'),
+  onTouchcancel: (event: any) => sampleSliderTouch(event, 'cancel')
+} : {})
 function sampleSliderLayout(event: any) {
   // 此处记录演示中单滑块的控件宽度；不是伪造组件内部缓存的轨道度量结果。
   const layout = event?.detail?.layout ?? event?.detail
@@ -199,7 +224,7 @@ const safeAreaText = computed(() => {
         wd-config-provider 的根 view 现已内置 height:100%，此处显式声明使布局契约不依赖组件内部实现。
         theme 受控切换：亮/暗令牌由 provider 根 view 的 wot-theme-* 类翻转（第 8 组验证）。 -->
   <wd-config-provider :theme="themeMode" custom-class="app-root" @tap="closeOutside">
-    <scroll-view scroll-orientation="vertical" :scroll-enable="!pageScrollLocked" :enable-scroll="!pageScrollLocked" class="page">
+    <scroll-view id="device-test-page" scroll-orientation="vertical" :scroll-enable="!pageScrollLocked" :enable-scroll="!pageScrollLocked" class="page">
       <!-- ============ 头部：设备信息 ============ -->
       <view class="header">
         <text class="header__title">wot-lynx-ui 真机测试</text>
@@ -228,8 +253,10 @@ const safeAreaText = computed(() => {
       </view>
 
       <!-- ============ 1. Button ============ -->
+      <ShowcaseLayout :browse="!demoProps.stress" id-prefix="device-tests" scroll-target="#device-test-page" @section-change="resetTransientTests">
+      <DemoSection name="button" :title="testSections[0].title" v-slot="{ title }">
       <view class="card">
-        <text class="card__title">{{ testSections[0].title }}</text>
+        <text class="card__title">{{ title }}</text>
         <text class="card__hint">{{ testSections[0].hint }}</text>
         <view class="row">
           <wd-button type="primary">主要</wd-button>
@@ -255,18 +282,17 @@ const safeAreaText = computed(() => {
         </view>
         <ChecklistBox :items="testSections[0].items" :checked="checked" @toggle="toggle" />
       </view>
+      </DemoSection>
 
       <!-- ============ 2. Slider ============ -->
+      <DemoSection name="slider" :title="testSections[1].title" v-slot="{ title }">
       <view class="card">
-        <text class="card__title">{{ testSections[1].title }}</text>
+        <text class="card__title">{{ title }}</text>
         <text class="card__hint">{{ testSections[1].hint }}</text>
         <view
           id="slider-native-probe"
           class="row slider-row"
-          @touchstart="(e: any) => sampleSliderTouch(e, 'start')"
-          @touchmove="(e: any) => sampleSliderTouch(e, 'move')"
-          @touchend="(e: any) => sampleSliderTouch(e, 'end')"
-          @touchcancel="(e: any) => sampleSliderTouch(e, 'cancel')"
+          v-bind="sliderProbeBindings"
         >
           <wd-slider v-model="sliderValue" :style="{ flex: '1' }" @dragmove="sampleSliderDragMove" @layoutchange="sampleSliderLayout" />
           <text class="tag slider-value" text-maxline="1">当前 {{ sliderValue }}</text>
@@ -293,10 +319,12 @@ const safeAreaText = computed(() => {
         </view>
         <ChecklistBox :items="testSections[1].items" :checked="checked" @toggle="toggle" />
       </view>
+      </DemoSection>
 
       <!-- ============ 3. SwipeAction ============ -->
+      <DemoSection name="swipe-action" :title="testSections[2].title" v-slot="{ title }">
       <view class="card">
-        <text class="card__title">{{ testSections[2].title }}</text>
+        <text class="card__title">{{ title }}</text>
         <text class="card__hint">{{ testSections[2].hint }}</text>
         <text class="tag">{{ swipeTip }}</text>
         <wd-swipe-action v-for="(cell, index) in swipeCells" :key="index" v-model="cell.status">
@@ -313,10 +341,12 @@ const safeAreaText = computed(() => {
         </view>
         <ChecklistBox :items="testSections[2].items" :checked="checked" @toggle="toggle" />
       </view>
+      </DemoSection>
 
       <!-- ============ 4. 弹层 ============ -->
+      <DemoSection name="overlay" :title="testSections[3].title" v-slot="{ title }">
       <view class="card">
-        <text class="card__title">{{ testSections[3].title }}</text>
+        <text class="card__title">{{ title }}</text>
         <text class="card__hint">{{ testSections[3].hint }}</text>
         <view class="row">
           <wd-button size="small" @tap="openPopup('bottom')">底部 Popup</wd-button>
@@ -340,10 +370,41 @@ const safeAreaText = computed(() => {
         <text class="tag">事件：{{ overlayEvent }}</text>
         <ChecklistBox :items="testSections[3].items" :checked="checked" @toggle="toggle" />
       </view>
+      <wd-popup
+        v-model="popupVisible"
+        :position="popupPosition"
+        round
+        closable
+        @update:modelValue="onPopupModel"
+        @after-enter="overlayEvent = 'popup after-enter'"
+        @after-leave="overlayEvent = 'popup after-leave'"
+      >
+        <view class="popup-body">
+          <text class="popup__title">position = {{ popupPosition }}</text>
+          <text class="popup__hint">点击遮罩或关闭按钮退出；也可在弹层上继续打开 Dialog 验证层级</text>
+          <wd-button size="small" type="primary" @tap="showConfirm">在弹层上打开 Dialog</wd-button>
+        </view>
+      </wd-popup>
+      <wd-overlay :show="overlayVisible" @click="overlayVisible = false">
+        <!-- 内容不可用 position: fixed：fixed 节点被引擎提升到页面根节点后
+             脱离遮罩子树，遮罩隐藏时仍常驻、tap 也不再冒泡到遮罩（CONVENTIONS §9） -->
+        <view class="overlay-center">
+          <view class="overlay-box">
+            <text class="overlay-box__text">遮罩内容（点击任意处关闭）</text>
+          </view>
+        </view>
+      </wd-overlay>
+      <wd-dialog ref="dialogRef" selector="device-test-dialog" />
+      <wd-toast selector="device-test-toast" />
+      <wd-picker v-model="pickerValue" v-model:visible="pickerVisible" :columns="pickerColumns" title="选择器" />
+      <wd-datetime-picker v-model="datetimeValue" v-model:visible="datetimeVisible" type="datetime" title="日期时间" />
+      <wd-notify v-model:visible="notifyVisible" message="Notify 悬浮：贴顶 + 左右内缩" variant="floating" position="top" />
+      </DemoSection>
 
       <!-- ============ 5. 表单 ============ -->
+      <DemoSection name="form" :title="testSections[4].title" v-slot="{ title }">
       <view class="card">
-        <text class="card__title">{{ testSections[4].title }}</text>
+        <text class="card__title">{{ title }}</text>
         <text class="card__hint">{{ testSections[4].hint }}</text>
         <view class="row">
           <wd-password-input :model-value="payValue" :length="6" />
@@ -372,10 +433,13 @@ const safeAreaText = computed(() => {
         </view>
         <ChecklistBox :items="testSections[4].items" :checked="checked" @toggle="toggle" />
       </view>
+      <wd-keyboard v-model="payValue" v-model:visible="keyboardVisible" />
+      </DemoSection>
 
       <!-- ============ 6. Cell 列表 ============ -->
+      <DemoSection name="cell" :title="testSections[5].title" v-slot="{ title }">
       <view class="card">
-        <text class="card__title">{{ testSections[5].title }}</text>
+        <text class="card__title">{{ title }}</text>
         <text class="card__hint">{{ testSections[5].hint }}</text>
         <wd-cell-group title="基础用法" border>
           <wd-cell title="单元格" value="内容" />
@@ -391,10 +455,12 @@ const safeAreaText = computed(() => {
         </wd-cell-group>
         <ChecklistBox :items="testSections[5].items" :checked="checked" @toggle="toggle" />
       </view>
+      </DemoSection>
 
       <!-- ============ 7. 展示组件 ============ -->
+      <DemoSection name="display" :title="testSections[6].title" v-slot="{ title }">
       <view class="card">
-        <text class="card__title">{{ testSections[6].title }}</text>
+        <text class="card__title">{{ title }}</text>
         <text class="card__hint">{{ testSections[6].hint }}</text>
         <view class="row">
           <wd-icon name="close" size="20" />
@@ -440,10 +506,12 @@ const safeAreaText = computed(() => {
         </wd-tabs>
         <ChecklistBox :items="testSections[6].items" :checked="checked" @toggle="toggle" />
       </view>
+      </DemoSection>
 
       <!-- ============ 8. 主题与适配 ============ -->
+      <DemoSection name="theme" :title="testSections[7].title" v-slot="{ title }">
       <view class="card">
-        <text class="card__title">{{ testSections[7].title }}</text>
+        <text class="card__title">{{ title }}</text>
         <text class="card__hint">{{ testSections[7].hint }}</text>
         <view class="row">
           <!-- 未选中态用 info（中性类型）而非 'default'：ButtonType 只有
@@ -469,60 +537,28 @@ const safeAreaText = computed(() => {
         <text class="tag">安全区：{{ safeAreaText }}</text>
         <ChecklistBox :items="testSections[7].items" :checked="checked" @toggle="toggle" />
       </view>
-
-      <!-- ============ 命令式 / 受控弹层实例（集中在 scroll-view 末尾） ============ -->
-      <wd-popup
-        v-model="popupVisible"
-        :position="popupPosition"
-        round
-        closable
-        @update:modelValue="onPopupModel"
-        @after-enter="overlayEvent = 'popup after-enter'"
-        @after-leave="overlayEvent = 'popup after-leave'"
-      >
-        <view class="popup-body">
-          <text class="popup__title">position = {{ popupPosition }}</text>
-          <text class="popup__hint">点击遮罩或关闭按钮退出；也可在弹层上继续打开 Dialog 验证层级</text>
-          <wd-button size="small" type="primary" @tap="showConfirm">在弹层上打开 Dialog</wd-button>
-        </view>
-      </wd-popup>
-      <wd-overlay :show="overlayVisible" @click="overlayVisible = false">
-        <!-- 内容不可用 position: fixed：fixed 节点被引擎提升到页面根节点后
-             脱离遮罩子树，遮罩隐藏时仍常驻、tap 也不再冒泡到遮罩（CONVENTIONS §9） -->
-        <view class="overlay-center">
-          <view class="overlay-box">
-            <text class="overlay-box__text">遮罩内容（点击任意处关闭）</text>
-          </view>
-        </view>
-      </wd-overlay>
-      <wd-dialog ref="dialogRef" selector="device-test-dialog" />
-      <wd-toast selector="device-test-toast" />
-      <!-- 贴边弹层验收面（popup 定位 harness）：bottom 贴底、center 居中、
-           floating 悬浮 banner 贴顶并左右内缩 12px -->
-      <wd-picker v-model="pickerValue" v-model:visible="pickerVisible" :columns="pickerColumns" title="选择器" />
-      <wd-datetime-picker v-model="datetimeValue" v-model:visible="datetimeVisible" type="datetime" title="日期时间" />
-      <wd-notify v-model:visible="notifyVisible" message="Notify 悬浮：贴顶 + 左右内缩" variant="floating" position="top" />
-      <wd-keyboard v-model="payValue" v-model:visible="keyboardVisible" />
+      </DemoSection>
 
       <!-- ============ 全量组件渲染（106/106，真机必查） ============ -->
-      <!-- 为什么放在这一页（2026-11-03）：交互清单只覆盖 28 个组件，其余 78 个
-           组件在 device-test 页面上**没有可渲染实例**——真机上自然"显示不出来"，
-           而主 demo 在电脑上是齐全的。这里直接挂载与 main 入口**同一份**
-           Showcase：真机与电脑看到的是完全相同的 106 个组件实例，任何
-           「电脑能显示、真机不显示」的差异都能当场在真机页上看到。 -->
+      <!-- 保留同一份全量目录，但只在打开本项时实例化；普通浏览仍逐节挂载。 -->
+      <DemoSection name="catalog" title="全部组件目录（106 / 106 可访问）" v-slot="{ title, all }">
       <view class="card">
-        <text class="card__title">全量组件渲染（106 / 106）</text>
-        <text class="card__hint">与主 demo 共用同一份 Showcase：以下每个组件在真机上都应有真实渲染结果</text>
+        <text class="card__title">{{ title }}</text>
+        <text class="card__hint">与主 demo 共用同一份目录：选择项目后挂载真实组件，不一次展开全部</text>
         <text class="tag">构建标记 {{ buildTag }}</text>
       </view>
-      <Showcase />
+      <Showcase :browse="!all" scroll-target="#device-test-page" />
+      </DemoSection>
 
       <!-- ============ 全量渲染清单（6 组 106 条，逐项对照上面的实例） ============ -->
-      <view v-for="section in renderSections" :key="section.id" class="card">
+      <DemoSection v-for="section in renderSections" :key="section.id" :name="section.id" :title="section.title">
+      <view class="card">
         <text class="card__title">{{ section.title }}</text>
         <text class="card__hint">{{ section.hint }}</text>
         <ChecklistBox :items="section.items" :checked="checked" @toggle="toggle" />
       </view>
+      </DemoSection>
+      </ShowcaseLayout>
     </scroll-view>
   </wd-config-provider>
 </template>
