@@ -6,10 +6,10 @@
 
 ## 特性
 
-- **🎨 同源令牌，独立品牌** — 主色 `#755FFE`、次主题色 `#9A89FF`、亮色主文字 `#2D273D`、次文字 `#979797`；原始 `--wot-blue-*` 色阶保持官方值，成功 / 危险 / 警告语义不改色
+- **🎨 同源令牌，独立品牌** — 品牌原色 `#755FFE`、次色 `#9A89FF` 与官方原始 `--wot-blue-*` 色阶分离；组件主色、文字及成功/危险/警告语义的实际亮暗映射以[亮色主题](<packages/ui/src/styles/theme/light.scss>)、[暗色主题](<packages/ui/src/styles/theme/dark.scss>)和[JS 镜像](<packages/ui/src/common/theme.ts>)为准，不宣称所有语义值与官方逐值一致
 - **⚡ 原生性能** — Lynx 双线程架构：Vue 运行在后台线程，渲染在主线程；拖动/滑动等高频交互使用声明式 Main Thread Script，跟手时段禁用 CSS transition、落位时恢复；细线边框使用 `1ppx` 物理像素；图标使用原生字体渲染
 - **🧩 API 兼容** — 主入口公开 106 个组件：100 个有实际功能的官方对应组件 + 6 个本地扩展；官方空占位 `wot-ui` 不作为主入口公开组件计数
-- **📦 开箱即用** — 发布预编译 CSS，消费者无需安装 Sass 工具链；组件以源码分发，由 Rspeedy 直接编译，天然支持 Tree-shaking
+- **📦 源码分发与预编译 CSS** — 消费者无需安装 Sass 工具链；组件源码由 Rspeedy 编译，按需导入及 worklet 保留遵守下方构建配置
 - **🌗 主题系统** — CSS 变量驱动亮色/暗色主题，`WdConfigProvider` 全局配置（`wot-theme-light` / `wot-theme-dark`）；暗色文字使用适配深色背景的中性色
 - **🧰 命令式 API** — `useToast` / `useDialog` / `useNotify` / `useImagePreview` 等弹层命令式调用；宿主专属能力按 Lynx 原生模块契约（`NativeModules.WotLynxUI` / `lynx.getJSModule` / `configureHost`）接入，**不含 uni-app 兼容层**
 - **🧪 可测试** — 纯函数守卫与基于 @lynx-js/testing-environment 的 Vue Lynx 双线程测试，覆盖组件渲染、交互回归与构建约束；全量状态以实际校验结果为准
@@ -20,7 +20,7 @@
 
 仅有两项明确豁免：`customStyle` 从官方 `String` 扩展为 `[String, Object]`，以及 `WdCircle.color` 默认值从 `#1C64FD` 改为品牌色 `#755FFE`。守卫检查 prop 名称、运行时构造器、required、默认值/工厂与 validator；**不证明 TypeScript 泛型、类型别名或联合类型全部一致，也不证明全部交互或真机行为一致**。6 个本地扩展（AddressEdit、BarCode、Coupon、PullRefresh、ShareSheet、SubmitBar）在该官方离线包中没有对应定义，明确不计入官方覆盖。
 
-运行时守卫见 [check-wot-props.mjs](<scripts/check-wot-props.mjs>)、[官方 props fixture](<packages/ui/test/fixtures/wot-ui-2.3.2-props.json>) 与 [props 回归测试](<packages/ui/test/wot-parity-props.test.ts>)。
+运行时守卫见 [check-wot-props.mjs](<scripts/check-wot-props.mjs>)、[官方 props fixture](<packages/ui/test/fixtures/wot-ui-2.3.2-props.json>) 与 [props 回归测试](<packages/ui/test/parity/wot-parity-props.test.ts>)。
 
 ## 快速开始
 
@@ -36,26 +36,40 @@ pnpm add wot-lynx-ui vue-lynx vue
 import { defineConfig } from '@lynx-js/rspeedy'
 import { pluginQRCode } from '@lynx-js/qrcode-rsbuild-plugin'
 import { pluginVueLynx } from 'vue-lynx/plugin'
+import { pluginWotLynxWebFonts, pluginWotLynxWebViewport } from 'wot-lynx-ui/plugin'
 
 export default defineConfig({
-  environments: {
-    lynx: {},
-    web: {}
-  },
+  environments: { lynx: {}, web: {} },
   plugins: [
+    pluginWotLynxWebFonts(),
+    pluginWotLynxWebViewport(),
     pluginQRCode(),
     pluginVueLynx({
-      // 设计令牌依赖 CSS 变量级联
+      optionsApi: false,
+      enableElementTemplates: false,
       enableCSSInheritance: true,
-      enableCSSInlineVariables: true
+      enableCSSInlineVariables: true,
+      // npm 安装的包也必须进入主线程 worklet 依赖图
+      includeWorkletPackages: ['wot-lynx-ui']
     })
   ],
-  source: {
-    // 保证 pnpm workspace 链接的组件库源码被编译
-    include: [/wot-lynx-ui/]
+  source: { include: [/wot-lynx-ui/] },
+  tools: {
+    rspack(config, utils) {
+      const envName = String((utils as any)?.environment?.name ?? '')
+      if (envName.startsWith('lynx') || envName.startsWith('web')) {
+        // 当前工具链的 MT bare import 需保留，否则注册 worklet 会被剪掉
+        config.optimization = config.optimization ?? {}
+        config.optimization.sideEffects = false
+      }
+    }
   }
 })
 ```
+
+以上面向 npm 发布包的默认 `import` 分支，主题解析到预编译 CSS。worklet 包白名单解决 loader 剔除，应用级 `optimization.sideEffects: false` 解决当前工具链的 MT bare import 剪枝；后者可能增大后台包体，但不要因此把库的 CSS/SCSS/TTF sideEffects 白名单改成 `true`。
+
+工作区源码直连不触发第一道 loader 闸门，但仍需保住 MT import。本仓库 Demo 显式启用 `source` 条件并将主题映射为生成 CSS，见[实际配置](<packages/demo/lynx.config.ts>)；新工作区若走默认 dist 分支需先 `pnpm build:ui`，不要仅复制源码 alias 绕过 exports。配置/包体优化后需重新验证 BG 引用与 MT 注册契约，详见[组件规范 §10](<CONVENTIONS.md>)。
 
 ### 引入主题与组件
 
@@ -76,7 +90,7 @@ createApp(App).mount()
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue-lynx'
-import { WdButton, WdCell, WdCellGroup } from 'wot-lynx-ui'
+import { Button as WdButton, Cell as WdCell, CellGroup as WdCellGroup } from 'wot-lynx-ui'
 
 const count = ref(0)
 </script>
@@ -89,11 +103,13 @@ const count = ref(0)
 </template>
 ```
 
-也支持全局注册：
+当前命名导出为 `Button`、`Cell`、`CellGroup`；上例的 `Wd*` 是局部 `as` 别名，也可直接使用 `<Button>` 等导入绑定。它们不等于包新增了 `WdButton` 命名导出。
+
+也支持全局注册（插件注册 `WdButton` 等 PascalCase 标签，无需逐个 import）：
 
 ```ts
 import wotLynxUI from 'wot-lynx-ui'
-createApp(App).use(wotLynxUI)
+createApp(App).use(wotLynxUI).mount()
 ```
 
 > **注意**：Vue Lynx 的编译器将所有 kebab-case 标签视为 Lynx 原生元素，
@@ -102,8 +118,10 @@ createApp(App).use(wotLynxUI)
 >
 > ```ts
 > import { pluginWotLynxTags } from 'wot-lynx-ui/plugin'
-> export default defineConfig({ plugins: [pluginWotLynxTags()] })
+> // 在上方 plugins 数组加入 pluginWotLynxTags()，保留其他插件和 tools 配置。
 > ```
+>
+> 转换只改标签；仍需局部 `Wd*` 绑定或全局插件注册，不自动新增组件 import。
 >
 > props / events / slots / 样式类名以 wot-ui 2.3.2 为兼容参考；已验证范围与适配说明见上文及[「与 wot-ui 的差异」](#与-wot-ui-的差异)一节。
 
@@ -130,7 +148,13 @@ createApp(App).use(wotLynxUI)
 
 - [组件文档](<docs/components/>)（VitePress，按组件说明 API 与适配范围）
 - [Demo 应用](<packages/demo/>)（`pnpm dev:demo`，包含组件演示与真机验收入口）
-- [重写规范](./CONVENTIONS.md)（为 Lynx 重写的完整约定）
+- [重写规范](<CONVENTIONS.md>)（当前组件开发约定）
+
+## AI 协作
+
+- 从[AGENTS.md](<AGENTS.md>)开始，再读取所修改目录的局部指引；规则随 Git 共享，不依赖本机 AI 记忆。
+- [AI 开发指南](<docs/ai/README.md>)提供目录/组件定位、事实来源、生成物规则、任务验证命令和验收报告格式。
+- 这些指引面向仓库维护；消费者的分块 API / `llms.txt` 等属于后续阶段，不把现有有损 meta 当完整类型/事件语义。工具不自动识别 AGENTS 时，显式要求它先读取入口。
 
 ## 真机测试
 
@@ -222,23 +246,28 @@ pnpm visual:baseline  # 差异是有意的 → 更新基线；换平台后也要
 
 ```
 wot-lynx-ui/
+├── AGENTS.md                      # 共享 AI 协作入口（子目录另有局部指引）
 ├── packages/
-│   ├── ui/                       # wot-lynx-ui 组件库（源码分发）
+│   ├── ui/                        # 组件库：源码分发 + 预编译 CSS
 │   │   ├── src/
-│   │   │   ├── components/       # 106 个主入口组件 + 官方空占位 / 内部模块
-│   │   │   ├── composables/      # 组合式函数（useParent/useChildren/useTouch...）
-│   │   │   ├── common/           # 工具函数 / props / 日期格式化（dayjs）/ vue-lynx Transition 兼容层 / uni 兼容层
-│   │   │   ├── icons/            # 官方与兼容字体集 / registry 注册表 / TTF
-│   │   │   ├── locale/           # 16 种语言
-│   │   │   └── styles/           # 原始刻度 / 独立品牌 / 亮暗语义 / mixin / BEM
-│   │   ├── plugin/               # Rspeedy 标签兼容插件（wd-* → PascalCase）
-│   │   ├── test/                 # 运行时契约守卫 / 纯函数与双线程回归（vitest）
+│   │   │   ├── primitives/       # L3.5 基础件，与业务根平级
+│   │   │   ├── components/       # L4 业务组件 + 官方空占位/内部模块
+│   │   │   ├── composables/      # 父子通信、触摸、弹层、表单、上传等
+│   │   │   ├── common/           # 工具/props/style/native/host/platform/日期/过渡
+│   │   │   ├── icons/            # 官方与兼容字体集、registry、TTF
+│   │   │   ├── locale/           # 多语言资源
+│   │   │   └── styles/           # 原始刻度、独立品牌、亮暗语义、mixin、BEM
+│   │   ├── plugin/               # Rspeedy 标签/按需导入/Web 宿主插件
+│   │   ├── test/                 # unit、component、parity、mts、regression 等
+│   │   ├── meta.json             # 源码推导的 API 目录，不手改
 │   │   └── vitest.config.ts
-│   └── demo/                     # Vue Lynx Demo 应用（Rspeedy，双端构建，含 device-test 真机测试入口）
-├── docs/                         # VitePress 文档站（组件说明，由 meta 生成）
-├── scripts/                      # CSS 编译 / 图标生成 / 文档生成
-├── CONVENTIONS.md                # Lynx 重写规范
-└── README.md
+│   └── demo/                     # Rspeedy 双端 Demo，showcase 与 device-test
+├── docs/                          # VitePress：手写指南 + 生成组件文档
+│   ├── ai/                       # 按任务读取与验证的仓库开发指南
+│   └── adr/                      # 现行/历史架构决策记录
+├── scripts/                       # 生成、构建、检查、迁移工具
+├── CONVENTIONS.md                 # 当前组件开发规范
+└── ARCHITECTURE.md                # 当前规则、历史评审与后续方向
 ```
 
 ## 性能实现

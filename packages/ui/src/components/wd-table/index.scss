@@ -27,6 +27,8 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
 @include b(table) {
   position: relative;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   overflow: hidden;
   background: $table-bg;
   // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
@@ -43,6 +45,12 @@ $table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
 
   @include when(border) {
     border: $table-border-width solid $table-border-color;
+  }
+
+  @include e(scroll) {
+    width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
   }
 
   // Lynx 适配：参考源表头为 CSS Grid 行，Lynx 无 Grid，改为 flex 行

@@ -152,11 +152,42 @@ $tabs-map-body-bg: var(--wot-tabs-map-body-bg, $filled-oppo) !default;
     min-width: 0;
   }
 
-  @include e(line) {
+  // The anchor matches the current header's actual box. Its sole pixel
+  // translation moves the box; native flex centers any theme/custom line width.
+  @include e(line-anchor) {
     position: absolute;
-    bottom: $tabs-nav-line-bottom;
     left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+    padding-bottom: $tabs-nav-line-bottom;
+    pointer-events: none;
     z-index: 1;
+
+    @include when(underline) {
+      padding-bottom: 0;
+    }
+    @include when(dot) {
+      padding-bottom: 0;
+    }
+  }
+
+  // Vertical placement must not depend on flex-end or percentage translation.
+  @include e(line-spacer) {
+    flex-grow: 1;
+  }
+
+  @include e(line) {
+    position: relative;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    flex-shrink: 0;
     height: $tabs-nav-line-height;
     background: $tabs-nav-line-bg;
     border-radius: calc($tabs-nav-line-height / 2);

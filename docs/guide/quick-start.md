@@ -2,8 +2,9 @@
 
 ## 环境要求
 
-- Node.js 18 及以上
-- 基于 [Vue Lynx](https://vue.lynxjs.org)（vue-lynx >= 0.5）与 [Rspeedy](https://lynxjs.org/rspeedy) 的应用
+- 本仓库开发使用 Node.js >= 20、pnpm 10.24.0，实际版本以[根配置](<../../package.json>)为准。
+- 消费应用使用 [Vue Lynx](https://vue.lynxjs.org) 与 [Rspeedy](https://lynxjs.org/rspeedy)；Vue / Vue Lynx 的 peer 范围见[组件包配置](<../../packages/ui/package.json>)，构建工具的 Node 要求以应用依赖为准。
+- 组件含 Vue SFC/worklet 源码，由应用工具链编译；预编译 CSS 不表示组件可在裸 Node/SSR 中直接执行。
 
 ## 安装
 
@@ -17,26 +18,42 @@ pnpm add wot-lynx-ui vue-lynx vue
 import { defineConfig } from '@lynx-js/rspeedy'
 import { pluginQRCode } from '@lynx-js/qrcode-rsbuild-plugin'
 import { pluginVueLynx } from 'vue-lynx/plugin'
+import { pluginWotLynxWebFonts, pluginWotLynxWebViewport } from 'wot-lynx-ui/plugin'
 
 export default defineConfig({
-  environments: {
-    lynx: {},
-    web: {}
-  },
+  environments: { lynx: {}, web: {} },
   plugins: [
+    pluginWotLynxWebFonts(),
+    pluginWotLynxWebViewport(),
     pluginQRCode(),
     pluginVueLynx({
-      // 设计令牌依赖 CSS 变量级联
+      optionsApi: false,
+      enableElementTemplates: false,
       enableCSSInheritance: true,
-      enableCSSInlineVariables: true
+      enableCSSInlineVariables: true,
+      // npm 安装的包也必须进入主线程 worklet 依赖图
+      includeWorkletPackages: ['wot-lynx-ui']
     })
   ],
-  source: {
-    // 保证 pnpm workspace 链接的组件库源码被编译
-    include: [/wot-lynx-ui/]
+  source: { include: [/wot-lynx-ui/] },
+  tools: {
+    rspack(config, utils) {
+      const envName = String((utils as any)?.environment?.name ?? '')
+      if (envName.startsWith('lynx') || envName.startsWith('web')) {
+        // 当前工具链的 MT bare import 需保留，否则注册 worklet 会被剪掉
+        config.optimization = config.optimization ?? {}
+        config.optimization.sideEffects = false
+      }
+    }
   }
 })
 ```
+
+::: warning worklet 构建契约不能省略
+这是本仓库当前工具链的完整双端配置示例：`includeWorkletPackages` 防止 npm 包被 MT loader 剔除；应用级 `optimization.sideEffects: false` 保留 MT bare import，避免 worklet 注册被 tree-shaking 剪掉。关闭该级优化可能增加后台包体，库侧仍保留 CSS/SCSS/TTF sideEffects 白名单，不改成 `true`。
+
+npm 使用默认 `import` 分支，主题为预编译 CSS。workspace 源码直连虽不触发 loader 剔除，MT 剪枝仍需处理；本仓库 Demo 另有 `source` 条件及主题 CSS 映射，见[实际配置](<../../packages/demo/lynx.config.ts>)。新工作区走默认 dist 分支时先构建 UI；显式使用 source 时需处理主题 SCSS，不用主入口源码 alias 绕开 exports。构建优化后重新验证 worklet 契约，不能用 jsdom 模拟层证明生产可用。
+:::
 
 ## 引入主题
 
@@ -55,7 +72,7 @@ createApp(App).mount()
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue-lynx'
-import { WdButton, WdCell, WdCellGroup } from 'wot-lynx-ui'
+import { Button as WdButton, Cell as WdCell, CellGroup as WdCellGroup } from 'wot-lynx-ui'
 
 const count = ref(0)
 </script>
@@ -68,8 +85,10 @@ const count = ref(0)
 </template>
 ```
 
-::: tip 组件标签使用 PascalCase
-Vue Lynx 的编译器将所有 kebab-case 标签视为 Lynx 原生元素，因此组件必须使用 **PascalCase 标签**（`<WdButton>`）。这与 wot-ui 的 `<wd-button>` 写法不同，是 Vue Lynx 生态的统一约定（props / events / slots / 样式类名与 wot-ui 完全一致）。
+::: tip 标签与导出名不是同一件事
+当前主入口命名导出为 `Button`、`Cell` 等；示例通过 `as WdButton` 等建立局部别名，因此模板使用 `<WdButton>`。也可以直接使用导入绑定的 `<Button>`，不需要修改组件库导出。
+
+Vue Lynx 把 kebab-case 标签视为原生元素，未启用标签转换插件时必须使用 PascalCase。全局注册的 `WdButton` 是另一种使用方式；API 兼容范围与平台差异见[差异指南](<differences.md>)，并非所有行为完全一致。
 :::
 
 ## 全局注册
@@ -77,33 +96,21 @@ Vue Lynx 的编译器将所有 kebab-case 标签视为 Lynx 原生元素，因�
 ```ts
 import wotLynxUI from 'wot-lynx-ui'
 
-createApp(App).use(wotLynxUI)
+createApp(App).use(wotLynxUI).mount()
 ```
 
 全局注册后可直接使用 `<WdButton>` 等标签，无需逐个 import。
 
 ## 沿用 wot-ui 的 kebab-case 标签写法（可选）
 
-安装 `pluginWotLlynxTags` 插件后，业务模板中的 `<wd-xxx>` 会在构建时被自动改写为
-`<WdXxx>`，无需修改现有代码：
+将 `pluginWotLynxTags()` 加入上方完整配置的 plugins 数组（放在 `pluginVueLynx()` 前），保留其余宿主、主题、worklet 和 tools 配置：
 
 ```ts
-// lynx.config.ts
-import { defineConfig } from '@lynx-js/rspeedy'
-import { pluginVueLynx } from 'vue-lynx/plugin'
 import { pluginWotLynxTags } from 'wot-lynx-ui/plugin'
-
-export default defineConfig({
-  environments: { lynx: {}, web: {} },
-  plugins: [
-    pluginWotLynxTags(),
-    pluginVueLynx({
-      enableCSSInheritance: true,
-      enableCSSInlineVariables: true
-    })
-  ]
-})
+// 上方 plugins 数组追加 pluginWotLynxTags()；不要替换整份配置。
 ```
+
+它将 `<wd-xxx>` 改为 `<WdXxx>`。仍须保留对应局部 `Wd*` 别名或全局注册；标签转换本身不会自动引入组件。
 
 ```vue
 <template>
@@ -141,16 +148,10 @@ Lynx Web 的组件逻辑运行在 Worker 中，不能直接读取浏览器 `wind
 
 ```ts
 import { pluginWotLynxWebFonts, pluginWotLynxWebViewport } from 'wot-lynx-ui/plugin'
-
-export default defineConfig({
-  environments: { lynx: {}, web: {} },
-  plugins: [
-    pluginWotLynxWebFonts(),
-    pluginWotLynxWebViewport(),
-    pluginVueLynx({ enableCSSInheritance: true, enableCSSInlineVariables: true })
-  ]
-})
+// 将这两个插件放入完整配置的 plugins 数组；本页首个配置已经包含它们。
 ```
+
+不要为启用 Web 插件删除前述主题/worklet 参数或 tools.rspack 配置。
 
 插件处理普通 Web 宿主 HTML 和 Rspeedy 的固定预览页；不修改原生端，也不需要轮询尺寸。
 
@@ -180,8 +181,7 @@ jsContext.dispatchEvent({ type: 'wot:viewport-change', data: { width, height } }
 ## 注入宿主能力（原生模块契约）
 
 Lynx 没有 `uni` 全局对象，本库也**不再提供任何 uni-app 兼容层**（ADR-022）。
-引擎自带的能力（节点度量、交叉观察、原生 `<video>`、`SystemInfo` 安全区）直接
-读取，开箱即用；只有引擎管不到的能力才需要宿主注册——按 Lynx 的标准扩展点：
+引擎能力通过原生层读取，是否可用由实际运行时与 `getPlatform().capabilities` 决定；例如 video 元素需引擎/宿主支持，安全区需宿主 `SystemInfo` 提供对应数据。只有引擎管不到的能力才由宿主注册，按 Lynx 的标准扩展点：
 
 1. `NativeModules.WotLynxUI`（宿主注册的原生模块）；
 2. `lynx.getJSModule('WotLynxUI')`（宿主注册的 JS 模块）；
@@ -203,9 +203,7 @@ configureHost({
 })
 ```
 
-三项都缺失时，对应能力视为**不可用**：组件走原生降级路径（事件代替路由、
-SVG 代替 canvas、封面代替 video），只 warning 不崩溃。完整契约见
-`packages/ui/src/common/host.ts`，差异说明见[与 wot-ui 的差异](./differences.md)。
+示例中的 `router`、`myPicker`、`myUploader`、`myCanvas` 由应用实现，并需符合对应回调/任务契约，不是库内自动提供的对象。三个注册入口均未提供某项宿主能力时，该能力不可用；引擎自带能力仍按运行时探测，不一并置为 false。组件按各自实现降级，不能将“无宿主”理解为 video 一定不可用或所有平台行为完全一致。完整契约见[host 类型](<../../packages/ui/src/common/host.ts>)和[差异指南](<differences.md>)。
 
 ## 已知构建提示（不影响使用）
 

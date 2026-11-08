@@ -491,7 +491,7 @@ function resetTransientDemos() {
       <view class="page__header">
         <text class="page__title">wot-lynx-ui</text>
         <text class="page__subtitle">Vue Lynx 组件库 · Lynx / Web · {{ layoutProps.columns }} 列 · {{ count }}</text>
-        <text class="demo-tag">build R16 · 默认按项挂载；全量模式仅用于压力测试</text>
+        <text class="demo-tag">build R17 · 级联标签指示线修复；默认按项挂载</text>
       </view>
 
       <!-- ConfigProvider 主题切换 -->
@@ -848,10 +848,11 @@ function resetTransientDemos() {
           <text class="demo-panel__label">Table / Steps / Swiper / Watermark / Collapse</text>
           <!-- Table 的列是 wd-table-column 子组件（无 columns prop，传了会被
                当作透传属性静默忽略、整表只剩序号列） -->
+          <!-- 列宽使用容器比例，不能只把外框设为 100% 后仍写死像素列宽。 -->
           <wd-table :data="tableData" :custom-style="{ 'margin-bottom': '8px' }">
-            <wd-table-column prop="name" label="姓名" :width="80" />
-            <wd-table-column prop="age" label="年龄" :width="60" />
-            <wd-table-column prop="city" label="城市" :width="80" />
+            <wd-table-column prop="name" label="姓名" width="35%" />
+            <wd-table-column prop="age" label="年龄" width="30%" />
+            <wd-table-column prop="city" label="城市" width="35%" />
           </wd-table>
           <wd-steps :active="1">
             <wd-step title="步骤一" />
@@ -1548,13 +1549,13 @@ function resetTransientDemos() {
           <!-- 自定义单元格：在具体列上写 #value 作用域插槽（row 为该行数据）；
                wd-table 的默认插槽用于摆放列组件，不是带 row/column 参数的作用域插槽 -->
           <wd-table :data="tableColData">
-            <wd-table-column prop="name" label="姓名" :width="80" />
-            <wd-table-column prop="status" label="状态" :width="90">
+            <wd-table-column prop="name" label="姓名" width="30%" />
+            <wd-table-column prop="status" label="状态" width="40%">
               <template #value="{ row }">
                 <text class="demo-tag">{{ row.status }}</text>
               </template>
             </wd-table-column>
-            <wd-table-column prop="score" label="得分" :width="80" />
+            <wd-table-column prop="score" label="得分" width="30%" />
           </wd-table>
           <view class="demo-row">
             <text class="demo-tag">插槽参数：row / index</text>

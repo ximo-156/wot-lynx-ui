@@ -1885,7 +1885,7 @@
       {"name":"height","type":"number | string","description":"画布高度"},
       {"name":"width","type":"number | string","description":"画布宽度"},
       {"name":"backgroundColor","type":"string","description":"画板背景色"},
-      {"name":"disableScroll","type":"boolean","default":"true","description":"是否禁用画布滚动 Lynx 实现说明：uni-app canvas 的 disable-scroll 属性在 Lynx 无 对应能力（view 元素无该属性）。端口将画布触摸统一经 @touchmove.stop.prevent 阻止页面滚动，即该 prop 恒按 true 生效， 保留声明仅为 API 对齐。"},
+      {"name":"disableScroll","type":"boolean","default":"true","description":"是否禁用画布滚动 Lynx 实现说明：通过画布的 consume-slide-event / touch-action 进行 局部滚动仲裁；为 true 时阻止签名触摸被页面滚动接管，为 false 或 disabled 时放行。不会给整个页面施加模态滚动锁。"},
       {"name":"enableHistory","type":"boolean","default":"false","description":"是否开启历史记录"},
       {"name":"step","type":"number","default":"1","description":"撤回和恢复的步长"},
       {"name":"undoText","type":"string","description":"撤销按钮文本（revokeText 的兼容别名，revokeText 优先）"},

@@ -206,6 +206,106 @@ describe('WdIndexBar / WdIndexAnchor', () => {
     expect(scrollCalls(calls).pop()!.selector).toMatch(/^#wd-index-bar-[0-9a-f]+-anchor-A$/)
   })
 
+  // 桌面 Web 的鼠标 click 映射为 Lynx tap，不会先派发 touch 事件。
+  it('字母上的 tap 无需触摸事件或坐标即可跳转对应锚点', async () => {
+    mock = mockGeometry()
+    const { container } = await renderIndexBar4()
+    const label = container.querySelectorAll('.wd-index-bar__index-text')[3]
+
+    fireEvent.tap(label, { bubbles: true })
+    await nextTick()
+
+    const scrolls = scrollToCalls(mock.calls)
+    expect(scrolls).toHaveLength(1)
+    expect(scrolls[0].selector).toMatch(/^#wd-index-bar-[0-9a-f]+-content$/)
+    expect(scrolls[0].params.params).toEqual({ offset: 300, smooth: true })
+    expect(container.querySelector('.wd-index-bar__index.is-active')?.textContent).toBe('D')
+  })
+
+  it('未度量时重复 tap 同一字母仍逐次跳转（包括当前激活项）', async () => {
+    mock = mockSelectorQuery()
+    const { container } = await renderIndexBar()
+    const first = container.querySelector('.wd-index-bar__index')!
+
+    fireEvent.tap(first)
+    await nextTick()
+    fireEvent.tap(first)
+    await nextTick()
+
+    const jumps = scrollCalls(mock.calls)
+    expect(jumps).toHaveLength(2)
+    expect(jumps.every((call) => /-anchor-A$/.test(call.selector))).toBe(true)
+    expect(scrollToCalls(mock.calls)).toHaveLength(0)
+  })
+
+  it('touchend 后同一字母的 tap 不重复下发滚动', async () => {
+    mock = mockGeometry()
+    const { container } = await renderIndexBar4()
+    const sidebar = container.querySelector('.wd-index-bar__sidebar')!
+    const last = container.querySelectorAll('.wd-index-bar__index')[3]
+
+    fireEvent.touchstart(sidebar)
+    fireEvent.touchend(sidebar, { changedTouches: [{ clientY: 1177 }] })
+    fireEvent.tap(last)
+    await nextTick()
+
+    expect(scrollToCalls(mock.calls)).toHaveLength(1)
+    expect(scrollToCalls(mock.calls)[0].params.params.offset).toBe(300)
+  })
+
+  it('页面滚动后点击仍按实际字母定位，不被过期触摸坐标阻断', async () => {
+    mock = mockGeometry()
+    const { container } = await renderIndexBar4()
+    const sidebar = container.querySelector('.wd-index-bar__sidebar')!
+    const last = container.querySelectorAll('.wd-index-bar__index')[3]
+
+    // 外层页面移动了 300px，而侧栏缓存仍是 top=1114：旧映射会错误命中 A。
+    fireEvent.touchstart(sidebar)
+    fireEvent.touchend(sidebar, { changedTouches: [{ clientY: 877 }] })
+    fireEvent.tap(last)
+    await nextTick()
+
+    const scrolls = scrollToCalls(mock.calls)
+    expect(scrolls.at(-1)?.params.params.offset).toBe(300)
+    expect(container.querySelector('.wd-index-bar__index.is-active')?.textContent).toBe('D')
+  })
+
+  it('平滑跳转和末尾偏移钳制不覆盖目标，scrollend 后恢复滚动联动', async () => {
+    mock = mockGeometry()
+    const { container } = await renderIndexBar4()
+    const content = container.querySelector('.wd-index-bar__content')!
+    const last = container.querySelectorAll('.wd-index-bar__index')[3]
+    const active = () => container.querySelector('.wd-index-bar__index.is-active')?.textContent
+
+    fireEvent.tap(last)
+    await nextTick()
+    fireEvent.scroll(content, { detail: { scrollTop: 100 } })
+    await nextTick()
+    expect(active()).toBe('D')
+
+    fireEvent.scrollend(content)
+    await nextTick()
+    expect(active()).toBe('D')
+    fireEvent.scroll(content, { detail: { scrollTop: 100 } })
+    await nextTick()
+    expect(active()).toBe('B')
+  })
+
+  it('用户触摸列表会立即解除程序化目标保护', async () => {
+    mock = mockGeometry()
+    const { container } = await renderIndexBar4()
+    const content = container.querySelector('.wd-index-bar__content')!
+    const last = container.querySelectorAll('.wd-index-bar__index')[3]
+
+    fireEvent.tap(last)
+    await nextTick()
+    fireEvent.touchstart(content)
+    fireEvent.scroll(content, { detail: { scrollTop: 100 } })
+    await nextTick()
+
+    expect(container.querySelector('.wd-index-bar__index.is-active')?.textContent).toBe('B')
+  })
+
   // ---- 2026-11-05 真机「点击索引条无反应」回归 ----
 
   it('纯点击（touchstart → touchend 带触点坐标）经官方 scrollTo 跳转，无需 touchmove', async () => {

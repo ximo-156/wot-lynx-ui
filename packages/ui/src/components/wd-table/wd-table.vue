@@ -10,20 +10,45 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, onBeforeUnmount, reactive, shallowReactive, toRaw, watch, type Ref } from 'vue-lynx'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowReactive, toRaw, watch, type Ref } from 'vue-lynx'
 import WdSortButton from '../wd-sort-button/wd-sort-button.vue'
 import WdTableColumn from '../wd-table-column/wd-table-column.vue'
-import { addUnit, isDef, isObj, parseStyle, throttle, uuid } from '../../common/util'
+import { addUnit, getRect, isDef, isObj, parseStyle, throttle, uuid } from '../../common/util'
 import { useChildren } from '../../composables/useChildren'
 import { useTranslate } from '../../composables/useTranslate'
+import { useViewportWidth } from '../../composables/useWideViewport'
 import type { SortDirection, TableColumnInstance, TableColumnProps } from '../wd-table-column/types'
 import { TABLE_KEY, tableProps, type TableProvide } from './types'
-import { normalizeTableSpan, resolveTableRows, type TableCellMeasure } from './layout'
+import { normalizeTableSpan, resolveTableColumnWidths, resolveTableRows, type TableCellMeasure } from './layout'
 
 const props = defineProps(tableProps)
 const emit = defineEmits(['sort-method', 'row-click'])
 const { translate } = useTranslate('tableCol')
 const state = reactive({ scrollLeft: 0, scrollTop: 0 })
+const viewportId = `wd-table-viewport-${uuid()}`
+const viewportWidth = ref(0)
+const windowWidth = useViewportWidth()
+let alive = true
+let viewportRevision = 0
+function handleViewportLayout(event: any) {
+  const width = Number(event?.detail?.width ?? event?.detail?.layout?.width)
+  if (!Number.isFinite(width) || width < 0) return
+  viewportRevision++
+  viewportWidth.value = width
+}
+async function measureViewportWidth() {
+  // Web may resize without layoutchange. Query the actual container after the MT flush,
+  // not the window width; a newer query or native layout event invalidates this result.
+  const revision = ++viewportRevision
+  await nextTick()
+  if (!alive || revision !== viewportRevision) return
+  const rect = await getRect(`#${viewportId}`)
+  if (!alive || revision !== viewportRevision) return
+  const width = Number(rect?.width)
+  if (Number.isFinite(width) && width >= 0) viewportWidth.value = width
+}
+onMounted(measureViewportWidth)
+watch(windowWidth, measureViewportWidth, { flush: 'post' })
 const { linkChildren, children, internalChildren } = useChildren<TableColumnInstance, TableProvide>(TABLE_KEY)
 const registrations = shallowReactive(new Map<number, { props: TableColumnProps; direction: Ref<SortDirection> }>())
 const measurements = shallowReactive(new Map<string, TableCellMeasure>())
@@ -71,12 +96,14 @@ function reportCellHeight(uid: number, rowIndex: number, rowspan: number, height
   const old = measurements.get(key)
   if (!old || old.rowspan !== rowspan || Math.abs(old.height - height) > 0.5) measurements.set(key, { rowIndex, rowspan, height })
 }
-watch([() => props.data, () => props.ellipsis, () => props.spanMethod, () => props.virtual], () => measurements.clear(), { deep: true })
-const widths = computed(() => columns.value.map((column) => addUnit(column.width)))
+watch([() => props.data, () => props.ellipsis, () => props.spanMethod, () => props.virtual, viewportWidth], () => measurements.clear(), { deep: true })
+const widths = computed(() => resolveTableColumnWidths(columns.value.map((column) => addUnit(column.width)), viewportWidth.value))
 const widthSum = (parts: string[]) => parts.length === 0 ? '0px' : parts.length === 1 ? parts[0] : `calc(${parts.join(' + ')})`
 const contentStyle = computed(() => ({ width: widthSum(widths.value) }))
+const getColumnWidth = (index: number) => widths.value[index]
 const getFixedLeft = (index: number) => index <= 0 ? '0px' : widthSum(widths.value.slice(0, index))
-const getSpanWidth = (index: number, colspan: number) => widthSum(widths.value.slice(index, index + colspan))
+// The containing block of a body cell is its own column. Only merged cells span table tracks.
+const getSpanWidth = (index: number, colspan: number) => colspan <= 1 ? '100%' : widthSum(widths.value.slice(index, index + colspan))
 const lastFixedProp = computed(() => {
   const fixed = columns.value.filter((column) => column.fixed)
   return fixed[fixed.length - 1]?.prop
@@ -88,19 +115,19 @@ function getSpan(rowIndex: number, columnIndex: number) {
   return normalizeTableSpan(props.spanMethod({ row: props.data[rowIndex], column: { prop: column.prop, label: column.label }, rowIndex, columnIndex }))
 }
 function rowClick(index: number) { emit('row-click', { rowIndex: index }) }
-linkChildren({ props, state, visibleRange, rowClick, getIsLastFixed, getFixedLeft, getSpan, registerColumn, unregisterColumn, bodyHeight, getRowTop, getCellHeight, getSpanWidth, reportCellHeight })
+linkChildren({ props, state, visibleRange, rowClick, getIsLastFixed, getFixedLeft, getSpan, registerColumn, unregisterColumn, bodyHeight, getRowTop, getCellHeight, getColumnWidth, getSpanWidth, reportCellHeight })
 const indexUUID = uuid()
 const indexColumn = computed<TableColumnProps>(() => ({ label: translate('indexLabel'), width: '100rpx', sortable: false, fixed: false, align: 'left', ...(isObj(props.index) ? props.index : {}), prop: indexUUID }))
 const showIndex = computed(() => props.index !== false)
 const scrollY = computed(() => isDef(props.height))
-const scrollStyle = computed(() => ({ maxHeight: isDef(props.height) ? addUnit(props.height) : 'none' }))
+const scrollStyle = computed(() => ({ 'max-height': isDef(props.height) ? addUnit(props.height) : 'none' }))
 function handleScroll(event: any) {
   const detail = event?.detail || {}
   if (Number.isFinite(Number(detail.scrollLeft))) state.scrollLeft = Number(detail.scrollLeft)
   if (props.virtual && Number.isFinite(Number(detail.scrollTop))) state.scrollTop = Math.max(0, Number(detail.scrollTop))
 }
 const handleScrollThrottled = throttle(handleScroll, 16) as ((event: any) => void) & { cancel?: () => void }
-onBeforeUnmount(() => handleScrollThrottled.cancel?.())
+onBeforeUnmount(() => { alive = false; viewportRevision++; handleScrollThrottled.cancel?.() })
 function headerStyle(index: number) {
   const column = columns.value[index]
   return { width: widths.value[index], left: column?.fixed ? getFixedLeft(index) : 'auto' }
@@ -116,7 +143,7 @@ function handleSortChange(value: SortDirection, uid: number) {
 
 <template>
   <view :class="['wd-table', { 'is-border': border }, customClass]" :style="parseStyle(customStyle)">
-    <scroll-view :scroll-x="true" :scroll-y="scrollY" :style="scrollStyle" @scroll="handleScrollThrottled">
+    <scroll-view :id="viewportId" class="wd-table__scroll" :scroll-x="true" :scroll-y="scrollY" :style="scrollStyle" @layoutchange="handleViewportLayout" @scroll="handleScrollThrottled">
       <view class="wd-table__content" :style="contentStyle">
         <view v-if="showHeader" :class="['wd-table__header', { 'is-sticky': fixedHeader }]">
           <!-- 斑马纹按参考源语义只作用于数据行；表头误挂 is-stripe 会让

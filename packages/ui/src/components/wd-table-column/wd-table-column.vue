@@ -25,7 +25,7 @@ watch(() => [props.prop, props.label, props.width, props.sortable, props.fixed, 
 }, { immediate: true, flush: 'sync' })
 const isVirtual = computed(() => Boolean(table.value?.props.virtual))
 const ellipsis = computed(() => Boolean(table.value?.props.ellipsis))
-const columnStyle = computed(() => ({ width: addUnit(props.width), height: `${table.value?.bodyHeight?.value || 0}px`, left: props.fixed ? table.value?.getFixedLeft(columnIndex.value) || '0px' : 'auto' }))
+const columnStyle = computed(() => ({ width: table.value?.getColumnWidth?.(columnIndex.value) ?? addUnit(props.width), height: `${table.value?.bodyHeight?.value || 0}px`, left: props.fixed ? table.value?.getFixedLeft(columnIndex.value) || '0px' : 'auto' }))
 const cellConfigs = computed(() => {
   const parent = table.value
   const data = parent?.props.data || []

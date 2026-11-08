@@ -122,10 +122,9 @@ export const signatureProps = {
    * 类型: boolean
    * 默认值: true
    *
-   * Lynx 实现说明：uni-app canvas 的 disable-scroll 属性在 Lynx 无
-   * 对应能力（view 元素无该属性）。端口将画布触摸统一经
-   * @touchmove.stop.prevent 阻止页面滚动，即该 prop 恒按 true 生效，
-   * 保留声明仅为 API 对齐。
+   * Lynx 实现说明：通过画布的 consume-slide-event / touch-action 进行
+   * 局部滚动仲裁；为 true 时阻止签名触摸被页面滚动接管，为 false 或
+   * disabled 时放行。不会给整个页面施加模态滚动锁。
    */
   disableScroll: {
     type: Boolean,

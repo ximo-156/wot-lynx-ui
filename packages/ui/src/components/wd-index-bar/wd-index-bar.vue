@@ -38,6 +38,9 @@ const childRevision = ref(0)
 const offsetTop = ref(0)
 let measureVersion = 0
 let endTimer: ReturnType<typeof setTimeout> | undefined
+let scrollTimer: ReturnType<typeof setTimeout> | undefined
+let scrollTargetUid: number | null = null
+let touchTargetUid: number | null = null
 const sidebarRect = ref<{ top: number; height: number } | null>(null)
 const DEFAULT_SIDEBAR_RECT = { top: 0, height: 300 }
 
@@ -85,7 +88,7 @@ async function measure() {
   const height = Number(sidebar?.height) || 0
   sidebarRect.value = height > 0 ? { top: Number(sidebar.top) || 0, height } : null
   await Promise.all(children.map((child) => child?.$?.exposed?.refresh?.()))
-  if (isAlive() && version === measureVersion && !scrollState.touching) updateActiveByScroll(scrollState.prevScrollTop)
+  if (isAlive() && version === measureVersion && !scrollState.touching && scrollTargetUid === null) updateActiveByScroll(scrollState.prevScrollTop)
 }
 function requestMeasure() {
   measureVersion++
@@ -99,6 +102,7 @@ onMounted(measure)
 onBeforeUnmount(() => {
   measureVersion++
   clearTimeout(endTimer)
+  clearTimeout(scrollTimer)
 })
 function anchorTop(child: any): number | null {
   const exposed = child?.$?.exposed
@@ -116,12 +120,16 @@ function updateActiveByScroll(scrollTop: number) {
   }
   activate(active)
 }
+function clearScrollTarget() {
+  clearTimeout(scrollTimer)
+  scrollTargetUid = null
+}
 function handleScroll(event: any) {
   const raw = event?.detail?.scrollTop
   const scrollTop = Number(raw)
   if (raw === undefined || !Number.isFinite(scrollTop)) return
   scrollState.prevScrollTop = Math.max(0, Math.floor(scrollTop))
-  if (!scrollState.touching) updateActiveByScroll(scrollState.prevScrollTop)
+  if (!scrollState.touching && scrollTargetUid === null) updateActiveByScroll(scrollState.prevScrollTop)
 }
 function getAnchorByPageY(pageY: number) {
   if (!Number.isFinite(pageY) || !sidebarEntries.value.length) return undefined
@@ -158,6 +166,11 @@ function touchY(event: any, ended = false): number {
  * 度量缺失时无内容偏移可算，退回官方 scrollIntoView 按锚点 id 定位。
  */
 function setScrollTop(entry: { index: AnchorIndex; child: any }, smooth = true) {
+  scrollTargetUid = entry.child.$.uid
+  clearTimeout(scrollTimer)
+  // scrollend 只解除保护，不按钳制后的偏移重新选字母；内容手势立即解除。
+  // 同一偏移可能没有 scrollend，旧宿主也可能不派发它，故等待必须有上限。
+  scrollTimer = setTimeout(() => { if (isAlive()) clearScrollTarget() }, 1000)
   const exposed = entry.child?.$?.exposed
   const rawTop = Number(exposed?.top?.value ?? exposed?.top ?? NaN)
   const measured = (exposed?.measured?.value ?? exposed?.measured) !== false
@@ -168,8 +181,16 @@ function setScrollTop(entry: { index: AnchorIndex; child: any }, smooth = true) 
   const id = exposed?.id?.value ?? exposed?.id ?? getAnchorId(entry.child.$.uid, entry.index)
   scrollIntoViewById(`#${id}`, 'start')
 }
+// Web 鼠标 click 只映射为 tap，不产生 touch 序列。按已知条目跳转，
+// 也避免外层页面滚动后用过期的 sidebarRect 将点击命中为别的字母。
+function handleIndexTap(entry: { index: AnchorIndex; child: any }) {
+  if (scrollState.touching && touchTargetUid === entry.child.$.uid) return
+  activate(entry.child)
+  setScrollTop(entry)
+}
 function handleTouchStart() {
   clearTimeout(endTimer)
+  touchTargetUid = null
   scrollState.touching = sidebarEntries.value.length > 0
 }
 function handleTouchMove(event: any) {
@@ -177,12 +198,14 @@ function handleTouchMove(event: any) {
   if (!target || activeUid.value === target.child.$.uid) return
   activate(target.child)
   setScrollTop(target, false)
+  touchTargetUid = target.child.$.uid
 }
 function handleTouchEnd(event: any) {
   const target = getAnchorByPageY(touchY(event, true))
   if (target) {
     activate(target.child)
     setScrollTop(target)
+    touchTargetUid = target.child.$.uid
   }
   clearTimeout(endTimer)
   endTimer = setTimeout(() => { if (isAlive()) scrollState.touching = false }, 30)
@@ -191,7 +214,7 @@ function handleTouchEnd(event: any) {
 
 <template>
   <view class="wd-index-bar" :id="indexBarId" @layoutchange="handleLayoutChange">
-    <scroll-view :id="`${indexBarId}-content`" :scroll-y="true" class="wd-index-bar__content" @scroll="handleScroll"><slot /></scroll-view>
+    <scroll-view :id="`${indexBarId}-content`" :scroll-y="true" class="wd-index-bar__content" @scroll="handleScroll" @scrollend="clearScrollTarget" @touchstart="clearScrollTarget"><slot /></scroll-view>
     <view v-if="scrollState.touching" class="wd-index-bar__current-index"><text class="wd-index-bar__current-index-text">{{ state.activeIndex }}</text></view>
     <view
       :id="`${indexBarId}-sidebar`"
@@ -201,7 +224,7 @@ function handleTouchEnd(event: any) {
       @touchend.stop.prevent="handleTouchEnd"
       @touchcancel.stop.prevent="handleTouchEnd"
     >
-      <view v-for="entry in sidebarEntries" :key="entry.key" class="wd-index-bar__index" :class="{ 'is-active': entry.index === state.activeIndex }"><text class="wd-index-bar__index-text">{{ entry.index }}</text></view>
+      <view v-for="entry in sidebarEntries" :key="entry.key" class="wd-index-bar__index" :class="{ 'is-active': entry.index === state.activeIndex }" @tap.stop="handleIndexTap(entry)"><text class="wd-index-bar__index-text">{{ entry.index }}</text></view>
     </view>
   </view>
 </template>

@@ -159,6 +159,7 @@ export type TableProvide = {
   bodyHeight?: ComputedRef<number>
   getRowTop?: (rowIndex: number) => number
   getCellHeight?: (rowIndex: number, rowspan: number) => number
+  getColumnWidth?: (columnIndex: number) => string | undefined
   getSpanWidth?: (columnIndex: number, colspan: number) => string
   reportCellHeight?: (uid: number, rowIndex: number, rowspan: number, height: number) => void
 }

@@ -4,6 +4,15 @@ import type { SpanMethodResult } from './types'
 export interface TableCellMeasure { rowIndex: number; rowspan: number; height: number }
 export interface TableRowTracks { heights: number[]; offsets: number[]; total: number }
 
+/** Percentages use the scroll viewport, never the expanded content or an individual column. */
+export function resolveTableColumnWidths(widths: readonly string[], viewport: number): string[] {
+  return widths.map((width) => {
+    const percent = /^(\d+(?:\.\d+)?|\.\d+)%$/.exec(width.trim())
+    return percent && Number.isFinite(viewport) && viewport > 0
+      ? `${viewport * Number(percent[1]) / 100}px` : width
+  })
+}
+
 export function resolveTableRows(count: number, fallback: number, virtual: boolean, measures: TableCellMeasure[]): TableRowTracks {
   const heights = Array.from({ length: count }, () => virtual ? fallback : 0)
   if (!virtual) {

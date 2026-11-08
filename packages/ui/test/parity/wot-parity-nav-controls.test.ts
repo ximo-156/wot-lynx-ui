@@ -161,7 +161,7 @@ describe('tabs and panels', () => {
     ]) } as any)
     await frames()
     for (const name of ['setActive', 'scrollIntoView', 'updateLineStyle']) expect(exposed.value[name]).toBeTypeOf('function')
-    const line = () => node(container, '.wd-tabs__nav-container > .wd-tabs__line')
+    const line = () => node(container, '.wd-tabs__line-anchor > .wd-tabs__line')
     expect(line().style.width).toBe(''); expect(line().style.height).toBe('')
     width.value = 17; height.value = 3; await frames()
     expect(line().style.width).toBe('17px'); expect(line().style.height).toBe('3px')
@@ -187,12 +187,13 @@ describe('tabs and panels', () => {
     await frames(); rects.delay()
     const older = first.value.updateLineStyle(), newer = first.value.updateLineStyle()
     second.value.updateLineStyle()
-    expect(rects.pending).toHaveLength(6); expect(rects.pending[0].selector).not.toBe(rects.pending[4].selector)
-    rects.pending[2].deliver([{ ...RECT, width: 100 }]); rects.pending[3].deliver([{ ...RECT, width: 55 }]); await newer; await frames(1)
-    rects.pending[0].deliver([{ ...RECT, width: 100 }]); rects.pending[1].deliver([{ ...RECT, width: 12 }])
-    rects.pending[4].deliver([{ ...RECT, width: 100 }]); rects.pending[5].deliver([{ ...RECT, width: 20 }])
+    // Each request measures headers, text and its own native nav container.
+    expect(rects.pending).toHaveLength(9); expect(rects.pending[0].selector).not.toBe(rects.pending[6].selector)
+    rects.pending[3].deliver([{ ...RECT, width: 100 }]); rects.pending[4].deliver([{ ...RECT, width: 55 }]); rects.pending[5].deliver(RECT); await newer; await frames(1)
+    rects.pending[0].deliver([{ ...RECT, width: 100 }]); rects.pending[1].deliver([{ ...RECT, width: 12 }]); rects.pending[2].deliver(RECT)
+    rects.pending[6].deliver([{ ...RECT, width: 100 }]); rects.pending[7].deliver([{ ...RECT, width: 20 }]); rects.pending[8].deliver(RECT)
     await older; await frames()
-    expect(node(container, '.wd-tabs__nav-container > .wd-tabs__line').style.width).toBe('55px')
+    expect(node(container, '.wd-tabs__line-anchor > .wd-tabs__line').style.width).toBe('55px')
   })
 
   it('reacts to child removal without mismatching header and painted panel', async () => {

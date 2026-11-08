@@ -36,9 +36,15 @@ export interface LynxRuntime {
   [key: string]: any
 }
 
-/** 取 Lynx 运行时全局。Web 预览 / Node 测试环境下为 undefined。 */
+/**
+ * Lynx bundle 的 SDK 由模块包装器以词法参数注入，不一定挂在 globalThis。
+ * declare 仅提供类型，不创建变量；Node / 测试宿主仍可使用全局对象兜底。
+ */
+declare const lynx: LynxRuntime | undefined
+
+/** 取当前模块的 Lynx SDK，避免把 Web 后台 Worker 的空全局当作 SDK。 */
 export function getLynxRuntime(): LynxRuntime | undefined {
-  const runtime = (globalThis as any).lynx
+  const runtime = typeof lynx !== 'undefined' ? lynx : (globalThis as any).lynx
   return runtime && typeof runtime === 'object' ? (runtime as LynxRuntime) : undefined
 }
 

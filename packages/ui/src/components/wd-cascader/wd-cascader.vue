@@ -37,9 +37,8 @@ const props = defineProps(cascaderProps)
 const isAlive = useAlive()
 const emit = defineEmits(['close', 'update:modelValue', 'confirm', 'update:visible'])
 
-// 本地 wd-tabs 未 defineExpose updateLineStyle（共享层缺口），以可选方法类型承接，
-// 调用处 optional chaining 守卫：未暴露时静默跳过（仅影响指示线重定位，不崩）。
-const tabsRef = ref<{ updateLineStyle?: () => void }>() // tabs组件实例
+// Re-measure after sheet transitions; WdTabs exposes updateLineStyle.
+const tabsRef = ref<{ updateLineStyle?: () => void }>()
 const pickerShow = ref<boolean>(false) // picker弹框是否出现
 const tabs = ref<CascaderTab[]>([]) // 面板状态数据
 const activeTab = ref<number>(0) // 当前停留的列下标

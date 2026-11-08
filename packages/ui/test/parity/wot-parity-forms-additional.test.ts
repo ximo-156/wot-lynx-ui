@@ -611,8 +611,7 @@ describe('real host media export and stale callback cancellation', () => {
     mounted.instance().clear()
     for (const query of queries) query.success?.(rect())
     await flush()
-    const svg = String(node(mounted.container, 'svg').getAttribute('content'))
-    expect(svg).not.toContain('<polyline')
+    expect(mounted.container.querySelector('.wd-signature__stroke')).toBeNull()
     mounted.props.value.disabled = true
     await flush()
     fireEvent.touchstart(canvas, { touches: [{ clientX: 100, clientY: 100 }] })

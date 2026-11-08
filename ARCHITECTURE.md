@@ -1,30 +1,30 @@
-# wot-lynx-ui 架构设计（v2.0）
+# wot-lynx-ui 架构设计（v2.0，现行规则校准）
 
-> 本文档是 `wot-lynx-ui` 的**架构权威文档**，与 `CONVENTIONS.md`（编码规范）互为补充：
-> `CONVENTIONS.md` 回答「一个组件怎么写」，本文回答「整个系统怎么组织、怎么演进」。
+> 本文解释系统组织与演进，与[组件规范](<CONVENTIONS.md>)互补；[AI 入口](<AGENTS.md>)和[任务流程](<docs/ai/README.md>)提供按需阅读路径。
 >
 > | 项 | 值 |
 > |---|---|
-> | 版本 | **v2.0**（2026-10-22 修订） |
-> | 上一版 | v1.0（2026-10-16），已因两次全库重写而失效 |
-> | 基线 | `packages/ui` 106 个 `wd-*` 组件 / 50,024 行源码 |
-> | 修订依据 | 2026-10-22 架构评审（依赖图实测 + 文档漂移比对，报告存档于评审人本机） |
-> | 决策留痕 | `docs/adr/` |
+> | 文档基点 | v2.0（2026-10-22 架构评审）；2026-11-08 按现行源码/门禁校准 |
+> | 历史版本 | v1.0（2026-10-16），相关旧断言已失效 |
+> | 当前规模 | 见[生成快照](<docs/architecture/SNAPSHOT.md>)及检查脚本，不用旧手写数字代替 |
+> | 决策状态 | 以[ADR 索引](<docs/adr/README.md>)及顶部执行/修订说明为准 |
+>
+> **阅读边界**：§2.3、§4、§5.1 说明现行约束；§0 和带日期的评审/性能数字是历史留档，§11–§13 保留演进计划/风险/指标，不是让 AI 自动执行的重构任务。目录分层已落地不等于未来独立包已发布，元数据非空不等于完整类型语义。历史段落与现行规则不一致时先核对有效 ADR 和源码，不恢复已删除的 uni 层或强行解合法族内环。
 
 ---
 
-## 0. v1.0 → v2.0 修订说明
+## 0. v1.0 → v2.0 历史修订说明
 
 v1.0 于 2026-10-16 写成。此后仓库发生两次全库级重写（`a00b6b9` 全量对齐 wot-ui 2.3.2、`7658d0c` 全组件原生优先重写），导致 v1.0 的 6 处断言与代码不符。**本版的首要工作不是增加新设计，而是把文档拉回事实。**
 
 | # | v1.0 断言 | v2.0 更正 | 依据 |
 |---|---|---|---|
 | C1 | **INV-5 / ADR-009：零 MTS**，`src/` 不得出现 worklet | **撤销。** 改为「声明式 MTS 是跟手交互的唯一形态，命令式跨线程 API 禁止」 | `7658d0c`；`CONVENTIONS §10`（2026-10-19 改写）；12 个组件使用 `main-thread-bind*` |
-| C2 | P0-1：`index.ts` 435 行手写 barrel，清单维护两遍 | **已解决。** `scripts/gen-index.mjs` 生成，`src/index.ts` 173 行 + `components/index.ts` 生成物 | `pnpm check:index` |
+| C2 | P0-1：`index.ts` 435 行手写 barrel，清单维护两遍 | **已解决。** 双根 barrel 由[gen-index](<scripts/gen-index.mjs>)按目录生成；[主入口](<packages/ui/src/index.ts>)保留手写的转出与插件编排 | `pnpm check:index` |
 | C3 | §3.3 Style Funnel「待引入」（Phase 0.4） | **已落地。** `common/style.ts` 提供 `resolveStyle` / `defineStyleKeys` / `createStyleResolver`，带单测 | `common/style.ts`、`test/unit/style-funnel.test.ts` |
 | C4 | §1.1「`docs/` 8 篇指南 + 101 篇组件文档」 | **更正。** `docs/components/` 由 `gen-docs.mjs` 按需生成，不入库 | 目录实测 |
 | C5 | §3.1「组件之间不得互相 import 实现」 | **改写。** 该禁令从未生效（实存 153 条边），且方向错误。改为三条边规则（见 §5） | 依赖图实测 |
-| C6 | §3.2 / ADR-003：拆域包「暂不做」，条件为「单域 > 40 组件」 | **改写。** 拆域包的真实障碍是依赖图有环（5 个）且稠密（153 边），不是版本管理成本。前提条件改为「业务↔业务边 ≤ 60 且环 = 0」 | 依赖图实测 |
+| C6 | §3.2 / ADR-003：拆域包「暂不做」，条件为「单域 > 40 组件」 | **改写。** 拆域包的真实障碍是依赖图有环（5 个）且稠密（153 边），不是版本管理成本。前提条件改为「业务↔业务边 ≤ 60 且跨族环 = 0」 | 依赖图实测 |
 
 另新增两个 ADR：**ADR-011 声明式 MTS**、**ADR-012 Primitives 层**。
 
@@ -36,84 +36,37 @@ v1.0 于 2026-10-16 写成。此后仓库发生两次全库级重写（`a00b6b9`
 
 > 以下数据均可由 `node scripts/gen-snapshot.mjs` 与 `node scripts/analyze-deps.mjs` 复现。**文档中的数字若与脚本输出不一致，以脚本为准。**
 
-### 1.1 规模与形态
+### 1.1 当前目录与规模入口
 
-```
-wot-lynx-ui/  (pnpm monorepo, packageManager: pnpm@10.24.0, node>=20)
-├── packages/ui/        组件库本体（源码分发 + dist 入口桥接层）
-│   ├── src/components/ 106 个 wd-* 目录（111 .vue + 111 types.ts + index.scss + 生成 index.css）
-│   ├── src/composables/ 23 个组合式函数（父子通信 / 触摸 / 弹层 / 表单 / 上传…）
-│   ├── src/common/      14 个基础模块（util / props / style / native / host / 日期 / 过渡 / 主题镜像…）
-│   ├── src/styles/      三层令牌 + mixin + 3 套预设主题（brand-a / compact / high-contrast）
-│   ├── src/icons/       图标注册表（registry + sets + 字体 .ttf）
-│   ├── src/locale/      16 种语言
-│   ├── plugin/          Rspeedy 插件：标签转换 / 自动按需导入 / Web 字体
-│   └── test/            87 个测试文件（node + jsdom 双 project，组件 project 关闭文件隔离）
-│       ├── unit/        17 个纯函数/静态数据用例（node 环境、无 setup）
-│       ├── component/   20 个组件行为与平台约束用例（jsdom 双线程）
-│       ├── parity/      15 个与官方 wot-ui 2.3.2 的 API/CSS 对齐用例
-│       ├── native-first/ 12 个「原生优先」重写回归
-│       ├── mts/         10 个 Main Thread Script 跟手用例
-│       ├── regression/  13 个 bugfix / 崩溃守卫回归
-│       ├── helpers/     测试侧公共解析（双组件根，ADR-012）
-│       └── fixtures/    官方 2.3.2 API / props 快照
-├── packages/demo/       Rspeedy 双端 Demo + 真机验收清单
-├── docs/                VitePress 站点（6 篇用户指南 + 组件文档由脚本生成）
-├── scripts/             工程脚本（gen-index / gen-docs / build-css / build-dist / review-lint …）
-└── .github/workflows/ci.yml   并行门禁 job
+```text
+packages/ui/
+├── src/
+│   ├── primitives/      基础件（L3.5）
+│   ├── components/      业务组件（L4），另有不公开的参考占位
+│   ├── composables/     父子通信、表单、触摸等
+│   ├── common/          样式、原生/宿主能力、平台、工具、日期、过渡
+│   ├── styles/          原始刻度、品牌、亮暗语义与预设
+│   ├── icons/           字体/图标注册表
+│   └── locale/          多语言资源
+├── plugin/              标签、按需导入、Web 宿主插件
+├── test/                unit/component/parity/native-first/mts/regression
+└── meta.json            源码推导的组件 API 目录
+packages/demo/           Rspeedy 双端示例与设备清单
+docs/                    手写指南、决策、生成组件页与浏览器预览
+scripts/                 生成、构建、契约检查、迁移
 ```
 
-| 指标 | 数值 |
-|---|---|
-| 组件数 | 106 |
-| 源码行数 | 50,024（vue 23,687 / ts 13,614 / scss 12,723） |
-| 每组件均值 | vue 221 / ts 127 / scss 118 |
-| 最大组件 | `wd-calendar-view`（vue 1,591 + ts 866，21 文件） |
-| vue 行数分布 | 中位数 156 / p90 505 / >800 行仅 2 个 |
+组件公开集合以[两个生成 barrel](<packages/ui/src/index.ts>)及 `pnpm check:index` 为准；目录/源码规模和测试文件数见[快照](<docs/architecture/SNAPSHOT.md>)，依赖关系见[依赖报告](<docs/architecture/DEPS.md>)与 `pnpm check:deps`。不再维护另一套手写 LOC/测试数字，快照校验失败时不能把旧值当当前事实。
 
-### 1.2 分层现状：纵向健康，横向失控
+### 1.2 当前分层与历史收敛
 
-**纵向（层间）——已达标**：
+- common 不反向依赖 composables/组件；composables 不反向依赖组件。基础件/业务组件是两个平级根，不只检查一个根。
+- 业务→基础件为合法组合；基础件可依赖其他基础件，但不得依赖业务组件。基础件之间并非“一律禁止互引”。
+- 业务族内实现/契约互引允许；跨族实现/契约借用按 lint/基线约束，禁止引入跨族环。
+- 族只读[families.json](<docs/architecture/families.json>)及理由，不通过前缀、双向边或工具各自推断。判据及规则 ID 见[ADR-013](<docs/adr/013-declarative-families.md>)和 §5.1。
+- `type`/KEY 的 import 不是天然违规：业务→基础件、基础件之间、声明的族内契约均需与跨族业务借用区分，不为了“全图零环”一刀切下沉。
 
-| 检查 | 结果 |
-|---|---|
-| `common/` → `components/` 或 `composables/` | **0 处** |
-| `composables/` → `components/` | **0 处** |
-| 守护 | `review-lint.mjs` 的 `dep-direction` ×2（error 级） |
-
-**横向（组件间）——失控**：
-
-| 指标 | 评审时（改造前） | 当前 |
-|---|---|---|
-| 跨组件 import 行数 | 197 | 205 |
-| 去重依赖边 | 153 | 157 |
-| 「业务 ↔ 业务」边 | **153（全部）** | **48** |
-| 「业务 → 基础件」边 | 0 | 97 |
-| 「基础件 ↔ 基础件」边 | — | 10 |
-| 「基础件 → 业务」边 | — | **0** |
-| 有出边的组件 | 74 / 106（70%） | — |
-| 跨族环 | — | **0** |
-| 族内环（父子组件对） | 5 | 5 |
-| `wd-icon` fan-in | 47（44% 的组件依赖它） | — |
-
-> 总数从 153 变为 157 不是劣化：评审用的临时脚本只匹配同根 `../wd-x/`，
-> 而 `analyze-deps.mjs` 额外覆盖跨根 `../../primitives/wd-x/` 与嵌套子目录。
-> **可比指标是「业务 ↔ 业务」边**，它由 153 降到 48（−69%）。
-
-边的类型分布（决定修复策略，不能一刀切）：
-
-| 类型 | 条数 | 例子 | 判定 |
-|---|---|---|---|
-| `component-compose`（引 `.vue`） | 132 | `wd-calendar → wd-tabs.vue` | ✅ 合法组合，需限方向 |
-| `type-contract`（`import type` 引 `types`） | 42 | `wd-button → wd-loading/types` | ❌ 必须下沉 |
-| `other`（值导入 `types` 内 KEY 常量） | 22 | `wd-avatar → wd-avatar-group/types` | ❌ 必须下沉 |
-| `util-borrow`（引 `utils`） | 1 | `wd-calendar → wd-calendar-view/utils` | ❌ 应下沉 `common` |
-
-**契约借用（跨族业务↔业务借 types/utils）是「环」与「拆包不可行」的唯一成因，现为 0。**
-
-> 口径修正：评审时统计的「65 处」把族内父子契约也算进去了。子组件 import 父组件的
-> `*_KEY` 是 provide/inject 的固有形态，不是可拆解的耦合（见 `docs/architecture/families.json`）。
-> 按「跨族才算」的真实口径，改造后该指标为 **0**。
+历史评审记录：改造前 153 条业务依赖边，收敛后留档为 48；原 5 个环是父子族内环，**不是必须继续清零的当前回归**。当前检查关注业务边不增长、跨族环为零、契约借用不增长、基础件无反向业务依赖；它不证明全库所有 import 语义都已完美。
 
 ### 1.3 必须固化的平台不变量（Lynx 硬约束）
 
@@ -131,7 +84,9 @@ wot-lynx-ui/  (pnpm monorepo, packageManager: pnpm@10.24.0, node>=20)
 | I8 | kebab-case 标签被当原生元素 | ✅ 标签转换插件 + 测试 |
 | I9 | worklet 之间禁止互相引用（`'main thread'` 函数不可互调） | ✅ `CONVENTIONS §21` + lint |
 
-### 1.4 架构性问题（按严重度）
+### 1.4 历史评审的问题清单（非当前待办）
+
+下表保留评审时的问题与部分后续记录。源码分发桥接、目录生成 barrel、API meta/文档、脚手架、视觉回归和分片现已有实现；不能将旧“缺失”直接转成当前任务。当前是否退化须运行相应门禁，残余语义/平台问题按源码与新证据确认。
 
 | 级别 | 问题 | 证据 |
 |---|---|---|
@@ -163,8 +118,8 @@ wot-lynx-ui/  (pnpm monorepo, packageManager: pnpm@10.24.0, node>=20)
 | 原则 | 含义 | 当前状态 |
 |---|---|---|
 | **P1 单一来源** | 任何事实只定义一处，其余靠生成 | ✅ 组件清单 + `meta.json` 已生成 |
-| **P2 依赖单向** | 层间单向；**层内也须单向** | ✅ 层间；🔴 层内（153 边） |
-| **P3 显式契约** | 平台能力、组件 API、父子通信都可类型化、可测试 | 🟡 父子契约好；平台契约弱 |
+| **P2 依赖单向** | 层间单向；横向按族与层级约束 | 现行规则有机器守护，历史边与当前检查分开 |
+| **P3 显式契约** | 平台能力、组件 API、父子通信可类型化、可测试 | 原生/宿主契约已落地；meta 仍有类型语义边界 |
 | **P4 失败降级** | 平台不支持时降级并留痕 | 🟡 散落 |
 | **P5 约束机器化** | 文档里的每条硬规则都有 lint / 测试守护 | 🟡 28 条规则，横向缺口 |
 | **P6 演进优先** | 可增量交付、可回滚 | ✅ |
@@ -173,14 +128,14 @@ wot-lynx-ui/  (pnpm monorepo, packageManager: pnpm@10.24.0, node>=20)
 
 违反即视为架构回归：
 
-- **INV-1 依赖无环**：全库 import 图无强连通分量。
-- **INV-2 层间单向**：`components/primitives → composables → common/platform → styles`，反向 import 是错误。
-- **INV-3 层内单向**：业务组件可依赖基础件；**业务组件之间禁止契约借用**；基础件之间禁止互相依赖。
-- **INV-4 样式出口唯一**：组件不得直接拼装内联样式对象下发，一律经 Style Funnel。
-- **INV-5 声明式 MTS**：跟手交互只能用 `main-thread-bind*` + `useMainThreadRef` + `'main thread'`；**禁止** `runOnMainThread` / `runOnBackground` / `lynxWorkletImpl`。
-- **INV-6 平台能力经适配层**：组件不得直接读 `SystemInfo` / 宿主全局，必须经 `PlatformAdapter`。
-- **INV-7 契约有源**：props / events / slots / 元信息由 `meta` 单一来源驱动生成物。
-- **INV-8 API 兼容**：`wd-*` 的 props / events / slots / 类名与 wot-ui 2.3.2 对齐（差异须在 `differences.md` 登记）。
+- **INV-1 跨族无环**：组件横向依赖不得出现跨族强连通分量；声明的父子族内环允许，不等于要求全库所有 import 无环。
+- **INV-2 层间单向**：common 不依赖 composables/组件；composables 不依赖组件；基础件不依赖业务组件。下层不得反向 import 上层。
+- **INV-3 横向边受控**：基础件之间允许组合；业务族内互引允许，跨族业务实现/契约借用受现行规则与存量基线约束，新改动不得扩大违规。
+- **INV-4 样式出口明确**：后台可切换样式使用完整键集/显式中性值，动态键通过每元素独立的 Style Funnel 记录并清除；MTS 直接写样式仍须遵守状态复位和所有权协议。
+- **INV-5 声明式 MTS**：MTS 唯一允许形态为 `main-thread-bind*` + `useMainThreadRef` + `'main thread'`；禁止命令式派发与 worklet 互相闭包引用。现有兼容降级遵守[组件规范 §10](<CONVENTIONS.md>)及目标源码证据，不自动重写。
+- **INV-6 能力经现有适配层**：引擎能力用 native，宿主能力用 host，可用性由 `getPlatform().capabilities` 实时派生；设备/窗口信息用既有工具。PlatformAdapter 不是另一个 measure/navigate 方法门面。
+- **INV-7 契约有源**：源码是公开 API 事实来源，meta 是推导生成物，组件文档/侧边栏及 diff 消费 meta；barrel 由双根目录生成，不手填第二套清单。
+- **INV-8 兼容有边界**：保留已声明的 wot-ui 2.3.2 对应 API，差异见[差异指南](<docs/guide/differences.md>)；运行时 prop 守卫不是完整 TypeScript/真机行为证明。
 
 ---
 
@@ -262,7 +217,7 @@ wd-button(11) wd-popup(9) wd-img(3) wd-cell(3) wd-input(4) wd-root-portal
 | `@wot-lynx/cli` | scaffold / gen-* / codemod | P2 |
 | `wot-lynx-ui`（保留） | 兼容层：re-export 全部，存量零改动 | 全程 |
 
-**按域拆组件包的前提**：`业务↔业务边 ≤ 60 且环 = 0`。
+**按域拆组件包的前提**：`业务↔业务边 ≤ 60 且跨族环 = 0`。
 
 ---
 

@@ -1,8 +1,12 @@
 # ADR-012 引入 L3.5 Primitives 层
 
-- **状态**：**已落地**（2026-10-23 完成，全量测试通过）
+- **状态**：已采纳（分层已落地，族/边规则经 ADR-013 修订）
 - **日期**：2026-10-22
 - **相关**：ADR-001、ADR-003、`ARCHITECTURE.md §3.2`
+
+> **现行规则说明（2026-11-08 校准）**：基础件/业务组件双根分层继续生效；下文早期“基础件禁止互引”“自动识别组件族”和旧规则 ID 已由[ADR-013](<013-declarative-families.md>)修订。
+> 组件族只读[families.json](<../architecture/families.json>)及 reason；族内父子互引/环允许，跨族环禁止。基础件可组合其他基础件，但不得反向依赖业务组件；跨族业务实现/契约借用按现行 lint 约束。
+> 当前规则 ID 是 `dep/primitives-purity`、`dep/lateral-component`、`dep/lateral-contract`；不要从保留的历史段落重新推断族或强制下沉所有族内 KEY。以下数字与“全量测试通过”均为当时记录，不代替当前验收。
 
 ## 背景
 

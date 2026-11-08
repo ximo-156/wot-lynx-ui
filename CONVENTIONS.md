@@ -1,65 +1,59 @@
-# wot-lynx-ui 组件重写规范（CONVENTIONS）
+# wot-lynx-ui 组件开发规范（CONVENTIONS）
 
-> 本文档是重写 wot-lynx-ui 组件库的**唯一权威规范**。所有重写工作必须严格遵守。
+> 本文约束 `packages/ui` 的当前组件开发；文档站和 Demo 的差异规则见各目录的 `AGENTS.md`。
+> [AI 协作入口](<AGENTS.md>)提供最小阅读路径，[架构文档](<ARCHITECTURE.md>)解释系统组织，[ADR 索引](<docs/adr/README.md>)说明现行与历史决策。
 >
-> **重写，不是移植**：wot-ui 仅作为 **API 与交互参考**（props / slots / events /
-> 组件名与其对齐），不作为源码转换来源。每个组件都是为 Vue Lynx 从零手写的
-> 全新实现；视觉与设计令牌按本文档第 3 节的体系重新设计。
+> **重写，不是移植**：wot-ui 2.3.2 仅作为 API 与交互参考，不作为源码转换来源。
+> `--wot-*` 命名和原始刻度保留，品牌与亮暗语义由本库独立映射；不宣称默认视觉逐像素一致。
+> 历史重写进度、巡检记录和当时测试数字不是当前验收结果；与源码/门禁冲突时先核对有效 ADR，不自行放宽约束。
 
 ## 0. 源与目标
 
-- **API 参考**：wot-ui 2.3.2 源码（`/tmp/wot-ui/src/uni_modules/wot-ui/components/<component>/`）
-  - `types.ts` — props 定义（含详细中文注释），重写时保持 props 名称/类型/默认值一致
-  - `<name>.vue` — 交互逻辑参考（事件、状态机、边界处理），**不复制代码**
-- **目标**：`packages/ui/src/components/<component>/`（三文件 + 生成的 `index.css`）
-  - `types.ts` — props 定义，import 自 `vue-lynx` 与 `../../common/props`
-  - `wd-xxx.vue` — 全新实现
-  - `index.scss` — 全新样式，消费 `--wot-*` 设计令牌（与 wot-ui 2.3.2 同源）
+- **API 参考**：入库的[官方 props fixture](<packages/ui/test/fixtures/wot-ui-2.3.2-props.json>)与[契约守卫](<scripts/check-wot-props.mjs>)；更新 fixture 才需要本地离线官方源码，不假设另一台机器存在 `/tmp/wot-ui`。
+  - 官方属性与交互用于核对契约、事件和边界，**不复制实现代码**。
+  - 运行时守卫不是完整 TypeScript 或真机行为证明，已验证范围见[项目说明](<README.md>)。
+- **目标有两个平级根**：[primitives](<packages/ui/src/primitives/>)（基础件）与[components](<packages/ui/src/components/>)（业务组件）。按组件名定位、生成或测试时都要覆盖双根。
+  - `types.ts` — props/类型定义，框架类型来自 `vue-lynx`，公共工厂来自 `../../common/props`。
+  - `wd-xxx.vue` — Lynx 原生实现。
+  - `index.scss` — 消费 `--wot-*` 令牌的样式；`index.css` 是生成物。
 
 ## 1. 总体原则
 
-1. **API 兼容优先**：props / slots / events / 组件名 / BEM 类名与 wot-ui 保持一致，用户无感迁移。
-2. **视觉重新设计**：不再沿用 wot-ui 的 `--wot-*` 令牌与视觉取值，按第 3 节的新设计系统实现。
-3. **原生性能**：能用 CSS（`:active`、transition、animation）解决的不用 JS；高频交互（拖动、滑动）在后台线程用响应式实现（禁止 Main Thread Script，见 §9）。
-4. **为 Lynx 而写**：不是"把 Web 代码改到能跑"，而是按 Lynx 渲染引擎的约束与能力设计实现（文本必须 `<text>`、无伪元素、linear 布局等，见 §4/§5/§14）。
-5. **渐进增强**：平台不支持的能力（canvas、渐变 SVG 等）给出降级方案并在文件头注释说明。
-6. **成熟方案优先**：通用能力（时间格式化、过渡动画状态机等）优先使用市面成熟方案
-   （dayjs、vue-lynx 内置 Transition 等），不自研通用逻辑；自研只用于 Lynx 平台特化
-   适配层（如 wd-transition 对框架 Transition 的显隐契约 / 事件映射）。
+1. **API 兼容优先**：保留已声明的 props / slots / events / 组件名 / BEM 契约；差异和验证边界在[差异指南](<docs/guide/differences.md>)记录，不把“参考兼容”泛化为全部功能无差异。
+2. **同源令牌，独立品牌**：保留 `--wot-*` 命名和官方原始刻度，品牌与亮暗语义按第 3 节映射，不机械还原为官方默认主色。
+3. **原生性能**：基础反馈优先 CSS；跟手交互正常形态为声明式 MTS，禁止命令式跨线程派发（§10）。已有记录的兼容降级按目标源码和回归处理，不擅自全库换线程。
+4. **为 Lynx 而写**：原生文本、元素、linear/flex 布局和样式通道遵守 §4/§5/§15/§19，不从普通 Vue Web 经验猜引擎行为。
+5. **渐进增强**：原生/宿主能力不可用时走现有降级，说明边界并覆盖测试，不伪造成功。
+6. **成熟方案优先**：时间格式化、过渡状态机复用 dayjs、vue-lynx Transition 等；自研用于 Lynx 特化适配，不重复实现通用能力。
 
 ## 2. 目录与文件规范
 
+```text
+packages/ui/src/<primitives 或 components>/wd-xxx/
+├── types.ts          # props/公开类型
+├── wd-xxx.vue        # Lynx 实现
+├── index.scss        # 样式源
+└── index.css         # build:css 生成，入库但禁止手改
 ```
-packages/ui/src/components/wd-xxx/
-├── types.ts          # props 定义，import 自 'vue-lynx' 与 '../../common/props'
-├── wd-xxx.vue        # 组件实现（全新手写）
-└── index.scss        # 样式（消费 --wot-* 令牌）
-```
 
-`index.css` 由 `node scripts/build-css.mjs` 自动生成，**不要手动编辑**。
+新增组件优先 `pnpm gen:component wd-xxx --dry-run` 检查路径，基础件显式加 `--root=primitives`。脚手架不代表 API、文档和 Demo 已全部完成，后续见[任务流程](<docs/ai/README.md>)。
 
-## 3. 设计系统（与 wot-ui 2.3.2 同源的 --wot-* 体系）
+`index.css` 经 `pnpm build:css` 生成；目录→barrel、源码→meta、meta→文档是不同生成链。禁止手改下游产物。
 
-**令牌体系直接采用 wot-ui 2.3.2 的设计规范**（`--wot-*` 命名空间，与官方源码逐值一致）——
-消费方从 wot-ui 迁移时，既有主题定制（`themeVars` 键、CSS 变量覆盖）零改动可用：
+## 3. 设计系统（同源 --wot-* 命名与独立语义映射）
 
-| 层 | 文件 | 内容 | 示例 |
-| --- | --- | --- | --- |
-| 原始刻度 | `styles/theme/base/*.scss` | 色阶/数值/圆角/字体/排版/透明度/描边/间距，主题无关 | `--wot-blue-6`、`--wot-n-16` |
-| 语义令牌 | `styles/theme/light.scss` / `dark.scss` | 亮/暗双主题语义别名 | `--wot-primary-6`、`--wot-text-main` |
-| 组件令牌 | 各组件 `index.scss` | 组件私有变量，回退到语义/原始刻度 | `--wot-button-primary-bg` |
-| SCSS 映射 | `styles/variable.scss` | SCSS 变量 → CSS 变量（含字面量回退），组件样式经它消费令牌 | `$primary-6: var(--wot-primary-6, #1C64FDFF)` |
+原始色阶及尺寸度量沿用 wot-ui 2.3.2，品牌色板、亮暗主色/文字/表面语义可独立映射。**令牌名称同源不等于所有主题取值与官方逐值一致**；实际映射以样式源和 JS 镜像为准。
 
-**主题机制**：`import 'wot-lynx-ui/theme'` 引入全部令牌；`WdConfigProvider`
-的 `theme="dark"` 给根 view 挂 `wot-theme-dark` 类切换语义令牌；
-`themeVars` prop 将 camelCase 键映射为 `--wot-<kebab>` 内联变量
-（完整键集合见 `composables/theme-vars.ts`，与 wot-ui 的 theme-vars 生成物一致）。
-`position: fixed` 弹层被提升到页面根节点后会脱离主题子树，因此
-`.wd-root-portal` 容器内镜像同名变量（见 `styles/theme/index.scss` 选择器）。
+| 层 | 来源 | 内容 |
+|---|---|---|
+| 原始刻度与品牌 | [theme/base](<packages/ui/src/styles/theme/base/>) | 官方基础刻度及独立品牌，主题无关 |
+| 语义令牌 | [light](<packages/ui/src/styles/theme/light.scss>) / [dark](<packages/ui/src/styles/theme/dark.scss>) | 亮暗主色、文字、表面等映射 |
+| 组件令牌 | 各组件 `index.scss` | 组件私有变量，回退到语义/原始刻度 |
+| SCSS 映射 | [variable](<packages/ui/src/styles/variable.scss>) | 通过 CSS 变量和字面量 fallback 消费令牌；fallback 不等于完整默认主题 |
 
-**JS 镜像**：需要"用 JS 算颜色"的场景（如 svg content 不继承 currentColor），
-用 `common/theme.ts` 的色板常量，与 `styles/theme/base/color.scss` 保持一致
-（`test/unit/theme-token-parity.test.ts` 机器守护两侧不漂移）。
+主题入口 `wot-lynx-ui/theme` 包含 base 与 light/dark，不含预设；预设按[ADR-016](<docs/adr/016-theme-presets-on-demand.md>)单独引入。`WdConfigProvider` 的 `theme` 类与 `themeVars` 映射由现有实现处理，fixed 弹层的变量传递使用既有 portal/镜像机制，不自行另建主题来源。
+
+需要 JS 计算颜色的图形使用[theme.ts](<packages/ui/src/common/theme.ts>)；原始色板与[theme-token-parity 测试](<packages/ui/test/unit/theme-token-parity.test.ts>)及 `pnpm check:theme-mirror` 保持一致。不要将品牌原色、语义主色、图形最终色混为一个固定值。
 
 ## 4. .vue 文件模板
 
@@ -89,7 +83,7 @@ defineProps(xxxProps)
 
 | 规则 | 说明 |
 | --- | --- |
-| import 来源 | 一律 `from 'vue-lynx'`（ref/computed/watch/Transition 等均由其再导出） |
+| import 来源 | 库源码中的 Vue 功能/类型来自 `vue-lynx`；文档站的 Vue DOM 预览遵守其局部指引 |
 | 样式引入 | `import './index.css'` 放在 `<script setup>` 第一行；**禁止** `<style>` 块 |
 | 顶层注释 | **禁止在 SFC 顶层注释中出现 `<xxx>` 形式的标签**（如 `<view>`、`<svg>`），Vue 解析器会将其识别为自定义块导致编译失败。写成 "view 元素" 即可 |
 | 裸文本 | `<view>` 内的所有文本必须包裹 `<text>`；`{{ }}` 插值同理 |
@@ -160,38 +154,29 @@ import { useDeviceInfo } from '../../composables/useDeviceInfo'
 import { usePopover } from '../../composables/usePopover'
 import { useUpload } from '../../composables/useUpload'
 
-import { addUnit, isDef, objToStyle, getRect, getSystemInfo, deepMerge, ... } from '../../common/util'
-import { defineStyleKeys, resolveStyle } from '../../common/style'  // Style Funnel（§20）
+import { addUnit, isDef, getRect, getSystemInfo, parseStyle } from '../../common/util'
+import { defineStyleKeys, resolveStyle, createStyleResolver } from '../../common/style'  // Style Funnel（§20）
 import { baseProps, makeBooleanProp, makeNumberProp, makeStringProp, makeNumericProp, numericProp } from '../../common/props'
 import { callInterceptor } from '../../common/interceptor'
 import { formatDate, getMonthDays, getFirstDayOfWeek } from '../../common/formatDate'  // 基于 dayjs
 import { AbortablePromise } from '../../common/AbortablePromise'
 import { Transition } from '../../common/lynxTransition'  // vue-lynx 内置 Transition（含 props 兼容补齐）
-import { BLUE, GRAY, GREEN, AMBER, RED } from '../../common/theme'
+import { BLUE, COOLGREY, GREEN, ORANGE, RED } from '../../common/theme'
 
 // 全局配置契约（composable 层自有，禁止组件反向依赖）
 import { CONFIG_PROVIDER_KEY, mergeConfig } from '../../composables/global-config'
 ```
 
-注意：`useDeviceInfo` 的 `getSystemInfo()` 基于 Lynx `SystemInfo` 全局对象；安全区数据 Lynx 不提供（置零，可由宿主注入）。
+设备信息与窗口尺寸经[getSystemInfo](<packages/ui/src/common/util.ts>)读取；它保留宿主 `SystemInfo` 提供的字段，并使用视口覆盖。安全区矩形由[useDeviceInfo](<packages/ui/src/composables/useDeviceInfo.ts>)读取 `safeArea`；缺失时回退到全屏矩形，不是把 `bottom=0` 当屏幕底，也不假设所有宿主都提供安全区。
 
-**依赖方向**：composable / common 层不得 import 组件目录；组件 import composable。
-共享契约（cell-group、form、config-provider 的 provide 类型与 key）定义在
-composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
+**依赖方向**：common 不得依赖 composables/组件，composables 不得依赖组件；基础件不得依赖业务组件。基础件之间可组合但不引入非法环；业务组件跨族禁止实现/契约借用，族内父子契约互引允许。
+共享的跨族契约放在公共/组合式层；族内 KEY 不为“全图零环”强制下沉。组件族只读[families.json](<docs/architecture/families.json>)，现行规则见[ADR-013](<docs/adr/013-declarative-families.md>)和[依赖 lint](<scripts/review-lint.mjs>)。
 
 ## 8. wd-icon 与 SVG 硬约束
 
-- 内置图标经图标注册表 `src/icons/registry.ts` 组织，**单一内置集合**：
-  iconfont 集（`src/icons/sets/iconfont.ts`，180 个，移动端成套图标）：
-  **.ttf 字体图标**（`src/icons/fonts/iconfont.ttf` + 同目录 `iconfont.css` 的
-  `@font-face`，族名 `wd-iconfont`），由 `scripts/generate-iconfont.mjs` 从
-  iconfont.cn 导出物生成（码点取自 `iconfont.json` 的 `glyphs[].unicode`，
-  `--check` 校验 TS 模块与字体字节）。
-- 组件内部用到的图标一律从这 180 个中挑选（navbar / pagination 左箭头取
-  `arrow-left-bold`，rate 星星取 `favorite-filling`，empty 默认图取
-  `folder-close` 等）；内置集没有对应字形的形态用 CSS 绘制——radio /
-  checkbox 的未选中空心圆/方与 dot 选中态圆心点，经边框 + `currentColor`
-  实现（见 `wd-radio` / `wd-checkbox`）。
+- 默认集合与顺序以[registry](<packages/ui/src/icons/registry.ts>)为准：官方 `wot` 字体集先注册，`iconfont` 为兼容扩展集；裸名字按顺序回退，`集合键:名字` 精确选择。
+- 内置集合通过对应的生成脚本维护，字体由资产管线随包分发。新增字形先确认实际注册集合，不假设只有某次记录的 180 个图标，也不直接编辑生成字体映射。
+- 组件内部图标优先使用已注册字形；没有对应字形时采用现有 CSS/安全 SVG 路径，不能引入依赖伪元素的 iconfont Web 写法。
 - 字体渲染的 Lynx 约束：CSS 不支持 `::before/::after`，经典
   `.icon-x::before { content: '\e6a3' }` 写法不可用；wd-icon 字体模式把码点
   字形直接作为 `<text>` 子节点渲染，显式设置 `font-family / font-size / color /
@@ -202,7 +187,7 @@ composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
   集时消歧）。新增一套图标：实现 `IconSet` 接口（`src/icons/types.ts`，
   SVG 集 / 字体集联合类型）并 `registerIconSet()`，wd-icon 无需改动；
   回归见 `test/component/icons-registry.test.ts`。
-- `<wd-icon name="close" :size="20" color="#f00" />`：命中内置字体集时渲染
+- `<WdIcon name="close" :size="20" color="#f00" />`：命中内置字体集时渲染
   `<text>` 字形；命中扩展注册的 SVG 集时渲染 `<svg :content>`（多 path 图标
   输出多个 `path`，fill 统一注入）；name 含 `/` 时按图片渲染 `<image>`；
   `css-icon` 走 CSS 类名模式。
@@ -246,12 +231,11 @@ composable 层（`useCell.ts` / `useFormDisabled.ts` / `global-config.ts`）。
 
 ## 10. Main Thread Script（原生交互性能，声明式唯一形态）
 
-**本组件库的所有跟手交互（拖动 / 滑动 / 缩放 / 手势）必须走 Lynx 官方的声明式
-MTS 路径**——这是 Lynx「原生交互性能」的唯一官方形态：事件在主线程直接派发，
-worklet 内同步改写节点样式，零线程跨越（后台线程方案每帧两次线程往返，
-低端机上手感明显滞后）。
+**跟手交互的正常路径是 Lynx 声明式 MTS**：事件在主线程直接派发，worklet 同步更新元素样式；新实现遵守该路径，不新增命令式跨线程 API。
 
-**唯一允许的形态（声明式）**：
+当前 [PickerView](<packages/ui/src/components/wd-picker-view/wd-picker-view.vue>) 与 [Fab](<packages/ui/src/components/wd-fab/wd-fab.vue>) 在源码头部记录了真机文字/触发器兼容降级，保留后台响应式路径。它们是有证据的具体例外，不是禁用全库 MTS 的理由，也不是此次文档校准要自动重写的对象。修改例外前先复现平台问题并跑对应回归。
+
+**唯一允许的 MTS 形态（声明式）**：
 
 ```vue
 <script lang="ts" setup>
@@ -346,22 +330,26 @@ Slider 等内联手势组件使用局部原生仲裁，不把瞬态 dragging/set
 含原生式单事件冒泡、BG 延迟、反复暂停/范围跨越、未知触点和直接文字排版断言。
 这些测试仍不替代 Android/iOS 真机与 Web 真实触摸验收。
 
-## 11. 验证清单（每个组件完成后必须执行）
+## 11. 验证清单（组件修改完成后）
+
+从仓库根执行；先记录已有失败，再按[任务流程](<docs/ai/README.md>)选择针对性测试与必要生成物：
 
 ```bash
-cd packages/ui
-npx vue-tsc --noEmit          # 类型必须 0 错误
-cd ../demo && pnpm build      # 双端构建必须成功
+pnpm lint:conventions
+pnpm typecheck
+pnpm build:demo
+pnpm check:worklets
 ```
 
-并在 `packages/demo/src/App.vue` 的对应 section 中加入该组件的演示用例
-（参照现有小节的写法）。每层（tier）完成后跑 `pnpm test` 与 `pnpm build:css`。
+API/样式/组件根变化需更新相应生成物并跑契约守卫；完整代码收尾还需 `pnpm verify`。`verify` 会写生成 CSS并构建，不包含独立 lint、文档构建、视觉检查或真机验收，不能将其当作只读或全平台证明。
+
+组件演示在[Showcase](<packages/demo/src/showcase/Showcase.vue>)维护，页面容器在[Demo App](<packages/demo/src/App.vue>)；真机验收在[设备清单](<packages/demo/src/device-test/App.vue>)。需要新增演示/覆盖时同步相应入口，不继续按历史 tier 在主 App 追加整库实现。Web/jsdom、生产双端构建与 Android/iOS 真机分别报告结果。
 
 ## 12. 明确不做 / 降级的组件
 
 | 组件 | 处理方式 |
 | --- | --- |
-| `wd-signature`（canvas 手写签名） | Lynx 无 canvas API，用 `<polyline>` SVG 折线实现 |
+| `wd-signature`（canvas 手写签名） | Lynx 无内置 canvas；声明式 MTS + 原生 view 保留连续贝塞尔笔迹，SVG / 可选宿主 Canvas 2D 用于导出 |
 | `wd-img-cropper`（canvas 裁剪） | 基础版 + 文档标注 |
 | `wd-bar-code` / `wd-qr-code` | 用 `<svg>` 绘制（qrcode 算法在后台线程用 JS 生成 path） |
 | `wd-video-preview` / `wd-upload`（chooseMedia 等） | 依赖 Lynx 宿主能力，基础版并文档标注 |
@@ -489,9 +477,9 @@ Vue 的 `mergeProps` 会把两个同名 `on*` 监听合并成**数组**，数组
 CSS `:active` 伪类 + 对应类名样式（如 `.wd-button:active`、`.wd-cell.is-link:active`），
 零 JS 开销。禁用态、加载态不响应按压需用特异性覆盖。
 
-## 18. 重写计划（tier 与进度）
+## 18. 历史重写计划（tier 与当时进度）
 
-按依赖顺序分 tier 推进，每 tier 完成后执行 §11 验证并更新进度。
+以下保留早期重写的阶段记录，**不是当前组件规模、待办或测试通过状态**。后续开发按 §11 验证；规模以[生成快照](<docs/architecture/SNAPSHOT.md>)及检查脚本为准，不能引用下表的历史“全绿”代替本次执行。
 
 | Tier | 内容 | 状态 |
 | --- | --- | --- |
@@ -512,9 +500,9 @@ vue-lynx 的 `patchProp`（`runtime/dist/node-ops.js`）对 `style` 只处理
   const style = null != nextValue && 'object' == typeof nextValue ? normalizeStyle(nextValue) : {}
 ```
 
-**字符串值（`` :style="`height: 44px`" ``、`custom-style="color: red"`、
-计算属性拼出的 `"top: 1px; left: 2px"`）被静默替换为 `{}`**——不报错、
-不告警，只是样式全部消失。这与 §5 的类名错配并称「静默丢样式」两大根源。
+**直接下发给原生节点的字符串 `:style` 会变成 `{}`**，如未归一化的 `` :style="`height: 44px`" `` 或计算属性返回 `"top: 1px; left: 2px"`，不报错但样式消失。
+
+组件公开 `customStyle` 可接受字符串或对象，**字符串输入本身不是违规**；组件必须先经 `parseStyle` 归一为对象，再通过 Style Funnel 下发，不能将它直接绑定到原生 style。这与类名错配同属静默丢样式风险。
 
 **纯静态 `style="height: 100%"` 属性同样失效**（2026-10-25 真机巡检）：
 编译器只对「带绑定 / 数组 / 子表达式」的 style prop 包 `normalizeStyle`
@@ -523,15 +511,9 @@ vue-lynx 的 `patchProp`（`runtime/dist/node-ops.js`）对 `style` 只处理
 真机塌陷」——demo 页 `style="height: 180px"` 的水印容器就是这样塌掉的。
 静态样式也必须写对象：`:style="{ height: '180px' }"`。
 
-**内联键名必须 kebab-case，且内联 `--*` 自定义属性无效**（2026-10-25
-真机巡检）：Lynx 原生内联样式通道（`Element.setStyleProperty(s)`）要求
-「style names must be in kebab-case」，`zIndex` / `marginLeft` /
-`paddingTop` 等 camelCase 键被静默丢弃（web 端 CSSOM 两种都认，同样是
-「web 绿灯、真机塌陷」）；内联 CSS 自定义属性（`--wot-*`）被原生侧丢弃
-（lynx-family/lynx#8576），跨元素传值不能走这条路——wd-avatar 的层叠
-间距因此改为预设尺寸走样式表变量、自定义尺寸直接内联负边距。兜底位于
-`common/style.ts` 的 `resolveStyle()`（出口统一 `kebabKey` 归一），裸
-`:style` 对象须自行保证 kebab-case。
+**原生内联键名必须 kebab-case**：`zIndex` / `marginLeft` / `paddingTop` 等 camelCase 键不能假设原生识别。Style Funnel 出口统一归一，裸对象由调用方保证。
+
+2026-10-25 巡检曾发现某些宿主内联 `--wot-*` 变量丢失；这是需要保留的平台证据，**不能据此删除当前 themeVars/portal 机制或宣称所有内联变量永久不可用**。现行消费配置开启 `enableCSSInheritance` 与 `enableCSSInlineVariables`，主题复用 ConfigProvider/portal 和原生镜像实现；自定义变量支持仍需目标引擎验收。跨节点几何传值不要只靠未经验证的 CSS 变量，优先现有属性/明确内联样式通道。
 
 **内联 `background` 简写按不可用处理**：样式表里的简写可用（按钮等），
 内联通道不保证展开，一律写 `'background-color'`（wd-avatar 的
@@ -569,10 +551,8 @@ bg-color 头像曾因此整组白底白字不可见）。
 2. 消费方传入的 `customStyle`（字符串）先过 `common/util.ts` 的
    **`parseStyle()`** 归一为对象再绑定：`:style="parseStyle(customStyle)"`。
    `baseProps.customStyle` 的类型已放宽为 `[String, Object]`，两种传法都支持。
-3. computed 返回样式对象；需要剔空值（`undefined` / `''`）时用
-   **`filterStyle()`**，不要再 `objToStyle()` 拼字符串后下发。
-4. 组件内拼接的多段样式（如 `${rootStyle}${customStyle}`）改为
-   `{ ...rootStyle, ...parseStyle(customStyle) }`。
+3. computed 返回样式对象；可切换键的空字符串/中性值必须保留，不用 `filterStyle()` 剔除 Style Funnel 已输出的清除键，更不能用 `objToStyle()` 拼字符串下发。
+4. 多段动态样式在每元素独立的 `createStyleResolver()` 内合并（包含 `parseStyle(customStyle)`）；它记录曾使用的键，下一帧显式清除。不能只用对象展开表达“键消失”。
 5. **回归测试**：`test/regression/inline-style-regression.test.ts` 经双线程管线 +
    JSDOM 挂载，直接断言关键元素 `style` 属性非空（列高 / translateY /
    指示带 / customStyle / themeVars 映射）。改样式相关代码必须全绿。
@@ -656,12 +636,16 @@ const lineStyle = computed(() => {
 })
 ```
 
-3. **中性值必须是「视觉上等同于不设置」的合法取值**：`translateX(0px)` /
-   `none` / `flex` / `0px`。
-   **不要**用 `inherit` 去兜底可能被 CSS 类声明的属性（如 `font-size`）——
-   `inherit` 会把内联值变成父级取值，反而覆盖掉类里的声明。
-4. 消费方传入的 `customStyle` 仍按 §19 经 `parseStyle()` 归一，与
-   `resolveStyle` 的结果合并：`{ ...resolveStyle(...), ...parseStyle(customStyle) }`。
+3. **中性值是“视觉上等同于不设置”的合法值**：`translateX(0px)` / `none` / `flex` / `0px`；需要恢复 CSS 类/主题的原值时可用 `''`，必须显式下发而非删除键。
+   不用 `inherit` 兜底类样式属性，否则会覆盖成父级值。
+4. `customStyle` 经 `parseStyle()` 归一；动态键与内部样式使用**每元素独立**的 `createStyleResolver()` 合并，不在多个元素间共享实例。不要在 Style Funnel 后剔空值。
+
+```ts
+const resolveRootStyle = createStyleResolver({ transform: 'translateX(0px)' })
+const rootStyle = computed(() =>
+  resolveRootStyle({ transform: `translateX(${offset.value}px)` }, parseStyle(props.customStyle))
+)
+```
 
 ### 守护
 
@@ -676,9 +660,11 @@ const lineStyle = computed(() => {
 - 纯函数单测见 `test/unit/style-funnel.test.ts`；渲染层回归见
   `test/regression/inline-style-regression.test.ts` 与真机验收清单。
 
-### 迁移状态
+### 历史迁移记录
 
-- 已完成：`wd-segmented`（参考实现）、`wd-picker-view`、`wd-toast`、`wd-fab`、
+以下清单与“59 处”是当时的迁移记录，不是当前剩余问题统计。继续迁移前核对目标源码、现行 lint 输出与 baseline；不因为旧清单列出了组件就自动重写。
+
+- 当时已完成：`wd-segmented`（参考实现）、`wd-picker-view`、`wd-toast`、`wd-fab`、
   `wd-transition`、`wd-swipe-action`（后五者在此前修复中以「显式写中性值」的
   等价手法处理）。
 - 待迁移（存量 59 处，已登记 baseline）：`wd-text` / `wd-icon` / `wd-col` /

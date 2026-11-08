@@ -86,11 +86,12 @@ describe('修复清单回归', () => {
     expect((Locale.messages() as any).upload.retry).toBe('重试')
   })
 
-  it('#5 WdSignature viewBox 与 svg 宽高一致（实测 / 默认兜底）', async () => {
-    const { container } = render(Signature, {})
+  it('#5 WdSignature 导出 viewBox 与图片宽高一致（实测 / 默认兜底）', async () => {
+    const results: any[] = []
+    const { container } = render(Signature, { onConfirm: (result: any) => results.push(result) })
     await pause(50)
-    const svg = container.querySelector('svg')
-    const content = String(svg?.getAttribute('content') || '')
+    fireEvent.tap([...container.querySelectorAll('.wd-signature__button')].at(-1)!)
+    const content = decodeURIComponent(results[0].tempFilePath.split(',')[1])
     const matched = content.match(/viewBox="0 0 (\d+) (\d+)"[^>]*width="(\d+)" height="(\d+)"/)
     expect(matched, 'svg content 应含 viewBox / width / height').not.toBeNull()
     const [, vbW, vbH, w, h] = matched!

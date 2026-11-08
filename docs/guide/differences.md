@@ -43,7 +43,7 @@ Lynx 的百分比高度只相对「已确定高度」的父级解析：中间层
 | 弹层传送 | `root-portal` / teleport | `position: fixed` 节点自动提升至根节点 |
 | 圆环进度 | canvas 2D | SVG（`stroke-dasharray` / `stroke-dashoffset`） |
 | 二维码 / 条形码 | canvas 2D | SVG（矩阵 → `rect` / `circle` / `path`） |
-| 手写签名 | canvas 2D | SVG `polyline`（撤销/恢复栈，导出标准 SVG data URI） |
+| 手写签名 | canvas 2D | 原生连续贝塞尔笔迹（MTS 跟手、撤销/恢复；导出标准 SVG data URI 或可选宿主 Canvas 2D 位图） |
 | 水印 | canvas `toDataURL` | 平铺层（重复水印单元 + 旋转文本） |
 | 页面跳转 | `uni.navigateTo` | 原生 `navigate` 事件 + 宿主模块（`configureHost({ navigateTo })` / `NativeModules.WotLynxUI`）；无宿主时只抛事件，由业务自行路由 |
 | 安全区 | `uni.getSystemInfoSync` | Lynx `SystemInfo.safeAreaInsets`（引擎原生读取，无需宿主注入） |

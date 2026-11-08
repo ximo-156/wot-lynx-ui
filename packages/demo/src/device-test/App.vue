@@ -16,7 +16,7 @@ const demoProps = withDefaults(defineProps<{ stress?: boolean }>(), { stress: fa
  * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
  * 真机排查第一时间看它，避免"改了没生效"的误判。
  */
-const buildTag = 'R16 · 按项挂载 / 全量压力模式分离'
+const buildTag = 'R17 · 级联标签指示线 / 按项挂载'
 
 /**
  * 全量渲染清单（component-checks.ts 的 6 组，共 106 条）。

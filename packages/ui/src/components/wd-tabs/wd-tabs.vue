@@ -61,7 +61,7 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, reactive, useMainThreadRef, useSlots, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, onUpdated, reactive, useMainThreadRef, useSlots, watch } from 'vue-lynx'
 import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import WdBadge from '../../primitives/wd-badge/wd-badge.vue'
 import WdTab from '../wd-tab/wd-tab.vue'
@@ -78,7 +78,7 @@ import { defineStyleKeys, resolveStyle } from '../../common/style'
 const tabsId = `wd-tabs-${uuid()}`
 const $item = `#${tabsId} .wd-tabs__nav-item`
 const $itemText = `#${tabsId} .wd-tabs__nav-item-text`
-const $container = `#${tabsId} .wd-tabs__nav-container`
+const $container = `#${tabsId}-nav`
 
 const props = defineProps(tabsProps)
 const emit = defineEmits(['change', 'disabled', 'click', 'update:modelValue'])
@@ -88,12 +88,19 @@ const { translate } = useTranslate('tabs')
 /** 组件存活守卫：getRect 回调晚于卸载落地时丢弃（真机 9902 防护） */
 const isAlive = useAlive()
 
-/** Class rules own normal/text/underline/dot dimensions; '' clears overrides. */
+/** Position and width are separate: CSS/theme widths are centered by native flex. */
 const LINE_STYLE = defineStyleKeys({
   display: 'flex',
   width: '',
   height: '',
   'border-radius': '',
+  transform: 'none',
+  transition: 'none'
+})
+const LINE_ANCHOR_STYLE = defineStyleKeys({
+  display: 'none',
+  width: '0px',
+  height: '0px',
   transform: 'translateX(0px)',
   transition: 'none'
 })
@@ -117,8 +124,10 @@ let lineRetryTimer: ReturnType<typeof setTimeout> | undefined
 const state = reactive({
   /** 选中值的索引，默认第一个 */
   activeIndex: 0,
-  /** 激活项边框线样式（对象语法；display:none 为未度量前的初始态） */
-  lineStyle: resolveStyle(LINE_STYLE, { display: 'none' }),
+  /** Marker dimensions still belong to its CSS theme; its parent positions it. */
+  lineStyle: resolveStyle(LINE_STYLE),
+  lineAnchorStyle: resolveStyle(LINE_ANCHOR_STYLE),
+  lineIndex: -1,
   /** 是否初始化 */
   inited: false,
   /** 是否动画中 */
@@ -130,6 +139,11 @@ const state = reactive({
   /** 滑动手势跟手中（主线程 worklet 直改条带 left，后台置位/回落） */
   swiping: false
 })
+
+const lineAnchorStyle = computed(() => resolveStyle(LINE_ANCHOR_STYLE, state.lineAnchorStyle, {
+  // A late geometry result for another header must never paint under this one.
+  display: state.lineIndex === state.activeIndex ? state.lineAnchorStyle.display : 'none'
+}))
 
 const { children, linkChildren } = useChildren(TABS_KEY)
 linkChildren({ state, props })
@@ -188,6 +202,8 @@ const rootStyle = computed(() => parseStyle(props.customStyle))
 
 /** 导航项数据（从默认插槽的 vnode 直读，非跟踪读取，见文件头说明） */
 type NavItem = { title: any; disabled: boolean; badgeProps: any; name: any }
+let renderedNavItems: NavItem[] = []
+let measuredTitles: any[] = []
 
 function navItems(): NavItem[] {
   const vnodes = slots.default ? slots.default() : []
@@ -202,6 +218,7 @@ function navItems(): NavItem[] {
       name: p.name
     })
   }
+  renderedNavItems = items
   return items
 }
 
@@ -315,6 +332,28 @@ watch(() => [props.lineWidth, props.lineHeight, props.lineTheme], () => {
   ++lineRequest
   nextTick(() => { if (isAlive()) void updateLineStyle(false) })
 })
+// Compare the header metadata captured during render. Invoking a slot in a
+// setup watcher would lose its render dependency context and warn in Vue.
+onUpdated(() => {
+  const titles = renderedNavItems.map(item => item.title)
+  if (titles.length === measuredTitles.length && titles.every((title, index) => title === measuredTitles[index])) return
+  measuredTitles = titles
+  ++lineRequest
+  nextTick(() => { if (state.inited && isAlive()) void updateLineStyle(false) })
+})
+let navLayoutWidth = 0
+let navLayoutHeight = 0
+function onNavLayoutChange(event: any) {
+  const layout = event?.detail?.layout ?? event?.detail
+  const width = Number(layout?.width)
+  const height = Number(layout?.height)
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return
+  if (width === navLayoutWidth && height === navLayoutHeight) return
+  navLayoutWidth = width
+  navLayoutHeight = height
+  ++lineRequest
+  nextTick(() => { if (state.inited && isAlive()) void updateLineStyle(false) })
+}
 onBeforeUnmount(() => {
   ++lineRequest
   ++scrollRequest
@@ -354,6 +393,7 @@ watch(
 )
 
 onMounted(() => {
+  measuredTitles = renderedNavItems.map(item => item.title)
   state.inited = true
   nextTick(() => {
     updateActive(props.modelValue, true)
@@ -386,45 +426,60 @@ function toggleMap() {
   }
 }
 
-/** Latest-request geometry; class rules retain each line theme's defaults. */
+/** Measure placement separately from the marker's CSS/theme-owned size. */
 async function updateLineStyle(animation: boolean = true, attempt: number = 0) {
   const request = ++lineRequest
+  if (lineRetryTimer) {
+    clearTimeout(lineRetryTimer)
+    lineRetryTimer = undefined
+  }
   if (!state.inited || !isAlive()) return
   const activeIndex = state.activeIndex
   const { lineWidth, lineHeight, lineTheme } = props
   const current = () => isAlive() && request === lineRequest && activeIndex === state.activeIndex
   const retry = () => {
     if (attempt >= LINE_MAX_RETRIES) return
-    if (lineRetryTimer) clearTimeout(lineRetryTimer)
     lineRetryTimer = setTimeout(() => {
       lineRetryTimer = undefined
-      if (request === lineRequest) void updateLineStyle(animation, attempt + 1)
+      if (current()) void updateLineStyle(animation, attempt + 1)
     }, LINE_RETRY_DELAY)
   }
   try {
-    const [rects, textRects] = await Promise.all([
+    const [rects, textRects, navRect] = await Promise.all([
       getRect($item, true, navItems().map((_, index) => `#${tabsId}-item-${index}`)),
-      !isDef(lineWidth) && lineTheme === 'text' ? getRect($itemText, true, navItems().map((_, index) => `#${tabsId}-text-${index}`)) : Promise.resolve([])
+      !isDef(lineWidth) && lineTheme === 'text' ? getRect($itemText, true, navItems().map((_, index) => `#${tabsId}-text-${index}`)) : Promise.resolve([]),
+      getRect($container)
     ])
     if (!current()) return
     const rect = rects[activeIndex]
-    // 有效度量要求：当前项与它之前的每一项都有真实宽度（决定 left 的累加值），
-    // 且当前项宽度 > 0。未就绪时留隐藏态并重试，绝不把线放到 0 位置。
-    const valid = !!rect && Number(rect.width) > 0 && rects.slice(0, activeIndex).every((item: any) => item && Number(item.width) > 0)
+    const measuredWidth = lineTheme === 'text' ? textRects[activeIndex]?.width : lineTheme === 'underline' ? rect?.width : undefined
+    const valid = rect && navRect && [rect.width, rect.height, navRect.width, navRect.height].every(value => Number.isFinite(Number(value)) && Number(value) > 0)
+      && Number.isFinite(Number(rect.left)) && Number.isFinite(Number(navRect.left))
+      && (isDef(lineWidth) || lineTheme !== 'text' || Number(measuredWidth) > 0)
     if (!valid) {
+      state.lineAnchorStyle = resolveStyle(LINE_ANCHOR_STYLE)
+      state.lineIndex = -1
       retry()
       return
     }
-    const measuredWidth = lineTheme === 'text' ? textRects[activeIndex]?.width : lineTheme === 'underline' ? rect.width : undefined
-    const left = rects.slice(0, activeIndex).reduce((sum: number, item: any) => sum + Number(item.width), 0) + Number(rect.width) / 2
+    // Both rectangles use the same coordinate space. Their difference includes
+    // padding/gaps and is unchanged when their shared scroll parent moves.
+    const offset = Number(rect.left) - Number(navRect.left)
+    const easing = '0.3s cubic-bezier(0.4, 0, 0.2, 1)'
     state.lineStyle = resolveStyle(LINE_STYLE, {
-      display: 'flex',
       width: isDef(lineWidth) ? addUnit(lineWidth) : isDef(measuredWidth) ? addUnit(Number(measuredWidth)) : '',
       height: isDef(lineHeight) ? addUnit(lineHeight) : '',
       'border-radius': isDef(lineHeight) ? `calc(${addUnit(lineHeight)} / 2)` : '',
-      transform: `translateX(${left}px) translateX(-50%)`,
-      transition: animation ? 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
+      transition: animation ? `width ${easing}` : 'none'
     })
+    state.lineAnchorStyle = resolveStyle(LINE_ANCHOR_STYLE, {
+      display: 'flex',
+      width: `${Number(rect.width)}px`,
+      height: `${Number(rect.height)}px`,
+      transform: `translateX(${offset}px)`,
+      transition: animation ? `width ${easing}, transform ${easing}` : 'none'
+    })
+    state.lineIndex = activeIndex
   } catch (error) {
     console.error('[wot ui] error(wd-tabs): update line style failed', error)
   }
@@ -621,7 +676,7 @@ const onBodyTouchMove = (event: any) => {
           <view class="wd-tabs__nav wd-tabs__nav--sticky">
             <view class="wd-tabs__nav--wrap">
               <scroll-view :scroll-x="innerSlidable()" :scroll-left="state.scrollLeft">
-                <view class="wd-tabs__nav-container">
+                <view class="wd-tabs__nav-container" :id="`${tabsId}-nav`" @layoutchange="onNavLayoutChange">
                   <view
                     @tap="handleSelect(index)"
                     v-for="(item, index) in navItems()"
@@ -636,7 +691,10 @@ const onBodyTouchMove = (event: any) => {
                     </WdBadge>
                     <text v-else :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
                   </view>
-                  <view :class="`wd-tabs__line ${'is-' + lineTheme}`" :style="state.lineStyle"></view>
+                  <view :class="`wd-tabs__line-anchor is-${lineTheme}`" :style="lineAnchorStyle" :user-interaction-enabled="false">
+                    <view class="wd-tabs__line-spacer" />
+                    <view :class="`wd-tabs__line is-${lineTheme}`" :style="state.lineStyle" />
+                  </view>
                 </view>
               </scroll-view>
             </view>
@@ -698,7 +756,7 @@ const onBodyTouchMove = (event: any) => {
       <view class="wd-tabs__nav">
         <view class="wd-tabs__nav--wrap">
           <scroll-view :scroll-x="innerSlidable()" :scroll-left="state.scrollLeft">
-            <view class="wd-tabs__nav-container">
+            <view class="wd-tabs__nav-container" :id="`${tabsId}-nav`" @layoutchange="onNavLayoutChange">
               <view
                 v-for="(item, index) in navItems()"
                 @tap="handleSelect(index)"
@@ -711,7 +769,10 @@ const onBodyTouchMove = (event: any) => {
                 </WdBadge>
                 <text v-else :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
               </view>
-              <view :class="`wd-tabs__line ${'is-' + lineTheme}`" :style="state.lineStyle"></view>
+              <view :class="`wd-tabs__line-anchor is-${lineTheme}`" :style="lineAnchorStyle" :user-interaction-enabled="false">
+                <view class="wd-tabs__line-spacer" />
+                <view :class="`wd-tabs__line is-${lineTheme}`" :style="state.lineStyle" />
+              </view>
             </view>
           </scroll-view>
         </view>
