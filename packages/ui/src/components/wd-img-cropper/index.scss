@@ -74,6 +74,9 @@ $img-cropper-icon-color: var(--wot-img-cropper-icon-color, $base-white) !default
     flex-grow: 1;
     flex-shrink: 1;
     flex-basis: auto;
+    // 子节点（__cut / __img / __gesture）均带 z-index：父级同时给 z-index: 0，
+    // 否则真机绘制与命中测试层序可能不一致（Lynx 定位 FAQ，demo fab 包裹层同款）
+    z-index: 0;
   }
 
   @include e(cut) {
@@ -207,6 +210,23 @@ $img-cropper-icon-color: var(--wot-img-cropper-icon-color, $base-white) !default
     width: 100%;
     backface-visibility: hidden;
     transform-origin: center;
+    // 纯展示节点：触摸全部由 __gesture 手势面承接。官方 <image> 只定义
+    // load / error 事件，与 __cut 的层序在真机上也可能与绘制不一致，
+    // 命中测试不依赖图片节点（见 wd-img-cropper.vue 文件头说明）
+    pointer-events: none;
+  }
+
+  // 手势面：覆盖包裹器的透明 view 层，全部触摸绑定（主线程 worklet 起笔 /
+  // 跟手 + 后台经 __wrapper 冒泡的累积与落定）都挂在这里，不依赖 <image>
+  // 的触摸派发。z-index 高于 __img、低于 __cut（__cut 为 pointer-events:
+  // none，不参与命中）
+  @include e(gesture) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 3;
   }
 
   // 离屏导出缓冲（Lynx 无 canvas，为同结构 view 占位，见 wd-img-cropper.vue

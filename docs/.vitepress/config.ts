@@ -30,6 +30,9 @@ export default defineConfig({
   description: '基于 Vue Lynx 的 wot-ui 适配组件库 — 原生性能、样式一致、API 兼容',
   lang: 'zh-CN',
   base: '/',
+  // 仓库 AI 指引使用源码/Git 相对路径，供助手读取，不作为消费者站点页面。
+  // 仅排除开发指引，保留其他页面的 dead-link 门禁。
+  srcExclude: ['**/AGENTS.md', 'ai/README.md'],
   // H5 预览：组件库源码以「Lynx 原生元素即自定义元素」的方式在浏览器编译渲染
   vue: {
     template: {

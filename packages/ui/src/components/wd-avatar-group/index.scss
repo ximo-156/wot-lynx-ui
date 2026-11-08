@@ -7,6 +7,16 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  /* 真机层序（CONVENTIONS §19 定位 FAQ，2026-11-08 真机截图缺陷）：
+     组内每个头像都按 cascading 方向内联下发 z-index（见 wd-avatar 的
+     rootStyle），即「带 z-index 的子节点」。父级（本根节点）必须同时
+     z-index: 0 建立层叠上下文，否则真机把这些 z-index 子节点按页面根
+     （屏幕）坐标系绘制——滚动页面时整组头像不跟随组件滚走，而是按滚动
+     偏移量粘在屏幕上：演示页滚过 AvatarGroup 一节时，A/B/C/+N 与方形
+     一组分别下移约一个滚动偏移量，压住下一行标签、溢出卡片底边。
+     与 wd-slider / wd-table / wd-calendar-view / wd-img-cropper 同一修法，
+     根节点先建立上下文，子节点的 z-index 才能收在本节点层序内。 */
+  z-index: 0;
 
   @include when(vertical) {
     flex-direction: column;

@@ -1,0 +1,4 @@
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Camera can access only a specifically granted staging URI, not picked files. -->
+    <cache-path name="wot_media_camera_staging" path="wot-media-picker/staging/" />
+</paths>

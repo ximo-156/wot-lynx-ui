@@ -4,7 +4,7 @@
 - **日期**：2026-10-16
 - **相关**：`scripts/build-css.mjs`、`.github/workflows/ci.yml`
 
-> **当前执行说明（2026-11-08 校准）**：本库直接分发 SFC 源码，其 `import './index.css'` 需要随包可用。因此已采用下文的兼容例外：**生成 CSS 入库 + CI 重新生成并校验一致性**，而不是删除 CSS。入库边界见[gitignore](<../../.gitignore>)，门禁见[CI](<../../.github/workflows/ci.yml>)。
+> **当前执行说明（2026-11-08 校准）**：本库直接分发 SFC 源码，其 `import './index.css'` 需要随包可用。因此已采用下文的兼容例外：**生成 CSS 入库 + CI 重新生成并校验一致性**，而不是删除 CSS。入库边界遵守仓库 Git 忽略规则，门禁见[CI](<../../.github/workflows/ci.yml>)。
 > 下文保留原始方案与当时背景；标题中的“不入库”不覆盖已生效的兼容例外，也不表示允许手改 CSS。
 
 ## 背景

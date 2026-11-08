@@ -28,6 +28,13 @@
  *   经 computed 重算网格，不走参考源的 doReset 重绘流程；
  * - 平铺节点数钳制在 MAX_TILES 上限内（小单元 + 大容器时防止铺出数千
  *   节点冻结渲染，见 test/perf-guards.test.ts）；
+ * - 真机层序（2026-11-08 真机截图缺陷，Lynx 定位 FAQ，CONVENTIONS §19
+ *   附注）：根节点样式表必须 z-index: 0 建立层叠上下文，且根的内联样式
+ *   不再下发 props.zIndex——图层（absolute / is-fullscreen 时 fixed）才是
+ *   真正定位的节点，props.zIndex 由 layerStyle 承担。否则真机把这棵子树
+ *   按页面根（屏幕）坐标系绘制：页面滚动后水印连同插槽内容不跟随组件
+ *   滚走，而是按滚动偏移量粘在屏幕上，整体脱离调用方容器。与
+ *   wd-avatar-group / wd-slider / wd-table 同一修法；
  * - 原生优先重写（NATIVE-REWRITE §3）：本组件为纯展示（无跟手交互，不涉及
  *   MTS），根节点经 SCSS 显式补全三件套（display: flex + flex-direction:
  *   column）——插槽内容纵向堆叠，水印图层绝对定位不参与流；图层四边 0 +
@@ -84,7 +91,15 @@ const rootClass = computed(() => {
 })
 
 /**
- * 水印样式
+ * 根节点样式
+ *
+ * 根节点**不再下发 z-index**：props.zIndex 由水印图层 layerStyle 承担
+ * （见下）。根是承载插槽内容的 position: relative 容器，层级抬升该落在
+ * 真正定位的图层上；根自身带 z-index 而祖先（调用方容器链）没有
+ * z-index: 0 时，真机会把整棵子树按页面根（屏幕）坐标系绘制——滚动页面
+ * 时水印不跟随组件滚走，而是按滚动偏移量粘在屏幕上（2026-11-08 真机截图
+ * 缺陷，与 wd-avatar-group 同根因；Lynx 定位 FAQ，CONVENTIONS §19 附注）。
+ * 根节点样式表已补 z-index: 0 建立层叠上下文。
  */
 const rootStyle = computed(() => {
   let width = props.width + props.gutterX
@@ -93,8 +108,7 @@ const rootStyle = computed(() => {
   }
   const style: Record<string, string> = {
     // Lynx 内联样式键必须 kebab-case（Element API 要求，camelCase 静默丢弃）
-    'background-size': addUnit(width),
-    'z-index': `${props.zIndex}`
+    'background-size': addUnit(width)
   }
   return { ...style, ...parseStyle(props.customStyle) }
 })
@@ -146,8 +160,11 @@ const tiles = computed(() => {
 
 /** 水印图层样式（Style Funnel，§20：键集每帧完整）。
  *  - opacity 由有值转无值时必须显式写中性值 ''，省略键会让旧透明度残留；
- *  - z-index 直接下发到图层：全屏态图层是真正 fixed 的节点（提升到页面根），
- *    打在根 view 上的 props.zIndex 够不到它，此前该 prop 在全屏模式失效。 */
+ *  - z-index 直接下发到图层：图层是真正定位的节点（absolute / is-fullscreen
+ *    时 fixed 提升到页面根），参考源下发给根的 props.zIndex 在本地的正确
+ *    落点是图层；根节点样式表配套 z-index: 0 建立层叠上下文，图层的
+ *    z-index 才能收在本组件层序内（否则真机按屏幕坐标系绘制，滚动时水印
+ *    不跟随组件——2026-11-08 真机截图缺陷，见文件头与 index.scss）。 */
 const layerStyle = computed(() => {
   return {
     opacity: isDef(props.opacity) ? `${props.opacity}` : '',

@@ -174,11 +174,11 @@ pnpm build:css        # 编译 SCSS → CSS（组件样式）
 pnpm dev:demo         # 启动 Demo（Rspeedy dev server）
 pnpm build:demo       # 构建 Demo（web + lynx 双端）
 pnpm typecheck        # 类型检查
-pnpm test             # 全部测试（node + jsdom 双 project，约 35s）
+pnpm test             # 全部测试（node + jsdom 双 project，耗时随套件/环境变化）
 pnpm test:shard --index=1 --count=4   # 只跑 1/4 分片（CI 用，按实测耗时均衡）
 pnpm test:shard:plan  # 只看分片负载，不跑
 pnpm docs:dev         # 文档站
-pnpm verify           # 一键校验：CSS 编译 + 类型检查 + 测试 + Demo 构建
+pnpm verify           # 生成物/契约 + CSS + 类型 + 全量测试 + Demo/worklet（会写产物）
 ```
 
 ### 测试结构
@@ -292,9 +292,10 @@ Lynx 是原生渲染引擎，与 Web/小程序运行时有本质差异，以下�
 | 细线边框 | `::after` + scale(0.5) | 原生 `border` + `1ppx` 物理像素 |
 | 伪元素装饰 | `::before` / `::after` | 模板真实元素（`__bar` / `__hairline` 等类名） |
 | 弹层传送 | `root-portal` / teleport | `position: fixed` 节点自动提升至根节点 |
-| 圆环/二维码/条形码/签名/水印 | canvas 2D | SVG（path / rect / polyline / data URI） |
+| 圆环/二维码/条形码/水印 | canvas 2D | SVG（安全渲染路径与导出 data URI 的能力边界分开） |
+| 签名笔迹 | canvas 2D | 声明式 MTS + 原生 view 保留笔迹；SVG / 可选宿主 Canvas 2D 导出 |
 | 页面跳转 | `uni.navigateTo` | 原生 `navigate` 事件 + 宿主模块（`configureHost({ navigateTo })` 等），无宿主时只抛事件 |
-| 安全区 | `uni.getSystemInfoSync` | Lynx `SystemInfo.safeAreaInsets`（引擎原生读取） |
+| 安全区 | `uni.getSystemInfoSync` | 保留宿主 `SystemInfo` 数据；`useDeviceInfo` 使用 `safeArea` 矩形，缺失回退全屏，不假设所有宿主提供安全区 |
 
 ## 致谢
 

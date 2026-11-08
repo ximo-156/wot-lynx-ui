@@ -339,15 +339,23 @@ export function useUpload(): UseUploadReturn {
   /**
    * 格式化媒体信息
    */
-  function formatMedia(res: any): ChooseFile[] {
-    const files = isArray(res?.tempFiles) ? res.tempFiles : []
-    return files.map((item: any) => ({
-      type: item.fileType,
-      path: item.tempFilePath,
-      thumb: item.fileType === 'video' ? item.thumbTempFilePath : item.tempFilePath,
-      size: item.size,
-      duration: item.duration
-    }))
+  function formatMedia(res: any, fallbackType: ChooseFile['type'] = 'image'): ChooseFile[] {
+    const files = isArray(res?.tempFiles) ? res.tempFiles : isArray(res?.files) ? res.files : []
+    const result: ChooseFile[] = []
+    for (const item of files) {
+      if (!item || typeof item !== 'object') continue
+      const path = [item.tempFilePath, item.path, item.filePath, item.url].find(value => typeof value === 'string' && value)
+      if (!path) continue
+      const rawType = item.fileType || item.type
+      const type: ChooseFile['type'] = rawType === 'video' || String(rawType).startsWith('video/') ? 'video'
+        : rawType === 'image' || String(rawType).startsWith('image/') ? 'image' : fallbackType
+      result.push({
+        type, path, name: item.name || item.fileName || '',
+        thumb: type === 'video' ? item.thumbTempFilePath || item.thumb || '' : path,
+        size: item.size, duration: item.duration
+      })
+    }
+    return result
   }
 
   /**
@@ -376,24 +384,25 @@ export function useUpload(): UseUploadReturn {
         reject(unsupported(api))
         return
       }
+      const invoke = (options: Record<string, unknown>) => handler.call(host, options)
       switch (accept) {
         case 'image':
-          handler({ count, mediaType: ['image'], sourceType, sizeType, camera, success: (res: any) => resolve(formatMedia(res)), fail })
+          invoke({ count, mediaType: ['image'], sourceType, sizeType, camera, success: (res: any) => resolve(formatMedia(res)), fail })
           break
         case 'video':
-          handler({ count, mediaType: ['video'], sourceType, camera, maxDuration, success: (res: any) => resolve(formatMedia(res)), fail })
+          invoke({ count, mediaType: ['video'], sourceType, camera, maxDuration, success: (res: any) => resolve(formatMedia(res, 'video')), fail })
           break
         case 'media':
-          handler({ count, sourceType, sizeType, camera, maxDuration, compressed, success: (res: any) => resolve(formatMedia(res)), fail })
+          invoke({ count, sourceType, sizeType, camera, maxDuration, compressed, success: (res: any) => resolve(formatMedia(res)), fail })
           break
         case 'file':
-          handler({ count: multiple ? (isDef(maxCount) ? maxCount : 100) : 1, type: accept, extension, success: (res: any) => resolve(res.tempFiles), fail })
+          invoke({ count: multiple ? (isDef(maxCount) ? maxCount : 100) : 1, type: accept, extension, success: (res: any) => resolve(res.tempFiles), fail })
           break
         case 'all':
-          handler({ count, type: accept, extension, success: (res: any) => resolve(res.tempFiles as ChooseFile[]), fail })
+          invoke({ count, type: accept, extension, success: (res: any) => resolve(res.tempFiles as ChooseFile[]), fail })
           break
         default:
-          handler({ count, mediaType: ['image'], sourceType, sizeType, camera, success: (res: any) => resolve(formatMedia(res)), fail })
+          invoke({ count, mediaType: ['image'], sourceType, sizeType, camera, success: (res: any) => resolve(formatMedia(res)), fail })
           break
       }
     })

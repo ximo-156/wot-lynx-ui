@@ -41,6 +41,7 @@ export interface LynxRuntime {
  * declare 仅提供类型，不创建变量；Node / 测试宿主仍可使用全局对象兜底。
  */
 declare const lynx: LynxRuntime | undefined
+declare const NativeModules: Record<string, unknown> | undefined
 
 /** 取当前模块的 Lynx SDK，避免把 Web 后台 Worker 的空全局当作 SDK。 */
 export function getLynxRuntime(): LynxRuntime | undefined {
@@ -124,7 +125,7 @@ export function invokeNative(
 
 /** 取宿主注册的原生模块（Lynx `NativeModules` 全局对象）。 */
 export function getNativeModule<T = any>(name: string): T | undefined {
-  const modules = (globalThis as any).NativeModules
+  const modules = typeof NativeModules !== 'undefined' ? NativeModules : (globalThis as any).NativeModules
   if (!modules || typeof modules !== 'object') return undefined
   const target = modules[name]
   return target && typeof target === 'object' ? (target as T) : undefined

@@ -56,7 +56,7 @@ docs/                    手写指南、决策、生成组件页与浏览器预�
 scripts/                 生成、构建、契约检查、迁移
 ```
 
-组件公开集合以[两个生成 barrel](<packages/ui/src/index.ts>)及 `pnpm check:index` 为准；目录/源码规模和测试文件数见[快照](<docs/architecture/SNAPSHOT.md>)，依赖关系见[依赖报告](<docs/architecture/DEPS.md>)与 `pnpm check:deps`。不再维护另一套手写 LOC/测试数字，快照校验失败时不能把旧值当当前事实。
+组件公开集合以[基础件 barrel](<packages/ui/src/primitives/index.ts>)、[业务 barrel](<packages/ui/src/components/index.ts>)及[主入口](<packages/ui/src/index.ts>)及 `pnpm check:index` 为准；目录/源码规模和测试文件数见[快照](<docs/architecture/SNAPSHOT.md>)，依赖关系见[依赖报告](<docs/architecture/DEPS.md>)与 `pnpm check:deps`。不再维护另一套手写 LOC/测试数字，快照校验失败时不能把旧值当当前事实。
 
 ### 1.2 当前分层与历史收敛
 
@@ -141,7 +141,9 @@ scripts/                 生成、构建、契约检查、迁移
 
 ## 3. 目标架构（To-Be）
 
-### 3.1 分层架构（L0–L5，含 L3.5）
+### 3.1 职责分层（L0–L5，含 L3.5）
+
+下图是职责示意，不代表每层已有独立发布包或多套 Adapter 类；当前原生/宿主接入是 native/host 与 platform 能力模型。
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
@@ -150,12 +152,12 @@ scripts/                 生成、构建、契约检查、迁移
 ├───────────────────────────────────────────────────────────────────────┤
 │ L4  业务组件层   src/components/wd-*                                    │
 │     calendar / select-picker / tabs / form / table …                   │
-│     可依赖 L3.5；禁止依赖其他 L4（禁止契约借用）                          │
+│     可依赖 L3.5；族内互引允许，跨族边受门禁约束                          │
 ├───────────────────────────────────────────────────────────────────────┤
 │ L3.5 基础件层 ★v2.0 新增   src/primitives/wd-*                          │
 │     icon · loading · transition · overlay · popup · root-portal         │
-│     badge · button · img · cell · input                                │
-│     只依赖 L3/L2/L0；禁止依赖 L4；基础件之间禁止互相依赖                    │
+│     badge · button · img · cell · input · textarea                                │
+│     可组合基础件及公共层；禁止依赖 L4                    │
 ├───────────────────────────────────────────────────────────────────────┤
 │ L3  组合式层   src/composables                                          │
 │     useParent/useChildren · useTouch · usePopover · useFormDisabled …   │
@@ -165,12 +167,12 @@ scripts/                 生成、构建、契约检查、迁移
 │     src/icons · src/locale                                              │
 ├───────────────────────────────────────────────────────────────────────┤
 │ L1  平台适配层 (common/platform 子模块)                                  │
-│     LynxAdapter · WebAdapter · MockAdapter(测试)                        │
+│     native/host 接入 · capabilities · mockPlatform                        │
 ├───────────────────────────────────────────────────────────────────────┤
 │ L0  设计系统层 src/styles                                               │
 │     primitive → semantic → component；预设主题；JS 镜像                  │
 └───────────────────────────────────────────────────────────────────────┘
-        ▲ 依赖方向只能向上依赖（下层不得 import 上层）
+        ▲ 上层可依赖下层；下层不得反向 import 上层
 ```
 
 ### 3.2 为什么是 Primitives 层，而不是「拆域包」
@@ -198,8 +200,8 @@ v1.0 计划按域拆包（`components-form` / `components-display` …），条�
 与 `wd-input` 同为表单叶子件，避免 `wd-dialog`/`wd-address-edit` 借它的类型）：
 
 ```
-wd-icon(47) wd-loading(9) wd-transition(7) wd-overlay(5) wd-badge(5)
-wd-button(11) wd-popup(9) wd-img(3) wd-cell(3) wd-input(4) wd-root-portal
+wd-icon wd-loading wd-transition wd-overlay wd-badge
+wd-button wd-popup wd-img wd-cell wd-input wd-root-portal wd-textarea
 ```
 
 ### 3.3 目标包结构
@@ -237,7 +239,7 @@ createStyleResolver(neutral?) => (...sources) => Record<string, string>  // 动�
 
 **守护**：`style/conditional-key-write`（warn，存量 baseline）+ `test/unit/style-funnel.test.ts` + `test/regression/inline-style-regression.test.ts`。
 
-**待办**：存量 59 处条件写样式迁移；迁移完成后规则收紧为 `error`。
+**历史迁移记录**：当时登记 59 处；当前剩余问题以源码、lint 与 baseline 为准，不据旧数字自动重写全库或收紧规则。
 
 ### 4.2 平台能力层（原生能力 + 宿主模块契约）— ADR-022
 
@@ -270,18 +272,16 @@ v1.0 计划「脚本生成骨架 + 人工补 events/slots/a11y」，需人工过
 | meta 字段 | 来源 | 维护方 |
 |---|---|---|
 | `props`（含 `type` / `default` / `required` / `options`） | `types.ts` 的 props 对象 + 前置 JSDoc 兜底 | 机器（`scripts/gen-meta.mjs`） |
-| `events` | `.vue` 的 `defineEmits`（五种写法全支持） | 机器 |
-| `slots` | template 中的 `<slot name="x">` | 机器 |
+| `events` | 已覆盖的 `defineEmits` 写法中的事件名称；不含完整参数类型 | 机器 |
+| `slots` | template 中的静态插槽名称；不含完整作用域参数 | 机器 |
 | `name` / `layer` | 目录结构（`primitives` / `components`） | 机器 |
 | `family` | `docs/architecture/families.json`（ADR-013） | 机器 |
 | `modelValue` | props 含 `modelValue` **且** events 含 `update:modelValue` | 机器 |
 | `domain` / `tier` / `status` / `a11y` / `wotCompat` | 人工语义 | 人工（尚未引入，见 ADR-017 推翻条件） |
 
-实测：106 个组件 / 1464 个 prop / 218.8 KB，**type 与 description 覆盖率均 100%**。
+当前数量由生成器/检查输出确定，不沿用旧手写统计。type/description 非空不代表完整类型语义：泛型可能折叠为 array，事件/插槽主要收录名称，实例方法和非组件 API 不在该扫描范围。使用者需回到源码声明，不将缺字段解释成缺能力。
 
-**一份 meta 驱动**（括号内为现状）：barrel 生成（✅）、组件文档（✅ ADR-018）、
-demo 注册（待建）、API 变更检测（✅ ADR-019）、codemod（✅ ADR-019）、
-JSON schema（IDE / AI，待建）。
+**现行生成链**：源码 → meta → 组件文档/侧边栏、已采集契约的 API diff/迁移计划；目录 → 双根 barrel。barrel 不由 meta 生成，主入口仍手写编排。自动 Demo 注册、完整语义 schema 等是后续方向，不是既有能力或第一期 AI 协作的前置条件。
 
 **副产品**：`meta.json` 的 diff 天然就是 API 变更清单。序列化时每个 prop 独占一行
 且字段顺序固定，所以 diff 粒度落在**单个 prop** 上；`scripts/api-diff.mjs` 再把这层
@@ -290,7 +290,7 @@ diff 翻译成 13 类语义变更与四级严重度，避免「改描述」和�
 **门禁**：
 
 - `pnpm check:meta`（CI `generated` job）—— 产物与源码不一致即红灯。
-- `test/unit/meta-generated.test.ts`（11 条断言）—— 管「解析是否完整」，其中 4 条是防
+- [meta-generated 测试](<packages/ui/test/unit/meta-generated.test.ts>)—— 管「解析是否完整」，其中 4 条是防
   解析器**静默失效**：源码有 `emit('x')` 则 events 必含 `x`、有 `<slot>` 则 slots
   非空、`types.ts` 定义的 prop 必在 props 里、`default` 不能是人话。
   这些检测逻辑**独立实现**，不 import `gen-meta.mjs` 的函数——复用会让同一个 bug
@@ -307,28 +307,15 @@ diff 翻译成 13 类语义变更与四级严重度，避免「改描述」和�
 
 | 规则 ID | 内容 | 级别 |
 |---|---|---|
-| `dep/lateral-contract` | 禁止 `wd-A` 直接 import `wd-B/types` 的契约；共享类型下沉 `common/types` 或基础件 `types` | error |
+| `dep/lateral-contract` | 禁止跨族业务组件借用其他业务组件的 types/utils；族内契约和合法基础件依赖不一刀切下沉 | error |
 | `dep/lateral-component` | 业务组件禁止 import 其他业务组件的 `.vue`；两条出路：提升为基础件，或在 `families.json` 声明同族 | error（存量 baseline） |
 | `dep/primitives-purity` | 基础件禁止 import 业务组件（`coreToBusiness` 必须为 0）。基础件之间**允许**互引——`popup → overlay → transition` 是必要的组合链，只需保证这条链不成环 | error |
 
-### 5.2 解环手法（5 处，统一）
+### 5.2 合法族内环与跨族回归
 
-5 个环全部是「子引父 `types` 拿注入 KEY，父引子 `.vue`」。统一解法：**KEY 与 Provide 类型下沉**。
+早期方案曾要求统一下沉所有父子 KEY，后续已按[ADR-012 的落地修订](<docs/adr/012-primitives-layer.md>)与[ADR-013](<docs/adr/013-declarative-families.md>)改为声明式族判据。父组件引子实现、子组件引父注入契约是合法组合，**不为全图零环强行解耦**。
 
-```ts
-// common/context-keys.ts
-export const AVATAR_GROUP_KEY: InjectionKey<AvatarGroupProvide> = Symbol('wd-avatar-group')
-```
-
-改完后 `wd-avatar → wd-avatar-group` 的边消失，环归零，**不改任何公开 API**。
-
-| 环 | 下沉的 KEY |
-|---|---|
-| `wd-avatar ↔ wd-avatar-group` | `AVATAR_GROUP_KEY` |
-| `wd-tab ↔ wd-tabs` | `TABS_KEY` |
-| `wd-swiper ↔ wd-swiper-nav` | `SWIPER_KEY` |
-| `wd-tabbar ↔ wd-tabbar-item` | `TABBAR_KEY` |
-| `wd-table ↔ wd-table-column` | `TABLE_KEY` |
+出现新跨族依赖时先核对职责边界：真正共享的能力/类型下沉中立层，真正不可独立演进的父子单元才能声明同族并写理由。不能按名字自动归族，也不能只为放行门禁改族/基线。
 
 ### 5.3 收敛是单调的，不是一次性的
 
@@ -359,14 +346,15 @@ export const AVATAR_GROUP_KEY: InjectionKey<AvatarGroupProvide> = Symbol('wd-ava
 
 | 消费者 | 结果 |
 |---|---|
-| 能编译 `.vue` 的打包器（Rspeedy / Vite + `@vitejs/plugin-vue` / webpack + `vue-loader`） | ✅ |
+| Rspeedy + Vue Lynx，具备完整样式/worklet 构建契约 | 生产入口需对应原生/Web 验收 |
+| 仅能编译 Vue SFC 的 DOM 打包器 | 不证明 Lynx/worklet 可用；文档预览另有专用垫片 |
 | 裸 Node / SSR 直跑 | ❌ `ERR_UNKNOWN_FILE_EXTENSION` |
 
-- **源码优先**：支持 `source` 条件的构建器走源码，Tree-shaking 最优；其余走 `dist` 垫片。
+- **分支要显式核对**：source 条件走源码（主题为 SCSS），默认 import 走 dist 桥接与预编译主题 CSS；源码分支不自动证明 worklet/按需优化正确。当前 MT 保留配置见[快速开始](<docs/guide/quick-start.md>)及实际 Demo，不能通过主入口 alias 绕过分发契约。
 - `source` 子路径目标**必须落到文件**。写成 `./src/components/*` 会代入出**目录**，
   Node 的 `PACKAGE_TARGET_RESOLVE` 不做目录解析 → `ERR_UNSUPPORTED_DIR_IMPORT`。
   （`import.meta.resolve()` 对目录也返回成功，手工验证抓不到，必须机器校验。）
-- `sideEffects` 必须限定为 `["**/*.css", "**/*.scss", "**/*.ttf"]`。写成 `true` 会关闭整个包的 tree-shaking —— `import { WdButton }` 会拉入全部 106 个组件。
+- `sideEffects` 必须限定为 `["**/*.css", "**/*.scss", "**/*.ttf"]`。写成 `true` 会关闭整个包的 tree-shaking —— `import { Button }` 可能保留本不需要的组件；应用 MT 保留策略与库侧样式白名单是两个层级，不能混淆。
 - `scripts/check-exports.mjs` 四类校验：①exports 目标存在；②`files` 白名单覆盖；
   ③`--built` 时 `dist` 每条 re-export 目标可解析；④通配符代入真实条目名后解析到**文件**。
   **声明了不存在的产物是发布期故障，必须由机器拦住。**
@@ -377,12 +365,11 @@ export const AVATAR_GROUP_KEY: InjectionKey<AvatarGroupProvide> = Symbol('wd-ava
 
 ### 6.2 按需引入
 
-`plugin/auto-import.ts` 已实现：扫描业务代码中的 `<wd-*>` 标签，自动生成 import 并注入主题 CSS。这是主路径的补充，不替代 `sideEffects` 的正确配置。
+公开插件由[plugin/index.js](<packages/ui/plugin/index.js>)导出；标签转换与[auto-import.js](<packages/ui/plugin/auto-import.js>)的按需导入是不同可选功能，不能仅启用标签转换就假定组件已导入。它们不替代主题/worklet 构建契约与 sideEffects 配置。
 
 ### 6.3 版本工程
 
-**API 变更检测已落地**（ADR-019）。`meta.json` 是源码的函数（ADR-017），两个 commit
-的 meta 之差就是公开 API 之差，`scripts/api-diff.mjs` 把它变成三样东西：
+**API 变更检测已落地**（ADR-019）。meta 是源码的函数，两个快照之差反映**已经采集的组件契约**，不涵盖所有 TypeScript 别名语义、事件参数或函数式/实例 API。`scripts/api-diff.mjs` 输出三类结果，不能以无 diff 证明全部公开 API 不变：
 
 | 产物 | 用途 |
 |---|---|
@@ -408,7 +395,7 @@ CI 在 PR 上生成清单并写入 `$GITHUB_STEP_SUMMARY`，**不阻塞**：破�
 
 ### 7.1 主题
 
-三层令牌（primitive → semantic → component）已与 wot-ui 对齐。
+三层令牌命名/原始刻度与 wot-ui 同源；品牌和亮暗语义独立映射，不宣称所有默认色值逐值一致，实际取值以样式源和 JS 镜像为准。
 
 **主主题与预设主题是独立入口**（ADR-016）：
 
@@ -420,8 +407,7 @@ wot-lynx-ui/theme/presets/high-contrast → 高对比度
 wot-lynx-ui/theme/presets            → 三者聚合
 ```
 
-预设是**覆盖层**，不进主包：`brand-a` 会把 `--wot-primary-*` 整体改成紫色品牌色，
-默认发给所有消费者等于替他们做品牌决策。实测主主题因此从 20103 → 18259 字节。
+预设是**可选覆盖层**，不进主主题入口；主主题本身已有独立品牌/亮暗语义，预设不是启用品牌色的唯一方式。分入口的历史体积测量不代表当前字节数。
 
 消费方式（`ConfigProvider` 输出 `wot-theme-${theme}` 类名，与预设选择器同源）：
 
@@ -440,7 +426,7 @@ import 'wot-lynx-ui/theme/presets/brand-a' // 按需
 
 ### 7.2 国际化
 
-16 种语言 + `check-locale-parity.mjs`（key 集合一致性 CI 校验）。**这一维度已达扩展性目标**，新增语言只需 1 个文件。
+多语言集合以[locale 入口](<packages/ui/src/locale/index.ts>)与[语言契约测试](<packages/ui/test/unit/locale-parity.test.ts>)为准。新增语言核对注册、导出和 key 对齐，不将文件存在或旧语言计数当成完成证明。
 
 ---
 
@@ -456,9 +442,9 @@ import 'wot-lynx-ui/theme/presets/brand-a' // 按需
     ╱    单元测试（纯函数：util / style / 格式化）
 ```
 
-现状：87 个测试文件，vitest 按 node / jsdom 分两个 project。两处结构性优化已落地（ADR-021）：
+测试规模见生成快照；[Vitest 配置](<packages/ui/vitest.config.ts>)按 node/jsdom 分为两个 project。以下为 ADR-021 的结构和历史性能记录，不代替当前执行结果：
 
-- **环境复用**：组件 project 设 `isolate: false`，`test/setup.ts` 每 worker 只跑一次。
+- **环境复用**：`isolate: false` 必须设在根 test（不是 project 内），setup 按 worker 复用；测试级状态仍在 beforeEach/teardown 复位。
   87 文件 / 1302 用例全量从 **110s 降到 33s**，`environment` 累计从 255s 降到 24s。
   收益来自 JSDOM + LynxTestingEnv 的每文件重建（≈3s），它比单文件真正要验的逻辑
   （中位数 < 300ms）大一个数量级。
@@ -483,8 +469,8 @@ import 'wot-lynx-ui/theme/presets/brand-a' // 按需
 
 ## 9. 治理
 
-- **ADR**：`docs/adr/NNNN-*.md`。任何架构决策（MTS 形态、primitives 层、版本锁定、不拆域包）必须留痕，避免后人反复推翻。
-- **组件生命周期**：`meta.status` 驱动 `draft → beta → stable → deprecated → removed`。
+- **ADR**：`docs/adr/NNN-*.md`。任何架构决策（MTS 形态、primitives 层、版本锁定、不拆域包）必须留痕，避免后人反复推翻。
+- **组件生命周期（待建）**：meta 尚无 status 字段，不将 draft/beta/deprecated 流程当现有自动机制。
 - **CODEOWNERS 按域划分**：basic / form / display / feedback / navigation / runtime / tokens。
 - **文档一致性**：`gen-snapshot.mjs` 生成架构快照，CI 校验与源码一致。**文档一致性是机器问题，不是自觉问题。**
 
@@ -492,35 +478,13 @@ import 'wot-lynx-ui/theme/presets/brand-a' // 按需
 
 ## 10. ADR 索引
 
-完整决策记录见 `docs/adr/`。摘要：
-
-| ID | 决策 | 结论 |
-|---|---|---|
-| ADR-001 | 布局分层 + 依赖单向 | 采纳 |
-| ADR-002 | 分阶段拆包 | 采纳 |
-| ADR-003 | 组件域包暂不拆 | **前提修正**：依赖图收敛后才可拆 |
-| ADR-004 | Style Funnel 强制唯一出口 | 采纳（已落地） |
-| ADR-005 | Platform Adapter 显式契约 | 采纳（待建） |
-| ADR-006 | meta 作为契约单一来源 | 采纳（推导式；产物 JSON 见 017） |
-| ADR-007 | 双轨分发（source + dist） | 已取代（被 014） |
-| ADR-008 | 生成物 `index.css` 不入库 | 采纳（构建时生成 + CI 校验） |
-| ADR-009 | ~~继续零 MTS~~ | **已撤销**，见 ADR-011 |
-| ADR-010 | `vue-lynx` 锁 0.5.1 | 维持，升级需 ADR + 回归矩阵 |
-| ADR-011 | 声明式 MTS 为跟手交互唯一形态 | 采纳（已落地） |
-| ADR-012 | 引入 L3.5 Primitives 层 | 采纳 |
-| ADR-013 | 组件族声明式化（`families.json` 单一来源） | 采纳 |
-| ADR-014 | `dist` 是入口桥接层，不是编译产物（取代 007） | 采纳 |
-| ADR-015 | PlatformAdapter 只落地 capabilities，方法层不做 | 采纳 |
-| ADR-016 | 预设主题按需引入，不进主包 | 采纳 |
-| ADR-017 | 组件契约由源码推导，产物是 JSON | 采纳 |
-| ADR-018 | 文档由 meta 生成，侧边栏是唯一组件清单 | 采纳 |
-| ADR-019 | API 变更检测走语义 diff，codemod 只做等价改写 | 采纳 |
-| ADR-020 | 视觉回归拍组件区域而非整页，基线按平台隔离 | 采纳 |
-| ADR-021 | 测试环境复用（`isolate: false`）+ LPT 分片 | 采纳（附顺序无关取证要求） |
+现行状态、执行例外和取代关系统一维护在[ADR 索引](<docs/adr/README.md>)，不在本文复制第二套状态表。005/015 已被 022 取代，008 执行 CSS 入库兼容例外，012 的族/边规则以 013 修订为准；历史原文保留。
 
 ---
 
-## 11. 路线图
+## 11. 历史路线图与后续方向
+
+下表保留当时计划、实施留痕和时间估算，不是当前剩余任务列表。尤其 P2.1/P2.2 的 uni 底座已经被 ADR-022 取代，不恢复旧实现；目录分层与脚手架不等于独立包拆分/发布流程已经完成。当前 AI 协作入口已见[AGENTS](<AGENTS.md>)及[任务流程](<docs/ai/README.md>)，消费者 schema/MCP 等后续能力另行按需求设计。
 
 ### P0 — 对齐事实与兑现契约（1 周，零风险）
 
@@ -577,7 +541,7 @@ L1 组件集合  →  L2 有规范的系统  →  L3 有契约与边界  →  L4
 
 ---
 
-## 12. 风险
+## 12. 历史演进风险（新增改动按实际范围评估）
 
 | 风险 | 等级 | 对策 |
 |---|---|---|
@@ -590,13 +554,15 @@ L1 组件集合  →  L2 有规范的系统  →  L3 有契约与边界  →  L4
 
 ---
 
-## 13. 验收指标（季度自检）
+## 13. 历史目标指标与现行判据
+
+下表基线/目标不是当前实测状态；完整类型语义与所有平台行为不能由字段非空或单个生成检查证明。
 
 | 指标 | v2.0 基线 | P1 后 | 拆包门槛 |
 |---|---|---|---|
 | 业务 ↔ 业务 依赖边 | 153 | ≤ 60 | ≤ 30 |
 | 契约借用（跨族 type/util） | 64 | 0 | ✅ 0 |
-| 强连通分量（环） | 5 | 0 | 0 |
+| 跨族环（族内环单列允许） | 历史曾混合统计 5 个族内环 | 0 | 0 |
 | `meta` 覆盖率（props / events / slots） | 0% | 100% | 100% |
 | 单组件引入体积 | 全量 | −60% | −80% |
 | 新增组件改动点 | 5 处（含手改 demo） | 1 条命令 | 1 条命令 |
@@ -617,11 +583,11 @@ L1 组件集合  →  L2 有规范的系统  →  L3 有契约与边界  →  L4
 
 | 检查项 | 通过标准 | 命令 |
 |---|---|---|
-| 依赖无环 | 环 = 0 | `node scripts/analyze-deps.mjs` |
+| 跨族无环/边受控 | 跨族环 = 0；族内按声明允许，边不增长 | `pnpm check:deps` |
 | 层间单向 | `dep-direction` 全绿 | `pnpm lint:conventions` |
 | 层内单向 | `dep/lateral-*` 全绿，边数不增长 | 同上 |
 | 样式出口唯一 | `style/*` 无新增 baseline | 同上 |
 | MTS 形态 | `js/mts-imperative` 全绿 | 同上 |
-| 契约一致 | barrel / docs 生成物零 diff | `pnpm check:index` |
+| 已采集契约一致 | 目录/barrel、源码/meta、meta/侧边栏一致 | `pnpm check:index`、`pnpm check:meta`、`pnpm check:docs` |
 | 分发契约 | exports 目标存在 | `node scripts/check-exports.mjs` |
 | 架构快照 | 与源码一致 | `node scripts/gen-snapshot.mjs --check` |

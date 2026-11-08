@@ -92,7 +92,7 @@ defineProps(xxxProps)
 | 条件编译 | 禁止 `// #ifdef` / `// #ifndef` / `// #endif` 等 uni-app 条件编译残留 |
 | 组件标签 | 模板内组件一律 PascalCase（`<WdButton>`）；kebab-case 会被 Lynx 编译器判为原生元素。业务代码若沿用 wot-ui 的 `<wd-button>` 写法，必须启用 `pluginWotLynxTags()`（构建期改写，见 `plugin/tag-transform-loader.cjs`） |
 | 原生元素 | 只允许 Lynx 内置元素（view / text / image / scroll-view / list / list-item / swiper / swiper-item / input / textarea / switch / checkbox / radio / slider / form / label / svg / video / web-view / page）。**禁止 uni-app 的 `<block>`**（用 `<template v-else>` 做无渲染占位）；误用会触发 603 sub_code 60301 "Can't find ui tag" 并白屏。守卫测试：`test/component/native-tag-whitelist.test.ts`。⚠️ `video` 是 XElement——宿主引擎未注册 video 原生组件时创建节点抛引擎级 990200「No BehaviorController defined for class video」，随后属性更新再抛 60301（2026-10-25 真机实测）；挂载 `<video>` 前必须以 `capabilities.videoElement`（引擎原生 `<video>`：`SystemInfo.engineVersion ≥ 4`，宿主可用 `supportsVideoElement()` 显式覆盖）门控，无能力时降级（见 wd-video-preview 的封面占位） |
-| 横向布局 | 依赖横向排列的容器必须显式 `display: flex`（见 §14） |
+| 横向布局 | 依赖横向排列的容器必须显式 `display: flex`（见 §15） |
 
 ## 5. SCSS 规范（index.scss）
 

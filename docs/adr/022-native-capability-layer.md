@@ -43,6 +43,8 @@ ADR-005 / ADR-015 时期，本库的做法是：把所有平台调用都收拢�
 
 `SystemInfo` 是引擎全局对象，直接读（`getSystemInfo()` 只做字段归一，不再经适配器）。
 
+> **2026-11-08 修订：SDK 取值作用域。** Lynx 原生与 Web bundle 的包装器可以通过模块参数注入 `lynx`，后台 Worker 不保证存在 `globalThis.lynx`。上表的“直接探测全局”不应理解为只读 `globalThis`：现行 [native.ts](<https://github.com/wot-lynx-ui/wot-lynx-ui/blob/main/packages/ui/src/common/native.ts>) 优先使用模块注入的 SDK，以全局对象兼容 Node/测试宿主；原生能力与宿主能力的分层没有改变。回归见 [SDK 作用域测试](<https://github.com/wot-lynx-ui/wot-lynx-ui/blob/main/packages/ui/test/regression/native-runtime-scope.test.ts>)。签名组件因此可以正确度量并保存画布局部坐标。
+
 ### 2. 能力是引擎探测的派生值
 
 `platform.ts` 的 4 个能力改为：

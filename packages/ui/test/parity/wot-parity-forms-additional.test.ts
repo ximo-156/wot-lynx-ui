@@ -477,15 +477,23 @@ describe('controlled controls, official continuous gestures and instance isolati
 
 
 describe('real host media export and stale callback cancellation', () => {
-  it('cropper without raster host reports the missing capability, never fake-confirms, and stays open', async () => {
+  it('cropper without raster host degrades to an honestly typed SVG data URI and confirms', async () => {
     const confirm = vi.fn(), error = vi.fn(), update = vi.fn()
     const { container } = mount(ImgCropper, { modelValue: true, imgSrc: '/a.jpg', onConfirm: confirm, onImgloaderror: error, 'onUpdate:modelValue': update })
     await flush()
     loadCropperImage(container)
     confirmCrop(container)
-    expect(confirm).not.toHaveBeenCalled()
-    expect(update).not.toHaveBeenCalled()
-    expect(error).toHaveBeenCalledWith(expect.objectContaining({ src: '/a.jpg', errMsg: expect.stringContaining('host adapters are required') }))
+    // 无宿主 canvas：不伪造位图，但确认链路不再静默断掉——SVG data URI 降级
+    expect(error).not.toHaveBeenCalled()
+    expect(confirm).toHaveBeenCalledTimes(1)
+    const result = confirm.mock.calls[0][0] as any
+    expect(result.src).toBe('/a.jpg')
+    expect(result.tempFilePath.startsWith('data:image/svg+xml;utf8,')).toBe(true)
+    const svg = decodeURIComponent(result.tempFilePath.slice('data:image/svg+xml;utf8,'.length))
+    expect(svg).toContain('xlink:href="/a.jpg"')
+    // 受控语义：emit update:modelValue(false) 后面板是否关闭由消费方回写决定，
+    // 这里 update 只是 vi.fn()（不回写），面板保持打开（与旧用例一致）。
+    expect(update).toHaveBeenCalledWith(false)
     expect(container.querySelector('.wd-img-cropper')).not.toBeNull()
   })
 

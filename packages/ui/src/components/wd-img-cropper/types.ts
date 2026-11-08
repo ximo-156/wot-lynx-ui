@@ -33,8 +33,9 @@ export const imgCropperProps = {
    * 可选值: 'png' | 'jpg' | 'jpeg'
    * 默认值: 'png'
    *
-   * Lynx 实现说明：需注册 createCanvasContext / canvasToTempFilePath 宿主能力；
-   * 未注册时通过 imgloaderror 报告缺少能力，不伪造 confirm。
+   * Lynx 实现说明：真实位图导出需注册 createCanvasContext / canvasToTempFilePath
+   * 宿主能力；未注册时降级为 SVG data URI 导出（tempFilePath 以
+   * data:image/svg+xml 开头），本属性不生效。
    */
   fileType: makeStringProp('png'),
   /**
@@ -42,7 +43,8 @@ export const imgCropperProps = {
    * 类型: number
    * 默认值: 1
    *
-   * Lynx 实现说明：真实宿主位图导出时透传给 canvasToTempFilePath。
+   * Lynx 实现说明：真实宿主位图导出时透传给 canvasToTempFilePath；SVG 降级
+   * 导出时不生效。
    */
   quality: makeNumberProp(1),
   /**
@@ -89,7 +91,10 @@ export type ImgCropperProps = ExtractPropTypes<typeof imgCropperProps>
 /**
  * 裁剪结果
  *
- * Lynx 实现说明：confirm 仅在真实宿主画布导出返回非空文件路径后触发。
+ * Lynx 实现说明：宿主注册 createCanvasContext + canvasToTempFilePath 时，
+ * confirm 在真实位图导出成功后触发，tempFilePath 为宿主返回的文件路径；
+ * 未注册时降级为 SVG data URI 导出（与 wd-signature 同款），tempFilePath
+ * 以 data:image/svg+xml 开头，承载裁剪窗口内的图像几何。
  * width / height 为 cutWidth / cutHeight × exportScale；src / x / y / scale /
  * angle 为保留的端口扩展几何信息（x / y 为未旋转图片绘制原点换算值，非自然像素裁剪坐标）。
  */

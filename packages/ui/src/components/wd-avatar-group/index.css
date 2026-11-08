@@ -1,1 +1,1 @@
-.wd-avatar-group{display:flex;flex-direction:row;align-items:center}.wd-avatar-group.is-vertical{flex-direction:column}
+.wd-avatar-group{display:flex;flex-direction:row;align-items:center;z-index:0}.wd-avatar-group.is-vertical{flex-direction:column}

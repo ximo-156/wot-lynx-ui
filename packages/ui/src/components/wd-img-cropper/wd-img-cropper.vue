@@ -3,27 +3,37 @@
  *
  * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
  * - Lynx 无 canvas 2D API（CONVENTIONS §12 降级）：离屏导出缓冲 canvas
- *   以同结构 view 占位（同名 class / 内联尺寸，见 index.scss 的 __canvas），
- *   确认时不产出位图，而是 emit 裁剪几何参数（src / x / y / scale / angle），
- *   由宿主用原生能力完成最终裁剪；width / height 仍按 wot-ui 语义给出导出
- *   像素尺寸（裁剪框 × exportScale），tempFilePath 恒为空串；
- * - fileType / quality 为 canvas 导出专有 props，保留声明不生效；
+ *   以同结构 view 占位（同名 class / 内联尺寸，见 index.scss 的 __canvas）。
+ *   宿主注册 createCanvasContext + canvasToTempFilePath 时走真实位图导出
+ *   （fileType / quality 生效）；未注册时走**矢量降级**：emit 的 confirm
+ *   携带 SVG data URI（tempFilePath，裁剪窗口内的图像几何 + 导出尺寸），
+ *   与 wd-signature 的 SVG 降级同款——不伪造位图、也不让确认链路静默断掉。
+ *   width / height 仍按 wot-ui 语义给出导出像素尺寸（裁剪框 × exportScale），
+ *   src / x / y / scale / angle 为端口扩展几何信息；
+ * - fileType / quality 为 canvas 导出专有 props：仅真实位图导出时生效，
+ *   SVG 降级导出时不参与；
  * - 参考源离屏 canvas 的 top: -200% 依赖 Web 视口单位；Lynx 的 100vw/100vh
  *   支持不确定，根节点与 __cut 改用地基约定的 left/right/top/bottom: 0
  *   全屏贴边（CONVENTIONS §9），根节点显式 display: flex + column、
  *   __wrapper flex-grow: 1 撑满剩余高度（Lynx 默认 linear 布局，
  *   CONVENTIONS §15）；
- * - **跟手走主线程（声明式 MTS）**：图片的 touchmove 经
- *   `main-thread-bindtouchmove` 绑定 'main thread' worklet，单指拖动 /
- *   双指缩放的几何经与后台同一套公式（含 wot-ui 的边界钳制）计算后
- *   `setStyleProperty('transform', ...)` 直改图片节点——零线程跨越，
- *   低端机跟手无滞后（CONVENTIONS §10）；
- * - **跨元素分工（真机冒泡语义）**：图片元素绑主线程 touchstart /
- *   touchmove（起笔登记 + 跟手直改）与后台 @touchend（落定提交）；
- *   包裹器 __wrapper（图片父元素）绑后台 @touchstart（拖动态与起点
- *   记录）与 @touchmove（笔迹数据累积——非响应式闭包变量，不触发
- *   重渲染）。真机上图片触摸冒泡到 __wrapper 即触发；**jsdom 不模拟
- *   冒泡**，测试中需向两个元素分别派发验证（slider 范本同款分工）；
+ * - **跟手走主线程（声明式 MTS）**：手势面 __gesture（覆盖包裹器的独立
+ *   view 层）的 touchmove 经 `main-thread-bindtouchmove` 绑定 'main thread'
+ *   worklet，单指拖动 / 双指缩放的几何经与后台同一套公式（含 wot-ui 的
+ *   边界钳制）计算后 `setStyleProperty('transform', ...)` 直改图片节点——
+ *   零线程跨越，低端机跟手无滞后（CONVENTIONS §10）；
+ * - **跨元素分工（真机冒泡语义）**：手势面 __gesture 绑主线程 touchstart /
+ *   touchmove（起笔登记 + 跟手直改）与主线程 touchend / touchcancel（清
+ *   手势起点）；包裹器 __wrapper（手势面父元素）绑后台 @touchstart（拖动
+ *   态与起点记录）、@touchmove（笔迹数据累积——非响应式闭包变量，不触发
+ *   重渲染）与 @touchend / @touchcancel（落定提交）。真机上手势面触摸
+ *   冒泡到 __wrapper 即触发；**jsdom 不模拟冒泡**，测试中需向两个元素
+ *   分别派发验证（slider / slide-verify 范本同款分工）；
+ * - **触摸命中不依赖图片节点**：官方 image 元素文档只定义 load / error
+ *   事件，且 __cut（z-index 9）与图片（z-index 2）的层序在真机上可能与
+ *   绘制顺序不一致（CONVENTIONS §19 附注：absolute 带 z-index 时父级需
+ *   z-index: 0）。图片元素降为纯展示（__img pointer-events: none），
+ *   全部触摸绑定放在 view 手势面上（slider / signature 同款结构）；
  * - **几何经元素属性桥接**：图片中心（center-x / center-y）、显示尺寸
  *   （pic-w / pic-h）、缩放（img-scale）、角度（img-angle）与裁剪框
  *   （cut-left / cut-top / cut-w / cut-h）由后台随重渲染下发到图片
@@ -632,15 +642,46 @@ function handleConfirm() {
   draw()
 }
 
+/** XML 属性值转义（SVG data URI 内嵌 imgSrc，防止引号 / 尖括号破坏标记） */
+function escapeXmlAttr(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+/** SVG 数值取整到 4 位小数：规避浮点残差（如 358.7 - 175 - 183.7 = 1.1e-13） */
+function svgNumber(value: number): string {
+  return String(Math.round(value * 10000) / 10000)
+}
+
+/**
+ * 无宿主 Canvas 2D 能力时的矢量降级导出（wd-signature 同款思路）：
+ * 用 SVG 承载裁剪窗口内的图像几何——视口即裁剪框（导出像素 = 裁剪框 ×
+ * exportScale），图片按当前位移 / 缩放 / 旋转绘入，超出视口的内容由 SVG
+ * 视口裁剪（等价于 canvas 路径的 clearRect + 区域 drawImage）。
+ */
+function buildExportSvg(result: { width: number; height: number }): string {
+  const scale = props.exportScale
+  const width = Math.round(result.width)
+  const height = Math.round(result.height)
+  const x = (imgLeft.value - picWidth.value / 2 - cutLeft.value) * scale
+  const y = (imgTop.value - picHeight.value / 2 - cutTop.value) * scale
+  const drawWidth = picWidth.value * imgScale.value * scale
+  const drawHeight = picHeight.value * imgScale.value * scale
+  const centerX = (imgLeft.value - cutLeft.value) * scale
+  const centerY = (imgTop.value - cutTop.value) * scale
+  const angle = props.disabledRotate ? 0 : imgAngle.value
+  const rotate = angle ? ` transform="rotate(${svgNumber(angle)} ${svgNumber(centerX)} ${svgNumber(centerY)})"` : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><image xlink:href="${escapeXmlAttr(props.imgSrc)}" x="${svgNumber(x)}" y="${svgNumber(y)}" width="${svgNumber(drawWidth)}" height="${svgNumber(drawHeight)}" preserveAspectRatio="none"${rotate}/></svg>`
+}
+
 /** Raster export uses only real registered host canvas capabilities, never a fake empty path. */
 function draw() {
   if (!isAlive() || !props.modelValue || !props.imgSrc || exporting.value) return
   const src = props.imgSrc
-  if (!getPlatform().capabilities.canvas2d) {
-    // 文案保持原样：errMsg 是消费者可能匹配的对外契约，能力重构不该顺带改它。
-    emit('imgloaderror', { src, errMsg: 'img-cropper:fail createCanvasContext and canvasToTempFilePath host adapters are required' })
-    return
-  }
   if (picWidth.value <= 0 || picHeight.value <= 0 || cutWidth.value <= 0 || cutHeight.value <= 0) {
     emit('imgloaderror', { src, errMsg: 'img-cropper:fail image geometry is not ready' })
     return
@@ -659,6 +700,15 @@ function draw() {
     if (!valid()) return
     exporting.value = false
     emit('imgloaderror', { ...error, src })
+  }
+  // 无宿主 Canvas 2D：矢量降级导出并照常确认（SVG data URI）。不伪造位图，
+  // 也不再把「缺宿主能力」当成静默失败——否则消费方（如 demo）点完成看不到
+  // 任何效果。宿主注册能力后仍走下方真实位图导出。
+  if (!getPlatform().capabilities.canvas2d) {
+    exporting.value = false
+    emit('confirm', { ...result, tempFilePath: 'data:image/svg+xml;utf8,' + encodeURIComponent(buildExportSvg(result)) })
+    if (valid()) emit('update:modelValue', false)
+    return
   }
   try {
     const ctx = createCanvasContext(canvasId.value, proxy)
@@ -898,7 +948,7 @@ const onGestureEndMt = () => {
 
 <template>
   <view v-if="modelValue" :class="['wd-img-cropper', customClass]" :style="rootStyle" @touchmove.stop="preventTouchMove">
-    <view class="wd-img-cropper__wrapper" @touchstart="handleImgTouchStart" @touchmove="handleImgTouchMove" :main-thread-bindtouchend="onGestureEndMt" :main-thread-bindtouchcancel="onGestureEndMt">
+    <view class="wd-img-cropper__wrapper" @touchstart="handleImgTouchStart" @touchmove="handleImgTouchMove" @touchend="handleImgTouchEnd" @touchcancel="handleImgTouchEnd">
       <!-- 展示在用户面前的裁剪框 -->
       <view class="wd-img-cropper__cut">
         <!-- 上方阴影块 -->
@@ -925,9 +975,9 @@ const onGestureEndMt = () => {
         <view :class="['wd-img-cropper__overlay', 'wd-img-cropper__overlay-bottom', { 'is-highlight': moving }]"></view>
       </view>
       <!-- 展示的传过来的图片: 控制图片的旋转角度(rotate)、缩放程度(imgScale)、移动位置(translate)。
-           主线程 worklet 跟手直改 transform（touchstart 起笔登记 / touchmove 跟手）；
-           后台 touchend 落定提交；包裹器后台 touchstart / touchmove 记录拖动态与
-           累积数据（真机上由图片触摸冒泡触发）。几何经元素属性桥接下发给主线程。 -->
+           纯展示节点（__img 已 pointer-events: none，不承接触摸）：主线程 worklet 经
+           main-thread-ref 直改其 transform；几何（中心 / 显示尺寸 / 缩放 / 角度 /
+           裁剪框）经元素属性桥接下发给主线程，触摸由下方 __gesture 手势面承接。 -->
       <image
         class="wd-img-cropper__img"
         :key="imgSrc"
@@ -948,13 +998,21 @@ const onGestureEndMt = () => {
         :cut-top="String(cutTop)"
         :cut-w="String(cutWidth)"
         :cut-h="String(cutHeight)"
-        :main-thread-bindtouchstart="onGestureStartMt"
-        :main-thread-bindtouchmove="onGestureMoveMt"
-        @touchend="handleImgTouchEnd"
-        @touchcancel="handleImgTouchEnd"
         @error="handleImgLoadError"
         @load="handleImgLoaded"
       />
+      <!-- 手势面（覆盖包裹器的独立 view 层）：主线程 worklet 绑本层（起笔登记 +
+           跟手直改 + 清手势起点），后台 touchstart / touchmove / touchend 绑
+           __wrapper（真机上由本层触摸冒泡触发）。官方 image 元素只定义 load / error
+           事件，且与 __cut 的 z-index 层序在真机上可能与绘制不一致，触摸命中不
+           依赖图片节点（CONVENTIONS §19 附注）；worklet 仍经 imgRef 寻址图片。 -->
+      <view
+        class="wd-img-cropper__gesture"
+        :main-thread-bindtouchstart="onGestureStartMt"
+        :main-thread-bindtouchmove="onGestureMoveMt"
+        :main-thread-bindtouchend="onGestureEndMt"
+        :main-thread-bindtouchcancel="onGestureEndMt"
+      ></view>
     </view>
     <!-- 离屏导出缓冲（Lynx 无 canvas，同结构 view 占位，见文件头说明） -->
     <view :id="canvasId" class="wd-img-cropper__canvas" :style="canvasStyle"></view>

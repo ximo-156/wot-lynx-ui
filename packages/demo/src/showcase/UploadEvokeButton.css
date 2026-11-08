@@ -27,7 +27,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  /* 视觉层不吞点击，由后置的透明 input 承接选图。 */
+  /* 视觉层不吞点击，由 Upload 唤起槽统一处理选图。 */
   pointer-events: none;
 }
 
@@ -47,27 +47,4 @@
   font-size: var(--demo-upload-evoke-resolved-num-font-size);
   line-height: var(--demo-upload-evoke-resolved-num-line-height);
   text-align: center;
-}
-
-/* Web 的 x-input 强制 display:contents!important，opacity 必须落在真实 view 盒上。 */
-.demo-upload-evoke__input-wrap {
-  display: flex;
-  flex-direction: row;
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-}
-
-/* 命中层：铺满 + 全透明。不能 display:none，否则无法原生选图。 */
-.demo-upload-evoke__input {
-  display: flex;
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
 }

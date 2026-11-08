@@ -282,7 +282,7 @@ LynxView.load(bundleUrl)  // bundleUrl 为 device-test.lynx.bundle 的可访问�
 | 样式丢失 / 主题色不对 | 确认入口文件 `import 'wot-lynx-ui/theme'`，且 `enableCSSInheritance: true` |
 | 组件不渲染（显示为空白原生元素） | 检查是否使用了 kebab-case 标签但未安装 `pluginWotLynxTags()` 插件 |
 | 键盘不弹出 | 真机需宿主 App 授权；Explorer 中通常正常 |
-| Upload 上传点「+」没反应 / 不弹相册 | 选图已改为 **Lynx 原生 `<input type="file">`**（`packages/demo/src/showcase/UploadEvokeButton.vue`）：真机点「+」由引擎直接弹系统相册，不经 uni 兼容层；选完经 change 事件回传文件，demo 手动入列后调组件 `submit()`，上传走 `uploadMethod` 演示桩。注意 input[type=file] **只兼容原生端**（Lynx Web 的 x-input 不派发文件事件），Web 预览里选图不可用，真机验收为准 |
+| Upload 上传点相机卡片只弹输入法 / 不弹相册 | Lynx [原生 input](https://lynxjs.org/api/elements/built-in/input.md) 不支持 `type="file"`，透明输入框仍会聚焦并弹出键盘。Demo 唤起卡片现在只用 view，一次 tap 交给 Upload 的 `beforeChoose` → 宿主 `chooseMedia` → `beforeUpload` → 入列流程；宿主需通过 Native Module / JS Module 或 `configureHost()` 接入真实相册/拍照。缺失能力会明确提示；`uploadMethod` 演示桩仅模拟网络上传，不提供选图。Web 也需要真正的文件选择适配，x-input 的文本 value/fakepath 不是可上传文件 |
 
 ## 启动卡住：iCloud 占位文件
 

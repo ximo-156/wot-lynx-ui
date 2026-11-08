@@ -9,7 +9,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue-lynx'
 import { listIcons, useToast } from 'wot-lynx-ui'
-import { demoBrokenImage, demoImage } from '../assets/demo-images'
+import { demoBrokenImage, demoCropImage, demoImage } from '../assets/demo-images'
 import UploadEvokeButton from './UploadEvokeButton.vue'
 import ShowcaseLayout from './ShowcaseLayout'
 import DemoSection from './DemoSection'
@@ -62,39 +62,6 @@ const carKeyboardValue = ref('')
 const verifyPassed = ref(false)
 const slideVerifyRef = ref<any>(null)
 const uploadFiles = ref<any[]>([])
-const uploadRef = ref<any>(null)
-// 手动入列时的 uid 计数器：绕过组件内部 chooseFile 流程直接 push 也需要唯一标识
-// （与组件内部 context.id 分开计数，避免撞号）
-let uploadUid = 10000
-
-/**
- * 原生 <input type="file"> 选完图的落库（UploadEvokeButton.vue 回传）。
- *
- * 为什么手动 push 而不是让组件自己选：选图已由原生 input 直接完成，组件内部的
- * chooseFile → uni.chooseMedia 链路在 Lynx 上没有对应原生能力，整条弃用。
- * 这里按 pending 入列（受 limit 约束），再调组件 expose 的 submit() 上传。
- *
- * nextTick 是必须的：fileList 的 watch 是默认 pre flush（异步），push 后
- * 同步调 submit() 时组件内部 uploadFiles 还没纳入新项，会空转。
- */
-function onUploadPicked(files: Array<{ path: string; size: number; name: string }>) {
-  const remain = 3 - uploadFiles.value.length
-  const accepted = files.slice(0, Math.max(0, remain))
-  for (const file of accepted) {
-    uploadFiles.value.push({
-      uid: uploadUid++,
-      url: file.path,
-      thumb: file.path,
-      name: file.name,
-      size: file.size,
-      status: 'pending',
-      percent: 0
-    })
-  }
-  nextTick(() => {
-    uploadRef.value?.submit()
-  })
-}
 
 /**
  * 演示上传方法（wd-upload 的 uploadMethod 扩展点）：模拟 0→100 进度后成功。
@@ -118,16 +85,19 @@ function demoUploadMethod(file: any, formData: any, options: any) {
   }
 }
 
-// chooseerror 只应作为诊断保留：选图已不走组件内部链路，它一旦触发说明
-// 原生 input 的 @tap.stop 没拦住冒泡（点击漏进了唤起槽外层 view）。
+// 相册由宿主提供；缺失能力、取消或权限错误都应明确反馈，不能转成输入框。
 function onUploadChooseError(e: any) {
   const errMsg = String(e?.error?.errMsg || e?.error?.message || '')
-  console.warn('[demo] upload chooseerror（原生 input 未拦截点击？）', e)
-  if (errMsg.includes('cancel')) {
+  console.warn('[demo] upload chooseerror', e)
+  if (/cancel/i.test(errMsg)) {
     toast.info('已取消选择')
     return
   }
-  toast.error('选图链路异常：点击漏进了组件内部降级流程')
+  if (errMsg.includes('宿主未注册')) {
+    toast.error('当前宿主尚未接入相册/拍照能力')
+    return
+  }
+  toast.error(errMsg || '选择图片失败，请检查相册权限')
 }
 const tabValue = ref(0)
 const sidebarValue = ref('a')
@@ -250,14 +220,28 @@ function replayCountTo() {
   countToKey.value++
   countToDone.value = false
 }
-// Backtop 回到顶部（scrollTop 必填，由 scroll-view @scroll 下发）
-const backtopScrollTop = ref(0)
+// Backtop 回到顶部（scrollTop 必填）。
+// 「位置回显」与「滚动指令」必须分成两个 ref：scroll-top 是程序化指令通道，
+// 把 @scroll 的实时位置写回它，引擎就会按事件值反复瞬移——真机上 BG→MT
+// 属性补丁滞后于触摸/惯性，Web 上 rAF 里的 scrollTo 也晚于当前帧，滚动中
+// 列表按过时位置来回闪跳。回显只喂 wd-backtop 的显隐与文案；指令只在点击
+// 回顶时写，用户滚动期间属性不动，原生滚动全程不受干扰。
+const backtopScrollPos = ref(0)
+const backtopScrollCmd = ref(0)
 function onBacktopScroll(e: any) {
-  backtopScrollTop.value = e?.detail?.scrollTop ?? 0
+  const value = Number(e?.detail?.scrollTop)
+  // Lynx Web 的 scroll 事件在 scrollTop===0 时上报 -scrollHeight/2，归一为 0
+  backtopScrollPos.value = Number.isFinite(value) ? Math.max(0, value) : 0
 }
 function onBacktopTap() {
   console.log('[demo] backtop tap, 回到顶部')
-  backtopScrollTop.value = 0
+  backtopScrollPos.value = 0
+  // scroll-top 只在值变化时生效：先 -1 复位再置 0，重复回顶也触发
+  // （wd-select-picker 同款指令写法）
+  backtopScrollCmd.value = -1
+  nextTick(() => {
+    backtopScrollCmd.value = 0
+  })
 }
 // Resize 尺寸监听
 const resizeHeight = ref(60)
@@ -365,7 +349,9 @@ const datetimePickerViewValue = ref(Date.now())
 const cropperVisible = ref(false)
 const cropperResult = ref('')
 function onCropperConfirm(e: any) {
-  cropperResult.value = `缩放 ${e.scale} · ${e.width}×${e.height}`
+  // 无宿主 canvas 能力时组件降级为 SVG data URI（tempFilePath 前缀可区分）
+  const kind = String(e.tempFilePath).startsWith('data:image/svg+xml') ? 'SVG' : '文件'
+  cropperResult.value = `缩放 ${e.scale} · ${e.width}×${e.height} · ${kind}`
 }
 // SwipeAction 滑动操作
 const swipeCells = ref([
@@ -689,20 +675,17 @@ function resetTransientDemos() {
             <wd-signature :style="{ flex: '1' }" />
           </view>
           <view class="demo-row">
-            <!-- 选图走 Lynx 原生 <input type="file">（见 UploadEvokeButton.vue）：
-                 真机点击直接弹系统相册，不经 uni 兼容层；上传走组件自带
-                 uploadMethod 扩展点。input[type=file] 只兼容原生端，Web 预览
-                 里选图不可用（真机验收为准）。 -->
+            <!-- 视觉卡片不含 input；一次 tap 由 Upload 选择/校验并调用宿主
+                 chooseMedia。缺少能力会提示；uploadMethod 仅模拟网络上传。 -->
             <wd-upload
-              ref="uploadRef"
               v-model:file-list="uploadFiles"
               :limit="3"
               action=""
-              :auto-upload="false"
+              :auto-upload="true"
               :upload-method="demoUploadMethod"
               @chooseerror="onUploadChooseError"
             >
-              <UploadEvokeButton :count="uploadFiles.length" :limit="3" @picked="onUploadPicked" />
+              <UploadEvokeButton :count="uploadFiles.length" :limit="3" />
             </wd-upload>
           </view>
         </view>
@@ -1220,10 +1203,10 @@ function resetTransientDemos() {
         <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">scroll-view 滚动超过 top 阈值显示</text>
-          <scroll-view scroll-orientation="vertical" :style="{ height: '220px' }" :scroll-top="backtopScrollTop" @scroll="onBacktopScroll">
+          <scroll-view scroll-orientation="vertical" :style="{ height: '220px' }" :scroll-top="backtopScrollCmd" @scroll="onBacktopScroll">
             <view :style="{ padding: '12px' }">
-              <wd-backtop :scroll-top="backtopScrollTop" :top="60" text="顶部" shape="square" :bottom="24" :right="24" @tap="onBacktopTap" />
-              <text class="demo-panel__label">scrollTop: {{ backtopScrollTop }}（阈值 60）</text>
+              <wd-backtop :scroll-top="backtopScrollPos" :top="60" text="顶部" shape="square" :bottom="24" :right="24" @tap="onBacktopTap" />
+              <text class="demo-panel__label">scrollTop: {{ backtopScrollPos }}（阈值 60）</text>
               <view v-for="item in 12" :key="item" :style="{ padding: '10px 0' }">
                 <text class="demo-tag">滚动内容 {{ item }}</text>
               </view>
@@ -1483,7 +1466,7 @@ function resetTransientDemos() {
       <view class="demo-section">
         <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
-          <text class="demo-panel__label">基础裁剪（网络图，aspectRatio="1:1"）</text>
+          <text class="demo-panel__label">基础裁剪（横图，aspectRatio="1:1"，可拖动 / 双指缩放 / 旋转）</text>
           <view class="demo-row">
             <wd-button type="primary" size="small" @tap="cropperVisible = true">打开裁剪</wd-button>
             <text class="demo-tag">{{ cropperResult || '未裁剪' }}</text>
@@ -1492,7 +1475,7 @@ function resetTransientDemos() {
       </view>
       <wd-img-cropper
         v-model="cropperVisible"
-        :img-src="demoImage"
+        :img-src="demoCropImage"
         aspect-ratio="1:1"
         @confirm="onCropperConfirm"
       />

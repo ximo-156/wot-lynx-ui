@@ -18,6 +18,9 @@
  * - https://lynxjs.org/api/lynx-api/lynx/lynx-get-js-module.md
  */
 
+import { getNativeModule, getJSModule } from './native'
+import { getNativeMediaPickerHost, supplementMediaPicker } from './nativeMediaPicker'
+
 /** 宿主返回的矩形。 */
 export interface HostRect {
   width: number
@@ -107,25 +110,18 @@ export function configureHost(host: WotLynxHost | null): void {
 /** 取当前宿主能力（稳定实例，能力读取实时）。 */
 export function getHost(): WotLynxHost {
   if (injectedHost) return injectedHost
-  const fromModule = readModule('WotLynxUI')
-  if (fromModule) return fromModule
-  return readModule('WotLynxUIHost') || {}
+  const host = readModule('WotLynxUI') || readModule('WotLynxUIHost')
+  if (host && typeof host.chooseMedia === 'function') return host
+  const media = getNativeMediaPickerHost()
+  if (media) return host ? supplementMediaPicker(host, media) : media
+  return host || {}
 }
 
 function readModule(name: string): WotLynxHost | null {
-  const modules = (globalThis as any).NativeModules
-  const native = modules && typeof modules === 'object' ? modules[name] : undefined
-  if (native && typeof native === 'object') return native as WotLynxHost
-  const runtime = (globalThis as any).lynx
-  if (runtime && typeof runtime.getJSModule === 'function') {
-    try {
-      const jsModule = runtime.getJSModule(name)
-      if (jsModule && typeof jsModule === 'object') return jsModule as WotLynxHost
-    } catch {
-      // 宿主未注册该模块：视为不可用。
-    }
-  }
-  return null
+  const native = getNativeModule<WotLynxHost>(name)
+  if (native) return native
+  const jsModule = getJSModule<WotLynxHost>(name)
+  return jsModule && typeof jsModule === 'object' ? jsModule : null
 }
 
 /** 判断某项宿主能力是否可用。 */

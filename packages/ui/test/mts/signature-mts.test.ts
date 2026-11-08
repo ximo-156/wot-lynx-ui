@@ -141,10 +141,11 @@ describe('wd-signature continuous MTS drawing', () => {
     const previous = strokes(mounted.container)[0]
     dispatch(mounted.container, 'start', [60, 150], 200); await frames()
     dispatch(mounted.container, 'move', [160, 150], 216); await frames()
-    const width = pool(mounted.container)[0].style.width
+    const activeSegment = pool(mounted.container).find(element => Number.parseFloat(element.style.top) > 120 && Number.parseFloat(element.style.width) > 0)!
+    const width = activeSegment.style.width
     expect(Number.parseFloat(width)).toBeGreaterThan(0)
     acknowledge(previous); await frames()
-    expect(pool(mounted.container)[0].style.width).toBe(width)
+    expect(activeSegment.style.width).toBe(width)
     dispatch(mounted.container, 'end', [160, 150], 232); await frames()
     acknowledge(strokes(mounted.container)[1]); await frames()
     const shape = nativeSegments(mounted.container).map(element => element.getAttribute('style'))
@@ -280,6 +281,70 @@ describe('wd-signature continuous MTS drawing', () => {
     expect(tip(mounted.container).every(element => element.style.width === '0px')).toBe(true)
     expect(exportSvg(mounted)).not.toMatch(/<(?:path|circle)\b/)
   })
+
+  it('keeps A visible when B starts before A geometry or native handoff completes', async () => {
+    const queries: any[] = []
+    let delayed = false
+    installRects(options => { if (delayed) queries.push(options); else options.success?.(RECT) })
+    const mounted = mount()
+    await frames()
+    delayed = true
+    await drawStroke(mounted.container, [[60, 120], [160, 120]])
+    expect(strokes(mounted.container)).toHaveLength(0)
+    const oldSegment = pool(mounted.container).find(element => Number.parseFloat(element.style.width) > 0)!
+    const oldStyle = oldSegment.getAttribute('style')
+    dispatch(mounted.container, 'start', [60, 150], 300); await frames()
+    dispatch(mounted.container, 'move', [160, 150], 316); await frames()
+    expect(oldSegment.getAttribute('style')).toBe(oldStyle)
+    const active = pool(mounted.container).find(element => Number.parseFloat(element.style.top) > 120 && Number.parseFloat(element.style.width) > 0)!
+    expect(active).toBeDefined()
+    const activeStyle = active.getAttribute('style')
+    queries.forEach(options => options.success?.(RECT)); await frames()
+    acknowledge(strokes(mounted.container)[0]); await frames()
+    expect(oldSegment.style.width).toBe('0px')
+    expect(active.getAttribute('style')).toBe(activeStyle)
+    // A repeated acknowledgement cannot erase slots subsequently reused by B.
+    dispatch(mounted.container, 'move', [180, 150], 332); await frames()
+    const before = pool(mounted.container).map(element => element.getAttribute('style'))
+    acknowledge(strokes(mounted.container)[0]); await frames()
+    expect(pool(mounted.container).map(element => element.getAttribute('style'))).toEqual(before)
+    dispatch(mounted.container, 'end', [180, 150], 348); await frames()
+    expect(strokes(mounted.container)).toHaveLength(2)
+  })
+
+  it('waits for valid fallback geometry and native materialization before releasing live ink', async () => {
+    const queries: any[] = []
+    let delayed = false
+    installRects(options => {
+      if (delayed) queries.push(options)
+      else options.success?.({ left: 0, top: 0, width: 0, height: 0 })
+    })
+    const mounted = mount()
+    await frames()
+    delayed = true
+    dispatch(mounted.container, 'start', [60, 120], 0); await frames(1)
+    await until(() => queries.length > 0)
+    // Fill the same bounded pool with a few highly curved moves. Holding an
+    // initial query through 150 dispatches can cross getRect's real timeout
+    // under a concurrent full suite, which tests timeout rather than late ACK.
+    for (let index = 1; index <= 10; index++) dispatch(mounted.container, 'move', [index % 2 ? 5000 : 60, 120], index)
+    await frames(1)
+    expect(canvas(mounted.container).getAttribute('gesture-fallback')).toBe('false')
+    expect(mounted.container.querySelector('.wd-signature__fallback')).toBeNull()
+    expect(pool(mounted.container).some(element => Number.parseFloat(element.style.width) > 0)).toBe(true)
+    queries.forEach(options => options.success?.(RECT))
+    await until(() => !!mounted.container.querySelector('.wd-signature__fallback'))
+    const fallback = mounted.container.querySelector('.wd-signature__fallback')!
+    expect(pool(mounted.container).some(element => Number.parseFloat(element.style.width) > 0)).toBe(true)
+    acknowledge(fallback); await frames()
+    expect(pool(mounted.container).every(element => element.style.width === '0px')).toBe(true)
+    expect(tip(mounted.container).every(element => element.style.width === '0px')).toBe(true)
+    expect(fallback.querySelectorAll('.wd-signature__segment').length).toBeGreaterThan(512)
+    // Geometry and pool availability can improve, but fallback stays latched.
+    dispatch(mounted.container, 'move', [100, 120], 151); await frames()
+    expect(canvas(mounted.container).getAttribute('gesture-fallback')).toBe('true')
+    expect(mounted.container.querySelector('.wd-signature__fallback')).not.toBeNull()
+  }, 15_000)
 
   it('waits for pending stroke geometry before a quick confirm and drops a cleared pending export', async () => {
     const queries: any[] = []

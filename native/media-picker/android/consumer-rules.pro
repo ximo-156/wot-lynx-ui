@@ -1,0 +1,3 @@
+-keep class com.wotlynx.mediapicker.WotMediaPickerModule { public <init>(android.content.Context); public void chooseMedia(com.lynx.react.bridge.ReadableMap, com.lynx.react.bridge.Callback); public void destroy(); }
+-keep class com.wotlynx.mediapicker.WotMediaPickerActivity { *; }
+-keep class com.wotlynx.mediapicker.WotMediaPickerFileProvider { *; }

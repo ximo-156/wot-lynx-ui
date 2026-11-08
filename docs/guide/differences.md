@@ -139,8 +139,8 @@ configureHost({
 
 | 组件 | 状态 | 说明 |
 | --- | --- | --- |
-| `WdImgCropper` 图片裁剪 | 接口保留 | Lynx 无 Canvas 2D API，像素导出需宿主提供 `createCanvasContext` + `canvasToTempFilePath` |
-| `WdUpload` 上传 | 基础可用 | 依赖宿主模块 `chooseMedia` / `uploadFile`（或自定义 `uploadMethod`）。demo 的选图已改用 **Lynx 原生 `<input type="file">`**（`packages/demo/src/showcase/UploadEvokeButton.vue`，真机直接弹系统相册，只兼容原生端），上传走 `uploadMethod` 演示桩 |
+| `WdImgCropper` 图片裁剪 | 接口保留 | Lynx 无 Canvas 2D API：宿主注册 `createCanvasContext` + `canvasToTempFilePath` 时走真实位图导出（`fileType` / `quality` 生效）；未注册时降级为 SVG data URI 导出（`tempFilePath` 以 `data:image/svg+xml` 开头），`confirm` 链路不断。裁剪框拖动 / 双指缩放 / 旋转与 wot-ui 一致 |
+| `WdUpload` 上传 | 依赖宿主选图 | 通过宿主 `chooseMedia` / `uploadFile`（或自定义 `uploadMethod`）提供真实能力。Demo 用 view 唤起标准选择与校验链路，不渲染 `input type="file"`，避免真机弹输入法；宿主未接入会提示。`uploadMethod` 只模拟网络上传；Web 文件选择也需宿主适配，不能把 x-input 的 fakepath 当可用文件 |
 | `WdVideoPreview` | 基础可用 | 依赖引擎原生 `<video>`（Lynx 4.1+）；宿主未注册 video XElement 时降级为封面占位 |
 | `WdSwiper` / `WdImagePreview` 轮播 | 自研实现 | `swiper` / `swiper-item` 并非 Lynx 引擎内置元素，其 BehaviorController 由宿主链接的 LynxUI 注册；宿主缺失时引擎抛 "No BehaviorController defined for class swiper"（错误码 9902）致命异常且 JS 侧无法捕获。故轮播改用引擎内置元素（scroll-view / view / image）+ scroll-left 分页自研实现，任何宿主均可用；`adjust-height` / `adjust-vertical-height`（支付宝小程序专有能力）随之失效 |
 | `WdTour` 富文本内容 | 纯文本 | `rich-text` 节点降级为 `<text>` 展示 |

@@ -427,7 +427,7 @@ const onDrawStartMt = (event: any) => {
     bank = { version, strokes: [], free: Array.from({ length: POOL_SIZE }, (_, index) => POOL_SIZE - 1 - index) }
     inkRef.current = bank
     // External cancellation may have rejected a start on only one thread.
-    // Reconcile with the background's next physical stroke at this boundary.
+    // Reconcile with the next background physical stroke at this boundary.
     serialRef.current = Math.max(0, (Number(canvas.getAttribute('gesture-next-stroke')) || 1) - 1)
   }
   const ink = bank
@@ -562,7 +562,7 @@ const onDrawStartMt = (event: any) => {
   }
   state.write = write
   const ready = (rect: any) => {
-    if (drawRef.current !== state || state.version !== canvas.getAttribute('gesture-version') || canvas.getAttribute('gesture-disabled') === 'true') return
+    if (canvasRef.current !== canvas || drawRef.current !== state || state.version !== canvas.getAttribute('gesture-version') || canvas.getAttribute('gesture-disabled') === 'true') return
     if (!rect || !(Number(rect.width) > 0) || !(Number(rect.height) > 0) || !Number.isFinite(Number(rect.left)) || !Number.isFinite(Number(rect.top))) return
     const geometry = { left: Number(rect.left), top: Number(rect.top), width: Number(rect.width), height: Number(rect.height) }
     geomRef.current = geometry

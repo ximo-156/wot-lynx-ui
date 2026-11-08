@@ -1,0 +1,39 @@
+apply plugin: 'com.android.library'
+
+// Uses the Explorer checkout's Android plugin and compile SDK; no plugin/SDK
+// version is independently selected by this integration kit.
+android {
+    if (android.hasProperty('namespace')) {
+        namespace 'com.wotlynx.mediapicker'
+    }
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    defaultConfig {
+        minSdkVersion 24
+        targetSdkVersion 32
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+    flavorDimensions 'lynx'
+    productFlavors {
+        asan { dimension 'lynx' }
+        noasan { dimension 'lynx' }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    // The inspected Explorer already supplies this exact dependency. This kit
+    // needs FileProvider only; it does not require upgrading AndroidX Activity.
+    implementation 'androidx.core:core:1.6.0'
+    if (rootProject.findProject(':LynxAndroid') != null) {
+        compileOnly project(':LynxAndroid')
+    } else {
+        def coordinate = project.findProperty('wotMediaPickerLynxCoordinate')
+        if (!coordinate) {
+            throw new GradleException('Use the Explorer :LynxAndroid source project, or supply -PwotMediaPickerLynxCoordinate=<the EXACT Lynx coordinate used by your host>.')
+        }
+        compileOnly coordinate.toString()
+    }
+}

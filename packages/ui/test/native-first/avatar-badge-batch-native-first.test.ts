@@ -144,6 +144,20 @@ describe('原生优先重写 · 布局居中契约（avatar / avatar-group / bad
     )
   })
 
+  it('wd-avatar-group 根节点自带层叠上下文（z-index: 0），收住组内头像的内联 z-index', () => {
+    // 真机缺陷（2026-11-08 截图）：组内每个头像都按 cascading 方向内联下发
+    // z-index（left-up: index+1 / right-up: count-index，见下方 DOM 对齐用例），
+    // 而根节点没有 z-index 时，真机把这些「带 z-index 的子节点」按页面根
+    // （屏幕）坐标系绘制——页面滚动后整组头像不跟随 demo 面板滚走，而是按
+    // 滚动偏移量粘在屏幕上（压住下一行标签、溢出卡片底边）。
+    // 修法同 wd-slider / wd-table / wd-calendar-view / wd-img-cropper：
+    // 父级先 z-index: 0 建立层叠上下文（Lynx 定位 FAQ，CONVENTIONS §19 附注）。
+    const group = ruleOf(css('wd-avatar-group/index.css'), '.wd-avatar-group')
+    expect(group, '.wd-avatar-group 需要 z-index: 0 建立层叠上下文').toMatch(/(^|;)z-index:0(;|$)/)
+    // 根节点自身不参与层序抬升：不能出现非 0 的 z-index
+    expect(group).not.toMatch(/(^|;)z-index:(?!0(;|$))/)
+  })
+
   it('wd-progress：outer / inner 显式 flex 行（参考源 display: block 引擎不识别）', () => {
     const c = css('wd-progress/index.css')
     // 参考源 outer 为 display: block（Lynx 仅认 flex/none/linear，CONVENTIONS §15），

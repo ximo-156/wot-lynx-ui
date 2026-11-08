@@ -204,6 +204,24 @@ describe('原生优先重写 · 展示家族布局居中契约（count-down / co
     // CONVENTIONS §9：fixed 节点必须是显隐/动画节点本身——全屏定位落在图层
     expect(ruleOf(c, '.wd-watermark.is-fullscreen .wd-watermark__layer')).toMatch(/(^|;)position:fixed(;|$)/)
   })
+
+  it('wd-watermark：根节点 z-index: 0 建层叠上下文，props.zIndex 只落图层', () => {
+    // 真机缺陷（2026-11-08 截图）：水印图层内联下发 props.zIndex（默认 1100），
+    // 而根节点同时带 z-index: 1100、其祖先（调用方容器链）没有 z-index: 0——
+    // 真机于是把这棵子树按页面根（屏幕）坐标系绘制：页面滚动后水印连同插槽
+    // 内容不跟随组件滚走，而是按滚动偏移量粘在屏幕上，整体脱离调用方容器
+    // （用户反馈「定位不准，跟着页面走，不是跟着组件的指定位置走」）。
+    // 修法同 wd-avatar-group / wd-slider / wd-table：根先 z-index: 0 建立
+    // 层叠上下文，图层的 z-index 才能收在本组件层序内（Lynx 定位 FAQ，
+    // CONVENTIONS §19 附注）。
+    const c = css('wd-watermark/index.css')
+    const root = ruleOf(c, '.wd-watermark')
+    expect(root, '.wd-watermark 需要 z-index: 0 建立层叠上下文').toMatch(/(^|;)z-index:0(;|$)/)
+    // 根节点自身不参与层序抬升：不能出现非 0 的 z-index
+    expect(root).not.toMatch(/(^|;)z-index:(?!0(;|$))/)
+    // props.zIndex 仍然下发，但落在真正定位的水印图层上
+    expect(ruleOf(c, '.wd-watermark__layer')).toMatch(/(^|;)z-index:1100(;|$)/)
+  })
 })
 
 describe('原生优先重写 · 展示家族 DOM 对齐与交互（count-down / count-to / skeleton / loadmore / notice-bar / watermark）', () => {
@@ -408,6 +426,12 @@ describe('原生优先重写 · 展示家族 DOM 对齐与交互（count-down / 
     // 非全屏：无 is-fullscreen 类
     const inline = render(Watermark as any, { content: '水印', fullScreen: false })
     expect(inline.container.querySelector('.wd-watermark')!.classList.contains('is-fullscreen')).toBe(false)
+
+    // 层序契约（2026-11-08 真机缺陷回归）：根内联样式不下发 z-index
+    // （否则真机按屏幕坐标系绘制整棵子树，滚动时水印不跟随组件）；
+    // props.zIndex 只落在真正定位的水印图层上
+    expect(styleOf(inline.container.querySelector('.wd-watermark')), '根节点内联不应带 z-index').not.toMatch(/z-index/)
+    expect(styleOf(inline.container.querySelector('.wd-watermark__layer')), '图层应内联下发 props.zIndex').toMatch(/z-index:\s*1100/)
   })
 
   it('wd-watermark：平铺单元样式键集完整——staggered 错位与 grid 中性值（Style Funnel §20）', async () => {

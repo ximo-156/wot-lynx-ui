@@ -8,17 +8,19 @@
  *    imageStyle 与 worklet 直改值一致（无跳变）；
  * 3. **几何属性桥接**：中心 / 显示尺寸 / 缩放 / 角度 / 裁剪框经图片
  *    元素属性下发给主线程（slider 的 left-bound 同款）；
- * 4. **事件链路**：confirm（裁剪几何）/ cancel / imgloaded /
- *    imgloaderror 与 moving 拖动态（is-highlight）；
+ * 4. **事件链路**：confirm（裁剪几何，含无宿主 canvas 时的 SVG 降级）/
+ *    cancel / imgloaded / imgloaderror 与 moving 拖动态（is-highlight）；
  * 5. **旋转**：revertIsAnimation / setRotate 经暴露方法与旋转按钮驱动。
  *
- * 派发路径说明（jsdom 不模拟冒泡）：图片元素绑主线程 touchstart /
- * touchmove 与后台 touchend；包裹器 __wrapper（图片父元素）绑后台
- * touchstart / touchmove。真机上图片触摸冒泡到 __wrapper 即触发其
- * 处理器，测试中向两个元素分别派发验证。
+ * 派发路径说明（jsdom 不模拟冒泡）：手势面 __gesture（覆盖包裹器的独立
+ * view 层）绑主线程 touchstart / touchmove / touchend；包裹器 __wrapper
+ * （手势面父元素）绑后台 touchstart / touchmove / touchend。真机上手势面
+ * 触摸冒泡到 __wrapper 即触发其处理器，测试中向两个元素分别派发验证。
+ * 图片元素 __img 为纯展示（pointer-events: none），只承载几何属性桥接。
  *
- * 环境说明：jsdom 无布局，getSystemInfo 走默认值（375×812）；
- * uni.getImageInfo 经 configureHost 注入（图片 200×100）。
+ * 环境说明：jsdom 无布局，getSystemInfo 走默认值（390×844，
+ * @lynx-js/testing-environment）；图片原始尺寸（200×100）经原生
+ * <image> load 事件的 detail.width / height 回传。
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
@@ -97,32 +99,33 @@ function mountControlled(extraProps: Record<string, unknown> = {}) {
   return { container, updates }
 }
 
-/** 图片 / 包裹器元素 */
+/** 图片 / 包裹器 / 手势面元素 */
 function elsOf(container: Element) {
   return {
     img: container.querySelector('.wd-img-cropper__img')!,
-    wrapper: container.querySelector('.wd-img-cropper__wrapper')!
+    wrapper: container.querySelector('.wd-img-cropper__wrapper')!,
+    gesture: container.querySelector('.wd-img-cropper__gesture')!
   }
 }
 
-/** 单指/双指手势（MTS 分工派发）：起笔（图片主线程 + 包裹器后台）→
+/** 单指/双指手势（MTS 分工派发）：起笔（手势面主线程 + 包裹器后台）→
  *  pause（等待 moving 重渲染 flush——真机微任务先于下一帧事件落地）→
- *  跟手（图片主线程 + 包裹器后台累积）→ 落定（图片后台） */
+ *  跟手（手势面主线程 + 包裹器后台累积）→ 落定（包裹器后台） */
 async function pinchOrDrag(
   container: Element,
   from: Array<[number, number]>,
   to: Array<[number, number]>
 ) {
-  const { img, wrapper } = elsOf(container)
+  const { wrapper, gesture } = elsOf(container)
   const startInit = { touches: from.map(([x, y]) => ({ clientX: x, clientY: y })) }
   const moveInit = { touches: to.map(([x, y]) => ({ clientX: x, clientY: y })) }
-  fireEvent.touchstart(img, startInit)
+  fireEvent.touchstart(gesture, startInit)
   fireEvent.touchstart(wrapper, startInit)
   await pause(10)
-  fireEvent.touchmove(img, moveInit)
+  fireEvent.touchmove(gesture, moveInit)
   fireEvent.touchmove(wrapper, moveInit)
   await pause(10)
-  fireEvent.touchend(img, { touches: [], changedTouches: to.map(([x, y]) => ({ clientX: x, clientY: y })) })
+  fireEvent.touchend(wrapper, { touches: [], changedTouches: to.map(([x, y]) => ({ clientX: x, clientY: y })) })
   await pause(30)
 }
 
@@ -152,7 +155,7 @@ describe('wd-img-cropper MTS 跟手', () => {
     const container = mount()
     await pause(50)
 
-    const { img, wrapper } = elsOf(container)
+    const { img, wrapper, gesture } = elsOf(container)
     // 初始 transform：中心 (195, 358.7) - 半图 (350, 175)
     const before = parseTransform(img)!
     expect(before.x).toBeCloseTo(CENTER_X - PIC_W / 2, 5)
@@ -160,13 +163,13 @@ describe('wd-img-cropper MTS 跟手', () => {
 
     // 自中心向右拖动 50px（未触边界：中心 → 245；图高 = 裁剪框高，
     // 垂直方向无可移动量，y 保持裁剪框中心 358.7）
-    fireEvent.touchstart(img, { touches: [{ clientX: CENTER_X, clientY: CENTER_Y }] })
+    fireEvent.touchstart(gesture, { touches: [{ clientX: CENTER_X, clientY: CENTER_Y }] })
     fireEvent.touchstart(wrapper, { touches: [{ clientX: CENTER_X, clientY: CENTER_Y }] })
     // 拖动态：包裹器后台置位 → 遮罩高亮（渲染 flush 后再派发 move）
     await pause(10)
     expect(container.querySelector('.wd-img-cropper__overlay')!.classList.contains('is-highlight')).toBe(true)
 
-    fireEvent.touchmove(img, { touches: [{ clientX: CENTER_X + 50, clientY: CENTER_Y }] })
+    fireEvent.touchmove(gesture, { touches: [{ clientX: CENTER_X + 50, clientY: CENTER_Y }] })
     await pause(10)
     const during = parseTransform(img)!
     // 跟手直改：translate(245-350, 358.7-175) = (-105, 183.7)
@@ -177,7 +180,7 @@ describe('wd-img-cropper MTS 跟手', () => {
 
     // 落定：后台累积 → ref → Vue 接管，值与 worklet 直改一致（无跳变）
     fireEvent.touchmove(wrapper, { touches: [{ clientX: CENTER_X + 50, clientY: CENTER_Y }] })
-    fireEvent.touchend(img, { touches: [], changedTouches: [{ clientX: CENTER_X + 50, clientY: CENTER_Y }] })
+    fireEvent.touchend(wrapper, { touches: [], changedTouches: [{ clientX: CENTER_X + 50, clientY: CENTER_Y }] })
     await pause(30)
     const after = parseTransform(img)!
     expect(after.x).toBeCloseTo(-105, 5)
@@ -193,12 +196,12 @@ describe('wd-img-cropper MTS 跟手', () => {
     const container = mount()
     await pause(50)
 
-    const { img, wrapper } = elsOf(container)
+    const { img, wrapper, gesture } = elsOf(container)
     // 大幅向左上拖动：右/下边界钳制（图片 700 宽 > 裁剪框 350）
-    fireEvent.touchstart(img, { touches: [{ clientX: CENTER_X, clientY: CENTER_Y }] })
+    fireEvent.touchstart(gesture, { touches: [{ clientX: CENTER_X, clientY: CENTER_Y }] })
     fireEvent.touchstart(wrapper, { touches: [{ clientX: CENTER_X, clientY: CENTER_Y }] })
     await pause(10)
-    fireEvent.touchmove(img, { touches: [{ clientX: -500, clientY: -500 }] })
+    fireEvent.touchmove(gesture, { touches: [{ clientX: -500, clientY: -500 }] })
     await pause(10)
     const during = parseTransform(img)!
     // 右边界：中心 x 钳到 cutLeft + cutW - picW*scale/2 = 20 + 350 - 350 = 20
@@ -209,7 +212,7 @@ describe('wd-img-cropper MTS 跟手', () => {
     expect(during.y).toBeCloseTo(CUT_TOP, 1)
 
     fireEvent.touchmove(wrapper, { touches: [{ clientX: -500, clientY: -500 }] })
-    fireEvent.touchend(img, { touches: [], changedTouches: [{ clientX: -500, clientY: -500 }] })
+    fireEvent.touchend(wrapper, { touches: [], changedTouches: [{ clientX: -500, clientY: -500 }] })
     await pause(30)
     const after = parseTransform(img)!
     expect(after.x).toBeCloseTo(20 - PIC_W / 2, 5)
@@ -220,7 +223,7 @@ describe('wd-img-cropper MTS 跟手', () => {
     const container = mount()
     await pause(50)
 
-    const { img, wrapper } = elsOf(container)
+    const { img, wrapper, gesture } = elsOf(container)
     // 起笔两指间距 100（跨初始中心 195）
     const start = {
       touches: [
@@ -228,7 +231,7 @@ describe('wd-img-cropper MTS 跟手', () => {
         { clientX: CENTER_X + 50, clientY: CENTER_Y }
       ]
     }
-    fireEvent.touchstart(img, start)
+    fireEvent.touchstart(gesture, start)
     fireEvent.touchstart(wrapper, start)
     await pause(10)
     // 放大到间距 250 → scale = 1 * 2.5 = 2.5（未超 maxScale 3）
@@ -238,7 +241,7 @@ describe('wd-img-cropper MTS 跟手', () => {
         { clientX: CENTER_X + 125, clientY: CENTER_Y }
       ]
     }
-    fireEvent.touchmove(img, move)
+    fireEvent.touchmove(gesture, move)
     await pause(10)
     const during = parseTransform(img)!
     expect(during.scale).toBe(2.5)
@@ -246,7 +249,7 @@ describe('wd-img-cropper MTS 跟手', () => {
 
     // 落定一致（后台累积同公式）
     fireEvent.touchmove(wrapper, move)
-    fireEvent.touchend(img, { touches: [], changedTouches: [{ clientX: CENTER_X + 125, clientY: CENTER_Y }] })
+    fireEvent.touchend(wrapper, { touches: [], changedTouches: [{ clientX: CENTER_X + 125, clientY: CENTER_Y }] })
     await pause(30)
     const after = parseTransform(img)!
     expect(after.scale).toBe(2.5)
@@ -295,6 +298,48 @@ describe('wd-img-cropper MTS 跟手', () => {
     // 确认后 modelValue 置 false → 根节点卸载
     expect(updates[updates.length - 1]).toBe(false)
     expect(container.querySelector('.wd-img-cropper')).toBeNull()
+  })
+
+  it('confirm 无宿主 canvas 能力时走 SVG 降级：emit confirm（data URI）并关闭', async () => {
+    const confirms: any[] = []
+    const errors: any[] = []
+    // 未注册任何宿主画布能力（demo / 未接入宿主的真机形态）
+    configureHost({})
+    const { container, updates } = mountControlled({
+      onConfirm: (e: any) => confirms.push(e),
+      onImgloaderror: (e: any) => errors.push(e)
+    })
+    await pause(50)
+
+    // 自中心向右拖动 50px 后确认
+    await pinchOrDrag(container, [[CENTER_X, CENTER_Y]], [[CENTER_X + 50, CENTER_Y]])
+
+    const buttons = [...container.querySelectorAll('.wd-img-cropper__footer .wd-button')]
+    fireEvent.tap(buttons[buttons.length - 1]!)
+    await pause(30)
+
+    // 不再静默失败：确认链路照常走完，且不伪造 imgloaderror
+    expect(errors).toEqual([])
+    expect(confirms.length).toBe(1)
+    expect(confirms[0].tempFilePath.startsWith('data:image/svg+xml;utf8,')).toBe(true)
+    const svg = decodeURIComponent(confirms[0].tempFilePath.slice('data:image/svg+xml;utf8,'.length))
+    expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"')
+    expect(svg).toContain('xlink:href="https://example.com/a.png"')
+    // 导出尺寸 = 裁剪框 × exportScale(2)
+    expect(svg).toContain('width="700"')
+    expect(svg).toContain('height="700"')
+    // 图片中心右移 50px：x = (245 - 350/2 - 20) * 2 = -250；y = (358.7 - 175 - 183.7) * 2 = 0
+    expect(svg).toContain('x="-250"')
+    expect(svg).toContain('y="0"')
+    // 绘制尺寸 = 图片显示尺寸 × 缩放 × exportScale
+    expect(svg).toContain('width="1400"')
+    expect(svg).toContain('height="700"')
+    expect(confirms[0].width).toBe(700)
+    expect(confirms[0].height).toBe(700)
+    expect(confirms[0].scale).toBe(1)
+    expect(updates[updates.length - 1]).toBe(false)
+    expect(container.querySelector('.wd-img-cropper')).toBeNull()
+    configureHost(null)
   })
 
   it('cancel 取消：emit cancel + update:modelValue(false) 卸载', async () => {
