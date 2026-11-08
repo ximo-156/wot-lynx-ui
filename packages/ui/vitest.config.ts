@@ -132,6 +132,7 @@ const PURE_TESTS = [
   'test/unit/code128.test.ts',
   'test/unit/codemod.test.ts',
   'test/unit/format-date.test.ts',
+  'test/unit/generated-css-device-guards.test.ts',
   'test/unit/interceptor.test.ts',
   'test/unit/locale-parity.test.ts',
   'test/unit/meta-generated.test.ts',

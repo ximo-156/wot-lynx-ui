@@ -86,17 +86,17 @@ function toggleLoading() {
     </view>
 
     <view class="wd-h5-demo__section">
-      <text class="wd-h5-demo__section-title">形状 round（默认胶囊）</text>
+      <text class="wd-h5-demo__section-title">形状 round（默认方圆角，round 才是胶囊）</text>
       <view class="wd-h5-demo__panel">
         <view class="wd-h5-demo__row">
-          <WdButton>默认胶囊</WdButton>
-          <WdButton :round="false">普通圆角</WdButton>
+          <WdButton>默认方圆角</WdButton>
+          <WdButton round>胶囊</WdButton>
         </view>
-        <text class="wd-h5-demo__panel-label">全局 button.round=false，仍可通过 round 单独开启</text>
-        <WdConfigProvider :button="{ round: false }">
+        <text class="wd-h5-demo__panel-label">全局 button.round=true，仍可通过 :round="false" 单独关闭</text>
+        <WdConfigProvider :button="{ round: true }">
           <view class="wd-h5-demo__row">
-            <WdButton>全局关闭</WdButton>
-            <WdButton round>单独开启</WdButton>
+            <WdButton>全局开启</WdButton>
+            <WdButton :round="false">单独关闭</WdButton>
           </view>
         </WdConfigProvider>
       </view>

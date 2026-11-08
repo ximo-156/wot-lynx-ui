@@ -1,4 +1,4 @@
-@use '../../styles/variable.scss' as *;
+﻿@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
 $checkbox-label-margin: var(--wot-checkbox-label-margin, $spacing-tight) !default; // 文字与图标距离
@@ -19,15 +19,15 @@ $checkbox-button-line-height: var(--wot-checkbox-button-line-height, $typography
 $checkbox-button-bg: var(--wot-checkbox-button-bg, $filled-bottom) !default; // 按钮模式背景颜色
 $checkbox-button-bg-checked: var(--wot-checkbox-button-bg-checked, $filled-oppo) !default; // 按钮模式选中状态背景颜色
 $checkbox-button-icon-size: var(--wot-checkbox-button-icon-size, $n-10) !default; // 按钮模式图标尺寸
-$checkbox-button-min-width: var(--wot-checkbox-button-min-width, calc(74 * #{$n-1})) !default; // 按钮模式最小宽
-$checkbox-button-max-width: var(--wot-checkbox-button-max-width, calc(148 * #{$n-1})) !default; // 按钮模式最大宽
+$checkbox-button-min-width: var(--wot-checkbox-button-min-width, 74px) !default; // 按钮模式最小宽（真机 calc 乘法不可靠，改用像素落值）
+$checkbox-button-max-width: var(--wot-checkbox-button-max-width, 148px) !default; // 按钮模式最大宽
 $checkbox-button-border-radius: var(--wot-checkbox-button-border-radius, $radius-main) !default; // 按钮圆角大小
 $checkbox-button-padding: var(--wot-checkbox-button-padding, $padding-extra-tight $padding-extra-loose) !default; // 按钮模式内边距
 $checkbox-button-icon-color: var(--wot-checkbox-button-icon-color, $icon-white) !default; // 按钮模式图标颜色
-$checkbox-button-shape-top: var(--wot-checkbox-button-shape-top, calc(-1 * #{$n-11})) !default; // 按钮模式勾角顶部偏移
-$checkbox-button-shape-left: var(--wot-checkbox-button-shape-left, calc(-1 * #{$n-9})) !default; // 按钮模式勾角左侧偏移
-$checkbox-button-shape-right: var(--wot-checkbox-button-shape-right, calc(-1 * #{$n-9})) !default; // 按钮模式勾角右侧偏移
-$checkbox-button-icon-top: var(--wot-checkbox-button-icon-top, calc(13 * #{$n-1})) !default; // 按钮模式图标顶部偏移
+$checkbox-button-shape-top: var(--wot-checkbox-button-shape-top, -11px) !default; // 按钮模式勾角顶部偏移
+$checkbox-button-shape-left: var(--wot-checkbox-button-shape-left, -9px) !default; // 按钮模式勾角左侧偏移
+$checkbox-button-shape-right: var(--wot-checkbox-button-shape-right, -9px) !default; // 按钮模式勾角右侧偏移
+$checkbox-button-icon-top: var(--wot-checkbox-button-icon-top, 13px) !default; // 按钮模式图标顶部偏移
 $checkbox-button-icon-right: var(--wot-checkbox-button-icon-right, $n-4) !default; // 按钮模式图标右侧偏移
 $checkbox-button-icon-left: var(--wot-checkbox-button-icon-left, $n-4) !default; // 按钮模式图标左侧偏移
 

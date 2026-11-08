@@ -129,6 +129,28 @@ function closeNotify() {
   // 关闭按钮必须同步 useNotify 注入通道，不能仅关闭快照。
   if (notifyOption.value !== None) notifyApi.closeNotify()
 }
+
+/**
+ * 按当前状态重置自动关闭计时器。
+ *
+ * 计时只在 showNotify / 命令式通道里挂过——声明式用法
+ * （`v-model:visible`、或文档预览里外部把 visible 置 true）根本不会经过
+ * 那里，消息就永远不会消失（真机 2026-11-08 反馈）。因此把「可见 → 计时、
+ * 隐藏 → 取消」收敛到 watcher，所有打开路径同一出口。
+ */
+function restartTimer() {
+  clearTimer()
+  if (!state.value.visible) return
+  const duration = Number(state.value.duration)
+  if (!(duration > 0) || !Number.isFinite(duration)) return
+  const request = notifyRequest
+  timer = setTimeout(() => {
+    if (!isAlive() || request !== notifyRequest) return
+    timer = undefined
+    closeNotify()
+  }, duration)
+}
+
 function showNotify(option: NotifyProps | string) {
   if (!isAlive()) return
   if (notifyOption.value !== None) {
@@ -137,16 +159,23 @@ function showNotify(option: NotifyProps | string) {
   }
   clearTimer()
   applyOptions({ ...(isString(option) ? { message: option } : option), visible: true })
-  const request = notifyRequest
-  const duration = state.value.duration
-  if (duration && duration > 0) {
-    timer = setTimeout(() => {
-      if (!isAlive() || request !== notifyRequest) return
-      timer = undefined
-      closeNotify()
-    }, duration)
-  }
 }
+
+/**
+ * 可见性 / 展示时长变化 → 重新计时。
+ *
+ * `immediate: true` 覆盖「挂载时父层已把 visible 置 true」的受控用法
+ * （`v-model:visible` 的初始态）；sync flush 保证计时与状态同帧生效，
+ * 与旧实现里 showNotify 立即计时的时机一致。
+ */
+watch(
+  () => [state.value.visible, state.value.duration] as const,
+  () => {
+    if (isAlive()) restartTimer()
+  },
+  { immediate: true, flush: 'sync' }
+)
+
 watch(() => state.value.visible, (visible) => emit('update:visible', !!visible))
 onUnmounted(clearTimer)
 defineExpose({ showNotify, closeNotify })

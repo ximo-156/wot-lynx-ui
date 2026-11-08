@@ -102,14 +102,23 @@ let scrollRequest = 0
 let mapRequest = 0
 let mapClosing = false
 let mapTimer: ReturnType<typeof setTimeout> | undefined
+/**
+ * 指示线度量重试（真机 2026-11-08）。
+ *
+ * 弹层刚打开时节点已挂载但还没完成布局，`boundingClientRect` 会回 0 宽；
+ * 旧实现拿着 0 宽直接算 `left = 0`，指示线被钉在导航区最左边（真机截图里
+ * 就是「紫色短线贴在左边缘」）。这里把无效度量视为「布局未就绪」：保留
+ * 隐藏态并重试若干帧，仍然量不到才放弃——宁可没有指示线，也不放在错位置。
+ */
+const LINE_MAX_RETRIES = 10
+const LINE_RETRY_DELAY = 80
+let lineRetryTimer: ReturnType<typeof setTimeout> | undefined
 
 const state = reactive({
   /** 选中值的索引，默认第一个 */
   activeIndex: 0,
   /** 激活项边框线样式（对象语法；display:none 为未度量前的初始态） */
   lineStyle: resolveStyle(LINE_STYLE, { display: 'none' }),
-  /** 是否使用内部激活项边框线，当外部激活下划线未成功渲染时显示内部定位的 */
-  useInnerLine: false,
   /** 是否初始化 */
   inited: false,
   /** 是否动画中 */
@@ -311,6 +320,10 @@ onBeforeUnmount(() => {
   ++scrollRequest
   ++mapRequest
   if (mapTimer) clearTimeout(mapTimer)
+  if (lineRetryTimer) {
+    clearTimeout(lineRetryTimer)
+    lineRetryTimer = undefined
+  }
   ;(setActive as typeof setActive & { cancel(): void }).cancel()
 })
 
@@ -344,7 +357,6 @@ onMounted(() => {
   state.inited = true
   nextTick(() => {
     updateActive(props.modelValue, true)
-    state.useInnerLine = true
   })
 })
 
@@ -375,12 +387,20 @@ function toggleMap() {
 }
 
 /** Latest-request geometry; class rules retain each line theme's defaults. */
-async function updateLineStyle(animation: boolean = true) {
+async function updateLineStyle(animation: boolean = true, attempt: number = 0) {
   const request = ++lineRequest
   if (!state.inited || !isAlive()) return
   const activeIndex = state.activeIndex
   const { lineWidth, lineHeight, lineTheme } = props
   const current = () => isAlive() && request === lineRequest && activeIndex === state.activeIndex
+  const retry = () => {
+    if (attempt >= LINE_MAX_RETRIES) return
+    if (lineRetryTimer) clearTimeout(lineRetryTimer)
+    lineRetryTimer = setTimeout(() => {
+      lineRetryTimer = undefined
+      if (request === lineRequest) void updateLineStyle(animation, attempt + 1)
+    }, LINE_RETRY_DELAY)
+  }
   try {
     const [rects, textRects] = await Promise.all([
       getRect($item, true, navItems().map((_, index) => `#${tabsId}-item-${index}`)),
@@ -388,10 +408,15 @@ async function updateLineStyle(animation: boolean = true) {
     ])
     if (!current()) return
     const rect = rects[activeIndex]
-    if (!rect) return
+    // 有效度量要求：当前项与它之前的每一项都有真实宽度（决定 left 的累加值），
+    // 且当前项宽度 > 0。未就绪时留隐藏态并重试，绝不把线放到 0 位置。
+    const valid = !!rect && Number(rect.width) > 0 && rects.slice(0, activeIndex).every((item: any) => item && Number(item.width) > 0)
+    if (!valid) {
+      retry()
+      return
+    }
     const measuredWidth = lineTheme === 'text' ? textRects[activeIndex]?.width : lineTheme === 'underline' ? rect.width : undefined
     const left = rects.slice(0, activeIndex).reduce((sum: number, item: any) => sum + Number(item.width), 0) + Number(rect.width) / 2
-    state.useInnerLine = false
     state.lineStyle = resolveStyle(LINE_STYLE, {
       display: 'flex',
       width: isDef(lineWidth) ? addUnit(lineWidth) : isDef(measuredWidth) ? addUnit(Number(measuredWidth)) : '',
@@ -610,11 +635,6 @@ const onBodyTouchMove = (event: any) => {
                       <text :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
                     </WdBadge>
                     <text v-else :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
-
-                    <view
-                      :class="`wd-tabs__line ${state.activeIndex === index && state.useInnerLine ? 'is-' + lineTheme : ''} wd-tabs__line--inner`"
-                      v-if="state.activeIndex === index && state.useInnerLine"
-                    ></view>
                   </view>
                   <view :class="`wd-tabs__line ${'is-' + lineTheme}`" :style="state.lineStyle"></view>
                 </view>
@@ -690,10 +710,6 @@ const onBodyTouchMove = (event: any) => {
                   <text :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
                 </WdBadge>
                 <text v-else :id="`${tabsId}-text-${index}`" class="wd-tabs__nav-item-text">{{ item.title }}</text>
-                <view
-                  :class="`wd-tabs__line ${state.activeIndex === index && state.useInnerLine ? 'is-' + lineTheme : ''} wd-tabs__line--inner`"
-                  v-if="state.activeIndex === index && state.useInnerLine"
-                ></view>
               </view>
               <view :class="`wd-tabs__line ${'is-' + lineTheme}`" :style="state.lineStyle"></view>
             </view>

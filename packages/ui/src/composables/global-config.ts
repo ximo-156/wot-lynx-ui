@@ -61,7 +61,10 @@ export type ConfigProviderInput = Partial<GlobalConfig>
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = Object.freeze({
   theme: 'light',
   themeVars: {},
-  button: { round: true },
+  // 形状默认跟随官方：普通按钮是方圆角（radius-main），只有显式 round
+  // 才是胶囊 / 圆形。真机 2026-11-08 反馈指出全量默认胶囊把选择器、
+  // 表单等普通按钮也一起变成了胶囊，与官方视觉不一致。
+  button: { round: false },
   tag: {}
 }) as GlobalConfig
 

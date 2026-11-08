@@ -86,7 +86,7 @@ const FALLBACK_SPECS: Record<string, FallbackSpec> = {
   'select-picker': { props: { visible: true, columns: SELECT_COLUMNS, title: '单选' } },
   cascader: { props: { visible: true, options: CASCADER_OPTIONS, title: '级联选择' } },
   'img-cropper': { props: { modelValue: true } },
-  notify: { props: { modelValue: true, message: '消息通知', type: 'primary' } },
+  notify: { props: { visible: true, duration: 0, message: '消息通知', type: 'primary' } },
   'floating-panel': { props: { height: 200 }, childText: '浮动面板内容（可拖拽）' },
   popover: { props: { content: '气泡内容' }, childText: '点我弹出' },
   tooltip: { props: { content: '文字提示' }, childText: '点我提示' },

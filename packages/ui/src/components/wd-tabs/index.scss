@@ -92,6 +92,12 @@ $tabs-map-body-bg: var(--wot-tabs-map-body-bg, $filled-oppo) !default;
     right: 0;
     width: 100%;
     background: $tabs-nav-bg;
+    /* 导航区高度必须吃掉自身内容（真机 2026-11-08 反馈）：
+       `.wd-tabs` 是 flex column，只声明 flex-direction 时子项 axis 由引擎按
+       内容撑开（Web flex-shrink:1）——引擎把它压到 0 高时，导航文字会叠在
+       内容区上，级联选择器里表现为「所有层级选项堆成一块、指示线落在第一
+       个选项下」。导航是定高元素，禁压缩；内容区再按剩余空间收缩。 */
+    flex-shrink: 0;
 
     @include m(wrap) {
       height: 100%;
@@ -155,11 +161,6 @@ $tabs-map-body-bg: var(--wot-tabs-map-body-bg, $filled-oppo) !default;
     background: $tabs-nav-line-bg;
     border-radius: calc($tabs-nav-line-height / 2);
 
-    @include m(inner) {
-      left: 50%;
-      transform: translateX(-50%)
-    }
-
     @include when(normal) {
       width: $tabs-nav-line-width;
     }
@@ -180,6 +181,11 @@ $tabs-map-body-bg: var(--wot-tabs-map-body-bg, $filled-oppo) !default;
 
   @include e(container) {
     overflow: hidden;
+    /* 剩余空间给内容区：`flex: 1 1 auto`（basis 保持 auto，避免父容器高度
+       为 auto 时内容区被压成 0）+ `min-height: 0`（允许在定高弹层里收缩，
+       默认的 min-height: auto 会禁止收缩并把面板顶出弹层）。 */
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   @include e(body) {

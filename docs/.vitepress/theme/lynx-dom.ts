@@ -3,8 +3,8 @@
  *
  * 背景：wot-lynx-ui 的组件源码面向 Lynx 引擎（vue-lynx 运行时 + view/text
  * 等原生元素 + SystemInfo / SelectorQuery 等宿主全局）。组件库自身已为
- * 「Web 预览」预留了降级路径（common/util.ts 的 DOM 度量兜底、common/uni.ts
- * 的 uni 兼容层），因此只需在浏览器中补三块拼图，即可让真实组件源码在
+ * 「Web 预览」预留了降级路径（common/util.ts 的 DOM 度量兜底、common/host.ts
+ * 的宿主能力桥），因此只需在浏览器中补三块拼图，即可让真实组件源码在
  * 文档站里直接渲染：
  *
  * 1. **模块别名**：`vue-lynx` → 本文件（Vite alias），组件 import 的

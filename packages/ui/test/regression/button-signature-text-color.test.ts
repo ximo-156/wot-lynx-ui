@@ -158,7 +158,7 @@ describe('Button direct native text foreground', () => {
           const text = label(button)
           expect(foreground(text)).toBe(expectedForeground(text, type, variant))
           expect(declarations(text).color).toBe(declarations(button.querySelector('.wd-button__text')!).color)
-          expect(button.classList.contains('is-round'), 'keep the staged default pill geometry').toBe(true)
+          expect(button.classList.contains('is-round'), 'default geometry follows the official squared radius').toBe(false)
           expect(declarations(button)['line-height']).toBeUndefined()
         }
       })

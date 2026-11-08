@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 全量组件真机渲染检查清单（106/106 覆盖）。
  *
  * 为什么单独一份：`checklist.ts` 的 8 个分组是**交互清单**（手势跟手、
@@ -23,7 +23,7 @@ export const componentSections: TestSection[] = [
     title: '基础件渲染（12）',
     hint: 'Button / Cell / Icon / Img / Input / Textarea / Loading / Overlay / Popup / RootPortal / Transition',
     items: [
-      { id: 'r-wd-button', name: 'Button 按钮', expect: '五种类型底色与文字色对比正确；六种变体描边可见；loading 时紫底上能看到白色转圈；按压即时变色' },
+      { id: 'r-wd-button', name: 'Button 按钮', expect: '五种类型底色与文字色对比正确；六种变体描边可见；默认方圆角、只有 round 才是胶囊/正圆；loading 时紫底上能看到白色转圈；按压即时变色' },
       { id: 'r-wd-cell', name: 'Cell 单元格', expect: '标题/描述/右侧值三级文字颜色都可见（text 不继承祖先 color）；is-link 箭头不歪；按压背景有反馈' },
       { id: 'r-wd-cell-group', name: 'CellGroup 单元格组', expect: '组内细分割线在、首尾不多线；insert 卡片模式左右留白与圆角正常' },
       { id: 'r-wd-icon', name: 'Icon 图标', expect: '抽查 20 个图标（含 expand-full / delete / left-circle）字形完整无豆腐块；size/color 实时生效' },
@@ -74,12 +74,12 @@ export const componentSections: TestSection[] = [
       { id: 'r-wd-datetime-picker', name: 'DatetimePicker 日期时间', expect: '「取消」不压「日期时间」标题；五列（年月日时分）内容不叠印' },
       { id: 'r-wd-datetime-picker-view', name: 'DatetimePickerView 视图', expect: '各列独立滚动互不干扰；type 切换后列数正确' },
       { id: 'r-wd-select-picker', name: 'SelectPicker 下拉选择', expect: '多选勾选态可见；已选标签不换行溢出；确认回传数组' },
-      { id: 'r-wd-cascader', name: 'Cascader 级联选择', expect: '多列联动正确；父列变化后子列重建；确认值层级完整' },
+      { id: 'r-wd-cascader', name: 'Cascader 级联选择', expect: '多列联动正确；父列变化后子列重建；确认值层级完整；弹层按列表高度令牌撑开（不再只有两三个选项高）' },
       { id: 'r-wd-drop-menu', name: 'DropMenu 下拉菜单', expect: '展开一项时其他项收起；遮罩随展开出现；菜单不被页面裁剪' },
       { id: 'r-wd-drop-menu-item', name: 'DropMenuItem 下拉菜单项', expect: '选项文字与勾选态可见；禁用项变灰不可点' },
       { id: 'r-wd-sort-button', name: 'SortButton 排序按钮', expect: '升/降序箭头切换正确；文字与箭头间距正常' },
       { id: 'r-wd-pagination', name: 'Pagination 分页器', expect: '页码与左右箭头都可见；当前页高亮；点击切页正确' },
-      { id: 'r-wd-tabs', name: 'Tabs 选项卡', expect: '标签可横向滚动；下划线跟随当前项；内容区切换正确' },
+      { id: 'r-wd-tabs', name: 'Tabs 选项卡', expect: '标签可横向滚动；下划线跟随当前项且不贴左边缘；内容区切换正确' },
       { id: 'r-wd-tab', name: 'Tab 选项卡面板', expect: '面板内容按需渲染；懒加载模式切换后内容出现' }
     ]
   },
@@ -152,7 +152,7 @@ export const componentSections: TestSection[] = [
     items: [
       { id: 'r-wd-dialog', name: 'Dialog 对话框', expect: 'alert/confirm 文案与按钮可见；确认/取消回调正确；遮罩关闭策略生效' },
       { id: 'r-wd-action-sheet', name: 'ActionSheet 动作面板', expect: '选项列表可见；取消按钮独立成块；危险项变红' },
-      { id: 'r-wd-notify', name: 'Notify 消息通知', expect: '顶部滑入；文字与关闭按钮可见；自动消失时间正确' },
+      { id: 'r-wd-notify', name: 'Notify 消息通知', expect: '顶部滑入；文字与关闭按钮可见；自动消失时间正确（声明式 v-model:visible 也要消失）' },
       { id: 'r-wd-toast', name: 'Toast 轻提示', expect: '居中显示；图标与文字都可见；不阻塞页面' },
       { id: 'r-wd-popover', name: 'Popover 气泡弹出', expect: '气泡只出现一份（度量副本不叠印）；箭头指向正确；点击外部关闭' },
       { id: 'r-wd-tooltip', name: 'Tooltip 文字提示', expect: '气泡只出现一份；三个方向定位正确；长按/点击触发符合配置' },

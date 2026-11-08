@@ -67,7 +67,8 @@ describe('wot 2.3.2 button — additional contracts', () => {
     const mounted = mount({ text: 'Continue' })
     expect(mounted.button().className).toContain('is-primary')
     expect(mounted.button().className).toContain('is-medium')
-    expect(mounted.button().className).toContain('is-round')
+    // 官方默认是方圆角（radius-main）；胶囊 / 正圆只由 round 或全局配置开启
+    expect(mounted.button().className).not.toContain('is-round')
     expect(mounted.button().className).not.toMatch(/is-(block|disabled|loading)/)
     expect(mounted.container.querySelector('.wd-button__text')!.tagName.toLowerCase()).toBe('view')
     expect(mounted.container.querySelector('.wd-button__text-content')!.tagName.toLowerCase()).toBe('text')

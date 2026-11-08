@@ -1,4 +1,4 @@
-@use '../../styles/variable.scss' as *;
+﻿@use '../../styles/variable.scss' as *;
 @use '../../styles/mixin/mixin.scss' as *;
 
 // 文案与图标间距
@@ -48,13 +48,13 @@ $radio-button-padding: var(--wot-radio-button-padding, $padding-extra-tight $pad
 // 按钮模式图标颜色
 $radio-button-icon-color: var(--wot-radio-button-icon-color, $icon-white) !default;
 // 按钮模式标记顶部偏移
-$radio-button-shape-top: var(--wot-radio-button-shape-top, calc(-1 * #{$n-11})) !default;
+$radio-button-shape-top: var(--wot-radio-button-shape-top, -11px) !default;
 // 按钮模式标记左侧偏移
-$radio-button-shape-left: var(--wot-radio-button-shape-left, calc(-1 * #{$n-9})) !default;
+$radio-button-shape-left: var(--wot-radio-button-shape-left, -9px) !default;
 // 按钮模式标记右侧偏移
-$radio-button-shape-right: var(--wot-radio-button-shape-right, calc(-1 * #{$n-9})) !default;
+$radio-button-shape-right: var(--wot-radio-button-shape-right, -9px) !default;
 // 按钮模式图标顶部偏移
-$radio-button-icon-top: var(--wot-radio-button-icon-top, calc(13 * #{$n-1})) !default;
+$radio-button-icon-top: var(--wot-radio-button-icon-top, 13px) !default;
 // 按钮模式图标右侧偏移
 $radio-button-icon-right: var(--wot-radio-button-icon-right, $n-4) !default;
 // 按钮模式图标左侧偏移

@@ -1,13 +1,10 @@
 /**
  * preview-host — 文档站 H5 预览的「宿主能力」注入。
  *
- * 组件库的媒体选择 / 上传走 common/uni 兼容层：宿主可通过
- * `configureUniAdapter` 注入真实能力，未注入时统一降级为 warning +
- * fail 回调。文档预览此前没有注入任何适配器，于是：
- * - wd-upload 点上传按钮只得到一条 console.warn，选文件 / 上传全流程
- *   在预览里不可见；
+ * ADR-022 起组件库不再有 `common/uni` 兼容层：媒体选择 / 上传 / 预览直接走
+ * 宿主原生模块契约（`common/host.ts` 的 `WotLynxHost`）。文档预览此时扮演
+ * 「宿主应用」角色，用浏览器等价实现注入 `configureHost`：
  *
- * 这里以「宿主应用」身份注入浏览器等价实现：
  * - chooseMedia / chooseMessageFile / chooseFile：隐藏 `<input type=file>`
  *   唤起真实文件选择，选中文件以 object URL 回填（预览即时可见）；
  * - uploadFile：本地模拟上传（进度回调 + 成功回调），让
@@ -16,11 +13,11 @@
  *
  * 仅服务于文档预览，不进入组件库产物。
  */
-import { configureUniAdapter } from '../../../packages/ui/src/common/uni'
+import { configureHost } from '../../../packages/ui/src/common/host'
 
 let installed = false
 
-/** 唤起文件选择；用户取消时 reject（与 uni fail 语义对齐） */
+/** 唤起文件选择；用户取消时 reject（与宿主 fail 语义对齐） */
 function pickFiles(accept: string, multiple: boolean): Promise<File[]> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input')
@@ -52,7 +49,7 @@ function acceptFor(mediaType?: string[]): string {
   return types.map((t) => (t === 'video' ? 'video/*' : 'image/*')).join(',')
 }
 
-/** chooseMedia / chooseImage 的成功回执形状 */
+/** chooseMedia 的成功回执形状（useUpload.formatMedia 直接消费 tempFiles） */
 function mediaResult(files: File[]) {
   return {
     tempFiles: files.map((file) => ({
@@ -105,28 +102,16 @@ function fakeUploadTask(options: any) {
 
 /**
  * 注入浏览器预览的宿主能力（幂等）。
- * 在 H5Preview 挂载演示前调用，保证组件内 uni.* 调用拿到浏览器等价实现。
+ * 在 H5Preview 挂载演示前调用，保证组件的宿主能力调用拿到浏览器等价实现。
  */
 export function installPreviewHostCapabilities(): void {
   if (installed || typeof document === 'undefined') return
   installed = true
 
-  configureUniAdapter({
+  configureHost({
     chooseMedia: (options: any) => {
       pickFiles(acceptFor(options?.mediaType), (options?.count || 1) > 1).then(
         (files) => options.success?.(mediaResult(files)),
-        (err) => options.fail?.(err)
-      )
-    },
-    chooseImage: (options: any) => {
-      pickFiles('image/*', (options?.count || 1) > 1).then(
-        (files) =>
-          options.success?.({
-            tempFiles: files.map((file) => ({
-              path: URL.createObjectURL(file),
-              size: file.size
-            }))
-          }),
         (err) => options.fail?.(err)
       )
     },
@@ -146,8 +131,7 @@ export function installPreviewHostCapabilities(): void {
     previewImage: (options: any) => {
       const url = options?.urls?.[options.current ?? 0] ?? options?.urls?.[0]
       if (url) window.open(url, '_blank')
-      options?.success?.({ errMsg: 'ok' })
-      options?.complete?.({ errMsg: 'ok' })
+      options?.success?.()
     }
   })
 }

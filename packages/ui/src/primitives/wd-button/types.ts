@@ -60,8 +60,9 @@ export type ButtonScope = 'phoneNumber' | 'userInfo'
 export const buttonProps = {
   ...baseProps,
   /**
-   * 圆角按钮（默认胶囊形）
-   * 不传则继承全局配置，未配置时为 true；显式 false 保留普通圆角
+   * 圆角按钮（胶囊形 / 图标按钮的正圆，正方形由图标按钮自身宽高决定）
+   * 不传则继承全局配置，未配置时为 false（官方默认：普通按钮为方圆角）；
+   * 传 true 才是胶囊形，显式 false 与默认一致
    */
   round: {
     type: Boolean,

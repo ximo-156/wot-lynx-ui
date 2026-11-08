@@ -45,6 +45,7 @@ const RULES = {
   'inline-min-width': { severity: 'warn', msg: '内联 min-width 不生效 → 宽度确定时用 width' },
   'flex-wrap-grid': { severity: 'warn', msg: '多行 wrap 容器高度只按前两行结算 → 显式行结构' },
   'em-unit': { severity: 'warn', msg: 'em 单位在真机基准不稳定 → 用 px / calc 派生' },
+  'calc-var-mul': { severity: 'error', msg: 'calc(N * var(--wot-n-*)) 在真机求值不可靠 → 令牌恒为 1px，直接写像素值' },
   'string-style': { severity: 'error', msg: '字符串 :style 被静默丢弃 → 对象语法' }
 }
 
@@ -158,6 +159,10 @@ function auditScss(file) {
     if (/display\s*:\s*block/.test(line)) report('display-block', file, n, line)
     if (/(background|background-color|fill|stroke)\s*:\s*[^;]*currentColor/.test(line)) report('current-paint', file, n, line)
     if (/\b\d+(\.\d+)?em\b/.test(line) && !/--[\w-]+\s*:/.test(line)) report('em-unit', file, n, line)
+    // 运行时 var 参与 calc 乘法（源码写作 calc(N * #{$n-1})，编译后是
+    // calc(N * var(--wot-n-1, 1px))）：真机 CSS 引擎求值失败会让整条声明失效
+    // （height 回落成内容高度，弹层塌高、列表被裁）。令牌恒为 1px，直接用像素值。
+    if (/calc\([^)]*\*\s*(?:#\{\$n-|var\(--wot-n-)/.test(line)) report('calc-var-mul', file, n, line)
   })
 
   // 最内层规则块内：overflow:hidden 与 text-overflow 同时出现

@@ -53,8 +53,11 @@ const effectiveType = computed(() => {
 })
 
 const effectiveRound = computed(() => {
+  // 未显式传 round 时继承全局；全局也未配置 → 普通方圆角（官方默认）。
+  // 方形由 is-icon.is-round（图标按钮的正圆）与调用方 round 自行声明，
+  // 不再把「全部按钮」默认成胶囊（2026-11-08 真机反馈）。
   if (isUndefined(props.round)) {
-    return isUndefined(globalConfig.value.button?.round) ? true : globalConfig.value.button?.round
+    return isUndefined(globalConfig.value.button?.round) ? false : globalConfig.value.button?.round
   }
   return props.round
 })

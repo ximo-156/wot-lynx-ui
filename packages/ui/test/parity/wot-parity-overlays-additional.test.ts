@@ -348,6 +348,35 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
     expect(clicked).toHaveBeenCalledOnce()
   })
 
+  it('notify auto closes for declarative v-model:visible, not only for imperative calls', async () => {
+    const updates = vi.fn()
+    const visible = ref(true)
+    const mounted = render({
+      setup: () => () => h(Notify, {
+        visible: visible.value,
+        duration: 200,
+        message: 'auto close',
+        // 受控：把父层状态同步回组件，验证更新链路
+        'onUpdate:visible': (value: boolean) => { updates(value); visible.value = value }
+      })
+    } as any)
+    await frames(1)
+    expect(mounted.container.querySelector('.wd-notify')).not.toBeNull()
+    expect(updates).not.toHaveBeenCalled()
+    await pause(320)
+    expect(updates).toHaveBeenCalledWith(false)
+    await settled()
+    expect(hidden(popup(mounted.container))).toBe(true)
+
+    // 再次打开（等价真机「点按钮置 true」）：仍必须按时自动关闭
+    updates.mockClear()
+    visible.value = true
+    await frames(2)
+    expect(mounted.container.querySelector('.wd-notify')).not.toBeNull()
+    await pause(320)
+    expect(updates).toHaveBeenCalledWith(false)
+  })
+
   it('notify instance timers cancel on reopen and custom props update rootPortal without resetting the message', async () => {
     const mounted = mount(Notify)
     mounted.exposed.value.showNotify({ message: 'short', duration: 60 }); await frames(1)
