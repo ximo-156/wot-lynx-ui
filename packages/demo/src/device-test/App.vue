@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue-lynx'
 import { useToast, usePageScrollLock, useQueue } from 'wot-lynx-ui'
 
 import { testSections, totalItems, type TestItem } from './checklist'
+import { componentSections } from './component-checks'
 import ChecklistBox from './ChecklistBox.vue'
 import Showcase from '../showcase/Showcase.vue'
 import ShowcaseLayout from '../showcase/ShowcaseLayout'
@@ -16,14 +17,31 @@ const demoProps = withDefaults(defineProps<{ stress?: boolean }>(), { stress: fa
  * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
  * 真机排查第一时间看它，避免"改了没生效"的误判。
  */
-const buildTag = 'R17 · 级联标签指示线 / 按项挂载'
+const buildTag = 'R19 · 106 组件逐页验收'
 
 /**
- * 全量渲染清单（component-checks.ts 的 6 组，共 106 条）。
- * 前 8 组是手写的交互卡片（testSections[0..7]），之后的 6 组按数据渲染，
- * 保证「106 个组件的检查项」在真机页面上也真的看得见。
+ * 页面结构（R19 按组件分页）：真机反馈「每一个组件都要能显示出来，按页分」。
+ * 顶部两种模式，默认落地组件目录：
+ *
+ * 1. **组件目录（106 页）**：与主 demo 共用同一份 Showcase，一个组件一节
+ *    （节名即组件标签），逐页浏览；每页渲染该组件的真实演示，下方「真机检查」
+ *    卡挂 component-checks.ts 的对应检查项，勾选进度与交互卡共用。
+ * 2. **交互验收（8 组）**：手写交互卡（Slider 拖动跟手、弹层级联、键盘、
+ *    亮暗主题等必须动手操作的场景），勾选进度按 39 项计。
+ *
+ * 两类合计 145 项；两种模式同时只挂载一个（v-if），切走即卸载，瞬态弹层
+ * 不会跨模式残留。
  */
-const renderSections = computed(() => testSections.slice(8))
+const mode = ref<'catalog' | 'interaction'>('catalog')
+
+// 组件标签 → 真机检查项（'r-wd-button' → 'wd-button'），供组件目录逐页渲染
+const checkMap = computed(() => {
+  const map: Record<string, TestItem> = {}
+  for (const section of componentSections) {
+    for (const item of section.items) map[item.id.slice(2)] = item
+  }
+  return map
+})
 
 const pageScrollLocked = usePageScrollLock()
 const { closeOutside } = useQueue()
@@ -228,13 +246,33 @@ const safeAreaText = computed(() => {
       <!-- ============ 头部：设备信息 ============ -->
       <view class="header">
         <text class="header__title">wot-lynx-ui 真机测试</text>
-        <text class="header__sub">Vue Lynx · 8 组交互 + 6 组全量渲染 · 共 {{ totalItems }} 项</text>
+        <text class="header__sub">Vue Lynx · 106 组件逐页 + 8 组交互验收 · 共 {{ totalItems }} 项</text>
         <text class="header__sub">{{ buildTag }}</text>
         <view class="header__device">
           <text class="header__device-item">平台 {{ deviceInfo.platform }}</text>
           <text class="header__device-item">屏幕 {{ deviceInfo.width }}×{{ deviceInfo.height }}</text>
           <text class="header__device-item">DPR {{ deviceInfo.dpr }}</text>
           <text class="header__device-item">引擎 {{ deviceInfo.engine }}</text>
+        </view>
+        <!-- 模式切换：组件目录（默认，106 页）/ 交互验收（8 组手写卡）。
+             两种模式同时只挂载一个，切走即卸载，弹层不会跨模式残留。 -->
+        <view class="header__modes">
+          <view id="device-mode-catalog" class="mode" :class="mode === 'catalog' ? 'mode--on' : ''" @tap="mode = 'catalog'">
+            <text :class="mode === 'catalog' ? 'mode__text mode__text--on' : 'mode__text'">组件目录（106 页）</text>
+          </view>
+          <view id="device-mode-interaction" class="mode" :class="mode === 'interaction' ? 'mode--on' : ''" @tap="mode = 'interaction'">
+            <text :class="mode === 'interaction' ? 'mode__text mode__text--on' : 'mode__text'">交互验收（8 组）</text>
+          </view>
+        </view>
+        <!-- 亮暗切换放头部：组件目录页同样需要验暗色令牌，不必为了切主题
+             退回交互验收的第 8 组。根 provider 受控，两种模式都生效。 -->
+        <view class="header__modes">
+          <view class="mode" :class="themeMode === 'light' ? 'mode--on' : ''" @tap="themeMode = 'light'">
+            <text :class="themeMode === 'light' ? 'mode__text mode__text--on' : 'mode__text'">亮色</text>
+          </view>
+          <view class="mode" :class="themeMode === 'dark' ? 'mode--on' : ''" @tap="themeMode = 'dark'">
+            <text :class="themeMode === 'dark' ? 'mode__text mode__text--on' : 'mode__text'">暗色</text>
+          </view>
         </view>
       </view>
 
@@ -252,8 +290,14 @@ const safeAreaText = computed(() => {
         <text class="progress__pct">{{ progress }}%</text>
       </view>
 
-      <!-- ============ 1. Button ============ -->
-      <ShowcaseLayout :browse="!demoProps.stress" id-prefix="device-tests" scroll-target="#device-test-page" @section-change="resetTransientTests">
+      <!-- ============ 组件目录（默认落地）：一个组件一页 ============ -->
+      <!-- 与主 demo 共用同一份 Showcase；每页渲染该组件真实演示，「真机检查」
+           卡挂 component-checks.ts 的对应检查项（checkMap 按节名匹配）。
+           普通浏览只挂载当前页；显式「全量压力模式」才全部同显。 -->
+      <Showcase v-if="mode === 'catalog'" :browse="!demoProps.stress" :header="false" initial-section="wd-button" :check-map="checkMap" :checked="checked" scroll-target="#device-test-page" @check-toggle="toggle" />
+
+      <!-- ============ 交互验收（8 组手写卡） ============ -->
+      <ShowcaseLayout v-else :browse="!demoProps.stress" id-prefix="device-tests" scroll-target="#device-test-page" @section-change="resetTransientTests">
       <DemoSection name="button" :title="testSections[0].title" v-slot="{ title }">
       <view class="card">
         <text class="card__title">{{ title }}</text>
@@ -538,26 +582,6 @@ const safeAreaText = computed(() => {
         <ChecklistBox :items="testSections[7].items" :checked="checked" @toggle="toggle" />
       </view>
       </DemoSection>
-
-      <!-- ============ 全量组件渲染（106/106，真机必查） ============ -->
-      <!-- 保留同一份全量目录，但只在打开本项时实例化；普通浏览仍逐节挂载。 -->
-      <DemoSection name="catalog" title="全部组件目录（106 / 106 可访问）" v-slot="{ title, all }">
-      <view class="card">
-        <text class="card__title">{{ title }}</text>
-        <text class="card__hint">与主 demo 共用同一份目录：选择项目后挂载真实组件，不一次展开全部</text>
-        <text class="tag">构建标记 {{ buildTag }}</text>
-      </view>
-      <Showcase :browse="!all" scroll-target="#device-test-page" />
-      </DemoSection>
-
-      <!-- ============ 全量渲染清单（6 组 106 条，逐项对照上面的实例） ============ -->
-      <DemoSection v-for="section in renderSections" :key="section.id" :name="section.id" :title="section.title">
-      <view class="card">
-        <text class="card__title">{{ section.title }}</text>
-        <text class="card__hint">{{ section.hint }}</text>
-        <ChecklistBox :items="section.items" :checked="checked" @toggle="toggle" />
-      </view>
-      </DemoSection>
       </ShowcaseLayout>
     </scroll-view>
   </wd-config-provider>
@@ -604,6 +628,37 @@ const safeAreaText = computed(() => {
   background: var(--wot-filled-bottom);
   border-radius: 4px;
   padding: 2px 6px;
+}
+
+/* 模式 / 主题切换 chips：选中态用主色底，未选中用中性底 */
+.header__modes {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mode {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--wot-filled-bottom);
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--wot-border-main);
+}
+
+.mode--on {
+  background: var(--wot-primary-6);
+  border-color: var(--wot-primary-6);
+}
+
+.mode__text {
+  font-size: 12px;
+  color: var(--wot-text-main);
+}
+
+.mode__text--on {
+  color: var(--wot-text-white);
 }
 
 .card {

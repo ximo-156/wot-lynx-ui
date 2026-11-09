@@ -27,6 +27,7 @@ function compile(name: string) {
   }).outputText
 }
 const nativeCode = compile('native')
+const mediaPickerCode = compile('nativeMediaPicker')
 const hostCode = compile('host')
 const own = (scope: Scope, key: keyof Scope) => Object.prototype.hasOwnProperty.call(scope, key)
 
@@ -45,10 +46,16 @@ function loadHost(scope: Scope = {}) {
   }) as (...args: unknown[]) => void
   nativeFactory(...args)
   const hostExports: Record<string, unknown> = {}
+  const mediaPickerExports: Record<string, unknown> = {}
   const requireNative = vi.fn((specifier: string) => {
-    if (specifier !== './native') throw new Error(`Unexpected import: ${specifier}`)
-    return nativeExports
+    if (specifier === './native') return nativeExports
+    if (specifier === './nativeMediaPicker') return mediaPickerExports
+    throw new Error(`Unexpected import: ${specifier}`)
   })
+  const mediaFactory = runInNewContext(`(function (exports, require) {\n${mediaPickerCode}\n})`, globals, {
+    filename: resolve(sourceDir, 'nativeMediaPicker.ts'), timeout: 1000
+  }) as (exports: Record<string, unknown>, require: typeof requireNative) => void
+  mediaFactory(mediaPickerExports, requireNative)
   const hostFactory = runInNewContext(`(function (exports, require) {\n${hostCode}\n})`, globals, {
     filename: resolve(sourceDir, 'host.ts'), timeout: 1000
   }) as (exports: Record<string, unknown>, require: typeof requireNative) => void
@@ -265,5 +272,92 @@ describe('host/native module injection scope', () => {
     const { host, warn } = loadHost({ lexicalModules: { WotLynxUI: module } })
     expect(host.callHost('chooseMedia', {})).toEqual({ called: false })
     expect(warn).toHaveBeenCalledOnce()
+  })
+  it('automatically adapts a module-local WotMediaPicker with a separate top-level native callback', () => {
+    const chooseMedia = vi.fn((_options: unknown, callback: (result: unknown) => void) => callback({
+      success: true, tempFiles: [{ fileType: 'image', tempFilePath: '/cache/photo.jpg', name: 'photo.jpg', size: 42 }]
+    }))
+    const { host } = loadHost({ lexicalModules: { WotMediaPicker: { chooseMedia } } })
+    const success = vi.fn(), fail = vi.fn()
+    expect(host.hasHostCapability('chooseMedia')).toBe(true)
+    host.getHost().chooseMedia!({ count: 2, mediaType: ['image'], success, fail })
+    expect(chooseMedia).toHaveBeenCalledOnce()
+    expect(chooseMedia.mock.calls[0]).toHaveLength(2)
+    expect(chooseMedia.mock.calls[0][0]).toMatchObject({ count: 2, multiple: true })
+    expect(chooseMedia.mock.calls[0][0]).not.toHaveProperty('success')
+    expect(success).toHaveBeenCalledOnce(); expect(fail).not.toHaveBeenCalled()
+  })
+
+  it('does not cache missing or replaced WotMediaPicker registrations', () => {
+    const modules: Record<string, unknown> = {}
+    const { host } = loadHost({ lexicalModules: modules })
+    expect(host.hasHostCapability('chooseMedia')).toBe(false)
+    const first = { chooseMedia: vi.fn((_options: unknown, _callback: unknown) => {}) }
+    modules.WotMediaPicker = first
+    host.getHost().chooseMedia!({ count: 1 })
+    expect(first.chooseMedia).toHaveBeenCalledOnce()
+    const second = { chooseMedia: vi.fn((_options: unknown, _callback: unknown) => {}) }
+    modules.WotMediaPicker = second
+    host.getHost().chooseMedia!({ count: 3 })
+    expect(second.chooseMedia).toHaveBeenCalledOnce()
+    expect(first.chooseMedia).toHaveBeenCalledOnce()
+    delete modules.WotMediaPicker
+    expect(host.hasHostCapability('chooseMedia')).toBe(false)
+  })
+
+  it('explicit host override and an explicitly empty host still prevent automatic picker selection', () => {
+    const nativePicker = { chooseMedia: vi.fn((_options: unknown, _callback: unknown) => {}) }
+    const { host } = loadHost({ lexicalModules: { WotMediaPicker: nativePicker } })
+    const explicit = mediaHost()
+    host.configureHost(explicit)
+    expect(host.getHost()).toBe(explicit)
+    host.getHost().chooseMedia!({ count: 1 })
+    expect(explicit.chooseMedia).toHaveBeenCalledOnce()
+    expect(nativePicker.chooseMedia).not.toHaveBeenCalled()
+    host.configureHost({})
+    expect(host.hasHostCapability('chooseMedia')).toBe(false)
+    host.configureHost(null)
+    expect(host.hasHostCapability('chooseMedia')).toBe(true)
+  })
+
+  it('an established Wot host chooseMedia has priority over the raw native picker ABI', () => {
+    const original = mediaHost()
+    const raw = { chooseMedia: vi.fn((_options: unknown, _callback: unknown) => {}) }
+    const { host } = loadHost({ lexicalModules: { WotLynxUI: original, WotMediaPicker: raw } })
+    expect(host.getHost()).toBe(original)
+    host.getHost().chooseMedia!({ count: 1 })
+    expect(original.chooseMedia).toHaveBeenCalledOnce()
+    expect(raw.chooseMedia).not.toHaveBeenCalled()
+  })
+
+  it('adds only the missing chooser to a frozen native host and preserves its method receivers', () => {
+    const uploadFile = vi.fn(function (this: unknown, _options: unknown) { return this })
+    const original = Object.freeze({ marker: 'original', chooseMedia: undefined, uploadFile })
+    const raw = { chooseMedia: vi.fn((_options: unknown, _callback: unknown) => {}) }
+    const { host } = loadHost({ lexicalModules: { WotLynxUI: original, WotMediaPicker: raw } })
+    const selected = host.getHost()
+    expect(selected.chooseMedia).toBeTypeOf('function')
+    expect(selected.uploadFile!({})).toBe(original)
+    expect(uploadFile.mock.contexts[0]).toBe(original)
+    expect((selected as unknown as { marker: string }).marker).toBe('original')
+    expect(original.chooseMedia).toBeUndefined()
+    selected.chooseMedia!({ count: 1 })
+    expect(raw.chooseMedia).toHaveBeenCalledOnce()
+  })
+
+  it('also supplements a JSModule host without losing existing capabilities', () => {
+    const existing = { uploadFile: vi.fn(function (this: unknown, _options: unknown) { return this }) }
+    const raw = { chooseMedia: vi.fn((_options: unknown, _callback: unknown) => {}) }
+    const sdk = { getJSModule: vi.fn((name: string) => name === 'WotLynxUI' ? existing : undefined) }
+    const { host } = loadHost({ lexicalModules: { WotMediaPicker: raw }, lexicalLynx: sdk })
+    expect(host.getHost().uploadFile!({})).toBe(existing)
+    host.getHost().chooseMedia!({ count: 2 })
+    expect(raw.chooseMedia).toHaveBeenCalledOnce()
+  })
+
+  it('rejects a registered picker without a callable chooser as unavailable', () => {
+    const { host } = loadHost({ lexicalModules: { WotMediaPicker: { chooseMedia: 'not callable' } } })
+    expect(host.hasHostCapability('chooseMedia')).toBe(false)
+    expect(host.callHost('chooseMedia', {})).toEqual({ called: false })
   })
 })

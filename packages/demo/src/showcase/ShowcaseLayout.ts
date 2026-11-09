@@ -2,10 +2,15 @@
  * Render the shared catalog in columns or one lazy section at a time.
  * The catalog is metadata (DemoSection VNodes with uncalled slots), not a tree
  * hidden with display:none. Switching sections unmounts their timers/observers.
+ *
+ * checkMap（device-test 传入）：按节名给出该组件页的真机检查项，渲染在浏览
+ * 控件下方——检查文字与演示同页，不再是独立的纯文字清单。主 demo 不传，
+ * 行为与此前完全一致。
  */
 import { cloneVNode, defineComponent, Fragment, h, nextTick, onBeforeUnmount, ref, useSlots, type VNode } from 'vue-lynx'
 import { scrollViewTo } from 'wot-lynx-ui'
 import DemoSection from './DemoSection'
+import type { TestItem } from '../device-test/checklist'
 
 function flatten(nodes: VNode[]): VNode[] {
   return nodes.flatMap(node => node.type === Fragment && Array.isArray(node.children)
@@ -28,6 +33,15 @@ const controlStyle = { display: 'flex', 'flex-direction': 'row', 'align-items': 
 const labelStyle = { 'font-size': '13px', 'line-height': '20px', color: 'var(--wot-text-main)' }
 const hintStyle = { 'font-size': '12px', 'line-height': '18px', color: 'var(--wot-text-secondary)' }
 
+// 真机检查卡（仅 device-test 的 checkMap 非空时渲染）
+const checkCardStyle = { 'background-color': 'var(--wot-filled-oppo)', 'border-radius': '10px', 'border-width': '1px', 'border-style': 'solid', 'border-color': 'var(--wot-border-main)', padding: '8px 10px', 'margin-top': '4px' }
+const checkTitleStyle = { 'font-size': '12px', 'font-weight': '600', color: 'var(--wot-text-main)', 'margin-bottom': '4px' }
+const checkRowStyle = { display: 'flex', 'flex-direction': 'row', 'align-items': 'flex-start' }
+const checkBoxStyle = { width: '16px', height: '16px', 'border-radius': '4px', 'border-width': '1px', 'border-style': 'solid', 'border-color': 'var(--wot-border-light)', 'margin-top': '2px', 'margin-right': '8px', 'flex-shrink': '0', 'align-items': 'center', 'justify-content': 'center' }
+const checkBoxOnStyle = { 'background-color': 'var(--wot-primary-6)', 'border-color': 'var(--wot-primary-6)' }
+const checkTickStyle = { 'font-size': '10px', color: 'var(--wot-text-white)' }
+const checkExpectStyle = { 'font-size': '11px', 'line-height': '16px', color: 'var(--wot-text-auxiliary)', 'flex-grow': '1' }
+
 export default defineComponent({
   name: 'ShowcaseLayout',
   props: {
@@ -36,9 +50,12 @@ export default defineComponent({
     browse: { type: Boolean, default: false },
     initialSection: { type: String, default: '' },
     idPrefix: { type: String, default: 'showcase' },
-    scrollTarget: { type: String, default: '' }
+    scrollTarget: { type: String, default: '' },
+    // 节名（组件标签）→ 真机检查项；空对象 = 不渲染检查卡
+    checkMap: { type: Object, default: () => ({}) as Record<string, TestItem> },
+    checked: { type: Object, default: () => ({}) as Record<string, boolean> }
   },
-  emits: ['section-change'],
+  emits: ['section-change', 'check-toggle'],
   setup(props, { emit }) {
     const slots = useSlots()
     const selected = ref(props.initialSection)
@@ -72,6 +89,27 @@ export default defineComponent({
         onTap: () => { if (!disabled) tap() }
       }, [h('text', { style: labelStyle }, text)])
     }
+    // 当前组件页的真机检查项：勾选态由调用方（device-test App）统一维护，
+    // 与手写交互卡共用同一份进度。
+    function renderCheck(item: TestItem) {
+      const on = Boolean(props.checked[item.id])
+      return h('view', { class: 'showcase__check', style: checkCardStyle }, [
+        h('text', { style: checkTitleStyle }, `真机检查 · ${item.name}`),
+        h('view', {
+          class: 'showcase__check-row',
+          style: checkRowStyle,
+          'accessibility-role': 'button',
+          'accessibility-label': `勾选检查项：${item.name}`,
+          onTap: () => emit('check-toggle', item)
+        }, [
+          h('view', {
+            class: on ? 'showcase__check-box showcase__check-box--on' : 'showcase__check-box',
+            style: on ? { ...checkBoxStyle, ...checkBoxOnStyle } : checkBoxStyle
+          }, on ? [h('text', { style: checkTickStyle }, '✓')] : null),
+          h('text', { style: checkExpectStyle }, item.expect)
+        ])
+      ])
+    }
 
     return () => {
       const nodes = flatten(slots.default?.() || [])
@@ -93,6 +131,7 @@ export default defineComponent({
         groups[(all ? index : 0) % columns].push(cloneVNode(node, { key: `demo-${names[index]}`, all }))
       })
       const title = String(sections[activeIndex]?.props?.title || activeName)
+      const check = (props.checkMap as Record<string, TestItem>)[activeName] as TestItem | undefined
       const browser = props.browse ? h('view', {
         class: 'showcase__browser',
         'render-mode': all ? 'stress' : 'single',
@@ -119,7 +158,8 @@ export default defineComponent({
             'accessibility-role': 'button', 'accessibility-label': String(node.props?.title || names[index]),
             style: { ...controlStyle, 'justify-content': 'flex-start', 'margin-bottom': '4px' },
             onTap: () => choose(names[index])
-          }, [h('text', { style: { ...labelStyle, color: index === activeIndex ? 'var(--wot-primary-6)' : 'var(--wot-text-main)' } }, String(node.props?.title || names[index]))]))) : null
+          }, [h('text', { style: { ...labelStyle, color: index === activeIndex ? 'var(--wot-primary-6)' : 'var(--wot-text-main)' } }, String(node.props?.title || names[index]))]))) : null,
+        check ? renderCheck(check) : null
       ]) : null
       return h('view', {
         class: ['showcase', `showcase--${columns}-columns`], style: columnStyle
