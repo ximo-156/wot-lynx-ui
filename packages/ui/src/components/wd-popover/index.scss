@@ -75,16 +75,32 @@ $popover-menu-icon-margin-right: var(--wot-popover-menu-icon-margin-right, $spac
   }
 
   @include e(text) {
-    // Lynx 适配：inline-block → flex + row
     display: flex;
     flex-direction: row;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  @include e(label) {
     color: $popover-color;
     font-size: $popover-font-size;
     line-height: $popover-line-height;
+    text-align: center;
+    // white-space 在 Lynx 只作用于 text 且不继承。短文案由外层
+    // max-content 撑开；达到最大宽度后允许正常换行，不能逐字挤成窄列。
+    white-space: normal;
+    min-width: 0;
+    flex-shrink: 1;
   }
 
   @include edeep(pos) {
     position: absolute;
+    display: flex;
+    flex-direction: column;
+    // Lynx absolute + auto 不等于 Web shrink-to-fit；用原生 intrinsic width
+    // 让短文案和菜单按内容展开，长文案仍受视口上限约束。
+    width: max-content;
+    max-width: calc(100vw - 24px);
     box-sizing: border-box;
     background-clip: padding-box;
     text-align: center;
@@ -106,6 +122,9 @@ $popover-menu-icon-margin-right: var(--wot-popover-menu-icon-margin-right, $spac
 
   @include e(container) {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
     z-index: $popover-z-index;
     box-shadow: $popover-box-shadow;
     border-radius: $popover-radius;
@@ -120,12 +139,8 @@ $popover-menu-icon-margin-right: var(--wot-popover-menu-icon-margin-right, $spac
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    white-space: nowrap;
     padding: $popover-padding;
-    font-size: $popover-font-size;
-    line-height: $popover-line-height;
     text-align: center;
-    color: $popover-color;
   }
 
   @include edeep(close-icon) {

@@ -398,12 +398,16 @@ describe('原生优先：Style Funnel 完整键集（CONVENTIONS §20）', () =>
     cleanup()
   })
 
-  it('wd-resize：宽高键集完整（度量未返回时为 0px 中性值）', async () => {
+  it('wd-resize：未量到尺寸也保持自然布局，不以 0px 锁死内容宽高', async () => {
     const { container } = render(Resize, {})
     await pause(20)
-    const style = styleOf(container.querySelector('.wd-resize'))
-    expect(style).toMatch(/width:\s*0px/)
-    expect(style).toMatch(/height:\s*0px/)
+    const root = container.querySelector('.wd-resize') as HTMLElement
+    expect(root.style.width).toBe('')
+    expect(root.style.height).toBe('')
+    const content = cssRules('wd-resize').find((r) => r.selector === '.wd-resize__container')!
+    expect(content.decls.position).toBe('relative')
+    expect(content.decls.display).toBe('flex')
+    expect(content.decls['flex-direction']).toBe('column')
     cleanup()
   })
 

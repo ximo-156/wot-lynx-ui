@@ -196,7 +196,9 @@ describe('原生优先重写 · 布局居中契约（avatar / avatar-group / bad
     }
     expect(text).not.toMatch(/top:\s*50%/)
     expect(text).not.toMatch(/transform/)
-    expect(text).not.toMatch(/width:\s*100%/)
+    // 根节点已有 size 对应的明确宽高，居中 view 必须完整覆盖圆环。
+    expect(text).toMatch(/(^|;)width:100%(;|$)/)
+    expect(text).toMatch(/(^|;)height:100%(;|$)/)
   })
 
   it('六个组件所有含 flex-direction 的规则，其元素都声明了 display:flex', () => {
@@ -435,8 +437,8 @@ describe('原生优先重写 · 布局居中契约（avatar / avatar-group / bad
     expect(content).toMatch(/<circle /)
     // 进度 0：按参考源 renderDot 在顶部绘制圆点
     expect(content).toMatch(/<circle[^>]*r="4.5"/)
-    // 文案分支：text prop 渲染 text 元素
-    expect(root.querySelector('text.wd-circle__text')!.textContent).toBe('0%')
+    // 文案分支：view 负责居中，text 只负责文字排版。
+    expect(root.querySelector('view.wd-circle__text > text.wd-circle__label')!.textContent).toBe('0%')
     cleanup()
 
     // 默认插槽分支：view 承载消费方内容

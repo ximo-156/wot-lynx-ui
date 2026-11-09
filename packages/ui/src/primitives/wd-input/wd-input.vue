@@ -52,6 +52,14 @@ const emit = defineEmits([
 const { translate } = useTranslate('input')
 const { parent: formItemValidate } = useParent(FORM_ITEM_VALIDATE_KEY)
 const isDisabled = useFormDisabled(props)
+// Lynx Android setMaxLength 直接构造 InputFilter.LengthFilter；-1 会拒绝
+// 所有新增字符，不是“不限”。公开 API 保留 -1，原生通道用 Int.MAX_VALUE，
+// 且必须显式下发，才能在有限长度 → 不限长度时清除旧过滤器。
+// https://github.com/lynx-family/lynx/blob/4.0.0/platform/android/lynx_xelement/lynx_xelement_input/src/main/java/com/lynx/xelement/input/LynxUIBaseInput.kt
+const nativeMaxlength = computed(() => {
+  const length = props.maxlength
+  return Number.isFinite(length) && length >= 0 ? Math.min(Math.floor(length), 2147483647) : 2147483647
+})
 const isAlive = useAlive()
 let inputRequest = 0
 let blurRequest = 0
@@ -153,8 +161,8 @@ function formatValue(value: string | number) {
   // 显式传入的 null 不套用，原样返回会在 :value="String(inputValue)" 渲染出
   // 字面量 "null"（maxlength 场景下 value.toString() 还会抛 TypeError）
   const normalized = isDef(value) ? value : ''
-  const { maxlength } = props
-  if (isDef(maxlength) && maxlength !== -1 && String(normalized).length > maxlength) {
+  const maxlength = nativeMaxlength.value
+  if (String(normalized).length > maxlength) {
     return normalized.toString().slice(0, maxlength)
   }
   return normalized
@@ -210,11 +218,13 @@ function handleInput({ detail }: any) {
   if (isDisabled.value || props.readonly) return
   // detail 容错：事件载荷缺失（宿主/测试环境直接派发）时按空串处理，
   // 不能让 TypeError 击穿事件注册表派发链
+  const value = detail?.value ?? ''
+  // 先记住原生已显示的值；setValue 的 TextWatcher 回声不是新的用户编辑，
+  // 不能重复 emit，也不能递增 inputRequest 把正在进行的 clear 取消。
+  markNativeValue(value)
+  if (isValueEqual(value, inputValue.value)) return
   inputRequest++
-  inputValue.value = detail?.value ?? ''
-  // 原生输入框本就显示用户敲的内容，标记已同步避免重复 setValue 打扰
-  // IME 光标（程序化改写才需要推送，见 useNativeInputValue）
-  markNativeValue(inputValue.value)
+  inputValue.value = value
   emit('update:modelValue', inputValue.value)
   emit('input', detail)
 }
@@ -266,7 +276,7 @@ function isValueEqual(value1: number | string, value2: number | string) {
       :value="String(inputValue)"
       :placeholder="placeholderValue"
       :disabled="isDisabled || readonly"
-      :maxlength="maxlength"
+      :maxlength="nativeMaxlength"
       :focus="focused"
       :confirm-type="confirmType"
       :confirm-hold="confirmHold"

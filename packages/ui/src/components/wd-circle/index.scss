@@ -34,10 +34,17 @@ $circle-text-line-height: var(--wot-circle-text-line-height, $typography-title-l
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    // 文案（含插槽自定义内容）多行时逐行居中
+    width: 100%;
+    height: 100%;
+    // 居中由 view 排列内部文字节点，不把 flex 属性直接用于文字字形。
     text-align: center;
+  }
+
+  @include e(label) {
     font-size: $circle-text-font-size;
     line-height: $circle-text-line-height;
     color: $circle-text-color;
+    text-align: center;
+    max-width: 100%;
   }
 }

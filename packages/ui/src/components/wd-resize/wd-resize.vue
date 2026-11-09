@@ -7,14 +7,13 @@
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref } from 'vue-lynx'
-import { addUnit, getRect, parseStyle, uuid } from '../../common/util'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue-lynx'
+import { getRect, parseStyle, uuid } from '../../common/util'
 import { createStyleResolver } from '../../common/style'
 import { resizeProps } from './types'
 
 const props = defineProps(resizeProps)
 const emit = defineEmits(['resize', 'layoutchange'])
-const instance = getCurrentInstance()!
 const resizeId = `resize${uuid()}`
 const height = ref(0)
 const width = ref(0)
@@ -25,8 +24,10 @@ const shrinkScrollLeft = ref(0)
 let measured = false
 let alive = true
 let revision = 0
-const resolveRootStyle = createStyleResolver({ width: '0px', height: '0px' })
-const rootStyle = computed(() => resolveRootStyle({ width: addUnit(width.value), height: addUnit(height.value) }, parseStyle(props.customStyle)))
+// 只观察内容尺寸，不把测量值写回约束内容的父节点；否则首次 0px 会形成
+// “窄容器 → 文字换行 → 测得窄宽度 → 再锁窄容器”的反馈环。
+const resolveRootStyle = createStyleResolver({ width: '', height: '' })
+const rootStyle = computed(() => resolveRootStyle(parseStyle(props.customStyle)))
 
 function scrollToBottom() {
   expandScrollTop.value = 100000 + height.value
@@ -37,6 +38,8 @@ function scrollToBottom() {
 async function measure() {
   if (!alive) return
   const version = ++revision
+  await nextTick()
+  if (!alive || version !== revision) return
   const rect = await getRect(`#${resizeId}`)
   if (!alive || version !== revision) return
   const newWidth = Number(rect?.width)
@@ -55,7 +58,8 @@ async function measure() {
 }
 function onLayoutChange(event: any) {
   emit('layoutchange', event)
-  if (measured && Number(event?.detail?.width) === width.value && Number(event?.detail?.height) === height.value) return
+  const layout = event?.detail?.layout || event?.detail
+  if (measured && Number(layout?.width) === width.value && Number(layout?.height) === height.value) return
   void measure()
 }
 onMounted(measure)
@@ -66,10 +70,10 @@ onBeforeUnmount(() => { alive = false; revision++ })
   <view :class="`wd-resize ${customClass}`" :style="rootStyle">
     <view :id="resizeId" :class="`wd-resize__container ${customContainerClass}`" @layoutchange="onLayoutChange">
       <slot />
-      <scroll-view class="wd-resize__wrapper" :scroll-y="true" :scroll-top="expandScrollTop" :scroll-x="true" :scroll-left="expandScrollLeft" @scroll="measure">
+      <scroll-view class="wd-resize__wrapper" :user-interaction-enabled="false" :scroll-y="true" :scroll-top="expandScrollTop" :scroll-x="true" :scroll-left="expandScrollLeft" @scroll="measure">
         <view class="wd-resize__wrapper--placeholder" :style="{ height: '100000px', width: '100000px' }" />
       </scroll-view>
-      <scroll-view class="wd-resize__wrapper" :scroll-y="true" :scroll-top="shrinkScrollTop" :scroll-x="true" :scroll-left="shrinkScrollLeft" @scroll="measure">
+      <scroll-view class="wd-resize__wrapper" :user-interaction-enabled="false" :scroll-y="true" :scroll-top="shrinkScrollTop" :scroll-x="true" :scroll-left="shrinkScrollLeft" @scroll="measure">
         <view class="wd-resize__wrapper--placeholder" :style="{ height: '250%', width: '250%' }" />
       </scroll-view>
     </view>

@@ -1,4 +1,4 @@
-import { ref } from 'vue-lynx'
+import { nextTick, ref } from 'vue-lynx'
 import { getRect, isObj, uuid } from '../common/util'
 import { useAlive } from './useAlive'
 import { defineStyleKeys, resolveStyle } from '../common/style'
@@ -72,6 +72,8 @@ export function usePopover(visibleArrow = true) {
   async function measurePosition(contentId: string) {
     const request = ++measureRequest
     try {
+      await nextTick()
+      if (!isAlive() || request !== measureRequest) return
       const [targetRect, contentRect] = await Promise.all([getRect(`#${ids.target}`), getRect(`#${contentId}`)])
       if (!isAlive() || request !== measureRequest) return
       if (targetRect) {

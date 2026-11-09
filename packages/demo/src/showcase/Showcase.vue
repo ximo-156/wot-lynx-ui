@@ -1992,21 +1992,21 @@ function resetTransientDemos() {
         <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">滚动容器内吸顶（zIndex / offsetTop）</text>
-          <scroll-view scroll-orientation="vertical" :style="{ height: '200px' }">
+          <scroll-view scroll-orientation="vertical" :style="{ height: '200px', overflow: 'hidden' }">
             <view :style="{ padding: '12px' }">
-              <view :style="{ height: '32px', background: 'var(--wot-filled-bottom)' }" />
+              <view :style="{ height: '32px', 'background-color': 'var(--wot-filled-bottom)' }" />
               <wd-sticky :offset-top="0" :z-index="10">
-                <view :style="{ background: 'var(--wot-primary-6)', padding: '10px', 'border-radius': '8px' }">
-                  <text :style="{ color: 'var(--wot-text-white)', 'font-size': '13px' }">吸顶标题 A（offsetTop 0）</text>
+                <view class="demo-sticky-label">
+                  <text class="demo-sticky-label__text">吸顶标题 A（offsetTop 0）</text>
                 </view>
               </wd-sticky>
-              <view :style="{ height: '260px', background: 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">滚动内容区</text></view>
+              <view :style="{ height: '260px', 'background-color': 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">滚动内容区</text></view>
               <wd-sticky :offset-top="12" :z-index="9">
-                <view :style="{ background: '#ff8800', padding: '10px', 'border-radius': '8px' }">
-                  <text :style="{ color: 'var(--wot-text-white)', 'font-size': '13px' }">吸顶标题 B（offsetTop 12）</text>
+                <view class="demo-sticky-label demo-sticky-label--warning">
+                  <text class="demo-sticky-label__text">吸顶标题 B（offsetTop 12）</text>
                 </view>
               </wd-sticky>
-              <view :style="{ height: '260px', background: 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">更多内容</text></view>
+              <view :style="{ height: '260px', 'background-color': 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">更多内容</text></view>
             </view>
           </scroll-view>
         </view>
@@ -2017,24 +2017,26 @@ function resetTransientDemos() {
       <view class="demo-section">
         <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
-          <text class="demo-panel__label">offsetTop 偏移（容器高度由外层样式承担）</text>
-          <wd-sticky-box :style="{ height: '180px' }">
-            <view :style="{ padding: '12px' }">
-              <wd-sticky :offset-top="0" :z-index="10">
-                <view :style="{ background: 'var(--wot-primary-6)', padding: '10px', 'border-radius': '8px' }">
-                  <text :style="{ color: 'var(--wot-text-white)', 'font-size': '13px' }">offsetTop 0</text>
-                </view>
-              </wd-sticky>
-              <view :style="{ height: '24px' }" />
-              <view :style="{ height: '220px', background: 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">容器内滚动内容</text></view>
-              <wd-sticky :offset-top="8">
-                <view :style="{ background: '#ff8800', padding: '10px', 'border-radius': '8px' }">
-                  <text :style="{ color: 'var(--wot-text-white)', 'font-size': '13px' }">offsetTop 8</text>
-                </view>
-              </wd-sticky>
-              <view :style="{ height: '220px', background: 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">继续滚动</text></view>
-            </view>
-          </wd-sticky-box>
+          <text class="demo-panel__label">offsetTop 偏移（在 180px 滚动视口内验收）</text>
+          <scroll-view scroll-orientation="vertical" :style="{ height: '180px', overflow: 'hidden' }">
+            <wd-sticky-box>
+              <view :style="{ padding: '12px' }">
+                <wd-sticky :offset-top="0" :z-index="10">
+                  <view class="demo-sticky-label">
+                    <text class="demo-sticky-label__text">offsetTop 0</text>
+                  </view>
+                </wd-sticky>
+                <view :style="{ height: '24px' }" />
+                <view :style="{ height: '220px', 'background-color': 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">容器内滚动内容</text></view>
+                <wd-sticky :offset-top="8">
+                  <view class="demo-sticky-label demo-sticky-label--warning">
+                    <text class="demo-sticky-label__text">offsetTop 8</text>
+                  </view>
+                </wd-sticky>
+                <view :style="{ height: '220px', 'background-color': 'var(--wot-filled-bottom)', padding: '12px' }"><text class="demo-tag">继续滚动</text></view>
+              </view>
+            </wd-sticky-box>
+          </scroll-view>
         </view>
       </view>
       </DemoSection>
@@ -2161,7 +2163,7 @@ function resetTransientDemos() {
           <wd-resize @resize="onResize">
             <!-- 对象语法：字符串 :style 会被 vue-lynx 静默丢弃（CONVENTIONS §19），
                  高度变化必须真实生效才能触发 wd-resize -->
-            <view :style="{ height: `${resizeHeight}px`, background: 'var(--wot-primary-1)', 'border-radius': '8px', padding: '12px' }">
+            <view :style="{ height: `${resizeHeight}px`, width: '100%', 'background-color': 'var(--wot-primary-1)', 'border-radius': '8px', padding: '12px', display: 'flex', 'flex-direction': 'column', 'justify-content': 'center' }">
               <text class="demo-tag">高度 {{ resizeHeight }}px · resize 触发 {{ resizeCount }} 次</text>
             </view>
           </wd-resize>
@@ -2500,6 +2502,30 @@ function resetTransientDemos() {
   background: var(--wot-primary-1);
   border-radius: 6px;
   padding: 4px 8px;
+}
+
+.demo-sticky-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: var(--wot-primary-6);
+}
+
+.demo-sticky-label--warning {
+  background-color: var(--wot-warning-main);
+}
+
+.demo-sticky-label__text {
+  color: var(--wot-text-white);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
 }
 
 .demo-transition-box {

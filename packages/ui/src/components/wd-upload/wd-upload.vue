@@ -230,9 +230,9 @@ function initFile(file: ChooseFile, currentIndex?: number) {
   // 状态初始化
   const initState: UploadFileItem = {
     uid: context.id++,
-    // 仅h5支持 name
     name: file.name || '',
     thumb: file.thumb || '',
+    ...(isDef(file.duration) ? { duration: file.duration } : {}),
     [statusKey]: 'pending',
     size: file.size || 0,
     url: file.path,

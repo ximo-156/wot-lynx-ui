@@ -24,10 +24,9 @@
  * - 内联样式：参考源 rootStyle 为 objToStyle 字符串 + customStyle 拼接，
  *   Lynx 的字符串 style 会被静默丢弃（CONVENTIONS §19），改为对象语法并
  *   经 parseStyle 归一 customStyle；
- * - 文案居中（NATIVE-REWRITE §3.2）：参考源 __text 用 top: 50% +
- *   translateY(-50%) 垂直居中，改为四边 0 撑满 + flex 成对居中（禁
- *   top/left: 50% + translate，四边定位 + flex 居中不依赖 transform），
- *   文本元素另加 text-align: center（Lynx text 不依赖继承）；
+ * - 文案居中：根节点按 size 定宽高，四边 0 的 view 成对 flex 居中；
+ *   text 不能靠自身 display:flex 垂直居中字形，字号/行高在独立文字出口上。
+ *   text 属性与普通文字插槽共用 WdTextSlot，自定义布局插槽保持原结构；
  * - 半径兜底：strokeWidth 超过 2 倍 size 时参考源 canvas 不绘制，本地
  *   负半径下 SVG 整环不渲染，故钳为 0 保持行为一致；
  * - 文本节点：参考源 view 内的裸文本已包 text，插槽内容由消费方保证。
@@ -40,7 +39,8 @@ import './index.css'
 import { computed, onBeforeUnmount, ref, watch } from 'vue-lynx'
 import { circleProps } from './types'
 import { isObj, parseStyle, sanitizeSvgContent } from '../../common/util'
-import { createStyleResolver } from '../../common/style'
+import { createStyleResolver, defineStyleKeys, resolveStyle } from '../../common/style'
+import { WdTextSlot } from '../../common/textSlot'
 import { useGlobalConfig } from '../../composables/useGlobalConfig'
 import { COOLGREY } from '../../common/theme'
 
@@ -87,11 +87,17 @@ const currentValue = ref<number>(format(props.modelValue))
 let interval: ReturnType<typeof setTimeout> | undefined
 let animationRevision = 0
 let disposed = false
-const resolveRootStyle = createStyleResolver({ color: '' })
-const rootStyle = computed(() => resolveRootStyle({
-  color: isObj(props.color) ? 'var(--wot-text-main)' : props.color
-}, parseStyle(props.customStyle)))
 const canvasSize = computed(() => Number.isFinite(Number(props.size)) ? Math.max(0, Number(props.size)) : 100)
+const resolveRootStyle = createStyleResolver({ color: '', width: '', height: '' })
+const rootStyle = computed(() => resolveRootStyle({
+  color: isObj(props.color) ? 'var(--wot-text-main)' : props.color,
+  width: `${canvasSize.value}px`,
+  height: `${canvasSize.value}px`
+}, parseStyle(props.customStyle)))
+// 新的 view 居中层直接获得前景色，text 的 currentColor 不再跨多层继承；
+// --wot-circle-text-color 仍由文字节点自身的 CSS 优先覆盖。
+const TEXT_CONTAINER_STYLE = defineStyleKeys({ color: '' })
+const textContainerStyle = computed(() => resolveStyle(TEXT_CONTAINER_STYLE, { color: rootStyle.value.color }))
 const sWidth = computed(() => Number.isFinite(Number(props.strokeWidth)) ? Math.max(0, Number(props.strokeWidth)) : 0)
 
 /**
@@ -247,13 +253,11 @@ function clearTimeInterval() {
   <view :class="`wd-circle ${customClass}`" :style="rootStyle">
     <svg :content="svgContent" :style="canvasStyle" />
 
-    <view v-if="!text" class="wd-circle__text">
-      <!-- 自定义提示内容 -->
-      <slot></slot>
+    <view class="wd-circle__text" :style="textContainerStyle">
+      <WdTextSlot text-class="wd-circle__label">
+        <template v-if="text">{{ text }}</template>
+        <slot v-else />
+      </WdTextSlot>
     </view>
-
-    <text v-else class="wd-circle__text">
-      {{ text }}
-    </text>
   </view>
 </template>

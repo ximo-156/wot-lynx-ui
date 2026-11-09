@@ -55,7 +55,7 @@ watch(
 )
 
 watch(
-  [() => props.placement, () => props.visibleArrow, () => props.offset],
+  [() => props.placement, () => props.visibleArrow, () => props.offset, () => props.content, () => props.mode, () => props.customPop],
   () => {
     popover.init(props.placement, props.visibleArrow, selector)
     if (showPopover.value) popover.control(props.placement, props.offset)
@@ -177,18 +177,16 @@ defineExpose<PopoverExpose>({
 
 <template>
   <view :class="`wd-popover ${customClass}`" :style="parseStyle(customStyle)" :id="popover.ids.root" @tap.stop="noop">
-    <view class="wd-popover__pos wd-popover__hidden" :id="popover.ids.pos">
+    <view class="wd-popover__pos wd-popover__hidden" :id="popover.ids.pos" :user-interaction-enabled="false">
       <view :class="`wd-popover__container ${customPop}`">
         <view v-if="!slots.content && mode === 'normal'" class="wd-popover__inner">
-          <text>{{ content }}</text>
+          <text class="wd-popover__label">{{ content }}</text>
         </view>
-        <view v-if="!slots.content && mode === 'menu' && typeof content === 'object'" class="wd-popover__menu">
-          <view v-for="(item, index) in content" :key="index" class="wd-popover__menu-inner" @tap="menuClick(index)">
-            <!-- 隐藏度量副本必须与可见副本同类名：__icon 无样式定义，
-                 实际样式在 __menu-icon（18px + margin-right），类名错配会让
-                 show 时测得的气泡宽度偏小、首帧定位偏差 -->
-            <WdIcon v-if="item.iconClass" :name="item.iconClass" custom-class="wd-popover__menu-icon" />
-            <text>{{ item.content }}</text>
+        <view v-if="!slots.content && mode === 'menu'" class="wd-popover__menu">
+          <view v-for="(item, index) in content" :key="index" :class="['wd-popover__menu-inner', index === 0 ? 'is-first' : '']">
+            <!-- 与可见菜单使用相同布局/文字节点，测量才包含真实图标和文案宽度。 -->
+            <WdIcon v-if="isObj(item) && item.iconClass" :name="item.iconClass" custom-class="wd-popover__menu-icon" />
+            <view class="wd-popover__text"><text class="wd-popover__label">{{ isObj(item) && item.content ? item.content : '' }}</text></view>
           </view>
         </view>
       </view>
@@ -212,7 +210,7 @@ defineExpose<PopoverExpose>({
         <slot name="content">
           <!-- 普通模式 -->
           <view v-if="mode === 'normal'" class="wd-popover__inner">
-            <text>{{ content }}</text>
+            <text class="wd-popover__label">{{ content }}</text>
           </view>
           <!-- 列表模式 -->
           <view v-if="mode === 'menu'" class="wd-popover__menu">
@@ -223,7 +221,7 @@ defineExpose<PopoverExpose>({
               @tap="menuClick(index)"
             >
               <WdIcon v-if="isObj(item) && item.iconClass" :name="item.iconClass" custom-class="wd-popover__menu-icon" />
-              <view class="wd-popover__text"><text>{{ isObj(item) && item.content ? item.content : '' }}</text></view>
+              <view class="wd-popover__text"><text class="wd-popover__label">{{ isObj(item) && item.content ? item.content : '' }}</text></view>
             </view>
           </view>
         </slot>

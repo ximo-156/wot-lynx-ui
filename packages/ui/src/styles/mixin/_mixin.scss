@@ -244,6 +244,9 @@ $B: null;
   */
 @mixin triangleArrow($size, $bg) {
   @include e(arrow) {
+    // 尺寸令牌的多级 var 回退只保留在自定义属性里；普通 calc 声明中的
+    // 嵌套 var 会被 Lynx 序列化器拒绝，运行时乘法也不能作为原生保证。
+    --wot-triangle-arrow-size: #{$size};
     position: absolute;
     width: 0;
     height: 0;
@@ -254,7 +257,7 @@ $B: null;
     border-right: $size solid transparent;
     border-top: $size solid $bg;
     transform: translateX(-50%);
-    bottom: calc(-1 * $size)
+    bottom: calc(0px - var(--wot-triangle-arrow-size))
   }
 
   @include e(arrow-up) {
@@ -262,7 +265,7 @@ $B: null;
     border-right: $size solid transparent;
     border-bottom: $size solid $bg;
     transform: translateX(-50%);
-    top: calc(-1 * $size)
+    top: calc(0px - var(--wot-triangle-arrow-size))
   }
 
   @include e(arrow-left) {
@@ -270,7 +273,7 @@ $B: null;
     border-bottom: $size solid transparent;
     border-right: $size solid $bg;
     transform: translateY(-50%);
-    left: calc(-1 * $size)
+    left: calc(0px - var(--wot-triangle-arrow-size))
   }
 
   @include e(arrow-right) {
@@ -278,7 +281,7 @@ $B: null;
     border-bottom: $size solid transparent;
     border-left: $size solid $bg;
     transform: translateY(-50%);
-    right: calc(-1 * $size)
+    right: calc(0px - var(--wot-triangle-arrow-size))
   }
 }
 

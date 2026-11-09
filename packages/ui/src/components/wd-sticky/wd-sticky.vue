@@ -29,7 +29,7 @@ const stickyId = `wd-sticky-${uuid()}`
 // 宿主能力应在挂载前配置；没有交叉观察器能力时不创建假的监听对象。
 const observerSupported = getPlatform().capabilities.intersectionObserver
 const manualPosition = ref(observerSupported)
-const stickyState = reactive({ position: 'absolute', boxLeaved: false, top: 0, height: 0, width: 0, state: 'normal' })
+const stickyState = reactive({ position: 'relative', boxLeaved: false, top: 0, height: 0, width: 0, state: 'normal' })
 let observer: any = null
 let measureVersion = 0
 
@@ -85,6 +85,8 @@ function clearObserver() {
 }
 async function measure() {
   const version = ++measureVersion
+  await nextTick()
+  if (!isAlive() || version !== measureVersion) return
   const size = await getRect(`#${stickyId}-container`)
   if (!isAlive() || version !== measureVersion) return
   stickyState.width = Math.max(0, Number(size?.width) || 0)
