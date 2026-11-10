@@ -16,8 +16,8 @@
  * 来自 component-checks.ts，与演示同页，不再是纯文字清单）。主 demo 不传。
  */
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue-lynx'
-import { listIcons, useToast } from 'wot-lynx-ui'
+import { computed, nextTick, onMounted, ref } from 'vue-lynx'
+import { hasHostCapability, listIcons, useToast } from 'wot-lynx-ui'
 import { demoBrokenImage, demoCropImage, demoImage } from '../assets/demo-images'
 import UploadEvokeButton from './UploadEvokeButton.vue'
 import ShowcaseLayout from './ShowcaseLayout'
@@ -92,6 +92,19 @@ const slideVerifyRef = ref<any>(null)
 const uploadFiles = ref<any[]>([])
 
 /**
+ * 宿主选图能力探测（公开 API hasHostCapability，实时读取 NativeModules /
+ * lynx.getJSModule / configureHost）。真机上 Lynx 引擎不内置相册：只有宿主
+ * 注册了 WotMediaPicker（或 WotLynxUI 的 chooseMedia）时点「+」才会弹系统
+ * 相册。这里把结论显示在演示区，用来区分「宿主没装模块」和「模块装了但链路
+ * 坏了」——官方 LynxExplorer 扫码加载的 bundle 永远显示未接入。
+ */
+const uploadHostReady = ref(false)
+function refreshUploadHostStatus() {
+  uploadHostReady.value = hasHostCapability('chooseMedia')
+}
+onMounted(refreshUploadHostStatus)
+
+/**
  * 演示上传方法（wd-upload 的 uploadMethod 扩展点）：模拟 0→100 进度后成功。
  * demo 的 action="" 没有真实端点，不注入实现时上传会停在 fail 态并显示
  * "uploadFile:fail not supported in lynx"——那是给真实宿主的降级语义，
@@ -115,6 +128,7 @@ function demoUploadMethod(file: any, formData: any, options: any) {
 
 // 相册由宿主提供；缺失能力、取消或权限错误都应明确反馈，不能转成输入框。
 function onUploadChooseError(e: any) {
+  refreshUploadHostStatus()
   const errMsg = String(e?.error?.errMsg || e?.error?.message || '')
   console.warn('[demo] upload chooseerror', e)
   if (/cancel/i.test(errMsg)) {
@@ -122,7 +136,7 @@ function onUploadChooseError(e: any) {
     return
   }
   if (errMsg.includes('宿主未注册')) {
-    toast.error('当前宿主尚未接入相册/拍照能力')
+    toast.error('当前宿主未接入相册/拍照能力：需安装带 WotMediaPicker 原生模块的 Lynx 宿主 APK（扫码用的官方 Explorer 不含该模块）')
     return
   }
   toast.error(errMsg || '选择图片失败，请检查相册权限')
@@ -723,7 +737,7 @@ function resetTransientDemos() {
           </view>
         </view>
       </view>
-      <wd-popup v-model="popupVisible" :position="popupPosition" round closable>
+      <wd-popup v-model="popupVisible" :position="popupPosition" safe-area-inset-bottom round closable>
         <view :style="{ padding: '24px', 'min-width': '200px' }">
           <text class="demo-panel__label">position = {{ popupPosition }}</text>
           <text class="demo-panel__label">点击遮罩或关闭按钮退出</text>
@@ -1063,6 +1077,7 @@ function resetTransientDemos() {
         <text class="demo-section__title">{{ title }}</text>
         <view class="demo-panel">
           <text class="demo-panel__label">选图 / 进度 / 删除（limit=3）</text>
+          <text class="demo-tag">宿主选图能力：{{ uploadHostReady ? '已接入' : '未接入（需带 WotMediaPicker 模块的宿主）' }}</text>
           <view class="demo-row">
             <!-- 视觉卡片不含 input；一次 tap 由 Upload 选择/校验并调用宿主
                  chooseMedia。缺少能力会提示；uploadMethod 仅模拟网络上传。 -->
@@ -1694,11 +1709,8 @@ function resetTransientDemos() {
             <wd-button size="small" @tap="showVideoPreview">播放视频</wd-button>
             <text class="demo-tag">closePosition: right-top</text>
           </view>
-          <!-- <video> 是 Lynx 的 XElement：当前演示宿主未注册 video 原生组件
-               （capabilities.videoContext = false），直接创建节点会抛引擎级
-               990200 / 60301。组件在此类宿主上自动降级为「封面 + 播放图标」，
-               注入了 createVideoContext 的宿主才挂载真正的 <video> -->
-          <text class="demo-panel__label">宿主未注入视频能力时显示封面占位（不创建 video 节点）</text>
+          <text class="demo-panel__label">原生视频需要 Lynx 4.1+ 或已接入兼容 video 的宿主；4.0 仅提示不支持，不能播放。</text>
+          <text class="demo-panel__label">点击播放后应看到视频首帧；再次点击可暂停，关闭后应停止声音。失败会显示原因，可点击重试。</text>
         </view>
       </view>
       <wd-video-preview ref="videoPreviewRef" selector="demo-video-preview" close-position="right-top" />

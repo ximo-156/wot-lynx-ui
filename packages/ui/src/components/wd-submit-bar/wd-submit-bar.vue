@@ -6,6 +6,8 @@ import { computed } from 'vue-lynx'
 import WdButton from '../../primitives/wd-button/wd-button.vue'
 import { submitBarProps } from './types'
 import { addUnit, parseStyle } from '../../common/util'
+import { createStyleResolver } from '../../common/style'
+import { useSafeArea } from '../../composables/useSafeArea'
 
 const props = defineProps(submitBarProps)
 const emit = defineEmits(['submit'])
@@ -14,10 +16,11 @@ const priceParts = computed(() => {
   const dot = price.indexOf('.')
   return dot === -1 ? { integer: price, decimal: '' } : { integer: price.slice(0, dot), decimal: price.slice(dot) }
 })
-const rootStyle = computed(() => ({
-  paddingBottom: props.safeAreaInsetBottom ? 'calc(8px + env(safe-area-inset-bottom))' : '8px',
-  ...parseStyle(props.customStyle)
-}))
+const safeArea = useSafeArea()
+const resolveRootStyle = createStyleResolver({ 'padding-bottom': '8px' })
+const rootStyle = computed(() => resolveRootStyle({
+  'padding-bottom': props.safeAreaInsetBottom ? safeArea.inset('bottom', 8) : '8px'
+}, parseStyle(props.customStyle)))
 function onSubmit() {
   if (!props.buttonDisabled && !props.buttonLoading) emit('submit')
 }

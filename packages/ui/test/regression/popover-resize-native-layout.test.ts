@@ -14,6 +14,7 @@ import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { nativeRuntime, restoreNativeStubs, stubNativeQuery } from '../helpers/native-stubs'
 import Popover from '../../src/components/wd-popover/wd-popover.vue'
+import type { PlacementType } from '../../src/components/wd-popover/types'
 import Resize from '../../src/components/wd-resize/wd-resize.vue'
 
 const sheets = new Map<string, ReturnType<typeof postcss.parse>>()
@@ -29,6 +30,47 @@ function declarations(element: Element, name: string): Record<string, string> {
   })
   return values
 }
+// 只验证变量链与声明，不模拟原生绘制；支持阴影 fallback 中的 rgba()/逗号。
+function resolveVars(value: string, variables: Record<string, string>, depth = 0): string {
+  if (depth > 40) throw new Error('循环 CSS 变量')
+  let result = value
+  for (let start = result.indexOf('var('); start !== -1; start = result.indexOf('var(')) {
+    let end = start + 4
+    let nesting = 1
+    let comma = -1
+    for (; end < result.length && nesting; end++) {
+      const char = result[end]
+      if (char === '(') nesting++
+      else if (char === ')') nesting--
+      else if (char === ',' && nesting === 1 && comma === -1) comma = end
+    }
+    if (nesting) throw new Error(`无效 CSS 变量：${value}`)
+    const name = result.slice(start + 4, comma === -1 ? end - 1 : comma).trim()
+    const replacement = variables[name] ?? (comma === -1 ? undefined : result.slice(comma + 1, end - 1).trim())
+    if (replacement === undefined) throw new Error(`未定义 CSS 变量：${name}`)
+    result = result.slice(0, start) + resolveVars(replacement, variables, depth + 1) + result.slice(end)
+  }
+  return result.trim()
+}
+
+async function nativePopoverRules(component = 'wd-popover') {
+  const here = path.dirname(fileURLToPath(import.meta.url))
+  const demoRequire = createRequire(path.resolve(here, '../../../demo/package.json'))
+  const templatePackage = createRequire(demoRequire.resolve('vue-lynx/plugin')).resolve('@lynx-js/template-webpack-plugin/package.json')
+  const serializerPath = createRequire(templatePackage).resolve('@lynx-js/css-serializer')
+  const CSS = await import(pathToFileURL(serializerPath).href)
+  const { genStyleInfo } = await import(pathToFileURL(path.resolve(path.dirname(templatePackage), 'lib/web/genStyleInfo.js')).href)
+  const css = readFileSync(path.resolve(here, '../../src/components', component, 'index.css'), 'utf8')
+  expect(CSS.parse(css).errors).toEqual([])
+  const { cssMap } = CSS.cssChunksToMap([css], [], true)
+  const rules: Array<{ sel: string[][]; decl: Array<[string, string]> }> = genStyleInfo(cssMap)['0'].rules
+  return (selector: string) => {
+    const matches = rules.filter((rule) => rule.sel.some((parts) => parts.flat().join('') === selector))
+    expect(matches.length, `原生序列化产物缺少 ${selector}`).toBeGreaterThan(0)
+    return Object.assign({}, ...matches.map((rule) => Object.fromEntries(rule.decl))) as Record<string, string>
+  }
+}
+
 async function flush() {
   for (let i = 0; i < 6; i++) await nextTick()
 }
@@ -103,33 +145,110 @@ describe('Popover 原生内容宽度', () => {
     expect(container.querySelector('.wd-transition .wd-popover__label')?.textContent).toBe('短')
   })
 
-  it('Rspeedy 使用的原生样式序列化器保留内容宽度、视口上限及直接文字样式', async () => {
-    const here = path.dirname(fileURLToPath(import.meta.url))
-    const demoRequire = createRequire(path.resolve(here, '../../../demo/package.json'))
-    const templatePackage = createRequire(demoRequire.resolve('vue-lynx/plugin')).resolve('@lynx-js/template-webpack-plugin/package.json')
-    const serializerPath = createRequire(templatePackage).resolve('@lynx-js/css-serializer')
-    const CSS = await import(pathToFileURL(serializerPath).href)
-    const { genStyleInfo } = await import(pathToFileURL(path.resolve(path.dirname(templatePackage), 'lib/web/genStyleInfo.js')).href)
-    const css = readFileSync(path.resolve(here, '../../src/components/wd-popover/index.css'), 'utf8')
-    expect(CSS.parse(css).errors).toEqual([])
-    const tooltipCss = readFileSync(path.resolve(here, '../../src/components/wd-tooltip/index.css'), 'utf8')
-    expect(CSS.parse(tooltipCss).errors).toEqual([])
-    const { cssMap } = CSS.cssChunksToMap([css], [], true)
-    const rules: Array<{ sel: string[][]; decl: Array<[string, string]> }> = genStyleInfo(cssMap)['0'].rules
-    const find = (suffix: string) => {
-      const rule = rules.find((candidate) => candidate.sel.some((parts) => parts.flat().join('').endsWith(suffix)))
-      expect(rule, `原生序列化产物缺少 ${suffix}`).toBeTruthy()
-      return Object.fromEntries(rule!.decl)
-    }
-    const position = find('.wd-popover__pos')
+  it('Rspeedy 使用的原生样式序列化器保留内容宽度、文字和三角盒模型', async () => {
+    const find = await nativePopoverRules()
+    const position = find('.wd-popover .wd-popover__pos')
     expect(position.width).toBe('max-content')
     expect(position['max-width'].replace(/\s/g, '')).toBe('calc(100vw-24px)')
     expect(position.display).toBe('flex')
-    expect(find('.wd-popover__arrow')['--wot-triangle-arrow-size']).toContain('--wot-popover-arrow-size')
-    expect(find('.wd-popover__arrow-down').bottom.replace(/\s/g, '')).toBe('calc(0px-var(--wot-triangle-arrow-size))')
     const label = find('.wd-popover__label')
     expect(label['white-space']).toBe('normal')
     for (const property of ['color', 'font-size', 'line-height']) expect(label[property]).toBeTruthy()
+    for (const [name, rule] of [['wd-popover', find], ['wd-tooltip', await nativePopoverRules('wd-tooltip')]] as const) {
+      expect(rule(`.${name}__arrow`)['box-sizing']).toBe('content-box')
+      expect(rule(`.${name}__arrow`)['--wot-triangle-arrow-size']).toContain(`--wot-${name.slice(3)}-arrow-size`)
+      expect(rule(`.${name}__arrow-down`).bottom.replace(/\s/g, '')).toBe('calc(0px-var(--wot-triangle-arrow-size))')
+      for (const [direction, side] of [['up', 'bottom'], ['down', 'top'], ['left', 'right'], ['right', 'left']]) {
+        const arrow = rule(`.${name}__arrow-${direction}`)
+        for (const property of ['width', 'style', 'color']) expect(arrow[`border-${side}-${property}`]).toBeTruthy()
+      }
+    }
+  })
+
+  it('原生序列化后默认阴影与层级仍可解析，允许显式覆盖和关闭阴影', async () => {
+    const rule = await nativePopoverRules()
+    const panel = rule('.wd-popover__container')
+    const position = rule('.wd-popover .wd-popover__pos')
+    const shadow = resolveVars(panel['box-shadow'], panel)
+    expect(shadow).not.toBe('none')
+    expect(shadow).toMatch(/rgba?\(/)
+    expect(resolveVars(position['z-index'], position)).toBe('500')
+    expect(Number(resolveVars(position['z-index'], position))).toBeGreaterThan(Number(rule('.wd-popover__backdrop')['z-index']))
+    for (const value of ['none', '0 2px 6px rgba(0, 0, 0, 0.25)']) {
+      expect(resolveVars(panel['box-shadow'], { ...panel, '--wot-popover-box-shadow': value })).toBe(value)
+    }
+    expect(resolveVars(position['z-index'], { ...position, '--wot-popover-z-index': '907' })).toBe('907')
+  })
+
+  it.each(['normal', 'menu'] as const)('%s 的面板有独立实色背景和外框，内容间距直接声明', async (mode) => {
+    stubNativeQuery(() => rect(120, 60))
+    const content = mode === 'normal' ? '普通气泡' : [{ content: '菜单选项' }]
+    const { container } = render(Popover, { modelValue: true, mode, content })
+    await flush()
+    for (const panel of container.querySelectorAll('.wd-popover__container')) {
+      const style = declarations(panel, 'wd-popover')
+      expect(style['background-color']).toContain('--wot-popover-bg')
+      expect(style['border-width']).toBe('1px')
+      expect(style['border-style']).toBe('solid')
+      expect(style['border-color']).toContain('--wot-popover-border-color')
+      expect(style.overflow).not.toBe('hidden')
+      if (mode === 'menu') {
+        const menu = declarations(panel.querySelector('.wd-popover__menu')!, 'wd-popover')
+        const row = declarations(panel.querySelector('.wd-popover__menu-inner')!, 'wd-popover')
+        for (const side of ['left', 'right']) expect(resolveVars(menu[`padding-${side}`], menu)).toBe('12px')
+        for (const side of ['top', 'bottom']) expect(resolveVars(row[`padding-${side}`], row)).toBe('12px')
+      }
+    }
+  })
+
+  it('十二种方位的箭头包含真实描边与填充，亮暗主题及定制颜色保持一致', async () => {
+    stubNativeQuery(() => rect(120, 60))
+    const placement = ref<PlacementType>('bottom')
+    const visibleArrow = ref(true)
+    const { container } = render(defineComponent(() => () => h(Popover, {
+      modelValue: true, content: '带轮廓的气泡', placement: placement.value, visibleArrow: visibleArrow.value
+    })))
+    const themeSheet = postcss.parse(compile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/styles/theme/index.scss')).css)
+    const themes = ['light', 'dark'].map((theme) => {
+      const variables: Record<string, string> = {}
+      themeSheet.walkRules((rule) => {
+        if (rule.selectors.includes(':root') || rule.selectors.includes(`.wot-theme-${theme}`)) {
+          rule.walkDecls((decl) => { variables[decl.prop] = decl.value })
+        }
+      })
+      return variables
+    })
+    themes.push({ '--wot-popover-bg': '#234567', '--wot-popover-border-color': '#abcdef' })
+    for (const [side, direction, border] of [
+      ['top', 'down', 'top'], ['bottom', 'up', 'bottom'], ['left', 'right', 'left'], ['right', 'left', 'right']
+    ]) {
+      for (const alignment of ['', '-start', '-end']) {
+        placement.value = (side + alignment) as PlacementType
+        await flush()
+        const panel = container.querySelector('.wd-transition .wd-popover__container')!
+        const arrow = panel.querySelector(`.wd-popover__arrow-${direction}`)!
+        expect(arrow).not.toBeNull()
+        expect(arrow.getAttribute('user-interaction-enabled')).toBe('false')
+        const fill = arrow.querySelector('.wd-popover__arrow-fill')!
+        expect(fill).not.toBeNull()
+        const panelStyle = declarations(panel, 'wd-popover')
+        const arrowStyle = declarations(arrow, 'wd-popover')
+        const fillStyle = declarations(fill, 'wd-popover')
+        expect(arrowStyle['box-sizing']).toBe('content-box')
+        expect(fillStyle['box-sizing']).toBe('content-box')
+        for (const variables of themes) {
+          const colors = { ...arrowStyle, ...fillStyle, ...variables }
+          expect(resolveVars(arrowStyle[`border-${border}-color`], colors)).toBe(resolveVars(panelStyle['border-color'], variables))
+          expect(resolveVars(fillStyle[`border-${border}-color`], colors)).toBe(resolveVars(panelStyle['background-color'], variables))
+        }
+      }
+    }
+    visibleArrow.value = false
+    await flush()
+    expect(container.querySelector('.wd-transition .wd-popover__arrow')).toBeNull()
+    visibleArrow.value = true
+    await flush()
+    expect(container.querySelectorAll('.wd-transition .wd-popover__arrow-fill')).toHaveLength(1)
   })
 
   it('content 插槽只挂载一份，不在隐藏测量层重复创建可交互内容', async () => {

@@ -7,12 +7,10 @@
  *   会被 vue-lynx 静默丢弃）；
  * - **根节点三件套**（NATIVE-REWRITE §3.1）：display: flex +
  *   flex-direction: column 在 index.scss 显式声明；
- * - **Style Funnel**（CONVENTIONS §20）：rootStyle 的两个可切换键
- *   （背景色 / 高度）经 defineStyleKeys + resolveStyle 每帧输出完整键集，
- *   避免 bgColor 由有值变 transparent 时旧背景残留；
- * - 参考源 safe 变体的 constant(safe-area-inset-bottom) 为旧版 iOS Web 专有
- *   回写，Lynx 不支持 constant()，仅保留 env()（本地弹层组件同款写法）；
- * - 无交互、无事件；安全区数据 Lynx 不提供（未注入 env 时为 0）。
+ * - **Style Funnel**（CONVENTIONS §20）：背景色 / 高度 / 安全区 padding 与
+ *   customStyle 经每元素独立的 createStyleResolver 合并，切换和移除显式复位；
+ * - 安全区来自 useSafeArea：优先宿主窗口 insets（包括 0），未知时才用原生 env()；
+ * - 无交互、无事件；height / bgColor 与 safeAreaBottom 的默认值保持不变。
  */
 <script lang="ts" setup>
 import './index.css'
@@ -20,7 +18,8 @@ import './index.css'
 import { computed } from 'vue-lynx'
 import { gapProps } from './types'
 import { addUnit, isDef, parseStyle, type CSSProperties } from '../../common/util'
-import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { createStyleResolver } from '../../common/style'
+import { useSafeArea } from '../../composables/useSafeArea'
 
 const props = defineProps(gapProps)
 
@@ -29,20 +28,18 @@ const props = defineProps(gapProps)
  * 中性值取「视觉上等同于不设置」：transparent 即无背景；
  * 高度中性值取 prop 默认值（14px）。
  */
-const GAP_STYLE = defineStyleKeys({
+const safeArea = useSafeArea()
+const resolveRootStyle = createStyleResolver({
   'background-color': 'transparent',
-  height: '14px'
+  height: '14px',
+  'padding-bottom': '0px'
 })
 
-const rootStyle = computed<CSSProperties>(() => {
-  return {
-    ...resolveStyle(GAP_STYLE, {
-      'background-color': isDef(props.bgColor) ? props.bgColor : '',
-      height: isDef(props.height) ? addUnit(props.height) : ''
-    }),
-    ...parseStyle(props.customStyle)
-  }
-})
+const rootStyle = computed<CSSProperties>(() => resolveRootStyle({
+  'background-color': isDef(props.bgColor) ? props.bgColor : '',
+  height: isDef(props.height) ? addUnit(props.height) : '',
+  'padding-bottom': props.safeAreaBottom ? safeArea.inset('bottom') : '0px'
+}, parseStyle(props.customStyle)))
 </script>
 
 <template>

@@ -5,7 +5,7 @@
  *
  * 1. **原生能力不依赖宿主注入**：`intersectionObserver` 直接来自
  *    `lynx.createIntersectionObserver`，`videoElement` 来自引擎版本
- *    （SystemInfo.engineVersion ≥ 4），宿主只对真正缺失的能力负责。
+ *    （SystemInfo.engineVersion ≥ 4.1），宿主可覆盖实际元素支持情况。
  * 2. **mock 强制降级**：`mockPlatform()` 必须能**压过**已注册的宿主能力，
  *    而不是简单地「不注册」。
  * 3. **能力真的驱动了组件分支**：`wd-backtop` 的 `pageScroll` 门禁在 mock 下
@@ -17,6 +17,7 @@ import { render, cleanup } from '../render'
 import { pause } from '../../src/common/util'
 import { fireEvent } from '../fire-event'
 import { configureHost } from '../../src/common/host'
+import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
 import { getPlatform, configurePlatform, mockPlatform } from '../../src/common/platform'
 import Backtop from '../../src/components/wd-backtop/wd-backtop.vue'
 import Signature from '../../src/components/wd-signature/wd-signature.vue'
@@ -47,16 +48,9 @@ function installNativeObserver(): () => void {
   return () => { lynx.createIntersectionObserver = original }
 }
 
-/** 引擎版本：Lynx 4.1 起内置 <video> 元素。 */
+/** 用原地修改的原生桩覆盖版本，避免线程切换丢失覆盖。 */
 function installEngineVersion(version: string): () => void {
-  const info = (globalThis as any).SystemInfo
-  const original = info?.engineVersion
-  ;(globalThis as any).SystemInfo = { ...(info || {}), engineVersion: version }
-  return () => {
-    ;(globalThis as any).SystemInfo = original === undefined
-      ? info
-      : { ...(info || {}), engineVersion: original }
-  }
+  return setSystemInfo({ engineVersion: version })
 }
 
 beforeEach(() => {
@@ -66,6 +60,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  restoreNativeStubs()
   resetHost()
 })
 
@@ -85,13 +80,36 @@ describe('平台能力探测', () => {
     restoreObserver()
   })
 
-  it('引擎版本 ≥ 4 时 videoElement 为真；宿主可显式覆盖', () => {
-    const restoreVersion = installEngineVersion('4.2.0')
-    expect(getPlatform().capabilities.videoElement).toBe(true)
+  it.each([
+    ['3.9.0', false], ['4', false], ['4.0', false], ['4.0.99', false],
+    ['4.1', true], ['4.1.0', true], ['4.2.0', true], ['4.10.0', true], ['5.0.0', true],
+    ['', false], ['unknown', false], ['4.invalid', false], ['4.1garbage', false]
+  ])('videoElement 的 4.1 版本边界：%s → %s', (version, supported) => {
+    installEngineVersion(version as string)
+    expect(getPlatform().capabilities.videoElement).toBe(supported)
+  })
 
+  it('版本缺失时可读 lynxSdkVersion，但不以较新的备用字段绕过实际 4.0 引擎', () => {
+    setSystemInfo({ engineVersion: '', lynxSdkVersion: '4.1.0' })
+    expect(getPlatform().capabilities.videoElement).toBe(true)
+    setSystemInfo({ engineVersion: '4.0.0' })
+    expect(getPlatform().capabilities.videoElement).toBe(false)
+  })
+
+  it('宿主可按真实注册情况覆盖版本，迟注册与撤销不缓存', () => {
+    installEngineVersion('4.0.0')
+    const { capabilities } = getPlatform()
+    expect(capabilities.videoElement).toBe(false)
+    configureHost({ supportsVideoElement: () => true })
+    expect(capabilities.videoElement).toBe(true)
+    configureHost({})
+    expect(capabilities.videoElement).toBe(false)
+    installEngineVersion('4.2.0')
+    expect(capabilities.videoElement).toBe(true)
     configureHost({ supportsVideoElement: () => false })
-    expect(getPlatform().capabilities.videoElement, '宿主显式关闭优先于版本探测').toBe(false)
-    restoreVersion()
+    expect(capabilities.videoElement).toBe(false)
+    configureHost({ supportsVideoElement: () => { throw new Error('element registry unavailable') } })
+    expect(capabilities.videoElement).toBe(false)
   })
 
   it('canvas2d 要求两个宿主 API 同时存在（缺一即为 false）', () => {

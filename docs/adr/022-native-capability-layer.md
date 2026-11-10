@@ -51,10 +51,12 @@ ADR-005 / ADR-015 时期，本库的做法是：把所有平台调用都收拢�
 
 ```ts
 intersectionObserver  // typeof lynx.createIntersectionObserver === 'function'
-videoElement          // SystemInfo.engineVersion >= 4，或宿主 supportsVideoElement()
+videoElement          // SystemInfo.engineVersion >= 4.1（比较主次版本），或宿主 supportsVideoElement()
 canvas2d              // 宿主 createCanvasContext + canvasToTempFilePath 同时存在
 pageScroll            // 宿主 pageScrollTo 存在
 ```
+
+> **2026-11-10 修订：video 最低版本必须是 4.1。** [官方 video 契约](https://lynxjs.org/api/elements/built-in/video.md)将 Android/iOS/Harmony 的加入版本标为 4.1（实验性）。此前代码只比较主版本 `>= 4`，误放行 4.0，可能导致节点创建失败以及后续 60301/未知签名移除错误。现在比较主次版本，缺失或非法版本保守降级；宿主显式 `supportsVideoElement()` 仍优先。该方法只是对真实原生注册的声明，返回 `true` 不会凭空安装播放器；4.0 宿主必须升级或实际接入兼容的 `video` 实现，不能把封面占位视为播放成功。
 
 `mockPlatform()` 保留：它是唯一能强制关闭引擎能力的测试钩子，用来覆盖降级分支。
 
@@ -93,7 +95,8 @@ pageScroll            // 宿主 pageScrollTo 存在
   `configureHost`）。语义上等价，但签名不同。
 - 宿主没注册能力时**不再静默成功**：路由只 emit `navigate`，上传回调
   `chooseerror`，canvas 导出返回 `imgloaderror`。
-- `SystemInfo` 的安全区、窗口尺寸完全由引擎提供，测试里必须显式桩。
+- **2026-11-10 修订：窗口与安全区不是标准 `SystemInfo` 保证字段。** [官方契约](https://lynxjs.org/api/lynx-api/global/system-info.md)只保证屏幕像素、比例及平台等信息。应用通过未加 padding 的根布局声明实际视口；宿主可经 `WotLynxHost.getSafeAreaInsets()` 返回当前 LynxView 内剩余的四边逻辑 px，已避让返回显式 `0`。已有 `SystemInfo.safeAreaInsets` / 屏幕坐标 `safeArea` 仍可读取，后者必须与当前窗口求交。
+- 未上报的安全区不能当作设备无需避让：原生 CSS 支持裸 `env(safe-area-inset-*)`，但 iOS 的值来自窗口级初始化，Android 未必填充，不能据此保证所有 Explorer 版本正确。普通按钮间距独立于安全区补偿，测试区分未知与明确的零值；真机验证另行执行。这是既有宿主桥的可选几何能力，不恢复 uni 兼容层。
 
 ## 推翻条件
 

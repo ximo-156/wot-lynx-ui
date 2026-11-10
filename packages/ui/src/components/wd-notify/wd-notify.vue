@@ -187,6 +187,7 @@ defineExpose({ showNotify, closeNotify })
     :responsive="false"
     :custom-style="popupStyle"
     :position="state.position"
+    :safe-area-inset-top="state.position !== 'top' || !(Number(state.safeHeight) > 0)"
     :z-index="state.zIndex"
     :modal="false"
     :lock-scroll="false"

@@ -20,6 +20,7 @@
 
 import { getNativeModule, getJSModule } from './native'
 import { getNativeMediaPickerHost, supplementMediaPicker } from './nativeMediaPicker'
+import type { SafeAreaInsets } from './safe-area'
 
 /** 宿主返回的矩形。 */
 export interface HostRect {
@@ -86,7 +87,13 @@ export interface WotLynxHost {
   canvasToTempFilePath?: (options: any, scope?: any) => any
 
   // --- 视口 ---------------------------------------------------------------
-  /** 窗口尺寸变化回调（Lynx Web 之外没有该事件）。 */
+  /**
+   * 当前 LynxView 内仍需避让的安全区，单位为逻辑 px；已经避让的边返回 0。
+   * iOS 取视图 safeAreaInsets，Android 取系统栏/刘海 WindowInsets 与视图的交集。
+   * 可返回部分边；未提供的边继续读取 SystemInfo / CSS 环境值。
+   */
+  getSafeAreaInsets?: () => Partial<SafeAreaInsets> | null
+  /** 窗口或系统栏变化回调；安全区变化但宽高未变时也应通知。 */
   onWindowResize?: (callback: (size: any) => void) => void
   offWindowResize?: (callback: (size: any) => void) => void
 
@@ -97,6 +104,18 @@ export interface WotLynxHost {
 
 /** 显式注入的能力（优先级最高）。 */
 let injectedHost: WotLynxHost | null = null
+const hostChangeListeners = new Set<() => void>()
+// Media supplementation must not manufacture a new event-source identity on every read.
+const supplementedHosts = new WeakMap<WotLynxHost, {
+  media: NonNullable<ReturnType<typeof getNativeMediaPickerHost>>
+  facade: WotLynxHost
+}>()
+
+/** @internal React to late registration/replacement without caching a setup snapshot. */
+export function subscribeHostChange(callback: () => void): () => void {
+  hostChangeListeners.add(callback)
+  return () => { hostChangeListeners.delete(callback) }
+}
 
 /**
  * 注入宿主能力。
@@ -104,7 +123,11 @@ let injectedHost: WotLynxHost | null = null
  * @param host 能力集合；传 `null` 表示撤回显式注入（回到 Native Module 探测）。
  */
 export function configureHost(host: WotLynxHost | null): void {
+  if (injectedHost === host) return
   injectedHost = host
+  for (const notify of [...hostChangeListeners]) {
+    if (hostChangeListeners.has(notify)) notify()
+  }
 }
 
 /** 取当前宿主能力（稳定实例，能力读取实时）。 */
@@ -113,8 +136,19 @@ export function getHost(): WotLynxHost {
   const host = readModule('WotLynxUI') || readModule('WotLynxUIHost')
   if (host && typeof host.chooseMedia === 'function') return host
   const media = getNativeMediaPickerHost()
-  if (media) return host ? supplementMediaPicker(host, media) : media
-  return host || {}
+  if (media && host) {
+    let record = supplementedHosts.get(host)
+    if (!record) {
+      const created = { media, facade: host }
+      created.facade = supplementMediaPicker(host, { chooseMedia: (options) => created.media.chooseMedia(options) })
+      supplementedHosts.set(host, created)
+      record = created
+    }
+    // Keep late native media registration live without replacing the host facade.
+    record.media = media
+    return record.facade
+  }
+  return media || host || {}
 }
 
 function readModule(name: string): WotLynxHost | null {

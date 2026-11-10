@@ -87,7 +87,7 @@ onUnmounted(() => abort())
 
 const showUpload = computed(() => !props.limit || uploadFiles.value.length < props.limit)
 /** 引擎是否提供原生 video 元素（Lynx 4.1+；未注册 XElement 时降级为文件占位）。 */
-const canUseVideo = computed(() => getPlatform().capabilities.videoElement)
+const platformCapabilities = getPlatform().capabilities
 
 const videoPreviewId = ref<string>(`videoPreview${uuid()}`)
 const { previewVideo } = useVideoPreview(videoPreviewId.value)
@@ -542,7 +542,7 @@ function resolveIconName(name: string) {
             <image :src="file.thumb" :mode="imageMode" class="wd-upload__picture" />
             <WdIcon :name="resolveIconName('play-circle-fill')" custom-class="wd-upload__video-play"></WdIcon>
           </view>
-          <view v-else-if="canUseVideo" class="wd-upload__video" @tap="onPreviewVideo(file)">
+          <view v-else-if="platformCapabilities.videoElement" class="wd-upload__video" @tap="onPreviewVideo(file)">
             <!-- Lynx 原生 video 元素：只保留引擎支持的属性（src / object-fit），
                  播放控制由原生 UIMethod 提供，没有 poster / controls 等小程序属性 -->
             <video

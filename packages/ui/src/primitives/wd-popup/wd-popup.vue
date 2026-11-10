@@ -13,9 +13,9 @@
  * - 遮罩点击：wd-overlay 把 transition 根 view 的引擎原生 tap 重新 emit 为
  *   click 与 tap（Lynx view 不派发 click，只派发 tap，CONVENTIONS §14），
  *   此处绑 @click 与 wot-ui API 对齐；
- * - safeAreaInsetBottom：优先使用宿主 safeAreaInsets.bottom；只有 safeArea
- *   矩形时按当前窗口底边与安全区底边计算，避免视口已避让时重复加高。
- *   无有效安全区数据回落 0，不把零占位矩形当作整屏安全距离。
+ * - 安全区由 useSafeArea 统一处理：宿主显式窗口 inset（含 0）优先，
+ *   屏幕 safeArea 矩形与当前窗口求交；缺失时由原生 env() 求值。
+ *   顶部避让在 harness 上，底部留白在面板内；最大高度扣除顶部安全区。
  * - 定位拆两层（真机 2026-11-05 修复，详见 HARNESS_STYLE 注释）：
  *   harness 负责「摆到视口的哪一侧」，面板负责「长什么样 + 播过渡动画」。
  *   内联样式为对象，createStyleResolver 每帧补全定位/宽高/安全区及曾使用的
@@ -39,10 +39,11 @@ import WdRootPortal from '../wd-root-portal/wd-root-portal.vue'
 import WdIcon from '../wd-icon/wd-icon.vue'
 import { popupProps, type PopupType } from './types'
 import type { TransitionName } from '../wd-transition/types'
-import { getSystemInfo, parseStyle } from '../../common/util'
+import { parseStyle } from '../../common/util'
 import { createStyleResolver, defineStyleKeys } from '../../common/style'
 import { SCROLL_LOCK_OWNER_KEY, useLockScroll } from '../../composables/useLockScroll'
-import { useIsWideViewport, useViewportSize } from '../../composables/useWideViewport'
+import { useIsWideViewport } from '../../composables/useWideViewport'
+import { useSafeArea } from '../../composables/useSafeArea'
 
 const props = defineProps(popupProps)
 const emit = defineEmits([
@@ -92,12 +93,11 @@ useLockScroll(() => props.lockScroll && inPlace.value, scrollLockOwner)
 
 // 父层必须与弹窗同层；固定为 0 会把整个 fixed 面板压在背景滚轮的 z-index 下。
 const wrapperStyle = computed(() => ({ position: 'relative' as const, 'z-index': String(props.zIndex) }))
-const safeBottom = ref(0)
 /**
- * 视口尺寸：浏览器端随窗口 `resize` 实时更新（Web 端拖动窗口时，Sheet 的
- * 宽度与遮罩尺寸要跟着变，否则会停在打开那一刻的版式），原生端为宿主尺寸。
+ * 视口尺寸随宿主刷新；Demo 由未加 padding 的根节点 layoutchange 提供真实尺寸。
+ * SystemInfo 的屏幕高度不能替代已扣除系统栏的 LynxView 高度。
  */
-const { width: viewportWidth, height: viewportHeight, refresh: refreshViewport } = useViewportSize()
+const { width: viewportWidth, height: viewportHeight, refresh: refreshViewport, inset, remaining } = useSafeArea()
 const isWide = useIsWideViewport(viewportWidth)
 const responsiveSheet = computed(() => props.responsive && isWide.value && props.position === 'bottom')
 const resolvedPosition = computed<PopupType>(() => responsiveSheet.value ? 'center' : props.position)
@@ -149,6 +149,7 @@ const HARNESS_STYLE = defineStyleKeys({
   width: '100%',
   height: '100%',
   'box-sizing': 'border-box',
+  'padding-top': '0px',
   display: 'flex',
   'flex-direction': 'column',
   // 交叉轴恒为居中：贴边弹层的面板宽度/高度按窗口像素显式下发（下方
@@ -186,7 +187,8 @@ const harnessStyle = computed(() => resolveHarnessStyle(
     'z-index': String(props.zIndex),
     // 真机不认「四边 0 + flex」的尺寸推导，宽高按窗口尺寸显式下发
     width: `${viewportWidth.value}px`,
-    height: `${viewportHeight.value}px`
+    height: `${viewportHeight.value}px`,
+    'padding-top': props.safeAreaInsetTop ? inset('top') : '0px'
   }
 ))
 
@@ -249,21 +251,22 @@ const sheetWidth = computed(() => props.responsive && isWide.value
   : viewportWidth.value)
 
 const style = computed(() => {
+  const margin = props.responsive && isWide.value && resolvedPosition.value === 'center' ? 48 : 0
+  const availableHeight = remaining(viewportHeight.value - margin, props.safeAreaInsetTop ? ['top'] : [])
   const size: Record<string, string> = responsiveSheet.value
     ? { width: `${sheetWidth.value}px`, height: 'auto' }
     : resolvedPosition.value === 'top' || resolvedPosition.value === 'bottom'
       ? { width: `${sheetWidth.value}px`, height: 'auto' }
       : resolvedPosition.value === 'left' || resolvedPosition.value === 'right'
-        ? { width: 'auto', height: `${viewportHeight.value}px` }
+        ? { width: 'auto', height: availableHeight }
         : { width: 'auto', height: 'auto' }
-  const margin = props.responsive && isWide.value && resolvedPosition.value === 'center' ? 48 : 0
   return resolvePopupStyle(
     size,
     {
       'z-index': String(props.zIndex),
-      'padding-bottom': `${safeBottom.value}px`,
+      'padding-bottom': props.safeAreaInsetBottom && !responsiveSheet.value ? inset('bottom') : '0px',
       'max-width': `${Math.max(1, viewportWidth.value - margin)}px`,
-      'max-height': `${Math.max(1, viewportHeight.value - margin)}px`
+      'max-height': availableHeight
     },
     parseStyle(props.customStyle)
   )
@@ -282,19 +285,11 @@ const rootClass = computed(() => {
   return classes.filter(Boolean).join(' ')
 })
 
-watch(() => props.modelValue, refreshViewport, { flush: 'sync' })
-watch([() => props.modelValue, () => props.safeAreaInsetBottom, () => resolvedPosition.value, viewportHeight], () => {
-  const info = getSystemInfo()
-  const inset = info.safeAreaInsets?.bottom
-  const areaBottom = Number(info.safeArea?.bottom)
-  const viewportBottom = info.windowTop + info.windowHeight
-  const bottom = inset != null && Number.isFinite(Number(inset))
-    ? Number(inset)
-    : Number.isFinite(areaBottom) && areaBottom > 0 ? viewportBottom - areaBottom : 0
-  safeBottom.value = props.safeAreaInsetBottom && !responsiveSheet.value
-    ? Math.min(info.windowHeight, Math.max(0, bottom))
-    : 0
-}, { immediate: true, flush: 'sync' })
+watch(
+  [() => props.modelValue, () => props.safeAreaInsetTop, () => props.safeAreaInsetBottom, () => resolvedPosition.value],
+  refreshViewport,
+  { flush: 'sync' }
+)
 
 function handleAfterLeave() {
   if (!props.modelValue) inPlace.value = false

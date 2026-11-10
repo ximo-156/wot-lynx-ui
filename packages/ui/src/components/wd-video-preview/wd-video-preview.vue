@@ -2,19 +2,16 @@
  * wd-video-preview — 视频预览
  *
  * Lynx 原生实现说明（ADR-022）：
- * - 统一 WdOverlay 弹层模式，ref.open 与 useVideoPreview 共用单次选项通道。
- * - 播放走引擎原生 UIMethod（SelectorQuery.invoke('play' / 'pause')），
- *   不再需要宿主注入 createVideoContext；
- * - video 元素 为 Lynx 4.1+ 内置 XElement：宿主未注册（capabilities.videoElement
- *   为 false）时降级为封面 + 播放图标占位，避免创建节点抛引擎级 990200 / 60301；
- * - Lynx 的 video 没有 poster / autoplay / controls 属性：封面用 image> 叠加，
- *   播放按钮由组件自己渲染并调用原生 play；
- * - tap 防冒泡；进入后挂载 video，离场完成且未重新打开才清除媒体资源。
+ * - 原生 video 从 Lynx 4.1 才支持，低版本/未注册宿主不创建节点。
+ * - 播放走 SelectorQuery UIMethod，界面状态以原生事件为准，不伪造成功。
+ * - 封面在首帧事件后撤掉；调用失败与媒体错误提供可重试的可见反馈。
+ * - 每次打开独立媒体代次，关闭/换片/卸载停止旧播放器并失效迟到回调。
+ * - fullScreen 仅铺满预览层（并自动播放），不模拟宿主横屏/系统全屏 API。
  */
 <script lang="ts" setup>
 import './index.css'
 
-import { computed, getCurrentInstance, inject, nextTick, reactive, ref, watch } from 'vue-lynx'
+import { computed, getCurrentInstance, inject, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue-lynx'
 import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import WdOverlay from '../../primitives/wd-overlay/wd-overlay.vue'
 import { videoPreviewProps, type PreviewVideo, type VideoPreviewExpose, type VideoPreviewOptions } from './types'
@@ -28,44 +25,65 @@ const props = defineProps(videoPreviewProps)
 const emit = defineEmits<{ open: []; close: []; tap: [event: any] }>()
 const isAlive = useAlive()
 const instance = getCurrentInstance()!
+let disposed = false
 let videoRequest = 0
-const state = reactive({ show: false, visible: false, playing: false })
+let commandRequest = 0
+let mountedVideoId = ''
+const state = reactive({ show: false, visible: false, playing: false, hasFrame: false, error: '' })
+const pendingPlay = ref<boolean | null>(null)
 const previewVideo = reactive<PreviewVideo>({ url: '', poster: '', title: '' })
 const requestOptions = ref<Partial<VideoPreviewOptions>>({})
-const videoId = `wd-video-preview-${uuid()}`
+const mediaGeneration = ref(0)
+const videoIdPrefix = `wd-video-preview-${uuid()}`
+const videoId = computed(() => `${videoIdPrefix}-${mediaGeneration.value}`)
 const videoPreviewOption = inject(getVideoPreviewOptionKey(props.selector), ref<Partial<VideoPreviewOptions>>({}))
 const options = computed(() => {
   const overrides = Object.fromEntries(Object.entries(requestOptions.value).filter(([, value]) => isDef(value)))
   return { ...props, ...overrides } as typeof props & Partial<VideoPreviewOptions>
 })
-/**
- * video 元素 是 Lynx 的 XElement：宿主引擎未注册 video 原生组件时创建节点直接抛
- * 990200「No BehaviorController defined for class video」，后续属性更新再抛
- * 60301「Can't find ui tag」（真机 2026-10-25）。能力判定改为原生版本探测
- * （SystemInfo.engineVersion ≥ 4.1），宿主可显式覆盖。
- */
-const canPlayVideo = computed(() => getPlatform().capabilities.videoElement)
+// 能力 getter 不是响应式依赖，不能包进无依赖的 computed 永久缓存。
+// 每次渲染/打开/操作重新读，后注册或撤销的宿主能力才能生效。
+function canPlayVideo() {
+  return getPlatform().capabilities.videoElement
+}
 const videoClass = computed(() => ['wd-video-preview__video', options.value.fullScreen ? 'is-fullscreen' : ''])
 const closeClass = computed(() => ['wd-video-preview__close', `is-${options.value.closePosition}`])
 
+function isLive() {
+  return !disposed && isAlive()
+}
+
+function stopPlayer() {
+  const id = mountedVideoId
+  mountedVideoId = ''
+  if (id && canPlayVideo()) invokeNative(`#${id}`, 'stop')
+}
+
 function reset(option: Partial<VideoPreviewOptions>) {
-  if (!isAlive()) return
+  if (!isLive()) return
   if (!option.show) {
     close()
     return
   }
-  const alreadyOpen = state.show
   ++videoRequest
+  ++commandRequest
+  stopPlayer()
+  ++mediaGeneration.value
+  state.playing = false
+  state.hasFrame = false
+  state.error = ''
+  pendingPlay.value = null
   requestOptions.value = { ...option }
   previewVideo.url = option.url || ''
   previewVideo.poster = option.poster || ''
   previewVideo.title = option.title || ''
   state.show = true
-  if (alreadyOpen && state.visible) enterFullScreen()
+  // 正在展示或退场中重开时，没有必要等下一次 enter；preparePlayer 会去重。
+  if (state.visible) preparePlayer()
 }
 
 watch(() => state.show, (show, previous) => {
-  if (!isAlive() || show === previous) return
+  if (!isLive() || show === previous) return
   if (show) emit('open')
   else emit('close')
   const raw = instance.vnode.props || {}
@@ -76,51 +94,112 @@ watch(() => state.show, (show, previous) => {
 watch(() => videoPreviewOption.value, reset, { deep: true, immediate: true })
 
 function handleEnter() {
-  if (!isAlive() || !state.show) return
+  if (!isLive() || !state.show) return
   state.visible = true
-  enterFullScreen()
+  preparePlayer()
 }
-function enterFullScreen() {
-  // Lynx 的 video 元素没有 requestFullScreen UIMethod：全屏由宿主能力提供，
-  // 宿主未提供时保持原尺寸（不伪造全屏）。
-  if (!options.value.fullScreen || !canPlayVideo.value) return
+function preparePlayer() {
   const request = videoRequest
   nextTick(() => {
-    if (!isAlive() || !state.show || !options.value.fullScreen || request !== videoRequest) return
-    invokeNative(`#${videoId}`, 'play')
+    if (!isLive() || !state.show || !state.visible || !previewVideo.url || request !== videoRequest || !canPlayVideo()) return
+    if (mountedVideoId === videoId.value) return
+    mountedVideoId = videoId.value
+    if (options.value.fullScreen) requestPlayback(true)
   })
 }
 
-/** 播放 / 暂停：原生 UIMethod 直接命令引擎里的 video 节点。 */
-function togglePlay() {
-  if (!isAlive() || !state.visible || !canPlayVideo.value) return
-  if (state.playing) {
-    invokeNative(`#${videoId}`, 'pause')
-    state.playing = false
-  } else {
-    invokeNative(`#${videoId}`, 'play')
-    state.playing = true
-  }
+function reportFailure(result: any, play = true) {
+  pendingPlay.value = null
+  const detail = result?.detail || result
+  const reason = detail?.errorMsg || detail?.msg || detail?.data
+  state.error = `${play ? '视频播放' : '暂停'}失败，请点击重试${typeof reason === 'string' && reason ? `：${reason}` : ''}`
 }
 
+function requestPlayback(play: boolean) {
+  if (!isLive() || !state.show || !state.visible || !mountedVideoId || !canPlayVideo()) return
+  const request = videoRequest
+  const command = ++commandRequest
+  const isCurrent = () => isLive() && state.show && request === videoRequest && command === commandRequest
+  state.error = ''
+  pendingPlay.value = play
+  const fail = (result?: any) => {
+    if (isCurrent()) reportFailure(result, play)
+  }
+  const invoked = invokeNative(`#${mountedVideoId}`, play ? 'play' : 'pause', undefined, {
+    // 原生某些平台通过 success 回传 { success: false }，同样是失败。
+    success: (result) => { if (result?.success === false) fail(result) },
+    fail
+  })
+  if (!invoked) fail()
+}
+
+function togglePlay() {
+  requestPlayback(!(pendingPlay.value ?? state.playing))
+}
+
+// 事件闭包绑定媒体代次，而非复用读取“当前 src”的函数，防止旧媒体事件污染新片。
+const videoEvents = computed(() => {
+  const generation = mediaGeneration.value
+  const isCurrent = () => isLive() && state.show && generation === mediaGeneration.value
+  const paused = () => {
+    if (!isCurrent()) return
+    state.playing = false
+    pendingPlay.value = null
+  }
+  return {
+    firstframe: () => {
+      if (isCurrent()) state.hasFrame = true
+    },
+    playing: () => {
+      if (!isCurrent()) return
+      state.playing = true
+      pendingPlay.value = null
+      state.error = ''
+    },
+    paused,
+    ended: paused,
+    stopped: paused,
+    error: (event: any) => {
+      if (!isCurrent()) return
+      ++commandRequest
+      state.playing = false
+      state.hasFrame = false
+      reportFailure(event)
+    }
+  }
+})
+
 function handleAfterLeave() {
-  if (isAlive() && state.show) return
+  if (!isLive() || state.show) return
   state.visible = false
   state.playing = false
+  state.hasFrame = false
+  state.error = ''
   previewVideo.url = ''
   previewVideo.poster = ''
   previewVideo.title = ''
 }
 
 function close() {
-  if (!isAlive()) return
+  if (!isLive()) return
   ++videoRequest
+  ++commandRequest
+  stopPlayer()
+  pendingPlay.value = null
+  state.playing = false
   state.show = false
 }
 
 function open(video: VideoPreviewOptions) {
   reset({ ...video, show: true })
 }
+
+onBeforeUnmount(() => {
+  disposed = true
+  ++videoRequest
+  ++commandRequest
+  stopPlayer()
+})
 
 function noop() {}
 
@@ -140,33 +219,39 @@ defineExpose<VideoPreviewExpose>({ open, close })
     @after-leave="handleAfterLeave"
   >
     <view :class="videoClass" @tap.stop="noop">
-      <!-- 封面：Lynx 的 video 没有 poster 属性，封面由 <image> 叠加承载 -->
-      <image v-if="previewVideo.poster" class="wd-video-preview__poster" :src="previewVideo.poster" />
       <video
-        v-if="state.visible && previewVideo.url && canPlayVideo"
+        v-if="state.visible && previewVideo.url && canPlayVideo()"
+        :key="videoId"
         :id="videoId"
         class="wd-video-preview__video-player"
         :src="previewVideo.url"
         object-fit="contain"
-        @playing="state.playing = true"
-        @paused="state.playing = false"
-        @ended="state.playing = false"
+        mode="latest"
+        @firstframe="videoEvents.firstframe"
+        @playing="videoEvents.playing"
+        @paused="videoEvents.paused"
+        @ended="videoEvents.ended"
+        @stopped="videoEvents.stopped"
+        @error="videoEvents.error"
       />
+      <!-- video 没有 poster 属性；首帧抵达后撤封面，不能一直遮着视频。 -->
+      <image v-if="previewVideo.poster && !state.hasFrame && canPlayVideo()" class="wd-video-preview__poster" :src="previewVideo.poster" />
       <view
-        v-if="state.visible && previewVideo.url && canPlayVideo"
-        class="wd-video-preview__control"
+        v-if="state.visible && previewVideo.url && canPlayVideo()"
+        :class="['wd-video-preview__control', { 'is-playing': state.playing }]"
+        :accessibility-label="state.playing ? '暂停视频' : '播放视频'"
         @tap.stop="togglePlay"
       >
         <WdIcon :name="state.playing ? 'pause' : 'play'" custom-class="wd-video-preview__control-icon" />
       </view>
-      <!-- 引擎没有 video 元素时的降级占位：封面铺满 + 播放图标，不再创建 video 元素 节点 -->
-      <view v-if="state.visible && previewVideo.url && !canPlayVideo" class="wd-video-preview__fallback">
+      <view v-if="state.visible && (!previewVideo.url || !canPlayVideo())" class="wd-video-preview__fallback">
         <image v-if="previewVideo.poster" class="wd-video-preview__fallback-poster" :src="previewVideo.poster" />
         <view class="wd-video-preview__fallback-hint">
-          <WdIcon name="play" custom-class="wd-video-preview__fallback-icon" />
+          <text class="wd-video-preview__fallback-text">{{ previewVideo.url ? '当前宿主不支持视频播放，请使用支持 video 的 Lynx 4.1+ 宿主或接入兼容的原生播放器' : '未提供视频地址' }}</text>
         </view>
       </view>
-      <text v-if="previewVideo.title" class="wd-video-preview__title">{{ previewVideo.title }}</text>
+      <text v-if="state.error" class="wd-video-preview__error" :user-interaction-enabled="false">{{ state.error }}</text>
+      <text v-if="previewVideo.title" class="wd-video-preview__title" :user-interaction-enabled="false">{{ previewVideo.title }}</text>
     </view>
     <view :class="closeClass" @tap.stop="close">
       <WdIcon name="close" custom-class="wd-video-preview__close-icon" />

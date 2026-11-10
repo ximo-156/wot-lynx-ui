@@ -69,12 +69,15 @@ function detectName(): PlatformName {
   return 'lynx'
 }
 
-/** 引擎版本号（Lynx 4.1 起内置 `<video>` 元素）。 */
-function engineMajorVersion(): number {
+/** 原生 video 从 4.1 才加入，不能仅比较主版本号而放行 4.0。 */
+function engineSupportsVideo(): boolean {
   const info = (globalThis as any).SystemInfo || {}
-  const raw = String(info.engineVersion || info.lynxSdkVersion || '')
-  const major = Number.parseInt(raw.split('.')[0], 10)
-  return Number.isFinite(major) ? major : 0
+  const raw = String(info.engineVersion || info.lynxSdkVersion || '').trim()
+  const version = /^(\d+)\.(\d+)(?:\.\d+)?(?:[-+][\w.-]+)?$/.exec(raw)
+  if (!version) return false
+  const major = Number(version[1])
+  const minor = Number(version[2])
+  return Number.isSafeInteger(major) && Number.isSafeInteger(minor) && (major > 4 || (major === 4 && minor >= 1))
 }
 
 function readCapability(key: keyof PlatformCapabilities): boolean {
@@ -92,7 +95,7 @@ function readCapability(key: keyof PlatformCapabilities): boolean {
           return false
         }
       }
-      return engineMajorVersion() >= 4
+      return engineSupportsVideo()
     }
     case 'canvas2d': {
       const host = getHost()

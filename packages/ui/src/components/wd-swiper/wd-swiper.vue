@@ -58,7 +58,7 @@ const shouldAutoplay = computed(() => props.autoplay && !videoPlaying.value && p
  * 引擎是否提供原生 <video> 元素（Lynx 4.1+；宿主未注册 XElement 时为 false）。
  * 没有该元素时创建节点会抛引擎错误，因此视频项降级为封面图。
  */
-const canUseVideo = computed(() => getPlatform().capabilities.videoElement)
+const platformCapabilities = getPlatform().capabilities
 
 function normalizeCurrent(value: number): number {
   const count = props.list.length
@@ -235,7 +235,7 @@ async function measure() {
   })
   startAutoplay()
   // 原生 video 没有 autoplay 属性：挂载后对当前视频项下发 play UIMethod。
-  if (props.autoplayVideo && canUseVideo.value && itemCount.value > 0 && isVideo(props.list[currentValue.value])) {
+  if (props.autoplayVideo && platformCapabilities.videoElement && itemCount.value > 0 && isVideo(props.list[currentValue.value])) {
     void nextTick(() => {
       if (isAlive()) invokeNative(`#video-${currentValue.value}-${uid}`, 'play')
     })
@@ -331,7 +331,7 @@ function handleLongPress(index: number, item: string | SwiperItem) {
           <slot :item="item" :index="index">
             <template v-if="isVideo(item)">
               <video
-                v-if="canUseVideo"
+                v-if="platformCapabilities.videoElement"
                 :id="`video-${index}-${uid}`"
                 :style="mediaStyle"
                 :src="isObj(item) ? item[valueKey] : item"

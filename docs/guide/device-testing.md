@@ -64,7 +64,28 @@ pnpm dev:device-test
 
 亮/暗切换在页面头部，两种模式都生效——组件目录页同样需要验暗色令牌，不必为了切主题退回交互验收。
 
-页面首屏构建标记为 **`R19 · 106 组件逐页验收`**。重新打开手机页面确认标记，避免仍在测旧 bundle。
+页面首屏构建标记为 **`R20 · iOS / Android 上下安全区`**。重新打开手机页面确认标记，避免仍在测旧 bundle。
+
+### R20：上下安全区与日历确认按钮留白
+
+- 主 Demo 和真机清单都从**未加 padding 的根节点**读取原生 `layoutchange`，将实际 LynxView 宽高交给共享视口。屏幕高不再被无条件当作弹层高；页面上下普通间距叠加安全区，但不会用减去 padding 的内容尺寸反复缩小视口。
+- Popup 默认避让顶部安全区（`safeAreaInsetTop=false` 可关闭），其最大高度同步扣除顶部距离；`safeAreaInsetBottom` 保留原默认值和显式关闭语义。日历、Picker、键盘等已有底部开关的弹层复用同一来源；Notify 已有手动 `safeHeight` 时不重复加顶部。
+- 日历确认行上下保留 **16px 普通 UI 间距**，底部系统安全区由 Popup 单独追加。16px 不是任何机型的手势区高度，关闭系统补偿也不会删除普通按钮间距。
+- 首屏额外显示实际视口和安全区来源。显示“原生 env（宿主未上报数值）”表示**仍未知**，不是测出了零安全区。
+
+**宿主几何契约**：`WotLynxHost.getSafeAreaInsets()` 可同步返回最近一次原生布局得到的 `{ top, right, bottom, left }` 快照（四边均为逻辑 px，可部分返回）。iOS 取已经挂载的目标 LynxView 的 `safeAreaInsets`；Android 取目标视图的系统栏／刘海 `WindowInsets`，除以 density，并扣除宿主已消费的部分。已完全避让的边必须明确返回 `0`，不应返回整个屏幕的 inset。系统栏或旋转更新快照后，通过已有 `onWindowResize` 回调通知；即使宽高没有变化也要通知。库支持通过 `configureHost`、原生模块或 JS 模块接入，不在组件内探测宿主全局。
+
+已有 `SystemInfo.safeAreaInsets` 视为视口相对值；旧 `safeArea` 矩形视为屏幕坐标，必须同时提供正确的窗口原点/尺寸，以计算剩余交集。`getSystemInfo` 的 `windowTopKnown/windowLeftKnown` 区分真实原点与兼容默认零；缺失原点时不将矩形换算为“精确 inset”。[官方 SystemInfo](https://lynxjs.org/api/lynx-api/global/system-info.md) 本身不保证这些字段。缺失时使用裸 `env(safe-area-inset-*)`，不用原生不支持的逗号 fallback；[原生求值实现](https://github.com/lynx-family/lynx/blob/a57f701cc91da83314ef3b9de0688a1519eafe1e/core/renderer/css/css_style_utils.cc)并不意味着两端宿主都提供了正确数值。
+
+**限制必须实测**：iOS 环境值可能是窗口级而不是当前 LynxView 的剩余距离；Android Explorer 未必向 CSS 填充系统 inset。缺失真实上报时，普通留白和 env 只能渐进改善，不能保证所有全面屏／三键导航设备都已避让。不要按机型或屏幕比例猜数值；Android 全屏仍被系统栏遮挡时，需要接入真实 WindowInsets，或在宿主已避让的非 fullscreen 模式下复验。
+
+**真机复验（Android / iOS 都执行）**：
+
+1. 确认 **R20**；记录手机型号、Explorer/SDK 版本、屏幕与实际视口、顶部/底部来源。
+2. 打开 Calendar：确认按钮完整、可点击，下方普通留白存在；有手势区时还应有对应系统补偿。确认、取消、重开均不累加距离。
+3. 检查顶部 Popup / Notify / Navbar 不进入状态栏或刘海，底部 Picker / Keyboard / Tabbar / SubmitBar 不被系统导航区遮住。
+4. 覆盖 fullscreen 与宿主已避让模式，后者返回明确 `0` 时不得再次加入系统距离；普通 UI padding 仍保留。
+5. 两端冷启动与横竖屏切换；Android 再切换手势／三键导航，确认同尺寸的安全区更新也生效。记录过矮视口中内容和确认按钮是否均可达，不能以构建或 jsdom 样式断言替代真机结果。
 
 ### R19：真机验收按组件分页（一个组件一页）
 

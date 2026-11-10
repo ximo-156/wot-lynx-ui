@@ -39,7 +39,8 @@
  *   经 ops 挂载）；
  * - rootStyle 由参考源的 objToStyle 字符串拼接改为对象语法（CONVENTIONS
  *   §19：字符串 :style 会被 vue-lynx 静默丢弃），height / transform /
- *   transition 三键每帧输出完整键集（Style Funnel，§20）；
+ *   transition / padding-bottom 每帧输出完整键集（Style Funnel，§20）；
+ *   安全区仅接入 useSafeArea 的 padding，窗口/安全区变化沿既有手势失效路径；
  * - SCSS：width: 100vw 改用 left/right: 0 贴边撑满（Lynx 视口单位支持不确定）；
  *   ::after 伪元素（把面板底色延伸到屏外，视觉为空操作）删除；cursor /
  *   user-select 等 Web 专有属性删除；constant() 安全区写法删除仅留 env()。
@@ -51,8 +52,10 @@ import { computed, getCurrentInstance, onBeforeMount, onBeforeUnmount, ref, watc
 import { floatingPanelProps } from './types'
 import { addUnit, closest, getRect, getSystemInfo, noop, parseStyle, uuid } from '../../common/util'
 import { createStyleResolver } from '../../common/style'
+import { useSafeArea } from '../../composables/useSafeArea'
 
 const props = defineProps(floatingPanelProps)
+const safeArea = useSafeArea()
 const emit = defineEmits(['update:height', 'height-change', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'layoutchange'])
 const { proxy } = getCurrentInstance() as any
 const instanceId = `wd-floating-panel-${uuid()}`
@@ -84,13 +87,14 @@ const boundary = computed(() => ({
 }))
 
 const anchors = computed(() => (props.anchors.length >= 2 ? props.anchors : [boundary.value.min, boundary.value.max]))
-const resolveRootStyle = createStyleResolver({ height: '', transform: 'none', transition: 'none' })
+const resolveRootStyle = createStyleResolver({ height: '', transform: 'none', transition: 'none', 'padding-bottom': '0px' })
 const rootStyle = computed(() => {
   void commitTick.value
   return resolveRootStyle({
     height: addUnit(boundary.value.max),
     transform: `translateY(calc(100% + ${addUnit(-heightValue.value)}))`,
-    transition: `transform ${props.duration}ms cubic-bezier(0.18, 0.89, 0.32, 1.28)`
+    transition: `transform ${props.duration}ms cubic-bezier(0.18, 0.89, 0.32, 1.28)`,
+    'padding-bottom': props.safeAreaInsetBottom ? safeArea.inset('bottom') : '0px'
   }, parseStyle(props.customStyle))
 })
 const extensionStyle = computed(() => ({ height: addUnit(windowHeight.value), bottom: addUnit(-windowHeight.value) }))
@@ -190,6 +194,10 @@ watch(anchors, () => {
 }, { immediate: true, deep: true })
 watch(() => [props.contentDraggable, props.duration, props.safeAreaInsetBottom], () => { invalidateGesture() })
 watch(() => props.customStyle, () => { invalidateGesture() }, { deep: true })
+watch(safeArea.revision, () => {
+  invalidateGesture()
+  windowHeight.value = safeArea.height.value
+})
 function handleLayoutChange(event: any) {
   if (disposed.value) return
   emit('layoutchange', event)

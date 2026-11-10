@@ -39,8 +39,8 @@ $calendar-range-separator-color: var(--wot-calendar-range-separator-color, $text
 $calendar-range-separator-width: var(--wot-calendar-range-separator-width, $n-8) !default;
 // 分隔符高度
 $calendar-range-separator-height: var(--wot-calendar-range-separator-height, $stroke-main) !default;
-// 确认区域内边距
-$calendar-confirm-padding: var(--wot-calendar-confirm-padding, $padding-tight $padding-loose) !default;
+// 确认区域保留独立 UI 留白；设备安全区由 Popup 额外承担，不能用 env 代替此间距。
+$calendar-confirm-padding: var(--wot-calendar-confirm-padding, $padding-extra-loose $padding-loose) !default;
 // 确认区域上边框颜色
 $calendar-confirm-border-color: var(--wot-calendar-confirm-border-color, $border-light) !default;
 
@@ -149,6 +149,7 @@ $calendar-confirm-border-color: var(--wot-calendar-confirm-border-color, $border
     display: flex;
     flex-direction: row;
     align-items: center;
+    flex-shrink: 0;
     padding: $calendar-confirm-padding;
     @include pixelBorder(top, 0, $calendar-confirm-border-color);
   }

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { getSystemInfo } from '../../src/common/util'
+import { resolveSafeAreaInsets } from '../../src/common/safe-area'
 import { getViewportSize, getViewportOverride, hasViewportOverride, isDesktopViewport, isWideViewport, setViewportOverride, VIEWPORT_BREAKPOINTS } from '../../src/common/viewport'
 import { subscribeViewportChange } from '../../src/common/viewport-state'
 
@@ -15,6 +16,35 @@ afterEach(() => {
 })
 
 describe('application viewport source', () => {
+  it('does not mistake a normalized zero for a reported window origin', () => {
+    g.SystemInfo = { platform: 'iOS', pixelRatio: 3, pixelWidth: 1170, pixelHeight: 2532,
+      safeArea: { top: 59, bottom: 810, left: 0, right: 390 }, statusBarHeight: 59 }
+    setViewportOverride({ width: 390, height: 785 })
+    const unknownOrigin = getSystemInfo()
+    expect(unknownOrigin.windowTop).toBe(0)
+    expect(unknownOrigin.windowTopKnown).toBe(false)
+    expect(unknownOrigin.windowLeftKnown).toBe(false)
+    expect(resolveSafeAreaInsets(unknownOrigin)).toMatchObject({
+      top: 0, bottom: 0, known: { top: false, bottom: false, left: false, right: false }
+    })
+    // The same 785px view starts below the 59px status/notch region, not at screen 0.
+    g.SystemInfo.windowTop = 59
+    g.SystemInfo.windowLeft = 0
+    expect(resolveSafeAreaInsets(getSystemInfo())).toMatchObject({
+      top: 0, bottom: 34, known: { top: true, bottom: true, left: true, right: true }
+    })
+    // A viewport-relative inset needs no screen origin and its explicit 0 remains authoritative.
+    delete g.SystemInfo.windowTop
+    g.SystemInfo.safeAreaInsets = { top: 0, bottom: 0 }
+    expect(resolveSafeAreaInsets(getSystemInfo())).toMatchObject({ top: 0, bottom: 0, known: { top: true, bottom: true } })
+  })
+
+  it.each([undefined, null, '', NaN, Infinity, true])('rejects an unknown/invalid window origin %j', windowTop => {
+    g.SystemInfo = { platform: 'Android', windowTop }
+    expect(getSystemInfo().windowTopKnown).toBe(false)
+    expect(getSystemInfo().windowTop).toBe(0)
+  })
+
   it('uses native logical pixels even if a native host exposes window', () => {
     g.SystemInfo = { platform: 'iOS', pixelRatio: 3, pixelWidth: 1170, pixelHeight: 2532 }
     g.window = { innerWidth: 1600, innerHeight: 1200 }

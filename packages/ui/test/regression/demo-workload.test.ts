@@ -11,6 +11,9 @@ import DemoSection from '../../../demo/src/showcase/DemoSection'
 import wotLynxUI from '../../src/index'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
+import { getViewportOverride, setViewportOverride } from '../../src/common/viewport'
+import { pause } from '../../src/common/util'
+import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
 
 async function select(container: Element, prefix: string, name: string) {
   fireEvent.tap(container.querySelector(`#${prefix}-directory-toggle`)!)
@@ -27,9 +30,49 @@ async function selectMode(container: Element, mode: 'catalog' | 'interaction') {
   await nextTick()
 }
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
+const originalViewport = getViewportOverride()
+afterEach(() => { cleanup(); restoreNativeStubs(); setViewportOverride(originalViewport); vi.restoreAllMocks(); vi.useRealTimers() })
 
 describe('bounded demo workload', () => {
+  it.each([
+    ['main', DemoApp, 16, 'main-demo-page'],
+    ['device-test', DeviceApp, 12, 'device-test-page']
+  ] as const)('%s reports the actual native viewport and reserves both safe edges', async (_name, component, gap, pageId) => {
+    setSystemInfo({ platform: 'Android', pixelRatio: 3.75, screenWidth: 384, screenHeight: 853,
+      windowWidth: 384, windowHeight: 853, windowTop: 0, statusBarHeight: 0,
+      safeArea: undefined, safeAreaInsets: { top: 32, bottom: 24 } })
+    const { container } = render(component as any, {}, [wotLynxUI])
+    const root = container.querySelector('.app-viewport')!
+    const page = container.querySelector(`#${pageId}`) as HTMLElement
+    fireEvent.layoutchange(root, { detail: { width: 384, height: 817 } })
+    await nextTick()
+    expect(getViewportOverride()).toEqual({ width: 384, height: 817 })
+    expect(page.style.paddingTop).toBe(`${gap + 32}px`)
+    expect(page.style.paddingBottom).toBe(`${gap + 24}px`)
+    await select(container, 'showcase', 'wd-calendar')
+    fireEvent.tap(container.querySelector('.demo-section .wd-button')!)
+    await nextTick()
+    await pause(80)
+    const harness = container.querySelector('.wd-popup-harness') as HTMLElement
+    expect(harness.style.height).toBe('817px')
+    expect(harness.style.paddingTop).toBe('32px')
+    expect((container.querySelector('.wd-popup') as HTMLElement).style.paddingBottom).toBe('24px')
+    expect(container.querySelector('.wd-calendar__confirm .wd-button')).not.toBeNull()
+    // The root stays unpadded. Insets already consumed by a host must remain 0.
+    setSystemInfo({ safeAreaInsets: { top: 0, bottom: 0 } })
+    fireEvent.layoutchange(root, { detail: { layout: { width: 384, height: 780 } } })
+    await nextTick()
+    expect(harness.style.height).toBe('780px')
+    expect(harness.style.paddingTop).toBe('0px')
+    expect(page.style.paddingTop).toBe(`${gap}px`)
+    expect(page.style.paddingBottom).toBe(`${gap}px`)
+    fireEvent.layoutchange(root, { detail: { width: 0, height: 0 } })
+    await nextTick()
+    expect(getViewportOverride()).toEqual({ width: 384, height: 780 })
+    cleanup()
+    expect(getViewportOverride()).toEqual(originalViewport)
+  })
+
   it.each([['main', DemoApp, 450], ['device-test', DeviceApp, 600]] as const)('%s does not mount the full catalog on startup', async (_name, component, limit) => {
     const { container } = render(component as any, {}, [wotLynxUI])
     await nextTick()

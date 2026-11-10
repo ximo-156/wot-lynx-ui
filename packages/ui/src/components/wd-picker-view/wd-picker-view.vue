@@ -21,6 +21,22 @@
  * - 数据逻辑（列格式化 / 选中索引 / 级联构建）在 composables/useSelection，
  *   本组件只负责触摸与渲染；
  * - 禁用项自动就近迁移（correctSelected）。
+ * - **跟手帧零冗余样式下发**（2026-11-10 真机卡顿反馈排查）：@vue/runtime-core
+ *   （3.5.43）patchElement 对 `patchFlag & STYLE` 的元素**无条件**调用
+ *   hostPatchProp——没有 `prev !== next` 守卫（runtime-core.cjs.js:
+ *   `if (patchFlag & 4) hostPatchProp(el, 'style', …)`），而 vue-lynx 的
+ *   patchProp 会把整个 style 对象推成一条 SET_STYLE op 下发主线程。于是
+ *   「后台响应式跟手」每帧重渲染时，列项 / 补位 / 遮罩 / 指示带这些**位移之外
+ *   什么都不变**的元素也会各下发一次。双线程测试环境实测（一条 SET_STYLE
+ *   对应真机一次原生样式应用，量级同构）：5 列日期时间选择器 167 op/帧，
+ *   其中 157 个来自 147 个列项 + 10 个补位。对策：
+ *     · 列项 / 整列 / 遮罩 / 指示带加 `v-memo`——withMemo 命中时返回**同一个
+ *       vnode 对象**，patch 对 `n1 === n2` 直接早退，整段不 patch；
+ *     · 列位移样式按列缓存（columnStyleOf），只有真正在拖的那列换新对象，
+ *       列级 v-memo 才能把其余四列整体跳过；
+ *     · v-memo 只能加在 v-for 元素本身或 v-for 之外的单元体上：加在 v-for
+ *       内部的普通元素会共用同一个 `_withMemo` 缓存槽（编译器给的是模板常量
+ *       index），多列会互相命中并把同一个元素复用成别列的子树。
  * - **内联样式一律对象语法**（CONVENTIONS §19）：列高、translateY 位移、
  *   指示带/遮罩尺寸全部依赖内联样式，字符串 :style 会被 vue-lynx 静默丢弃。
  * - **列项 view 不写行高/截断**（2026-10-25 真机巡检）：view 与内部 text
@@ -182,14 +198,26 @@ const COLUMN_TRANSITION = 'transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1)'
  * 常驻下发落位吸附过渡；跟手期间（draggingCount>0）由后台 touchmove 逐帧
  * 写 offsets 触发重渲染，此时过渡必须显式为 none，否则吸附过渡会把每帧
  * 位移平滑成滞后轨迹（Style Funnel 两态都写同一键，CONVENTIONS §20）。
+ *
+ * **按列缓存**：只有「位移 + 过渡」签名变化的那列才换新对象。跟手帧里
+ * offsets 只改一列，其余四列拿到的是同一个对象引用——列级 v-memo 以此为
+ * 依赖即可把其余四列整段跳过（见文件头「跟手帧零冗余样式下发」）。
  */
-const columnStyles = computed<Array<Record<string, string>>>(() => {
+const columnStyleCache: Array<Record<string, string>> = []
+const columnStyleSign: string[] = []
+function columnStyleOf(colIndex: number): Record<string, string> {
   const transition = draggingCount.value > 0 ? 'none' : COLUMN_TRANSITION
-  return formatColumns.value.map((_, colIndex) => ({
-    transform: `translateY(${-(offsets.value[colIndex] || 0)}px)`,
-    transition
-  }))
-})
+  const offset = offsets.value[colIndex] || 0
+  const sign = `${offset}|${transition}`
+  if (columnStyleSign[colIndex] !== sign) {
+    columnStyleSign[colIndex] = sign
+    columnStyleCache[colIndex] = {
+      transform: `translateY(${-offset}px)`,
+      transition
+    }
+  }
+  return columnStyleCache[colIndex]
+}
 
 /** 行 class 常量：用字符串拼接替代「每行新建数组 + join」 */
 const ITEM_CLASS = 'wd-picker-view__column-item'
@@ -201,6 +229,32 @@ function getItemClass(disabled: boolean | undefined, colIndex: number, rowIndex:
   if (disabled) className += ITEM_CLASS_DISABLED
   if (selectedIndex.value[colIndex] === rowIndex) className += ITEM_CLASS_ACTIVE
   return className
+}
+
+/**
+ * 列级 v-memo 依赖：必须覆盖列子树的**全部**动态输入，漏一个就是「状态变了
+ * 画面不更新」的静默缺陷。当前列子树（列外壳 + 列内容 + 补位 + 列项）依赖：
+ * - `col`：列数据本身——列重建、选项禁用变化都随新数组到来；
+ * - `columnStyleOf(colIndex)`：位移 + 过渡，跟手帧唯一真变化；
+ * - `selectedIndex[colIndex]`：选中项高亮（correctSelected 迁移后同样变化）；
+ * - `itemHeightStyle` / `padHeightStyle`：行高与上下留白（itemHeight /
+ *   visibleItemCount 变化）；
+ * - `props.labelKey`：列项文本取值键。
+ * 列项自身还有一行 v-memo（依赖 `[row, 是否选中, itemHeightStyle]`），两者
+ * 互补：列级负责「整列要不要重画」，列项级负责「这一行要不要重画」。
+ *
+ * 事件处理器是 setup 作用域稳定引用，内联闭包按 v-for 位置缓存，不随渲染
+ * 换 identity；`colIndex` 由 v-for key 固定，缓存槽与位置一一对应。
+ */
+function columnMemo(col: PickerOption[], colIndex: number): unknown[] {
+  return [
+    col,
+    columnStyleOf(colIndex),
+    selectedIndex.value[colIndex],
+    itemHeightStyle.value,
+    padHeightStyle.value,
+    props.labelKey
+  ]
 }
 
 /** 列内容最大位移 */
@@ -372,14 +426,15 @@ defineExpose<PickerViewExpose>({
   <view :class="`wd-picker-view ${customClass}`" :style="pickerStyle">
     <view class="wd-picker-view__main" :style="pickerViewStyle">
       <!-- 上下遮罩（盖在文字上形成渐隐；须排在列之前，见下方注释） -->
-      <view class="wd-picker-view__mask wd-picker-view__mask--top" :style="padHeightStyle" />
-      <view class="wd-picker-view__mask wd-picker-view__mask--bottom" :style="padHeightStyle" />
+      <view class="wd-picker-view__mask wd-picker-view__mask--top" :style="padHeightStyle" v-memo="[padHeightStyle]" />
+      <view class="wd-picker-view__mask wd-picker-view__mask--bottom" :style="padHeightStyle" v-memo="[padHeightStyle]" />
 
       <!-- 内容先 bind 跟手/落定，列外壳再 catch 冒泡，不能用 capture 截断子列。 -->
       <view
         v-for="(col, colIndex) in formatColumns"
         :key="colIndex"
         class="wd-picker-view__column"
+        v-memo="columnMemo(col, colIndex)"
         @touchstart.stop="stopColumnTouch"
         @touchmove.stop="stopColumnTouch"
         @touchend.stop="stopColumnTouch"
@@ -389,7 +444,7 @@ defineExpose<PickerViewExpose>({
              touchend（落定 commit） -->
         <view
           class="wd-picker-view__column-content"
-          :style="columnStyles[colIndex]"
+          :style="columnStyleOf(colIndex)"
           @touchstart="onTouchStart($event, colIndex)"
           @touchmove="onTouchMove($event, colIndex)"
           @touchend="onTouchEnd($event, colIndex)"
@@ -399,6 +454,7 @@ defineExpose<PickerViewExpose>({
           <view
             v-for="(row, rowIndex) in col"
             :key="rowIndex"
+            v-memo="[row, selectedIndex[colIndex] === rowIndex, itemHeightStyle]"
             :class="getItemClass(row['disabled'], colIndex, rowIndex)"
             :style="itemHeightStyle"
           >
@@ -412,7 +468,7 @@ defineExpose<PickerViewExpose>({
            z-index 低于列。Web 预览的绘制不遵循 z-index（按 DOM 逆序绘制），
            排在最前会连底色带文字一起盖掉；真机按 z-index 绘制，
            roller(0) < column(2) 同样在下方。 -->
-      <view class="wd-picker-view__roller" :style="indicatorStyle" />
+      <view class="wd-picker-view__roller" :style="indicatorStyle" v-memo="[indicatorStyle]" />
     </view>
   </view>
 </template>

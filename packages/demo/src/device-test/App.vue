@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue-lynx'
-import { useToast, usePageScrollLock, useQueue } from 'wot-lynx-ui'
+import { getSystemInfo, useSafeArea, useToast, usePageScrollLock, useQueue } from 'wot-lynx-ui'
+import { useDemoViewport } from '../useDemoViewport'
 
 import { testSections, totalItems, type TestItem } from './checklist'
 import { componentSections } from './component-checks'
@@ -17,7 +18,7 @@ const demoProps = withDefaults(defineProps<{ stress?: boolean }>(), { stress: fa
  * 构建标记（真机自证）：换新包后这一行会变，看不到就是加载了旧 bundle。
  * 真机排查第一时间看它，避免"改了没生效"的误判。
  */
-const buildTag = 'R19 · 106 组件逐页验收'
+const buildTag = 'R20 · iOS / Android 上下安全区'
 
 /**
  * 页面结构（R19 按组件分页）：真机反馈「每一个组件都要能显示出来，按页分」。
@@ -46,16 +47,22 @@ const checkMap = computed(() => {
 const pageScrollLocked = usePageScrollLock()
 const { closeOutside } = useQueue()
 
-// ---------- 设备信息 ----------
-const sysInfo = (globalThis as any).SystemInfo || {}
+// ---------- 设备信息 / 页面安全区 ----------
+const { width: viewportWidth, height: viewportHeight, revision: viewportRevision, insets, inset } = useSafeArea()
+const { onViewportLayout } = useDemoViewport()
+const pageStyle = computed(() => ({
+  'padding-top': inset('top', 12),
+  'padding-bottom': inset('bottom', 12)
+}))
 const deviceInfo = computed(() => {
-  const ratio = sysInfo.pixelRatio || 2
+  void viewportRevision.value
+  const info = getSystemInfo()
   return {
-    platform: sysInfo.platform || 'unknown',
-    width: sysInfo.pixelWidth ? Math.round(sysInfo.pixelWidth / ratio) : 0,
-    height: sysInfo.pixelHeight ? Math.round(sysInfo.pixelHeight / ratio) : 0,
-    dpr: ratio,
-    engine: sysInfo.engineVersion || sysInfo.lynxSdkVersion || '-'
+    platform: info.platform || 'unknown',
+    width: Math.round(info.screenWidth),
+    height: Math.round(info.screenHeight),
+    dpr: info.pixelRatio,
+    engine: info.engineVersion || info.lynxSdkVersion || '-'
   }
 })
 
@@ -227,10 +234,9 @@ const swiperList = ref([
 
 // ---------- 8. 主题与适配 ----------
 const safeAreaText = computed(() => {
-  const sa = sysInfo.safeArea
-  return sa
-    ? `top ${sa.top} / bottom ${sa.bottom} / left ${sa.left} / right ${sa.right}`
-    : '宿主未提供（Lynx 裸跑置零，属预期，见 CONVENTIONS §181）'
+  const area = insets.value
+  const edge = (name: 'top' | 'bottom') => area.known[name] ? `${area[name]}px` : '原生 env（宿主未上报数值）'
+  return `顶部 ${edge('top')} / 底部 ${edge('bottom')}`
 })
 </script>
 
@@ -238,11 +244,12 @@ const safeAreaText = computed(() => {
   <!-- app-root 显式挂 height:100%：Lynx 中百分比高度只相对「已确定高度」的父级解析，
         若包裹层为 auto（内容高度），其下 scroll-view 的 height:100% 会解析成内容高度而非
         屏幕高度——滚动容器与内容等高即无可滚动范围（页面无法滚动）。
-        链路：page 根(屏幕高，确定) > app-root(100%) > scroll-view.page(100%) > 内容。
+        链路：page 根 > app-viewport（100%，无 padding，原生 layoutchange）> app-root（100%）> scroll-view.page（100%）> 内容。
         wd-config-provider 的根 view 现已内置 height:100%，此处显式声明使布局契约不依赖组件内部实现。
         theme 受控切换：亮/暗令牌由 provider 根 view 的 wot-theme-* 类翻转（第 8 组验证）。 -->
+  <view class="app-viewport" @layoutchange="onViewportLayout">
   <wd-config-provider :theme="themeMode" custom-class="app-root" @tap="closeOutside">
-    <scroll-view id="device-test-page" scroll-orientation="vertical" :scroll-enable="!pageScrollLocked" :enable-scroll="!pageScrollLocked" class="page">
+    <scroll-view id="device-test-page" scroll-orientation="vertical" :scroll-enable="!pageScrollLocked" :enable-scroll="!pageScrollLocked" class="page" :style="pageStyle">
       <!-- ============ 头部：设备信息 ============ -->
       <view class="header">
         <text class="header__title">wot-lynx-ui 真机测试</text>
@@ -253,7 +260,9 @@ const safeAreaText = computed(() => {
           <text class="header__device-item">屏幕 {{ deviceInfo.width }}×{{ deviceInfo.height }}</text>
           <text class="header__device-item">DPR {{ deviceInfo.dpr }}</text>
           <text class="header__device-item">引擎 {{ deviceInfo.engine }}</text>
+          <text class="header__device-item">视口 {{ Math.round(viewportWidth) }}×{{ Math.round(viewportHeight) }}</text>
         </view>
+        <text class="header__sub">安全区：{{ safeAreaText }}</text>
         <!-- 模式切换：组件目录（默认，106 页）/ 交互验收（8 组手写卡）。
              两种模式同时只挂载一个，切走即卸载，弹层不会跨模式残留。 -->
         <view class="header__modes">
@@ -417,6 +426,7 @@ const safeAreaText = computed(() => {
       <wd-popup
         v-model="popupVisible"
         :position="popupPosition"
+        safe-area-inset-bottom
         round
         closable
         @update:modelValue="onPopupModel"
@@ -585,15 +595,20 @@ const safeAreaText = computed(() => {
       </ShowcaseLayout>
     </scroll-view>
   </wd-config-provider>
+  </view>
 </template>
 
 <style scoped>
+.app-viewport,
 .app-root {
+  width: 100%;
   height: 100%;
 }
 
 .page {
+  width: 100%;
   height: 100%;
+  box-sizing: border-box;
   padding: 12px;
   background-color: var(--wot-filled-bottom);
 }

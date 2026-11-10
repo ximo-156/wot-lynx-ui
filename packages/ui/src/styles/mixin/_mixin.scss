@@ -248,40 +248,66 @@ $B: null;
     // 嵌套 var 会被 Lynx 序列化器拒绝，运行时乘法也不能作为原生保证。
     --wot-triangle-arrow-size: #{$size};
     position: absolute;
+    // Lynx 默认 border-box；三角形依赖零内容盒外的边框，必须明确盒模型。
+    box-sizing: content-box;
     width: 0;
     height: 0;
   }
 
   @include e(arrow-down) {
-    border-left: $size solid transparent;
-    border-right: $size solid transparent;
-    border-top: $size solid $bg;
+    border-left-width: $size;
+    border-right-width: $size;
+    border-top-width: $size;
+    border-left-style: solid;
+    border-right-style: solid;
+    border-top-style: solid;
+    border-left-color: transparent;
+    border-right-color: transparent;
+    border-top-color: $bg;
     transform: translateX(-50%);
-    bottom: calc(0px - var(--wot-triangle-arrow-size))
+    bottom: calc(0px - var(--wot-triangle-arrow-size));
   }
 
   @include e(arrow-up) {
-    border-left: $size solid transparent;
-    border-right: $size solid transparent;
-    border-bottom: $size solid $bg;
+    border-left-width: $size;
+    border-right-width: $size;
+    border-bottom-width: $size;
+    border-left-style: solid;
+    border-right-style: solid;
+    border-bottom-style: solid;
+    border-left-color: transparent;
+    border-right-color: transparent;
+    border-bottom-color: $bg;
     transform: translateX(-50%);
-    top: calc(0px - var(--wot-triangle-arrow-size))
+    top: calc(0px - var(--wot-triangle-arrow-size));
   }
 
   @include e(arrow-left) {
-    border-top: $size solid transparent;
-    border-bottom: $size solid transparent;
-    border-right: $size solid $bg;
+    border-top-width: $size;
+    border-bottom-width: $size;
+    border-right-width: $size;
+    border-top-style: solid;
+    border-bottom-style: solid;
+    border-right-style: solid;
+    border-top-color: transparent;
+    border-bottom-color: transparent;
+    border-right-color: $bg;
     transform: translateY(-50%);
-    left: calc(0px - var(--wot-triangle-arrow-size))
+    left: calc(0px - var(--wot-triangle-arrow-size));
   }
 
   @include e(arrow-right) {
-    border-top: $size solid transparent;
-    border-bottom: $size solid transparent;
-    border-left: $size solid $bg;
+    border-top-width: $size;
+    border-bottom-width: $size;
+    border-left-width: $size;
+    border-top-style: solid;
+    border-bottom-style: solid;
+    border-left-style: solid;
+    border-top-color: transparent;
+    border-bottom-color: transparent;
+    border-left-color: $bg;
     transform: translateY(-50%);
-    right: calc(0px - var(--wot-triangle-arrow-size))
+    right: calc(0px - var(--wot-triangle-arrow-size));
   }
 }
 

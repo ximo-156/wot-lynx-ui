@@ -34,6 +34,7 @@ $video-preview-fallback-icon-size: var(--wot-video-preview-fallback-icon-size, $
   background: $video-preview-bg;
 
   @include e(video) {
+    position: relative;
     width: 100%;
     height: $video-preview-video-height;
     // Lynx 适配：视频容器显式 flex 纵向（承载 video 子元素，CONVENTIONS §3.1）
@@ -105,6 +106,8 @@ $video-preview-fallback-icon-size: var(--wot-video-preview-fallback-icon-size, $
   @include e(fallback-hint) {
     position: relative;
     z-index: 1;
+    padding: $spacing-tight;
+    background: $video-preview-fallback-bg;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -154,8 +157,23 @@ $video-preview-fallback-icon-size: var(--wot-video-preview-fallback-icon-size, $
     color: $video-preview-close-color;
   }
 
+  @include e(error) {
+    position: absolute;
+    left: $spacing-tight;
+    right: $spacing-tight;
+    bottom: $n-48;
+    padding: $spacing-tight;
+    background: $video-preview-fallback-bg;
+    font-size: $typography-body-size-main;
+    color: $video-preview-close-color;
+    text-align: center;
+  }
+
   @include e(title) {
-    margin-top: $spacing-tight;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: $spacing-tight;
     font-size: $typography-body-size-main;
     color: $video-preview-close-color;
     text-align: center;

@@ -60,12 +60,13 @@ describe('official wot-ui 2.3.2 runtime prop parity', () => {
       'wd-address-edit', 'wd-bar-code', 'wd-coupon', 'wd-pull-refresh', 'wd-share-sheet', 'wd-submit-bar'
     ])
     expect(audit.localOnly.every((item: any) => item.reason.includes('unverified'))).toBe(true)
-    // responsive is a documented local wide-screen extension, not an official wot prop.
+    // These are documented local extensions, not official wot-ui props.
     expect(audit.additions).toEqual([
-      { component: 'wd-popup', props: ['responsive'] },
+      { component: 'wd-popup', props: ['responsive', 'safeAreaInsetTop'] },
       { component: 'wot-ui', props: ['customClass', 'customStyle'] }
     ])
     expect(localProps('wd-popup').responsive).toMatchObject({ type: ['Boolean'], default: { kind: 'value', value: true } })
+    expect(localProps('wd-popup').safeAreaInsetTop).toMatchObject({ type: ['Boolean'], default: { kind: 'value', value: true } })
     // 这里要跑完 101 个组件的运行时 prop 提取（TS VM 逐个求值），空载 ~2s、
     // 并行高负载实测 10.4s，会撞默认 5s 上限。放宽的是这一条的重活预算。
   }, 60_000)

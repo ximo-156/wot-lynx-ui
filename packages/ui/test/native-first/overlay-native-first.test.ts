@@ -39,6 +39,7 @@ import Toast from '../../src/components/wd-toast/wd-toast.vue'
 import Notify from '../../src/components/wd-notify/wd-notify.vue'
 import { useToast } from '../../src/components/wd-toast'
 import { compRead } from '../helpers/component-roots'
+import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
 
 // 双组件根解析（ADR-012）：rel 形如 'wd-cell/index.css'，跨 primitives/components 定位
 const css = (rel: string) => compRead(...rel.split('/'))
@@ -111,7 +112,7 @@ function firstMatch(container: Element, selector: string): Element | null {
 const styleOf = (el: Element | null): string => (el ? el.getAttribute('style') || '' : '')
 
 describe('原生优先重写 · 弹层家族布局居中契约（popup / action-sheet / dialog / toast / notify）', () => {
-  afterEach(() => cleanup())
+  afterEach(() => { cleanup(); restoreNativeStubs() })
 
   it('编译产物不含 Lynx 静默丢失的 Web 专有写法', () => {
     for (const rel of BATCH_CSS) {
@@ -233,6 +234,7 @@ describe('原生优先重写 · 弹层家族布局居中契约（popup / action-
     // 全屏 .wd-popup-harness（fixed + 显式窗口像素 + flex 对齐），过渡根只做
     // 可见面板（背景/圆角/动画）。真机上 fixed + display: flex 的节点会按内容
     // 尺寸收缩，边值撑不开，整片弹层会贴到屏幕左上角。
+    setSystemInfo({ safeAreaInsets: { top: 0, bottom: 0 } })
     const popup = render(Popup as any, {
       modelValue: true,
       zIndex: 66,
@@ -243,7 +245,7 @@ describe('原生优先重写 · 弹层家族布局居中契约（popup / action-
     const popupRoot = firstMatch(popup.container, '.wd-popup-wrapper > .wd-popup-harness > .wd-transition.wd-popup')
     const popupStyle = styleOf(popupRoot)
     expect(popupStyle).toMatch(/z-index:\s*66/)
-    expect(popupStyle, 'safeAreaInsetBottom 无安全区数据时 padding-bottom 回落中性值 0px').toMatch(/padding-bottom:\s*0px/)
+    expect(popupStyle, '宿主明确已避让时 padding-bottom 输出 0px；未知 env 由原生样式通道回归单独验证').toMatch(/padding-bottom:\s*0px/)
     expect(popupStyle, 'customStyle 经 parseStyle 归一后仍生效').toMatch(/background:\s*red/)
     // 面板不再自带 fixed 边值：真机把 auto 边按 0 锚定，正是贴左上角的直接原因
     expect(popupStyle, '面板定位不再依赖 auto 边').not.toMatch(/(left|right|top|bottom):\s*auto/)

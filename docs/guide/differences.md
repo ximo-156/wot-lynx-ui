@@ -46,10 +46,16 @@ Lynx 的百分比高度只相对「已确定高度」的父级解析：中间层
 | 手写签名 | canvas 2D | 原生连续贝塞尔笔迹（MTS 跟手、撤销/恢复；导出标准 SVG data URI 或可选宿主 Canvas 2D 位图） |
 | 水印 | canvas `toDataURL` | 平铺层（重复水印单元 + 旋转文本） |
 | 页面跳转 | `uni.navigateTo` | 原生 `navigate` 事件 + 宿主模块（`configureHost({ navigateTo })` / `NativeModules.WotLynxUI`）；无宿主时只抛事件，由业务自行路由 |
-| 安全区 | `uni.getSystemInfoSync` | Lynx `SystemInfo.safeAreaInsets`（引擎原生读取，无需宿主注入） |
+| 安全区 | `uni.getSystemInfoSync` | `useSafeArea` 统一读取宿主视口 inset、扩展 SystemInfo 字段或原生 env；缺失数据不等同于零遮挡 |
 | 小程序标签 | `<block>` / `<rich-text>` / `data-*` 属性 | `<template>` / `<text>`（Lynx `__SetAttribute` 不支持任意 `data-*`） |
 | 内联 CSS 变量 | `:style="{ '--x': v }"` 或字符串 | `ev.style[key]` 通道会丢弃 `--x`；主题变量改由**根节点 `style` 属性串**下发（见下节），普通样式仍走对象语法 |
 | 主线程 worklet | 无此概念 | 声明式 MTS（`'main thread'`），且 worklet 之间禁止互相引用（真机会 TDZ，见 `CONVENTIONS.md` §21） |
+
+## 安全区与弹层扩展
+
+`Popup.safeAreaInsetTop` 是本库针对 Lynx 的扩展，默认 `true`：顶部预留安全距离，底部/侧边弹层的最大高度也相应限界；显式 `false` 可关闭。它与宽屏 `responsive` 一样，不计入 wot-ui 官方 props 覆盖。原有 `safeAreaInsetBottom` 的默认值保持不变，日历确认区域另保留普通 UI 间距。
+
+精确安全区以当前 LynxView 内的剩余遮挡为准，宿主已经避让时返回明确 `0`。屏幕安全矩形只能在窗口原点确知时换算；缺失原点不能把兼容默认的零当成真实坐标。iOS 的 CSS env 可能是窗口级，Android 宿主未必填充；详见[真机测试指南](<./device-testing.md>)的两端接入与复验步骤。
 
 ## 主题变量与内联样式通道（已实测）
 
@@ -117,7 +123,8 @@ ADR-022 起，本库**删除了 `common/uni.ts` 兼容层**（`configureUniAdapt
 | --- | --- | --- |
 | 节点度量 / 原生 UIMethod | `lynx.createSelectorQuery()` | 零尺寸兜底 + 一次 warning |
 | 交叉观察（sticky） | `lynx.createIntersectionObserver()` | 退回纯 CSS `position: sticky` |
-| 屏幕信息 / 安全区 | `SystemInfo` 全局对象 | 使用引擎默认值 |
+| 屏幕信息 | 标准 `SystemInfo` 全局对象 | 组件使用已有尺寸兜底，实际视口应由应用上报 |
+| 安全区 | 宿主 `getSafeAreaInsets()`、扩展 `SystemInfo` 字段、裸 CSS env | 保留普通 UI 留白；未知仍需真机/宿主确认，不伪造精确零 |
 | 原生 `<video>` | 引擎版本 ≥ 4.1，或宿主 `supportsVideoElement()` | 降级为封面占位 |
 | 路由 / 媒体选择 / 上传 / 页面滚动 / 振动 / 拨号 | `NativeModules.WotLynxUI`、`lynx.getJSModule('WotLynxUI')` 或 `configureHost()` | 只 warning + 事件，不伪造成功 |
 | Canvas 2D 导出 | 宿主 `createCanvasContext` + `canvasToTempFilePath` | 降级为 SVG / 直接失败回调 |
@@ -135,13 +142,22 @@ configureHost({
 宿主专属能力的完整契约见 `packages/ui/src/common/host.ts`；`configureHost(null)`
 撤回注入，回到 Native Module 探测。
 
+### 视频播放的宿主要求
+
+[官方 video 文档](https://lynxjs.org/api/elements/built-in/video.md)标明 Android、iOS 和 Harmony 的原生视频元素从 **Lynx 4.1** 起实验性支持；4.0 不能按「主版本同为 4」直接放行。版本缺失或非法时保守降级，宿主 `supportsVideoElement()` 的显式结果优先。
+
+- 4.0 宿主需要升级到实际包含 `video` 的 SDK/应用，或在原生工程中接入契约兼容的播放器。只升级 npm 包、重新打 JS bundle、把 `supportsVideoElement` 写成恒真，都不会安装原生播放器。
+- 宿主裁掉该元素时应返回 `false`；只有已注册并支持该元素的属性、事件及 UIMethod 时才声明 `true`。不要用创建未知节点来试探支持情况，节点创建异常可能发生在 JS 无法捕获的原生侧。
+- `WdVideoPreview` 无能力时显示原因而非可点击的假播放按钮；支持时由原生 `playing` / `paused` 等事件驱动状态，`firstframe` 后撤掉封面。调用失败或媒体 `error` 会显示提示，可点击播放重试。原生内置 `video` 当前只承诺在线网络资源，不把本地临时路径当作已支持。
+- `fullScreen` 表示铺满预览层并自动播放，不代表宿主横屏或系统全屏。真机仍需检查有画面/声音、暂停后重播、关闭后无残留声音、快速重开与换片；无崩溃或封面可见不等于播放验收通过。
+
 ## 能力降级的组件
 
 | 组件 | 状态 | 说明 |
 | --- | --- | --- |
 | `WdImgCropper` 图片裁剪 | 接口保留 | Lynx 无 Canvas 2D API：宿主注册 `createCanvasContext` + `canvasToTempFilePath` 时走真实位图导出（`fileType` / `quality` 生效）；未注册时降级为 SVG data URI 导出（`tempFilePath` 以 `data:image/svg+xml` 开头），`confirm` 链路不断。裁剪框拖动 / 双指缩放 / 旋转与 wot-ui 一致 |
 | `WdUpload` 上传 | 依赖宿主选图 | 通过宿主 `chooseMedia` / `uploadFile`（或自定义 `uploadMethod`）提供真实能力。Demo 用 view 唤起标准选择与校验链路，不渲染 `input type="file"`，避免真机弹输入法；宿主未接入会提示。`uploadMethod` 只模拟网络上传；Web 文件选择也需宿主适配，不能把 x-input 的 fakepath 当可用文件 |
-| `WdVideoPreview` | 基础可用 | 依赖引擎原生 `<video>`（Lynx 4.1+）；宿主未注册 video XElement 时降级为封面占位 |
+| `WdVideoPreview` | 依赖原生 video | Android/iOS/Harmony 原生 `<video>` 自 Lynx 4.1 起实验性支持；4.0/无能力宿主显示不支持提示而不创建视频节点。调用失败或媒体错误可见并可重试；只有收到原生播放事件才显示播放态，首帧后撤封面，关闭/换片/卸载停止旧播放器 |
 | `WdSwiper` / `WdImagePreview` 轮播 | 自研实现 | `swiper` / `swiper-item` 并非 Lynx 引擎内置元素，其 BehaviorController 由宿主链接的 LynxUI 注册；宿主缺失时引擎抛 "No BehaviorController defined for class swiper"（错误码 9902）致命异常且 JS 侧无法捕获。故轮播改用引擎内置元素（scroll-view / view / image）+ scroll-left 分页自研实现，任何宿主均可用；`adjust-height` / `adjust-vertical-height`（支付宝小程序专有能力）随之失效 |
 | `WdTour` 富文本内容 | 纯文本 | `rich-text` 节点降级为 `<text>` 展示 |
 | `WdWatermark` 文字宽度 | 近似换行 | Lynx 无 `measureText`，按字符宽度估算换行位置 |

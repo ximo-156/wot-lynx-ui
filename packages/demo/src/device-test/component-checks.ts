@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 全量组件真机渲染检查清单（106/106 覆盖）。
  *
  * 为什么单独一份：`checklist.ts` 的 8 个分组是**交互清单**（手势跟手、
@@ -59,7 +59,7 @@ export const componentSections: TestSection[] = [
       { id: 'r-wd-slide-verify', name: 'SlideVerify 滑动验证', expect: '左侧白色圆角滑块按钮可见（双箭头图标）；按住拖到最右松手 → 轨道变绿 + 成功文案；拖到一半松手回弹；刷新后立刻拖动也要能通过（2026-11-05 用户复报「没有滑动按钮、又没有正常的效果」：首屏 onMounted 度量拿到 0，轨道内联宽度 0px 把滑块裁掉、maxPosition 为 0 永远判不过——已按 R11 补 layoutchange / 补测 / min-width 四层兜底）' },
       { id: 'r-wd-signature', name: 'Signature 签名', expect: '画布可绘制且笔迹跟手；清空按钮生效；画布尺寸不塌陷' },
       { id: 'r-wd-img-cropper', name: 'ImgCropper 图片裁剪', expect: '图片加载后不被拉伸；裁剪框可拖动缩放；确认后回传图片' },
-      { id: 'r-wd-upload', name: 'Upload 上传', expect: '点「+」弹系统相册；已选图片缩略图可见；删除按钮可点；+ 唤起项不换行错位（选图为 Lynx 原生 input[type=file]，只兼容真机；Web 预览不可用）' },
+      { id: 'r-wd-upload', name: 'Upload 上传', expect: '点「+」弹系统相册；已选图片缩略图可见；删除按钮可点；+ 唤起项不换行错位（选图走宿主 chooseMedia：Lynx 原生 input 不支持 type=file，必须由宿主 Native Module 注册 WotMediaPicker，扫码用的官方 Explorer 不含该模块，需另外安装带模块的宿主 APK；见 native/media-picker/README.md）' },
       { id: 'r-wd-calendar', name: 'Calendar 日历', expect: '月份标题不插进日期网格中间；日期按周对齐；选中/区间底色正确' },
       { id: 'r-wd-calendar-view', name: 'CalendarView 日历视图', expect: '每周一行、每行 7 格；月初空格对齐到正确星期列；月份标题独立成行' }
     ]
@@ -110,7 +110,7 @@ export const componentSections: TestSection[] = [
       { id: 'r-wd-qr-code', name: 'QRCode 二维码', expect: '二维码完整可扫（无缺块）；尺寸正确' },
       { id: 'r-wd-bar-code', name: 'BarCode 条形码', expect: '条码清晰无模糊；下方文字可读' },
       { id: 'r-wd-image-preview', name: 'ImagePreview 图片预览', expect: '命令式 open 后遮罩与图片出现；左右滑动切图；关闭返回' },
-      { id: 'r-wd-video-preview', name: 'VideoPreview 视频预览', expect: '命令式 open 后视频可播放；关闭按钮可点' },
+      { id: 'r-wd-video-preview', name: 'VideoPreview 视频预览', expect: '支持 video 的宿主：open 后点播放有首帧、可暂停重播；关闭停止声音、重开正常。4.0/无能力宿主仅应提示不支持且无 990200/60301，不代表播放通过' },
       { id: 'r-wd-curtain', name: 'Curtain 幕帘', expect: '幕帘图片覆盖全屏；点击/上滑后关闭并回调' }
     ]
   },
@@ -154,7 +154,7 @@ export const componentSections: TestSection[] = [
       { id: 'r-wd-action-sheet', name: 'ActionSheet 动作面板', expect: '选项列表可见；取消按钮独立成块；危险项变红' },
       { id: 'r-wd-notify', name: 'Notify 消息通知', expect: '顶部滑入；文字与关闭按钮可见；自动消失时间正确（声明式 v-model:visible 也要消失）' },
       { id: 'r-wd-toast', name: 'Toast 轻提示', expect: '居中显示；图标与文字都可见；不阻塞页面' },
-      { id: 'r-wd-popover', name: 'Popover 气泡弹出', expect: '气泡只出现一份（度量副本不叠印）；箭头指向正确；点击外部关闭' },
+      { id: 'r-wd-popover', name: 'Popover 气泡弹出', expect: '亮暗主题下面板背景、外框和阴影可辨；箭头轮廓连续并指向目标；菜单有内边距；只出现一份；点菜单/外部关闭，重开无残留' },
       { id: 'r-wd-tooltip', name: 'Tooltip 文字提示', expect: '气泡只出现一份；三个方向定位正确；长按/点击触发符合配置' },
       { id: 'r-wd-tour', name: 'Tour 新手引导', expect: '高亮框对准目标；步骤切换正确；最后一步 finish' },
       { id: 'r-wd-floating-panel', name: 'FloatingPanel 浮动面板', expect: '三个锚点高度可切换；拖动跟手；吸顶后内容不被裁' },

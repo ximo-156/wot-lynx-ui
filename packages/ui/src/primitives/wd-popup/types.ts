@@ -65,11 +65,17 @@ export const popupProps = {
    */
   modalStyle: makeStringProp(''),
   /**
-   * 弹出面板是否设置底部安全距离（iphone X 类型的机型）
+   * 弹出面板是否设置底部安全距离（iOS / Android 手势区或导航栏）
    * 类型：boolean
    * 默认值：false
    */
   safeAreaInsetBottom: makeBooleanProp(false),
+  /**
+   * 是否避让顶部安全区（iOS 刘海 / Android 状态栏），底部和居中弹层同时限制最大高度。
+   * 类型：boolean
+   * 默认值：true
+   */
+  safeAreaInsetTop: makeBooleanProp(true),
   /**
    * 弹出层是否显示
    * 类型: boolean

@@ -134,7 +134,7 @@ export const calendarProps = {
    */
   onShortcutsClick: Function as PropType<CalendarOnShortcutsClick>,
   /**
-   * 弹出面板是否设置底部安全距离（iphone X 类型的机型）
+   * 弹出面板是否设置底部安全距离（iOS / Android 手势区或导航栏）
    * 类型: boolean
    * 默认值: true
    */

@@ -91,7 +91,7 @@ defineProps(xxxProps)
 | options 块 | 不需要 `<script>` options 块 |
 | 条件编译 | 禁止 `// #ifdef` / `// #ifndef` / `// #endif` 等 uni-app 条件编译残留 |
 | 组件标签 | 模板内组件一律 PascalCase（`<WdButton>`）；kebab-case 会被 Lynx 编译器判为原生元素。业务代码若沿用 wot-ui 的 `<wd-button>` 写法，必须启用 `pluginWotLynxTags()`（构建期改写，见 `plugin/tag-transform-loader.cjs`） |
-| 原生元素 | 只允许 Lynx 内置元素（view / text / image / scroll-view / list / list-item / swiper / swiper-item / input / textarea / switch / checkbox / radio / slider / form / label / svg / video / web-view / page）。**禁止 uni-app 的 `<block>`**（用 `<template v-else>` 做无渲染占位）；误用会触发 603 sub_code 60301 "Can't find ui tag" 并白屏。守卫测试：`test/component/native-tag-whitelist.test.ts`。⚠️ `video` 是 XElement——宿主引擎未注册 video 原生组件时创建节点抛引擎级 990200「No BehaviorController defined for class video」，随后属性更新再抛 60301（2026-10-25 真机实测）；挂载 `<video>` 前必须以 `capabilities.videoElement`（引擎原生 `<video>`：`SystemInfo.engineVersion ≥ 4`，宿主可用 `supportsVideoElement()` 显式覆盖）门控，无能力时降级（见 wd-video-preview 的封面占位） |
+| 原生元素 | 只允许 Lynx 内置元素（view / text / image / scroll-view / list / list-item / swiper / swiper-item / input / textarea / switch / checkbox / radio / slider / form / label / svg / video / web-view / page）。**禁止 uni-app 的 `<block>`**（用 `<template v-else>` 做无渲染占位）；误用会触发 603 sub_code 60301 "Can't find ui tag" 并白屏。守卫测试：`test/component/native-tag-whitelist.test.ts`。⚠️ `video` 是 XElement——宿主引擎未注册 video 原生组件时创建节点抛引擎级 990200「No BehaviorController defined for class video」，随后属性更新再抛 60301（2026-10-25 真机实测）；挂载 `<video>` 前必须以 `capabilities.videoElement`（引擎原生 `<video>`：`SystemInfo.engineVersion ≥ 4.1`，必须比较主次版本；4.0 不支持，宿主可用 `supportsVideoElement()` 按真实注册情况显式覆盖）门控，无能力时降级（见 wd-video-preview 的封面占位） |
 | 横向布局 | 依赖横向排列的容器必须显式 `display: flex`（见 §15） |
 
 ## 5. SCSS 规范（index.scss）
@@ -167,7 +167,9 @@ import { BLUE, COOLGREY, GREEN, ORANGE, RED } from '../../common/theme'
 import { CONFIG_PROVIDER_KEY, mergeConfig } from '../../composables/global-config'
 ```
 
-设备信息与窗口尺寸经[getSystemInfo](<packages/ui/src/common/util.ts>)读取；它保留宿主 `SystemInfo` 提供的字段，并使用视口覆盖。安全区矩形由[useDeviceInfo](<packages/ui/src/composables/useDeviceInfo.ts>)读取 `safeArea`；缺失时回退到全屏矩形，不是把 `bottom=0` 当屏幕底，也不假设所有宿主都提供安全区。
+设备信息与窗口尺寸经[getSystemInfo](<packages/ui/src/common/util.ts>)读取；它保留宿主 `SystemInfo` 提供的字段，并使用视口覆盖。**官方 `SystemInfo` 只保证屏幕信息，不保证 LynxView 可用高度及安全区**：应用用未加 padding 的根节点 `layoutchange` 回写 `setViewportOverride`，不能把已减去安全区的内容高度再次当全屏视口。
+
+安全区样式统一使用[useSafeArea](<packages/ui/src/composables/useSafeArea.ts>)：宿主 `getSafeAreaInsets()` 返回当前 LynxView 内仍需避让的逻辑 px（显式 `0` 表示已避让）优先，其次 `SystemInfo.safeAreaInsets`，再将屏幕坐标 `safeArea` 与 `windowTop/windowHeight` 求交；不猜机型或把零占位矩形当整屏遮挡。缺失边使用裸 `env(safe-area-inset-*)` 渐进增强，**不能用带逗号的 Web fallback 语法**。iOS 引擎环境值是窗口级，Android 未必填充；未知值不代表零遮挡，按钮普通 UI 留白必须独立保留，精确避让与旋转仍需宿主及真机验证。旧[useDeviceInfo](<packages/ui/src/composables/useDeviceInfo.ts>)的 `safeArea` 是矩形接口，不用于重复拼装组件安全区 padding。
 
 **依赖方向**：common 不得依赖 composables/组件，composables 不得依赖组件；基础件不得依赖业务组件。基础件之间可组合但不引入非法环；业务组件跨族禁止实现/契约借用，族内父子契约互引允许。
 共享的跨族契约放在公共/组合式层；族内 KEY 不为“全图零环”强制下沉。组件族只读[families.json](<docs/architecture/families.json>)，现行规则见[ADR-013](<docs/adr/013-declarative-families.md>)和[依赖 lint](<scripts/review-lint.mjs>)。

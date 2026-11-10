@@ -10,8 +10,8 @@
  *   （根节点三件套，NATIVE-REWRITE §3.1），随每帧完整下发；
  * - rootStyle 的 z-index / padding-top / height / line-height 同样经
  *   resolveStyle 输出完整键集（§20）；customStyle 经 parseStyle 归一；
- * - 安全区适配：参考源取 useDeviceInfo 的 statusBarHeight（Lynx 不提供
- *   安全区数据，宿主未注入时为 0，即不额外 padding）；
+ * - 安全区经 useSafeArea：已避让窗口的显式 0 优先，缺失数据交给原生
+ *   env(safe-area-inset-top)；系统栏或视口变化后同步重新测量占位；
  * - 占位高度经 getRect('.wd-navbar') 实测（参考源行为），回调经 useAlive
  *   守卫（真机 9902 防护）；
  * - 参考源右侧文案的 hover-class="wd-navbar__text--hover"（uni-app 专有
@@ -29,8 +29,9 @@ import WdIcon from '../../primitives/wd-icon/wd-icon.vue'
 import { navbarProps } from './types'
 import { addUnit, getRect, isDef, parseStyle, uuid } from '../../common/util'
 import { useDeviceInfo } from '../../composables/useDeviceInfo'
+import { useSafeArea } from '../../composables/useSafeArea'
 import { useAlive } from '../../composables/useAlive'
-import { defineStyleKeys, resolveStyle } from '../../common/style'
+import { createStyleResolver, defineStyleKeys, resolveStyle } from '../../common/style'
 
 const props = defineProps(navbarProps)
 const emit = defineEmits(['click-left', 'click-right'])
@@ -45,10 +46,12 @@ let heightRequest = 0
  */
 const height = ref<number | ''>('')
 
-const { statusBarHeight, navBarHeight } = useDeviceInfo()
+const { navBarHeight } = useDeviceInfo()
+const { inset, revision: safeAreaRevision, refresh: refreshSafeArea } = useSafeArea()
+watch(() => props.safeAreaInsetTop, refreshSafeArea, { flush: 'sync' })
 
 watch(
-  [() => props.fixed, () => props.placeholder, () => props.safeAreaInsetTop, () => props.bordered, () => props.customStyle, () => props.customClass, statusBarHeight, navBarHeight],
+  [() => props.fixed, () => props.placeholder, () => props.safeAreaInsetTop, () => props.bordered, () => props.customStyle, () => props.customClass, safeAreaRevision, navBarHeight],
   () => {
     ++heightRequest
     nextTick(() => { if (isAlive()) setPlaceholderHeight() })
@@ -66,12 +69,12 @@ const ROOT_STYLE = defineStyleKeys({
   'line-height': ''
 })
 
+const resolveRootStyle = createStyleResolver(ROOT_STYLE)
 const rootStyle = computed(() =>
-  resolveStyle(
-    ROOT_STYLE,
+  resolveRootStyle(
     {
       'z-index': props.fixed && isDef(props.zIndex) ? String(props.zIndex) : undefined,
-      'padding-top': props.safeAreaInsetTop ? addUnit(statusBarHeight.value || 0) : undefined,
+      'padding-top': props.safeAreaInsetTop ? inset('top') : '0px',
       height: navBarHeight.value ? addUnit(navBarHeight.value) : undefined,
       'line-height': navBarHeight.value ? addUnit(navBarHeight.value) : undefined
     },

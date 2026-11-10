@@ -4,9 +4,13 @@
  * Lynx 实现说明（相对 wot-ui 2.3.2 的适配点）：
  * - 渲染载体：参考源基于 canvas 2D（uni.createCanvasContext / createSelectorQuery
  *   取 node），Lynx 无 canvas 2D API，改用原生 svg 元素的 content 渲染
- *   （CONVENTIONS §8 白名单元素：svg / g / path / rect），码点几何（ceil 对齐、
- *   dotScale 缩放、square 运行合并、dots / rounded / liquid 的圆弧路径）逐段
- *   复刻参考源的 canvas 绘制逻辑；
+ *   （CONVENTIONS §8 白名单元素：svg / g / path / rect），码点几何（精确分数
+ *   坐标、dotScale 缩放、square 运行合并、dots / rounded / liquid 的圆弧路径）
+ *   逐段复刻参考源的 canvas 绘制逻辑；分数坐标是扫码可读性的硬要求（逐模块
+ *   ceil 量化会让三个 finder 宽度不一致、末边界浮点超界被 viewBox 裁切，真机
+ *   扫码器按 finder 反推模块尺寸时算错版本/维度而扫不出），详见 squareModules；
+ *   fill 逐元素显式下发（真机 SVG 不继承 g 元素的展示属性，CONVENTIONS §8），
+ *   colorDark / 渐变降级后的深色才能在所有引擎生效；
  * - 渐变降级：SVG content 的 linearGradient 不在 Lynx 白名单内（真机 9902
  *   致命异常），渲染路径降级为纯色（取首个色标）；exportImage 导出走标准 SVG
  *   data URI（不受白名单约束），保留渐变；
@@ -92,7 +96,15 @@ const tileSize = computed(() => {
 })
 
 /**
- * square 码点：按行做运行合并（对齐参考源 drawSquareModules 的 fillRect 批次）
+ * square 码点：按行做运行合并（对齐参考源 drawSquareModules 的 fillRect 批次）。
+ *
+ * 坐标用精确分数（2 位小数）而非逐模块 ceil 量化：SVG 原生支持小数几何，
+ * 而 ceil 量化会带来两个真机扫码致命问题——
+ *   1. 三个 finder 图案宽度不一致（如 29px / 28px），扫码器按 finder 反推
+ *      模块尺寸时产生 ~1.6% 偏差，版本/维度估算被推错而扫不出；
+ *   2. 末边界 `count * tile` 存在浮点超界（如 120.00000000000001），ceil 后
+ *      变成 121，被 viewBox 裁掉 1px，右侧 finder 直接窄一个模块像素。
+ * 参考源是 canvas fillRect，分数坐标由画布抗锯齿消化；SVG 侧必须原样保留。
  */
 function squareModules(m: boolean[][], tile: number): string {
   let rects = ''
@@ -107,11 +119,11 @@ function squareModules(m: boolean[][], tile: number): string {
       }
       if (runStart === -1) continue
 
-      const x = Math.ceil(runStart * tile) + props.margin
-      const y = Math.ceil(row * tile) + props.margin
-      const width = Math.ceil(col * tile) - Math.ceil(runStart * tile)
-      const height = Math.ceil((row + 1) * tile) - Math.ceil(row * tile)
-      rects += `<rect x="${n(x)}" y="${n(y)}" width="${n(width)}" height="${n(height)}"/>`
+      const x = runStart * tile + props.margin
+      const y = row * tile + props.margin
+      const width = (col - runStart) * tile
+      const height = tile
+      rects += `<rect x="${n(x)}" y="${n(y)}" width="${n(width)}" height="${n(height)}" fill="${xml(darkColor.value)}"/>`
       runStart = -1
     }
   }
@@ -151,7 +163,7 @@ function roundedRectPath(x: number, y: number, width: number, height: number, ra
 /**
  * dots / rounded / liquid 码点：逐模块计算缩放几何（对齐参考源 draw() 的
  * else 分支），圆弧类码点合并进单个 path 子路径（对应参考源的
- * beginPath() → fill() 批次）。
+ * beginPath() → fill() 批次）。坐标同样用精确分数，理由见 squareModules。
  */
 function dotModules(m: boolean[][], tile: number): string {
   const hasModule = (row: number, col: number) => {
@@ -164,10 +176,10 @@ function dotModules(m: boolean[][], tile: number): string {
     for (let col = 0; col < m[row].length; col++) {
       if (!m[row][col]) continue
 
-      const x = Math.ceil(col * tile) + props.margin
-      const y = Math.ceil(row * tile) + props.margin
-      const width = Math.ceil((col + 1) * tile) - Math.ceil(col * tile)
-      const height = Math.ceil((row + 1) * tile) - Math.ceil(row * tile)
+      const x = col * tile + props.margin
+      const y = row * tile + props.margin
+      const width = tile
+      const height = tile
       const scaledWidth = width * props.dotScale
       const scaledHeight = height * props.dotScale
       const scaledX = x + (width - scaledWidth) / 2
@@ -201,10 +213,10 @@ function dotModules(m: boolean[][], tile: number): string {
       }
 
       // square + dotScale !== 1
-      rects += `<rect x="${n(scaledX)}" y="${n(scaledY)}" width="${n(scaledWidth)}" height="${n(scaledHeight)}"/>`
+      rects += `<rect x="${n(scaledX)}" y="${n(scaledY)}" width="${n(scaledWidth)}" height="${n(scaledHeight)}" fill="${xml(darkColor.value)}"/>`
     }
   }
-  return rects + (d ? `<path d="${d}"/>` : '')
+  return rects + (d ? `<path d="${d}" fill="${xml(darkColor.value)}"/>` : '')
 }
 
 /** 渲染用 svg content（白名单元素；渐变降级为纯色） */

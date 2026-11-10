@@ -206,7 +206,10 @@ defineExpose<PopoverExpose>({
           v-if="visibleArrow"
           :class="`wd-popover__arrow ${popover.arrowClass.value} ${customArrow}`"
           :style="popover.arrowStyle.value"
-        />
+          :user-interaction-enabled="false"
+        >
+          <view class="wd-popover__arrow-fill" />
+        </view>
         <slot name="content">
           <!-- 普通模式 -->
           <view v-if="mode === 'normal'" class="wd-popover__inner">

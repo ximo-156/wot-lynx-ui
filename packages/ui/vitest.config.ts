@@ -140,6 +140,7 @@ const PURE_TESTS = [
   'test/unit/png-codec.test.ts',
   'test/unit/project-coverage.test.ts',
   'test/unit/qr-encoder.test.ts',
+  'test/unit/safe-area.test.ts',
   'test/unit/side-effects.test.ts',
   'test/unit/style-funnel.test.ts',
   'test/unit/tag-transform-loader.test.ts',

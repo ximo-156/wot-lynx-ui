@@ -916,8 +916,13 @@ export interface SystemInfo {
   windowWidth: number
   /** 窗口高度（px） */
   windowHeight: number
-  /** 窗口顶部位置 */
+  /** 窗口顶部位置；未上报时兼容回退为 0，请同时检查 windowTopKnown。 */
   windowTop: number
+  /** 窗口左侧位置；未上报时兼容回退为 0。 */
+  windowLeft?: number
+  /** 是否有真实上报的窗口坐标，不能由默认零或仅有窗口尺寸推断。 */
+  windowTopKnown?: boolean
+  windowLeftKnown?: boolean
   /** 设备像素比 */
   pixelRatio: number
   /** 平台信息 */
@@ -956,6 +961,13 @@ export function getSystemInfo(): SystemInfo {
     const number = Number(value)
     return Number.isFinite(number) && number > 0 ? number : fallback
   }
+  const coordinate = (value: unknown): number | undefined => {
+    if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return undefined
+    const number = Number(value)
+    return Number.isFinite(number) ? number : undefined
+  }
+  const windowTop = coordinate(info.windowTop)
+  const windowLeft = coordinate(info.windowLeft)
   const pixelRatio = positive(info.pixelRatio, 2)
   const screenWidth = positive(info.screenWidth, positive(info.pixelWidth, 375 * pixelRatio) / pixelRatio)
   const screenHeight = positive(info.screenHeight, positive(info.pixelHeight, 812 * pixelRatio) / pixelRatio)
@@ -969,7 +981,10 @@ export function getSystemInfo(): SystemInfo {
     screenHeight,
     windowWidth: viewport?.width ?? positive(info.windowWidth, browser?.width || screenWidth),
     windowHeight: viewport?.height ?? positive(info.windowHeight, browser?.height || screenHeight),
-    windowTop: Number(info.windowTop) || 0,
+    windowTop: windowTop ?? 0,
+    windowLeft: windowLeft ?? 0,
+    windowTopKnown: windowTop !== undefined,
+    windowLeftKnown: windowLeft !== undefined,
     statusBarHeight: Math.max(0, Number(info.statusBarHeight) || 0)
   }
 }
