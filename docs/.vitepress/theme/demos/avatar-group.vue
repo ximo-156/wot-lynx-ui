@@ -2,8 +2,8 @@
 /**
  * AvatarGroup 头像组 — 文档站 H5 预览演示（手工编写）。
  */
-import WdAvatar from 'wot-lynx-ui/components/wd-avatar/wd-avatar.vue'
-import WdAvatarGroup from 'wot-lynx-ui/components/wd-avatar-group/wd-avatar-group.vue'
+import WdAvatar from '@wot-lynx/ui-display/wd-avatar'
+import WdAvatarGroup from '@wot-lynx/ui-display/wd-avatar-group'
 
 // 内联 SVG 占位图（离线可渲染）
 const placeholder =

@@ -15,11 +15,11 @@
 import { describe, it, expect } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
-import Popover from '../../src/components/wd-popover/wd-popover.vue'
-import Tooltip from '../../src/components/wd-tooltip/wd-tooltip.vue'
-import Notify from '../../src/components/wd-notify/wd-notify.vue'
-import { useAlive } from '../../src/composables/useAlive'
+import { pause } from '@wot-lynx/core/common/util'
+import Popover from '@wot-lynx/ui-feedback/wd-popover'
+import Tooltip from '@wot-lynx/ui-feedback/wd-tooltip'
+import Notify from '@wot-lynx/ui-feedback/wd-notify'
+import { useAlive } from '@wot-lynx/core/composables/useAlive'
 
 /** 等待过渡入场（pause 约 33ms 一帧） */
 async function waitEnterFrames() {

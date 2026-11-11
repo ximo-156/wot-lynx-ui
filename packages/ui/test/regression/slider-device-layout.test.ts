@@ -5,18 +5,19 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import Slider from '../../src/components/wd-slider/wd-slider.vue'
-import type { SliderTheme, SliderValue } from '../../src/components/wd-slider/types'
+import Slider from '@wot-lynx/ui-form/wd-slider'
+import type { SliderTheme, SliderValue } from '@wot-lynx/ui-form/wd-slider/types'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
-const filename = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/components/wd-slider/index.scss')
+const filename = compPath('wd-slider', 'index.scss')
 const rules: Array<{ selector: string; specificity: number; declarations: Record<string, string> }> = []
-postcss.parse(compile(filename, { style: 'expanded' }).css).walkRules((rule) => {
+postcss.parse(compileScss(filename)).walkRules((rule) => {
   if (rule.parent?.type !== 'root') return
   const declarations: Record<string, string> = {}
   rule.walkDecls((decl) => { declarations[decl.prop] = decl.value })

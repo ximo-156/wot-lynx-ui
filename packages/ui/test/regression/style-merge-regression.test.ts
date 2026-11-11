@@ -19,12 +19,12 @@ import { describe, it, expect } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import Segmented from '../../src/components/wd-segmented/wd-segmented.vue'
-import PickerView from '../../src/components/wd-picker-view/wd-picker-view.vue'
-import Fab from '../../src/components/wd-fab/wd-fab.vue'
-import Toast from '../../src/components/wd-toast/wd-toast.vue'
-import { useToast } from '../../src/components/wd-toast'
+import { pause } from '@wot-lynx/core/common/util'
+import Segmented from '@wot-lynx/ui-form/wd-segmented'
+import PickerView from '@wot-lynx/ui-picker/wd-picker-view'
+import Fab from '@wot-lynx/ui-display/wd-fab'
+import Toast from '@wot-lynx/primitives/wd-toast'
+import { useToast } from '@wot-lynx/primitives/wd-toast'
 
 async function frames(n = 6) {
   for (let i = 0; i < n; i++) await pause()

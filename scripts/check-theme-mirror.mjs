@@ -20,8 +20,8 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const SCSS_FILE = join(ROOT, 'packages/ui/src/styles/theme/base/color.scss')
-const TS_FILE = join(ROOT, 'packages/ui/src/common/theme.ts')
+const SCSS_FILE = join(ROOT, 'packages/core/src/styles/theme/base/color.scss')
+const TS_FILE = join(ROOT, 'packages/core/src/common/theme.ts')
 
 /** theme.ts 的导出名 → SCSS 调色板名 */
 const PALETTE_MAP = {

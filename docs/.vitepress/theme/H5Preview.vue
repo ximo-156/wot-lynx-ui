@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** Real canvas dimensions, separate renderer mount points, and a body-level Web preview. */
 import { computed, h, nextTick, onBeforeUnmount, onMounted, provide, ref, watch, type App, type Component } from 'vue'
-import { SCROLL_LOCK_TARGET_KEY } from '../../../packages/ui/src/composables/useLockScroll'
+import { SCROLL_LOCK_TARGET_KEY } from '../../../packages/core/src/composables/useLockScroll'
 import { useRoute } from 'vitepress'
 import WdConfigProvider from 'wot-lynx-ui/components/wd-config-provider/wd-config-provider.vue'
 import { capturePreviewViewport, createLynxApp, installLynxGlobals, setPreviewViewport } from './lynx-dom'

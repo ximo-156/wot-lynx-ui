@@ -3,8 +3,8 @@
  * Sidebar 侧边导航 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdSidebar from 'wot-lynx-ui/components/wd-sidebar/wd-sidebar.vue'
-import WdSidebarItem from 'wot-lynx-ui/components/wd-sidebar-item/wd-sidebar-item.vue'
+import WdSidebar from '@wot-lynx/ui-nav/wd-sidebar'
+import WdSidebarItem from '@wot-lynx/ui-nav/wd-sidebar-item'
 
 const value = ref('a')
 </script>

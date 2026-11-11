@@ -18,9 +18,9 @@
  */
 import { describe, it, expect } from 'vitest'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
-import QrCode from '../../src/components/wd-qr-code/wd-qr-code.vue'
-import { generateQRCode, QRErrorCorrectLevel } from '../../src/components/wd-qr-code/qrcode'
+import { pause } from '@wot-lynx/core/common/util'
+import QrCode from '@wot-lynx/ui-display/wd-qr-code'
+import { generateQRCode, QRErrorCorrectLevel } from '../../../ui-display/src/wd-qr-code/qrcode'
 
 interface Rect {
   x: number

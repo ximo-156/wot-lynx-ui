@@ -18,7 +18,7 @@ export function pluginWotLynxWebFonts(options = {}) {
         ['wd-wot-icons', 'wot-icons.ttf'],
         ['wd-iconfont', 'iconfont.ttf']
       ].map(([family, filename]) => {
-        const font = readFileSync(new URL(`../src/icons/fonts/${filename}`, import.meta.url))
+        const font = readFileSync(new URL(`../../core/src/icons/fonts/${filename}`, import.meta.url))
         return `@font-face{font-family:${family};src:url("data:font/ttf;base64,${font.toString('base64')}") format("truetype");font-weight:normal;font-style:normal;font-display:block}`
       }).join('\n')
       const marker = 'data-wot-lynx-iconfont'

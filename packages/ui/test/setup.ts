@@ -9,8 +9,8 @@ import { JSDOM } from 'jsdom'
 import { LynxTestingEnv } from '@lynx-js/testing-environment'
 import { beforeEach } from 'vitest'
 import { installWorkletGlobals } from './mts-worklet-shim'
-import { __resetIconRegistry } from '../src/icons/registry'
-import { configureHost } from '../src/common/host'
+import { __resetIconRegistry } from '@wot-lynx/core/icons/registry'
+import { configureHost } from '@wot-lynx/core/common/host'
 import { restoreNativeStubs } from './helpers/native-stubs'
 
 // url 必须给 http(s) origin：about:blank 是不透明 origin，jsdom 的

@@ -1,0 +1,33 @@
+@use 'styles/variable.scss' as *;
+@use 'styles/mixin/mixin.scss' as *;
+
+// 数字主体文本字号
+$count-to-text-font-size: var(--wot-count-to-text-font-size, $typography-body-size-ultra-large) !default;
+// 数字主体文本行高
+$count-to-text-line-height: var(--wot-count-to-text-line-height, $typography-body-line-height-size-ultra-large) !default;
+// 分隔文本字号
+$count-to-separator-text-font-size: var(--wot-count-to-separator-text-font-size, $typography-label-size-main) !default;
+// 分隔文本行高
+$count-to-separator-text-line-height: var(--wot-count-to-separator-text-line-height, $typography-label-line-height-size-main) !default;
+
+@include b(count-to) {
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，不显式声明 display: flex 时 flex-direction 被静默丢弃；数字滚动
+  // 为「前缀 + 主体 + 后缀」的横向文本组合，根按横向流补全；
+  // 参考源的 vertical-align: bottom 为 Web 行内盒专有声明，Lynx 不识别
+  // （写了即静默丢失），其「小字号分隔文本与大字号主体底边对齐」的视觉
+  // 语义由 align-items: flex-end 原生等价承担。
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+
+  @include edeep(main-text) {
+    font-size: $count-to-text-font-size;
+    line-height: $count-to-text-line-height;
+  }
+
+  @include edeep(separator-text) {
+    font-size: $count-to-separator-text-font-size;
+    line-height: $count-to-separator-text-line-height;
+  }
+}

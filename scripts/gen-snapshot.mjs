@@ -22,8 +22,14 @@ import { fileURLToPath } from 'node:url'
 import process from 'node:process'
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..')
-const UI_SRC = join(ROOT, 'packages/ui/src')
+const CORE_SRC = join(ROOT, 'packages/core/src')
 const OUT_DIR = join(ROOT, 'docs/architecture')
+
+/** 包划分来自 packages.json（ADR-023） */
+const MANIFEST = JSON.parse(readFileSync(join(OUT_DIR, 'packages.json'), 'utf8'))
+const COMPONENT_PKGS = MANIFEST.packages.filter((p) => p.componentRoot)
+const corePkg = COMPONENT_PKGS.find((p) => p.role === 'primitives')
+const businessPkgs = COMPONENT_PKGS.filter((p) => p.role !== 'primitives')
 const OUT_PATH = join(OUT_DIR, 'SNAPSHOT.md')
 const DEPS_BASELINE = join(OUT_DIR, 'deps-baseline.json')
 
@@ -88,20 +94,27 @@ function countFiles(dir, pattern) {
   return n
 }
 
-const CORE = join(UI_SRC, 'primitives')
-const BUSINESS = join(UI_SRC, 'components')
+const CORE = join(ROOT, corePkg.dir, corePkg.componentRoot)
+const BUSINESS_DIRS = businessPkgs.map((p) => join(ROOT, p.dir, p.componentRoot))
 
 const coreComponents = listDirs(CORE, (n) => /^wd-/.test(n))
-const businessComponents = listDirs(BUSINESS, (n) => /^wd-/.test(n))
-const strayDirs = listDirs(BUSINESS, (n) => !/^wd-/.test(n) && n !== 'node_modules')
+const businessComponents = BUSINESS_DIRS.flatMap((d) => listDirs(d, (n) => /^wd-/.test(n)))
+const strayDirs = BUSINESS_DIRS.flatMap((d) => listDirs(d, (n) => !/^wd-/.test(n) && n !== 'node_modules'))
 
 const coreLines = countComponentLines(CORE, coreComponents)
-const businessLines = countComponentLines(BUSINESS, businessComponents)
+const businessLines = BUSINESS_DIRS.reduce(
+  (acc, d) => {
+    const l = countComponentLines(d, listDirs(d, (n) => /^wd-/.test(n)))
+    for (const k of ['.vue', '.ts', '.scss']) acc[k] += l[k]
+    return acc
+  },
+  { '.vue': 0, '.ts': 0, '.scss': 0 }
+)
 
-const composables = countFiles(join(UI_SRC, 'composables'), /\.ts$/)
-const commonModules = countFiles(join(UI_SRC, 'common'), /\.(ts|vue)$/)
-const locales = countFiles(join(UI_SRC, 'locale'), /\.ts$/)
-const presets = countFiles(join(UI_SRC, 'styles/theme/presets'), /\.scss$/)
+const composables = countFiles(join(CORE_SRC, 'composables'), /\.ts$/)
+const commonModules = countFiles(join(CORE_SRC, 'common'), /\.(ts|vue)$/)
+const locales = countFiles(join(CORE_SRC, 'locale'), /\.ts$/)
+const presets = countFiles(join(CORE_SRC, 'styles/theme/presets'), /\.scss$/)
 const testFiles = countFiles(join(ROOT, 'packages/ui/test'), /\.test\.ts$/)
 
 /** lint 规则数：review-lint.mjs 中 `id: '...'` 出现次数 */
@@ -116,8 +129,8 @@ try {
 /** 声明式 MTS 使用面：组件目录中包含 main-thread-bind* / useMainThreadRef 的文件数 */
 let mtsComponents = 0
 for (const dir of [...coreComponents, ...businessComponents]) {
-  const base = join(CORE, dir)
-  const root = existsSync(base) ? CORE : BUSINESS
+  // 组件可能在任一根下：基础件根或任一业务根（ADR-023 多包）
+  const root = existsSync(join(CORE, dir)) ? CORE : BUSINESS_DIRS.find((d) => existsSync(join(d, dir))) || CORE
   const target = join(root, dir)
   if (countFiles(target, /\.vue$/) === 0) continue
   let hit = false
@@ -162,12 +175,12 @@ rows.push('## 组件')
 rows.push('')
 rows.push('| 项 | 数值 |')
 rows.push('|---|---|')
-rows.push(`| 基础件（L3.5 ` + '`src/primitives/`' + `） | ${coreComponents.length} |`)
-rows.push(`| 业务组件（L4 ` + '`src/components/`' + `） | ${businessComponents.length} |`)
+rows.push(`| 基础件（` + '`@wot-lynx/primitives`' + `） | ${coreComponents.length} |`)
+rows.push(`| 业务组件（` + '`@wot-lynx/ui-*` + 门面' + `） | ${businessComponents.length} |`)
 rows.push(`| **组件总数** | **${coreComponents.length + businessComponents.length}** |`)
 rows.push('')
 if (strayDirs.length) {
-  rows.push(`> ⚠️ ` + '`src/components/`' + ` 下存在非 ` + '`wd-*`' + ` 目录：${strayDirs.map((d) => '`' + d + '`').join('、')}（建议清理）`)
+  rows.push(`> ⚠️ 门面 ` + '`src/components/`' + ` 下存在非 ` + '`wd-*`' + ` 目录：${strayDirs.map((d) => '`' + d + '`').join('、')}（建议清理）`)
   rows.push('')
 }
 rows.push('## 源码规模')
@@ -200,6 +213,7 @@ if (deps) {
   rows.push(`| 去重依赖边 | ${deps.edges} | — |`)
   rows.push(`| 业务 → 基础件 | ${deps.businessToCore} | ↑ |`)
   rows.push(`| 业务 ↔ 业务 | ${deps.businessToBusiness} | ≤ 60（拆包 ≤ 30） |`)
+  rows.push(`| 跨包业务边 | ${deps.crossPackage ?? 0} | 包级 DAG：单向允许、成环禁止 |`)
   rows.push(`| 契约借用 | ${deps.contractBorrow} | 0 |`)
   // 环的判据是「族内允许、跨族禁止」（ADR-012）：父子组件对是原子单元，
   // 其 provide/inject 互引不是缺陷。把两个数混为一个「循环依赖」会误导决策。
@@ -214,9 +228,9 @@ rows.push('')
 rows.push('## 生成物与契约')
 rows.push('')
 const artifacts = [
-  ['`src/index.ts`', join(UI_SRC, 'index.ts'), true],
-  ['`src/components/index.ts`（生成）', join(BUSINESS, 'index.ts'), true],
-  ['`src/primitives/index.ts`（生成）', join(CORE, 'index.ts'), false],
+  ['`src/index.ts`（门面 barrel）', join(ROOT, 'packages/ui/src/index.ts'), true],
+  ['门面 `src/components/index.ts`（生成）', join(ROOT, 'packages/ui/src/components/index.ts'), true],
+  ['`@wot-lynx/primitives` `src/index.ts`（生成）', join(CORE, 'index.ts'), false],
   ['`docs/adr/`', join(ROOT, 'docs/adr'), false],
   ['`dist/`（构建产物，不入库）', join(ROOT, 'packages/ui/dist'), false]
 ]

@@ -8,9 +8,9 @@
 import { describe, it, expect } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
-import VideoPreview from '../../src/components/wd-video-preview/wd-video-preview.vue'
-import ImagePreview from '../../src/components/wd-image-preview/wd-image-preview.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import VideoPreview from '@wot-lynx/ui-display/wd-video-preview'
+import ImagePreview from '@wot-lynx/ui-display/wd-image-preview'
 
 function renderWithExposed(comp: any, props: Record<string, any>, target: Ref<any>) {
   return render({

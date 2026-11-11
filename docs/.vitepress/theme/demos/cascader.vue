@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import WdCascader from 'wot-lynx-ui/components/wd-cascader/wd-cascader.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdCascader from '@wot-lynx/ui-form/wd-cascader'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const visible = ref(true)
 const value = ref<string | number>('xh')

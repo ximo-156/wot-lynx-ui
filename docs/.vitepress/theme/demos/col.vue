@@ -2,8 +2,8 @@
 /**
  * Col 列布局 — 文档站 H5 预览演示（手工编写）。
  */
-import WdRow from 'wot-lynx-ui/components/wd-row/wd-row.vue'
-import WdCol from 'wot-lynx-ui/components/wd-col/wd-col.vue'
+import WdRow from '@wot-lynx/ui-layout/wd-row'
+import WdCol from '@wot-lynx/ui-layout/wd-col'
 </script>
 
 <template>

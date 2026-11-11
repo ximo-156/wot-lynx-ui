@@ -23,12 +23,13 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import { fireEvent } from '../fire-event'
-import Keyboard from '../../src/components/wd-keyboard/wd-keyboard.vue'
+import Keyboard from '@wot-lynx/ui-form/wd-keyboard'
+import { compCss } from '../helpers/component-roots'
 
-const KEYBOARD_CSS = readFileSync(path.resolve(__dirname, '../..', 'src/components/wd-keyboard/index.css'), 'utf8')
-const KEY_CSS = readFileSync(path.resolve(__dirname, '../..', 'src/components/wd-keyboard/key/index.css'), 'utf8')
+const KEYBOARD_CSS = compCss('wd-keyboard')
+const KEY_CSS = compCss('wd-keyboard', 'key')
 
 /** 挂载一个受控 Keyboard（模拟 v-model），收集 update:modelValue */
 function renderKeyboard(props: Record<string, unknown> = {}) {

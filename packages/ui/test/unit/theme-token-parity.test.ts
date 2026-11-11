@@ -15,9 +15,9 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import * as theme from '../../src/common/theme'
+import * as theme from '@wot-lynx/core/common/theme'
 
-const COLOR_SCSS = path.resolve(__dirname, '../..', 'src/styles/theme/base/color.scss')
+const COLOR_SCSS = path.resolve(__dirname, '../../..', 'core/src/styles/theme/base/color.scss')
 
 /** 解析 `--wot-<name>: <value>;` 为 name → value（name 不含 --wot- 前缀） */
 function readColorTokens(): Map<string, string> {

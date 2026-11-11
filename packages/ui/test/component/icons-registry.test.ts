@@ -9,17 +9,17 @@
  */
 import { describe, it, expect } from 'vitest'
 import { render, cleanup } from '../render'
-import Icon from '../../src/primitives/wd-icon/wd-icon.vue'
+import Icon from '@wot-lynx/primitives/wd-icon'
 import {
   hasIcon,
   listIcons,
   listIconSets,
   registerIconSet,
   resolveIcon
-} from '../../src/icons/registry'
-import type { FontIconSet, IconSet, SvgIconSet } from '../../src/icons/types'
-import { wotIconsSet } from '../../src/icons/sets/wot-icons'
-import { iconfontSet } from '../../src/icons/sets/iconfont'
+} from '@wot-lynx/core/icons/registry'
+import type { FontIconSet, IconSet, SvgIconSet } from '@wot-lynx/core/icons/types'
+import { wotIconsSet } from '@wot-lynx/core/icons/sets/wot-icons'
+import { iconfontSet } from '@wot-lynx/core/icons/sets/iconfont'
 
 /** 码点 hex -> 字形字符 */
 const glyphOf = (hex: string) => String.fromCharCode(parseInt(hex, 16))

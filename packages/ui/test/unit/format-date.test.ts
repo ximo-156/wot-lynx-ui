@@ -8,7 +8,7 @@
  * 3. 日历辅助函数 getMonthDays / getFirstDayOfWeek（含闰年 2 月）。
  */
 import { describe, it, expect } from 'vitest'
-import { formatDate, getFirstDayOfWeek, getMonthDays } from '../../src/common/formatDate'
+import { formatDate, getFirstDayOfWeek, getMonthDays } from '@wot-lynx/core/common/formatDate'
 
 describe('formatDate（dayjs）', () => {
   it('按令牌格式化时间戳', () => {

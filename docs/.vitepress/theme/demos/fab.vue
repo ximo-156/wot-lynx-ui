@@ -3,8 +3,8 @@
  * Fab 悬浮按钮 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdFab from 'wot-lynx-ui/components/wd-fab/wd-fab.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdFab from '@wot-lynx/ui-display/wd-fab'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const active = ref(false)
 const activeLeft = ref(false)

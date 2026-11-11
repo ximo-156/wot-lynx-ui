@@ -3,8 +3,8 @@
  * Collapse 折叠面板 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdCollapse from 'wot-lynx-ui/components/wd-collapse/wd-collapse.vue'
-import WdCollapseItem from 'wot-lynx-ui/components/wd-collapse-item/wd-collapse-item.vue'
+import WdCollapse from '@wot-lynx/ui-layout/wd-collapse'
+import WdCollapseItem from '@wot-lynx/ui-layout/wd-collapse-item'
 
 const active = ref<string[]>(['1'])
 </script>

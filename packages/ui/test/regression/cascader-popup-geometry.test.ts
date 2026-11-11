@@ -12,16 +12,17 @@
  *    导航文字会叠在内容上）。
  */
 import { afterEach, describe, expect, it } from 'vitest'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import path from 'node:path'
 import { h } from 'vue-lynx'
 import { cleanup, render } from '../render'
-import Cascader from '../../src/components/wd-cascader/wd-cascader.vue'
-import { pause } from '../../src/common/util'
+import Cascader from '@wot-lynx/ui-form/wd-cascader'
+import { pause } from '@wot-lynx/core/common/util'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
-const cascaderCss = postcss.parse(compile(path.resolve(__dirname, '../../src/components/wd-cascader/index.scss')).css)
-const tabsCss = postcss.parse(compile(path.resolve(__dirname, '../../src/components/wd-tabs/index.scss')).css)
+const cascaderCss = postcss.parse(compileScss(compPath('wd-cascader', 'index.scss')))
+const tabsCss = postcss.parse(compileScss(compPath('wd-tabs', 'index.scss')))
 
 function rule(css: postcss.Root, selector: string): Record<string, string> {
   const declarations: Record<string, string> = {}

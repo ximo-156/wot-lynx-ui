@@ -3,8 +3,8 @@
  * DropMenu 下拉菜单 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdDropMenu from 'wot-lynx-ui/components/wd-drop-menu/wd-drop-menu.vue'
-import WdDropMenuItem from 'wot-lynx-ui/components/wd-drop-menu-item/wd-drop-menu-item.vue'
+import WdDropMenu from '@wot-lynx/ui-nav/wd-drop-menu'
+import WdDropMenuItem from '@wot-lynx/ui-nav/wd-drop-menu-item'
 
 const sortValue = ref('')
 const priceValue = ref('')

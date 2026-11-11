@@ -6,13 +6,14 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import Search from '../../src/components/wd-search/wd-search.vue'
+import Search from '@wot-lynx/primitives/wd-search'
+import { compPath } from '../helpers/component-roots'
+import { compileScss } from '../helpers/scss'
 
 const restores: Array<() => void> = []
 beforeEach(() => { vi.useFakeTimers() })
@@ -118,9 +119,9 @@ function tapChild(target: Element) {
   fireEvent.tap(target.querySelector('text, svg, image') || target, { bubbles: true })
 }
 
-const scss = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/components/wd-search/index.scss')
+const scss = compPath('wd-search', 'index.scss')
 const rules: Array<{ selector: string; declarations: Record<string, string> }> = []
-postcss.parse(compile(scss, { style: 'expanded' }).css).walkRules((rule) => {
+postcss.parse(compileScss(scss)).walkRules((rule) => {
   if (rule.parent?.type !== 'root') return
   const declarations: Record<string, string> = {}
   rule.walkDecls((declaration) => { declarations[declaration.prop] = declaration.value })

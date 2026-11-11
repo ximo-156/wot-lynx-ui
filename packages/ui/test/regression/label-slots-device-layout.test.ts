@@ -8,33 +8,31 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { defineComponent, h, nextTick, ref, type Component } from 'vue-lynx'
-import { compile } from 'sass'
 import postcss, { type Root } from 'postcss'
-import { fileURLToPath } from 'node:url'
-import path from 'node:path'
 import { cleanup, render } from '../render'
-import Tag from '../../src/components/wd-tag/wd-tag.vue'
-import Radio from '../../src/components/wd-radio/wd-radio.vue'
-import Checkbox from '../../src/components/wd-checkbox/wd-checkbox.vue'
-import Divider from '../../src/components/wd-divider/wd-divider.vue'
-import Loading from '../../src/primitives/wd-loading/wd-loading.vue'
+import { compPath } from '../helpers/component-roots'
+import { compileScss } from '../helpers/scss'
+import Tag from '@wot-lynx/ui-display/wd-tag'
+import Radio from '@wot-lynx/primitives/wd-radio'
+import Checkbox from '@wot-lynx/primitives/wd-checkbox'
+import Divider from '@wot-lynx/ui-layout/wd-divider'
+import Loading from '@wot-lynx/primitives/wd-loading'
 
-const cases: Array<{ name: string; component: Component; path: string; wrapper: string; leaf: string; props?: Record<string, unknown> }> = [
-  { name: 'Tag', component: Tag, path: 'components/wd-tag', wrapper: '.wd-tag__text', leaf: '.wd-tag__text-content' },
-  { name: 'Radio', component: Radio, path: 'components/wd-radio', wrapper: '.wd-radio__label', leaf: '.wd-radio__label-text', props: { value: 'a' } },
-  { name: 'Checkbox', component: Checkbox, path: 'components/wd-checkbox', wrapper: '.wd-checkbox__label', leaf: '.wd-checkbox__label-text', props: { modelValue: false } },
-  { name: 'Divider', component: Divider, path: 'components/wd-divider', wrapper: '.wd-divider__content', leaf: '.wd-divider__text' },
-  { name: 'Loading', component: Loading, path: 'primitives/wd-loading', wrapper: '.wd-loading__text', leaf: '.wd-loading__text-content' }
+const cases: Array<{ name: string; component: Component; comp: string; wrapper: string; leaf: string; props?: Record<string, unknown> }> = [
+  { name: 'Tag', component: Tag, comp: 'wd-tag', wrapper: '.wd-tag__text', leaf: '.wd-tag__text-content' },
+  { name: 'Radio', component: Radio, comp: 'wd-radio', wrapper: '.wd-radio__label', leaf: '.wd-radio__label-text', props: { value: 'a' } },
+  { name: 'Checkbox', component: Checkbox, comp: 'wd-checkbox', wrapper: '.wd-checkbox__label', leaf: '.wd-checkbox__label-text', props: { modelValue: false } },
+  { name: 'Divider', component: Divider, comp: 'wd-divider', wrapper: '.wd-divider__content', leaf: '.wd-divider__text' },
+  { name: 'Loading', component: Loading, comp: 'wd-loading', wrapper: '.wd-loading__text', leaf: '.wd-loading__text-content' }
 ]
 const sheets = new Map<string, Root>()
 
-function declarations(element: Element, source: string): Record<string, string> {
-  if (!sheets.has(source)) {
-    const filename = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src', source, 'index.scss')
-    sheets.set(source, postcss.parse(compile(filename, { style: 'expanded' }).css))
+function declarations(element: Element, comp: string): Record<string, string> {
+  if (!sheets.has(comp)) {
+    sheets.set(comp, postcss.parse(compileScss(compPath(comp, 'index.scss'))))
   }
   const values: Record<string, string> = {}
-  sheets.get(source)!.walkRules((rule) => {
+  sheets.get(comp)!.walkRules((rule) => {
     if (rule.parent?.type !== 'root' || !rule.selectors.some((selector) => element.matches(selector))) return
     rule.walkDecls((decl) => { values[decl.prop] = decl.value })
   })
@@ -53,12 +51,12 @@ describe('移动端标签插槽的显式文字契约', () => {
       expect(leaf.tagName.toLowerCase()).toBe('text')
       expect(leaf.textContent).toBe('移动端标签')
       expect(wrapper.contains(leaf)).toBe(true)
-      const style = declarations(leaf, item.path)
+      const style = declarations(leaf, item.comp)
       for (const property of ['font-size', 'line-height', 'color']) {
         expect(style[property], `${item.name} 的 ${property} 必须直接声明在文字节点`).toBeTruthy()
         expect(style[property]).not.toMatch(/^(inherit|currentColor)$/i)
       }
-      expect(declarations(wrapper, item.path)['line-height'], 'view 不应再与内部 text 叠加行高').toBeUndefined()
+      expect(declarations(wrapper, item.comp)['line-height'], 'view 不应再与内部 text 叠加行高').toBeUndefined()
     })
 
     it(`${item.name} 保留动态文字和自定义结构插槽`, async () => {

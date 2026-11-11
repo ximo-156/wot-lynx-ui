@@ -4,21 +4,22 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resolve } from 'node:path'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import CalendarView from '../../src/components/wd-calendar-view/wd-calendar-view.vue'
-import Calendar from '../../src/components/wd-calendar/wd-calendar.vue'
-import type { CalendarDayItem, CalendarType } from '../../src/components/wd-calendar-view/types'
+import { pause } from '@wot-lynx/core/common/util'
+import CalendarView from '@wot-lynx/ui-picker/wd-calendar-view'
+import Calendar from '@wot-lynx/ui-picker/wd-calendar'
+import type { CalendarDayItem, CalendarType } from '@wot-lynx/ui-picker/wd-calendar/types'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
 const stamp = (month: number, day: number) => new Date(2026, month - 1, day).getTime()
 const bounds = { minDate: stamp(6, 1), maxDate: stamp(7, 31) }
 const rules: Array<{ selector: string; specificity: number; declarations: Record<string, string> }> = []
 for (const panel of ['month', 'year']) {
-  postcss.parse(compile(resolve(__dirname, `../../src/components/wd-calendar-view/${panel}/index.scss`)).css).walkRules((rule) => {
+  postcss.parse(compileScss(compPath('wd-calendar-view', panel, 'index.scss'))).walkRules((rule) => {
     const declarations: Record<string, string> = {}
     rule.walkDecls((decl) => { declarations[decl.prop] = decl.value })
     for (const selector of rule.selectors) {

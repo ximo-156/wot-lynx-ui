@@ -3,10 +3,10 @@
  * Form 表单 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdForm from 'wot-lynx-ui/components/wd-form/wd-form.vue'
-import WdFormItem from 'wot-lynx-ui/components/wd-form-item/wd-form-item.vue'
-import WdInput from 'wot-lynx-ui/primitives/wd-input/wd-input.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdForm from '@wot-lynx/ui-form/wd-form'
+import WdFormItem from '@wot-lynx/ui-form/wd-form-item'
+import WdInput from '@wot-lynx/primitives/wd-input'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const formRef = ref<any>(null)
 const model = ref({ name: '', phone: '' })

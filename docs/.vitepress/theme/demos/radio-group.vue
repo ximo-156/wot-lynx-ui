@@ -3,8 +3,8 @@
  * RadioGroup 单选组 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdRadio from 'wot-lynx-ui/components/wd-radio/wd-radio.vue'
-import WdRadioGroup from 'wot-lynx-ui/components/wd-radio-group/wd-radio-group.vue'
+import WdRadio from '@wot-lynx/primitives/wd-radio'
+import WdRadioGroup from '@wot-lynx/primitives/wd-radio-group'
 
 const value = ref('a')
 </script>

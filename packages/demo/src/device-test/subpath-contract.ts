@@ -25,8 +25,8 @@
  * - 新增组件根（如 `./patterns/*`）时，应同步在此加一条导入。
  * - 删除某个组件时，若它被这里引用，构建会立刻报错 —— 这正是想要的效果。
  */
-import WdButton from 'wot-lynx-ui/primitives/wd-button'
-import WdTag from 'wot-lynx-ui/components/wd-tag'
+import WdButton from '@wot-lynx/primitives/wd-button'
+import WdTag from '@wot-lynx/ui-display/wd-tag'
 
 /**
  * 被引用的组件集合。仅用于让打包器保留解析结果，不参与渲染。

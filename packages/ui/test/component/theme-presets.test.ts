@@ -17,17 +17,17 @@
  */
 import { describe, it, expect } from 'vitest'
 import path from 'node:path'
-import { compile } from 'sass'
 import { h } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import ConfigProvider from '../../src/components/wd-config-provider/wd-config-provider.vue'
+import { compileScss } from '../helpers/scss'
 
-const THEME_DIR = path.resolve(__dirname, '../..', 'src/styles/theme')
+const THEME_DIR = path.resolve(__dirname, '../../..', 'core/src/styles/theme')
 
-/** 编译单个 SCSS 入口，返回压缩后的 CSS */
-function compileScss(relPath: string): string {
-  return compile(path.join(THEME_DIR, relPath), { style: 'compressed' }).css
+/** 编译单个 SCSS 入口，返回压缩后的 CSS（经 helpers/scss 配 loadPaths） */
+function compileThemeEntry(relPath: string): string {
+  return compileScss(path.join(THEME_DIR, relPath), { style: 'compressed' })
 }
 
 /** 该 CSS 里出现过的主题类名 */
@@ -43,19 +43,19 @@ const PRESETS = [
 
 describe('预设主题按需分发', () => {
   it('主主题只含 light/dark，不含任何预设', () => {
-    const classes = themeClasses(compileScss('index.scss'))
+    const classes = themeClasses(compileThemeEntry('index.scss'))
     expect(classes, '主主题必须提供亮/暗两套语义令牌').toEqual(['.wot-theme-dark', '.wot-theme-light'])
   })
 
   for (const preset of PRESETS) {
     it(`presets/${preset.name}.scss 单独编译后只含自己的类`, () => {
-      const classes = themeClasses(compileScss(`presets/${preset.name}.scss`))
+      const classes = themeClasses(compileThemeEntry(`presets/${preset.name}.scss`))
       expect(classes, `${preset.name} 必须自带类名规则，否则单独引入会得到空 CSS`).toEqual([preset.className])
     })
   }
 
   it('presets/index.scss 聚合三个预设', () => {
-    const classes = themeClasses(compileScss('presets/index.scss'))
+    const classes = themeClasses(compileThemeEntry('presets/index.scss'))
     expect(classes).toEqual([
       '.wot-theme-brand-a',
       '.wot-theme-compact',

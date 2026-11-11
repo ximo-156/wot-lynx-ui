@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { createTextVNode, defineComponent, Fragment, h, nextTick, ref, type VNode } from 'vue-lynx'
-import { normalizeTextSlot, WdTextSlot } from '../../src/common/textSlot'
+import { normalizeTextSlot, WdTextSlot } from '@wot-lynx/core/common/textSlot'
 import { cleanup, render } from '../render'
 
 afterEach(cleanup)

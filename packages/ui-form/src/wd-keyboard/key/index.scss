@@ -1,0 +1,119 @@
+@use 'styles/variable.scss' as *;
+@use 'styles/mixin/mixin.scss' as *;
+
+// 按键高度
+$keyboard-key-height: var(--wot-keyboard-key-height, $n-48) !default;
+// 按键间距
+$keyboard-key-padding: var(--wot-keyboard-key-padding, $padding-tight) !default;
+// 按键字号
+$keyboard-key-font-size: var(--wot-keyboard-key-font-size, $typography-title-size-extra-large) !default;
+// 按键行高
+$keyboard-key-line-height: var(--wot-keyboard-key-line-height, $typography-title-line-height-size-extra-large) !default;
+// 车牌按键字号
+$keyboard-key-car-font-size: var(--wot-keyboard-key-car-font-size, $typography-title-size-main) !default;
+// 车牌按键行高
+$keyboard-key-car-line-height: var(--wot-keyboard-key-car-line-height, $typography-title-line-height-size-main) !default;
+// 按键字重
+$keyboard-key-font-weight: var(--wot-keyboard-key-font-weight, $font-weight-medium) !default;
+// 按键背景色
+$keyboard-key-bg: var(--wot-keyboard-key-bg, $filled-oppo) !default;
+// 按键圆角
+$keyboard-key-radius: var(--wot-keyboard-key-radius, $radius-large) !default;
+// 按键激活背景色
+$keyboard-key-bg-active: var(--wot-keyboard-key-bg-active, $filled-strong) !default;
+// 删除键字号
+$keyboard-key-delete-font-size: var(--wot-keyboard-key-delete-font-size, $typography-title-size-main) !default;
+// 删除键行高
+$keyboard-key-delete-line-height: var(--wot-keyboard-key-delete-line-height, $typography-title-line-height-size-main) !default;
+// 删除键字重
+$keyboard-key-delete-font-weight: var(--wot-keyboard-key-delete-font-weight, $font-weight-medium) !default;
+// 主按钮文字颜色
+$keyboard-key-primary-color: var(--wot-keyboard-key-primary-color, $base-white) !default;
+// 主按钮背景色
+$keyboard-key-primary-bg: var(--wot-keyboard-key-primary-bg, $primary-6) !default;
+// 主按钮激活背景色
+$keyboard-key-primary-bg-active: var(--wot-keyboard-key-primary-bg-active, $primary-7) !default;
+// 按键图标尺寸
+$keyboard-key-icon-size: var(--wot-keyboard-key-icon-size, $n-22) !default;
+// 车牌键圆角（键宽仅 28.7px，4px 已是比例合适的圆角，不宜跟随数字键放大）
+$keyboard-key-car-radius: var(--wot-keyboard-key-car-radius, $radius-main) !default;
+
+.wd-key-wrapper {
+  position: relative;
+  // flex-grow 必须为 0：末行不足一整行时（车牌英数模式 34 键 → 末行 8 格），
+  // grow:1 会把末行键拉宽到 40.9px，与上方 28.7px 形成锯齿。
+  flex: 0 1 auto;
+  flex-basis: 33%;
+  // min-width:auto 会让 flex 项以 min-content 为下限，十列网格直接塌成三列；
+  // 显式归零，网格才按 flex-basis 排布。
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 $keyboard-key-padding $keyboard-key-padding 0;
+
+  @include m(wider) {
+    flex-basis: 66%;
+  }
+}
+
+@include b(key) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: $keyboard-key-height;
+  font-size: $keyboard-key-font-size;
+  line-height: $keyboard-key-line-height;
+  font-weight: $keyboard-key-font-weight;
+  background: $keyboard-key-bg;
+  border-radius: $keyboard-key-radius;
+  // 颜色过渡（用户反馈「浅色/暗色切换太生硬」）：按键在常态（filled-oppo）
+  // 与按压态（filled-strong）、亮色与暗色令牌之间都是整块背景色翻转，
+  // 没有过渡时按下去是硬切。走 $motion-fast——令牌注释即「按压反馈、
+  // 颜色切换」，与 switch / checkbox 的颜色过渡同一档。
+  transition: background-color $motion-fast $easing-standard, color $motion-fast $easing-standard;
+
+  // Lynx 适配：wot-ui 的按压态由 touch 事件驱动的 wd-key--active 类切换
+  // （滑动可取消，无法用 :active 表达），此处保留 m(active) 生成该类名。
+  @include m(active) {
+    background: $keyboard-key-bg-active;
+  }
+
+  @include when(car) {
+    font-size: $keyboard-key-car-font-size;
+    line-height: $keyboard-key-car-line-height;
+    border-radius: $keyboard-key-car-radius;
+  }
+
+  @include m(large) {
+    position: absolute;
+    top: 0;
+    right: $keyboard-key-padding;
+    bottom: $keyboard-key-padding;
+    left: 0;
+    height: auto;
+  }
+
+  @include m(delete, close) {
+    font-size: $keyboard-key-delete-font-size;
+    line-height: $keyboard-key-delete-line-height;
+    font-weight: $keyboard-key-delete-font-weight;
+  }
+
+  @include m(close) {
+    color: $keyboard-key-primary-color;
+    background: $keyboard-key-primary-bg;
+
+    &.wd-key--active {
+      background: $keyboard-key-primary-bg-active;
+    }
+  }
+
+  // Lynx 适配：wot-ui 的 :deep() 在本地无 shadow DOM，等价为后代选择器。
+  @include edeep(loading-icon) {
+    color: $keyboard-key-primary-color;
+  }
+
+  @include edeep(icon) {
+    font-size: $keyboard-key-icon-size;
+  }
+}

@@ -9,10 +9,10 @@ import { defineComponent, h, nextTick, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { nativeRuntime } from '../helpers/native-stubs'
-import Input from '../../src/primitives/wd-input/wd-input.vue'
-import type { InputProps } from '../../src/primitives/wd-input/types'
-import Form from '../../src/components/wd-form/wd-form.vue'
-import FormItem from '../../src/components/wd-form-item/wd-form-item.vue'
+import Input from '@wot-lynx/primitives/wd-input'
+import type { InputProps } from '@wot-lynx/primitives/wd-input/types'
+import Form from '@wot-lynx/ui-form/wd-form'
+import FormItem from '@wot-lynx/ui-form/wd-form-item'
 
 const restores: Array<() => void> = []
 beforeEach(() => vi.useFakeTimers())

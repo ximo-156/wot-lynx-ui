@@ -9,6 +9,8 @@ import { pluginWotLynxTags, pluginWotLynxWebFonts, pluginWotLynxWebViewport } fr
 
 /** 组件库源码内文件（相对 packages/ui/src 的路径）的绝对路径 */
 const uiSrc = (p: string) => fileURLToPath(new URL(`../ui/src/${p}`, import.meta.url))
+/** @wot-lynx/core 的 src（主题/scss load-path 住处，ADR-023） */
+const coreSrc = (p: string) => fileURLToPath(new URL(`../core/src/${p}`, import.meta.url))
 
 /**
  * ⚠️ 曾经在 dev 注入 `performance.buildCache: true`（rspack 持久化缓存）把启动
@@ -154,7 +156,7 @@ export default defineConfig({
         conditionNames: [...(config.resolve?.conditionNames ?? []), 'source'],
         alias: {
           ...alias,
-          'wot-lynx-ui/theme$': uiSrc('styles/theme/index.css')
+          'wot-lynx-ui/theme$': coreSrc('styles/theme/index.css')
         }
       }
     }

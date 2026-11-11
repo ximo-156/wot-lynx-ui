@@ -21,12 +21,11 @@ type LocaleLeaf = string | ((...args: never[]) => string)
 type LocaleTree = { [key: string]: LocaleLeaf | LocaleTree }
 
 /**
- * 用**根相对**模式（`/src/...`）而不是相对模式：`import.meta.glob` 的相对模式
- * 是相对当前文件解析的，文件在 `test/unit/` 时要写两层 `..` 才能到包根；一旦
- * 目录层级变动，模式会静默匹配 0 个文件（不报错，整组用例空转）。根相对模式
- * 以 vitest root（`packages/ui`）为基准，与测试文件放哪一层无关。
+ * 语言包已随 `@wot-lynx/core` 拆出（ADR-023），glob 用**相对当前文件**的模式：
+ * 一旦目录层级变动，模式会静默匹配 0 个文件（不报错，整组用例空转），
+ * 因此下面的「模块数」断言是必需的兜底。
  */
-const modules = import.meta.glob<{ default: LocaleTree }>('/src/locale/lang/*.ts', { eager: true })
+const modules = import.meta.glob<{ default: LocaleTree }>('../../../core/src/locale/lang/*.ts', { eager: true })
 
 /** 展平为 `a.b.c` → 叶子值 */
 function flatten(tree: LocaleTree, prefix = ''): Map<string, LocaleLeaf> {
@@ -47,7 +46,7 @@ const localeFiles = Object.keys(modules).sort()
  * 基准语言包：按**后缀**定位而不是写死相对路径。
  *
  * glob 的 key 是相对当前文件的路径，本文件位于 `test/unit/`，写死
- * `'../../src/locale/lang/zh-CN.ts'` 会在目录层级变动时静默失配
+ * `'../../../core/src/locale/lang/zh-CN.ts'` 会在目录层级变动时静默失配
  * （`modules[undefined].default` → TypeError，测试直接炸在 collect 阶段）。
  * 后缀匹配对层级免疫，且找不到时下面的断言会明确报错。
  */

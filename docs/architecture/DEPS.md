@@ -1,17 +1,18 @@
 # 组件横向依赖报告
 
 > 由 `scripts/analyze-deps.mjs` 自动生成，请勿手动编辑。
-> 生成日期：2026-10-23 ｜ 判据见 [ADR-012](../adr/012-primitives-layer.md)
+> 生成日期：2026-11-11 ｜ 判据见 [ADR-012](../adr/012-primitives-layer.md)；包边界见 [ADR-023](../adr/023-domain-package-split.md)
 
 ## 总量
 
 | 指标 | 数值 | 目标 |
 |---|---|---|
-| 组件数 | 106（core 12 / business 94） | — |
-| import 行数 | 204 | — |
+| 组件数 | 106（core 24 / business 82） | — |
+| import 行数 | 208 | — |
 | 去重依赖边 | 157 | — |
 | 业务 → 基础件 | 97 | ↑ 越多越好 |
-| **业务 ↔ 业务** | **48** | ≤ 60（拆包门槛 ≤ 30） |
+| **业务 ↔ 业务** | **28** | ≤ 60（拆包门槛 ≤ 30） |
+| **跨包业务边** | **4** | 包级 DAG：允许单向，禁止成环 |
 | 契约借用 | 0 | 0 |
 | **跨族环** | **0** | 0 |
 | 族内环（父子组件对） | 5 | 允许（原子单元） |
@@ -22,47 +23,47 @@
 
 | 类型 | 条数 | 说明 |
 |---|---|---|
-| compose | 139 | 引 `.vue`，组件组合（合法） |
+| compose | 142 | 引 `.vue`，组件组合（合法） |
 | type-contract | 42 | `import type` 借契约（应下沉） |
-| other | 22 | 值导入 `types` 内 KEY 常量（应下沉） |
+| other | 23 | 值导入 `types` 内 KEY 常量（应下沉） |
 | util-borrow | 1 | 借 utils（应下沉 common） |
 
 ## fan-in Top（被依赖最多）
 
-| 组件 | 层 | fan-in | fan-out |
+| 组件 | 包 | fan-in | fan-out |
 |---|---|---|---|
-| `wd-icon` | core | 49 | 0 |
-| `wd-button` | core | 11 | 2 |
-| `wd-loading` | core | 10 | 0 |
-| `wd-popup` | core | 9 | 4 |
-| `wd-transition` | core | 7 | 0 |
-| `wd-overlay` | core | 5 | 1 |
-| `wd-badge` | core | 5 | 0 |
-| `wd-input` | core | 4 | 1 |
-| `wd-cell` | core | 3 | 1 |
-| `wd-img` | core | 3 | 1 |
-| `wd-action-sheet` | business | 3 | 3 |
-| `wd-tabs` | business | 3 | 5 |
-| `wd-tab` | business | 3 | 2 |
-| `wd-textarea` | core | 2 | 2 |
-| `wd-toast` | business | 2 | 4 |
+| `wd-icon` | @wot-lynx/primitives | 49 | 0 |
+| `wd-button` | @wot-lynx/primitives | 11 | 2 |
+| `wd-loading` | @wot-lynx/primitives | 10 | 0 |
+| `wd-popup` | @wot-lynx/primitives | 9 | 4 |
+| `wd-transition` | @wot-lynx/primitives | 7 | 0 |
+| `wd-overlay` | @wot-lynx/primitives | 5 | 1 |
+| `wd-badge` | @wot-lynx/primitives | 5 | 0 |
+| `wd-input` | @wot-lynx/primitives | 4 | 1 |
+| `wd-tabs` | @wot-lynx/primitives | 3 | 5 |
+| `wd-tab` | @wot-lynx/primitives | 3 | 2 |
+| `wd-img` | @wot-lynx/primitives | 3 | 1 |
+| `wd-cell` | @wot-lynx/primitives | 3 | 1 |
+| `wd-action-sheet` | @wot-lynx/primitives | 3 | 3 |
+| `wd-sticky-box` | @wot-lynx/primitives | 2 | 0 |
+| `wd-swiper` | @wot-lynx/ui-display | 2 | 2 |
 
 ## fan-out Top（依赖最多）
 
-| 组件 | 层 | fan-out |
+| 组件 | 包 | fan-out |
 |---|---|---|
-| `wd-select-picker` | business | 8 |
-| `wd-calendar` | business | 7 |
-| `wd-address-edit` | business | 6 |
-| `wd-cascader` | business | 5 |
-| `wd-dialog` | business | 5 |
-| `wd-tabs` | business | 5 |
-| `wd-popup` | core | 4 |
-| `wd-toast` | business | 4 |
-| `wd-upload` | business | 4 |
-| `wd-action-sheet` | business | 3 |
-| `wd-avatar` | business | 3 |
-| `wd-calendar-view` | business | 3 |
+| `wd-select-picker` | @wot-lynx/ui-form | 8 |
+| `wd-calendar` | @wot-lynx/ui-picker | 7 |
+| `wd-address-edit` | @wot-lynx/ui-form | 6 |
+| `wd-tabs` | @wot-lynx/primitives | 5 |
+| `wd-cascader` | @wot-lynx/ui-form | 5 |
+| `wd-dialog` | @wot-lynx/ui-feedback | 5 |
+| `wd-popup` | @wot-lynx/primitives | 4 |
+| `wd-toast` | @wot-lynx/primitives | 4 |
+| `wd-upload` | @wot-lynx/ui-form | 4 |
+| `wd-action-sheet` | @wot-lynx/primitives | 3 |
+| `wd-grid-item` | @wot-lynx/ui-layout | 3 |
+| `wd-avatar` | @wot-lynx/ui-display | 3 |
 
 ## 循环依赖
 
@@ -72,11 +73,11 @@
 
 | # | 环 | 判定 |
 |---|---|---|
-| 1 | `wd-avatar` → `wd-avatar-group` → `wd-avatar` | ✅ 族内（含值导入） |
-| 2 | `wd-tabs` → `wd-tab` → `wd-tabs` | ✅ 族内（含值导入） |
+| 1 | `wd-tab` → `wd-tabs` → `wd-tab` | ✅ 族内（含值导入） |
+| 2 | `wd-avatar` → `wd-avatar-group` → `wd-avatar` | ✅ 族内（含值导入） |
 | 3 | `wd-swiper` → `wd-swiper-nav` → `wd-swiper` | ✅ 族内（纯类型） |
-| 4 | `wd-tabbar` → `wd-tabbar-item` → `wd-tabbar` | ✅ 族内（纯类型） |
-| 5 | `wd-table` → `wd-table-column` → `wd-table` | ✅ 族内（含值导入） |
+| 4 | `wd-table` → `wd-table-column` → `wd-table` | ✅ 族内（含值导入） |
+| 5 | `wd-tabbar` → `wd-tabbar-item` → `wd-tabbar` | ✅ 族内（纯类型） |
 
 ## 组件族（原子单元，拆包时不可拆分）
 
@@ -117,30 +118,13 @@
 
 ## 违规清单（按规则）
 
-### dep/lateral-component（24）
+### dep/lateral-component（7）
 
-- wd-address-edit → wd-cell-group（compose）
-- wd-address-edit → wd-switch（compose）
-- wd-calendar → wd-action-sheet（compose）
-- wd-calendar → wd-tabs（compose）
-- wd-calendar → wd-tab（compose）
-- wd-calendar → wd-tag（compose）
-- wd-calendar-view → wd-toast（compose）
-- wd-cascader → wd-action-sheet（compose）
-- wd-cascader → wd-tabs（compose）
-- wd-cascader → wd-tab（compose）
 - wd-count-to → wd-text（compose）
-- wd-form → wd-toast（compose）
 - wd-image-preview → wd-swiper（compose）
 - wd-loadmore → wd-divider（compose）
-- wd-select-picker → wd-action-sheet（compose）
-- wd-select-picker → wd-checkbox（compose）
-- wd-select-picker → wd-checkbox-group（compose）
-- wd-select-picker → wd-radio（compose）
-- wd-select-picker → wd-radio-group（compose）
-- wd-select-picker → wd-search（compose）
 - wd-table → wd-sort-button（compose）
-- wd-tabs → wd-sticky（compose）
-- wd-tabs → wd-sticky-box（compose）
+- wd-address-edit → wd-cell-group（compose）
 - wd-upload → wd-video-preview（compose）
+- wd-calendar → wd-tag（compose）
 

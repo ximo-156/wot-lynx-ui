@@ -3,9 +3,9 @@
  * Steps 步骤条 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdSteps from 'wot-lynx-ui/components/wd-steps/wd-steps.vue'
-import WdStep from 'wot-lynx-ui/components/wd-step/wd-step.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdSteps from '@wot-lynx/ui-nav/wd-steps'
+import WdStep from '@wot-lynx/ui-nav/wd-step'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const active = ref(1)
 </script>

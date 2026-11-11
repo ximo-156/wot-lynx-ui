@@ -4,9 +4,9 @@
  *
  * 命令式 API：useToast(selector) 与 <wd-toast selector> 配对。
  */
-import WdToast from 'wot-lynx-ui/components/wd-toast/wd-toast.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
-import { useToast } from 'wot-lynx-ui/components/wd-toast'
+import WdToast from '@wot-lynx/primitives/wd-toast'
+import WdButton from '@wot-lynx/primitives/wd-button'
+import { useToast } from '@wot-lynx/primitives/wd-toast'
 
 const toast = useToast('preview-toast')
 </script>

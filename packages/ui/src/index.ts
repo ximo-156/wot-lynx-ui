@@ -13,47 +13,53 @@
  * 本文件只负责：两份 barrel 的转出、非组件导出、以及全局注册插件。
  */
 import type { App, Plugin } from 'vue-lynx'
-import { allPrimitives } from './primitives'
+import { allPrimitives } from '@wot-lynx/primitives'
+import { allLayout } from '@wot-lynx/ui-layout'
+import { allDisplay } from '@wot-lynx/ui-display'
+import { allNav } from '@wot-lynx/ui-nav'
+import { allForm } from '@wot-lynx/ui-form'
+import { allFeedback } from '@wot-lynx/ui-feedback'
+import { allPicker } from '@wot-lynx/ui-picker'
 import { allComponents } from './components'
 
 // ---------------------------------------------------------------------------
 // 组件（barrel 为生成物，勿手工维护清单）
 // ---------------------------------------------------------------------------
-export * from './primitives'
+export * from '@wot-lynx/primitives'
 export * from './components'
 
 // ---------------------------------------------------------------------------
 // 宿主能力桥（ADR-022）：Lynx 原生扩展点（Native Module / JS Module）。
 // 本库不再提供 uni-app 兼容层；宿主专属能力按 WotLynxHost 契约注册。
 // ---------------------------------------------------------------------------
-export { configureHost, getHost, hasHostCapability } from './common/host'
-export type { HostRect, HostUploadTask, WotLynxHost } from './common/host'
+export { configureHost, getHost, hasHostCapability } from '@wot-lynx/core/common/host'
+export type { HostRect, HostUploadTask, WotLynxHost } from '@wot-lynx/core/common/host'
 
 // ---------------------------------------------------------------------------
 // 平台能力（ADR-005 / ADR-015）：能力判定统一走 getPlatform().capabilities
 // ---------------------------------------------------------------------------
-export { getPlatform, configurePlatform, mockPlatform } from './common/platform'
-export type { PlatformAdapter, PlatformCapabilities, PlatformName } from './common/platform'
+export { getPlatform, configurePlatform, mockPlatform } from '@wot-lynx/core/common/platform'
+export type { PlatformAdapter, PlatformCapabilities, PlatformName } from '@wot-lynx/core/common/platform'
 
 // ---------------------------------------------------------------------------
 // 命令式 API（弹层系）
 // ---------------------------------------------------------------------------
-export { useNotify, setNotifyDefaultOptions, resetNotifyDefaultOptions } from './components/wd-notify'
-export { useDialog } from './components/wd-dialog'
-export type { Dialog as DialogApi, DialogOptions, DialogResult } from './components/wd-dialog/types'
-export { useImagePreview } from './components/wd-image-preview'
-export type { ImagePreviewOptions } from './components/wd-image-preview/types'
-export { useVideoPreview } from './components/wd-video-preview'
-export type { VideoPreviewOptions } from './components/wd-video-preview/types'
-export { useToast, getToastOptionKey, toastIcon } from './components/wd-toast'
-export type { Toast as ToastApi, ToastOptions } from './components/wd-toast/types'
+export { useNotify, setNotifyDefaultOptions, resetNotifyDefaultOptions } from '@wot-lynx/ui-feedback/wd-notify'
+export { useDialog } from '@wot-lynx/ui-feedback/wd-dialog'
+export type { Dialog as DialogApi, DialogOptions, DialogResult } from '@wot-lynx/ui-feedback/wd-dialog/types'
+export { useImagePreview } from '@wot-lynx/ui-display/wd-image-preview'
+export type { ImagePreviewOptions } from '@wot-lynx/ui-display/wd-image-preview/types'
+export { useVideoPreview } from '@wot-lynx/ui-display/wd-video-preview'
+export type { VideoPreviewOptions } from '@wot-lynx/ui-display/wd-video-preview/types'
+export { useToast, getToastOptionKey, toastIcon } from '@wot-lynx/primitives/wd-toast'
+export type { Toast as ToastApi, ToastOptions } from '@wot-lynx/primitives/wd-toast/types'
 
 // ---------------------------------------------------------------------------
 // 内置图标注册表：扩展一套图标（另一个 iconfont 导出或手写 path）后经
 // registerIconSet 注册，即可通过 `<wd-icon name="xxx" />` / `name="key:xxx"` 使用
 // ---------------------------------------------------------------------------
-export { registerIconSet, resolveIcon, hasIcon, listIcons, listIconSets } from './icons/registry'
-export type { IconPaths, IconSet, ResolvedIcon } from './icons/types'
+export { registerIconSet, resolveIcon, hasIcon, listIcons, listIconSets } from '@wot-lynx/core/icons/registry'
+export type { IconPaths, IconSet, ResolvedIcon } from '@wot-lynx/core/icons/types'
 
 // ---------------------------------------------------------------------------
 // 全局配置契约
@@ -62,7 +68,7 @@ export {
   CONFIG_PROVIDER_KEY,
   DEFAULT_GLOBAL_CONFIG,
   mergeConfig
-} from './composables/global-config'
+} from '@wot-lynx/core/composables/global-config'
 export type {
   ButtonConfig,
   ButtonSize,
@@ -75,40 +81,40 @@ export type {
   TagConfig,
   TagSize,
   TagVariant
-} from './composables/global-config'
+} from '@wot-lynx/core/composables/global-config'
 
 // ---------------------------------------------------------------------------
 // 组合式函数
 // ---------------------------------------------------------------------------
-export { useParent } from './composables/useParent'
-export { useChildren, flattenVNodes, sortChildren } from './composables/useChildren'
-export { useQueue } from './composables/useQueue'
-export { useTouch } from './composables/useTouch'
-export { useRaf } from './composables/useRaf'
-export { useCountDown } from './composables/useCountDown'
-export { useTranslate } from './composables/useTranslate'
-export { useCell, CELL_GROUP_KEY } from './composables/useCell'
-export type { CellGroupProvide, CellLayout, CellSize, CellValueAlign } from './composables/useCell'
-export { useConfigProvider, mapThemeVarsToCSSVars } from './composables/useConfigProvider'
-export { useGlobalConfig } from './composables/useGlobalConfig'
-export { useFormDisabled, FORM_KEY, FORM_ITEM_DISABLED_KEY } from './composables/useFormDisabled'
-export type { FormItemDisabledProvide, FormProvide } from './composables/useFormDisabled'
-export { useLockScroll, usePageScrollLock, SCROLL_LOCK_TARGET_KEY } from './composables/useLockScroll'
-export { useDeviceInfo } from './composables/useDeviceInfo'
-export { useSafeArea } from './composables/useSafeArea'
-export { getSafeAreaInsets } from './common/safe-area'
-export type { SafeAreaInsets, SafeAreaInfo, SafeAreaEdge } from './common/safe-area'
-export { useViewportSize, useViewportWidth, useIsWideViewport } from './composables/useWideViewport'
-export type { ReactiveViewport } from './composables/useWideViewport'
-export { usePopover } from './composables/usePopover'
-export { useRadioGroup, RADIO_GROUP_KEY } from './composables/useRadioGroup'
-export type { RadioDirection, RadioGroupProvide, RadioPlacement, RadioType } from './composables/useRadioGroup'
-export { useCheckboxGroup, CHECKBOX_GROUP_KEY } from './composables/useCheckboxGroup'
-export type { CheckboxDirection, CheckboxGroupProvide, CheckboxPlacement, CheckboxType } from './composables/useCheckboxGroup'
-export { useSelection, formatColumnsData } from './composables/useSelection'
-export { FORM_ITEM_VALIDATE_KEY } from './composables/useFormItemValidate'
-export type { FormItemValidateProvide, FormValidateEvent } from './composables/useFormItemValidate'
-export { useUpload, UPLOAD_STATUS } from './composables/useUpload'
+export { useParent } from '@wot-lynx/core/composables/useParent'
+export { useChildren, flattenVNodes, sortChildren } from '@wot-lynx/core/composables/useChildren'
+export { useQueue } from '@wot-lynx/core/composables/useQueue'
+export { useTouch } from '@wot-lynx/core/composables/useTouch'
+export { useRaf } from '@wot-lynx/core/composables/useRaf'
+export { useCountDown } from '@wot-lynx/core/composables/useCountDown'
+export { useTranslate } from '@wot-lynx/core/composables/useTranslate'
+export { useCell, CELL_GROUP_KEY } from '@wot-lynx/core/composables/useCell'
+export type { CellGroupProvide, CellLayout, CellSize, CellValueAlign } from '@wot-lynx/core/composables/useCell'
+export { useConfigProvider, mapThemeVarsToCSSVars } from '@wot-lynx/core/composables/useConfigProvider'
+export { useGlobalConfig } from '@wot-lynx/core/composables/useGlobalConfig'
+export { useFormDisabled, FORM_KEY, FORM_ITEM_DISABLED_KEY } from '@wot-lynx/core/composables/useFormDisabled'
+export type { FormItemDisabledProvide, FormProvide } from '@wot-lynx/core/composables/useFormDisabled'
+export { useLockScroll, usePageScrollLock, SCROLL_LOCK_TARGET_KEY } from '@wot-lynx/core/composables/useLockScroll'
+export { useDeviceInfo } from '@wot-lynx/core/composables/useDeviceInfo'
+export { useSafeArea } from '@wot-lynx/core/composables/useSafeArea'
+export { getSafeAreaInsets } from '@wot-lynx/core/common/safe-area'
+export type { SafeAreaInsets, SafeAreaInfo, SafeAreaEdge } from '@wot-lynx/core/common/safe-area'
+export { useViewportSize, useViewportWidth, useIsWideViewport } from '@wot-lynx/core/composables/useWideViewport'
+export type { ReactiveViewport } from '@wot-lynx/core/composables/useWideViewport'
+export { usePopover } from '@wot-lynx/core/composables/usePopover'
+export { useRadioGroup, RADIO_GROUP_KEY } from '@wot-lynx/core/composables/useRadioGroup'
+export type { RadioDirection, RadioGroupProvide, RadioPlacement, RadioType } from '@wot-lynx/core/composables/useRadioGroup'
+export { useCheckboxGroup, CHECKBOX_GROUP_KEY } from '@wot-lynx/core/composables/useCheckboxGroup'
+export type { CheckboxDirection, CheckboxGroupProvide, CheckboxPlacement, CheckboxType } from '@wot-lynx/core/composables/useCheckboxGroup'
+export { useSelection, formatColumnsData } from '@wot-lynx/core/composables/useSelection'
+export { FORM_ITEM_VALIDATE_KEY } from '@wot-lynx/core/composables/useFormItemValidate'
+export type { FormItemValidateProvide, FormValidateEvent } from '@wot-lynx/core/composables/useFormItemValidate'
+export { useUpload, UPLOAD_STATUS } from '@wot-lynx/core/composables/useUpload'
 export type {
   ChooseFile,
   ChooseFileOption,
@@ -116,8 +122,8 @@ export type {
   UploadMethod,
   UploadStatusType,
   UploadSuccessStatus
-} from './composables/useUpload'
-export { Locale, useCurrentLang } from './locale'
+} from '@wot-lynx/core/composables/useUpload'
+export { Locale, useCurrentLang } from '@wot-lynx/core/locale'
 
 // ---------------------------------------------------------------------------
 // 响应式视口（宽屏 / Web 端适配）：Lynx 无 CSS 媒体查询，断点与视口口径统一从
@@ -131,18 +137,18 @@ export {
   isDesktopViewport,
   setViewportOverride,
   hasViewportOverride
-} from './common/viewport'
-export type { ViewportSize } from './common/viewport'
+} from '@wot-lynx/core/common/viewport'
+export type { ViewportSize } from '@wot-lynx/core/common/viewport'
 
 // ---------------------------------------------------------------------------
 // 工具函数
 // ---------------------------------------------------------------------------
-export * from './common/util'
-export * from './common/props'
-export * from './common/formatDate'
-export * from './common/style'
-export { callInterceptor } from './common/interceptor'
-export { AbortablePromise } from './common/AbortablePromise'
+export * from '@wot-lynx/core/common/util'
+export * from '@wot-lynx/core/common/props'
+export * from '@wot-lynx/core/common/formatDate'
+export * from '@wot-lynx/core/common/style'
+export { callInterceptor } from '@wot-lynx/core/common/interceptor'
+export { AbortablePromise } from '@wot-lynx/core/common/AbortablePromise'
 
 /**
  * 全局异常兜底（最后一道防线）。
@@ -192,7 +198,7 @@ export const wotLynxUI: Plugin = {
   install(app: App) {
     installGlobalErrorGuard(app)
 
-    const registry = [...allPrimitives, ...allComponents]
+    const registry = [...allPrimitives, ...allLayout, ...allDisplay, ...allNav, ...allForm, ...allFeedback, ...allPicker, ...allComponents]
     registry.forEach((component) => {
       const rawName = component.name || (component as { __name?: string }).__name || 'WdComponent'
       app.component(rawName, component)

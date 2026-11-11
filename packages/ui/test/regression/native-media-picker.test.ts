@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
-import Upload from '../../src/components/wd-upload/wd-upload.vue'
-import { configureHost } from '../../src/common/host'
+import Upload from '@wot-lynx/ui-form/wd-upload'
+import { configureHost } from '@wot-lynx/core/common/host'
 import {
   createNativeMediaPickerHost, normalizeNativeMediaOptions, supplementMediaPicker,
   type NativeMediaOptions, type NativeMediaResult, type NativeMediaPickerModule,
   type NativeMediaSuccess, type NativePickedMedia
-} from '../../src/common/nativeMediaPicker'
+} from '@wot-lynx/core/common/nativeMediaPicker'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import type { UploadFileItem } from '../../src/components/wd-upload/types'
+import type { UploadFileItem } from '@wot-lynx/ui-form/wd-upload/types'
 
 const image = (path = '/data/user/0/explorer/cache/WotMediaPicker/photo.jpg'): NativePickedMedia => ({
   fileType: 'image', tempFilePath: path, name: 'photo.jpg', size: 42

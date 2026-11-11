@@ -10,10 +10,10 @@
 import { describe, it, expect } from 'vitest'
 import { h } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
-import Watermark from '../../src/components/wd-watermark/wd-watermark.vue'
-import CalendarView from '../../src/components/wd-calendar-view/wd-calendar-view.vue'
-import PickerView from '../../src/components/wd-picker-view/wd-picker-view.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Watermark from '@wot-lynx/ui-display/wd-watermark'
+import CalendarView from '@wot-lynx/ui-picker/wd-calendar-view'
+import PickerView from '@wot-lynx/ui-picker/wd-picker-view'
 
 async function frames(n = 8) {
   for (let i = 0; i < n; i++) await pause()

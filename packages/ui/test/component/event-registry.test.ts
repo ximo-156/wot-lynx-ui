@@ -11,7 +11,7 @@ import DemoApp from '../../../demo/src/App.vue'
 import wotLynxUI from '../../src/index'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 
 const REGISTRY_KEY = '__VUE_LYNX_EVENT_REGISTRY__'
 

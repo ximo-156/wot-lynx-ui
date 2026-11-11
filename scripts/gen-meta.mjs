@@ -41,15 +41,18 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const UI_SRC = path.join(ROOT, 'packages/ui/src')
 const OUT_FILE = path.join(ROOT, 'packages/ui/meta.json')
 const FAMILIES_FILE = path.join(ROOT, 'docs/architecture/families.json')
 
-/** 两个组件根，顺序决定产物顺序（基础件在前） */
-const ROOTS = [
-  { dir: 'primitives', layer: 'primitives' },
-  { dir: 'components', layer: 'components' }
-]
+/**
+ * 组件根来自 packages.json（ADR-023）。产物仍是**一份** meta.json（库级契约），
+ * 每个组件额外带 `package` 字段标明所属包——文档与 API diff 按库消费，
+ * 不因拆包而分裂。
+ */
+const MANIFEST = JSON.parse(readFileSync(path.join(ROOT, 'docs/architecture/packages.json'), 'utf8'))
+const ROOTS = MANIFEST.packages
+  .filter((p) => p.componentRoot)
+  .map((p) => ({ pkg: p.name, dir: path.join(p.dir, p.componentRoot), layer: p.layer ?? 'components' }))
 
 const checkMode = process.argv.includes('--check')
 
@@ -491,7 +494,7 @@ function parsePropsObject(src, constName, seen = new Set()) {
     // 目前只有 ...baseProps 一种展开（106 个组件里 104 个用它），
     // 其定义在 common/props.ts，用同一个解析器展开，避免硬编码字段。
     if (spread === 'baseProps') {
-      const baseSrc = readFileSync(path.join(UI_SRC, 'common/props.ts'), 'utf8')
+      const baseSrc = readFileSync(path.join(ROOT, 'packages/core/src/common/props.ts'), 'utf8')
       for (const prop of parsePropsObject(baseSrc, 'baseProps', seen)) byName.set(prop.name, prop)
     }
   }
@@ -648,7 +651,7 @@ function resolveEventTypeAlias(alias, compDir) {
   } catch {
     /* 目录不存在则只试 common */
   }
-  candidates.push(path.join(UI_SRC, 'common', 'types.ts'))
+  candidates.push(path.join(ROOT, 'packages/core/src/common', 'types.ts'))
 
   for (const file of candidates) {
     if (!existsSync(file)) continue
@@ -782,8 +785,8 @@ function loadFamilyMap() {
 const familyMap = loadFamilyMap()
 const meta = {}
 
-for (const { dir, layer } of ROOTS) {
-  const baseDir = path.join(UI_SRC, dir)
+for (const { pkg, dir, layer } of ROOTS) {
+  const baseDir = path.join(ROOT, dir)
   if (!existsSync(baseDir)) continue
 
   for (const name of readdirSync(baseDir).sort()) {
@@ -811,6 +814,7 @@ for (const { dir, layer } of ROOTS) {
     meta[name] = {
       name,
       layer,
+      package: pkg,
       family: familyMap.get(name) ?? null,
       modelValue: props.some((p) => p.name === 'modelValue') && events.includes('update:modelValue'),
       props,

@@ -1,0 +1,75 @@
+/*
+ * wd-password-input — 密码输入框
+ *
+ * Lynx 实现说明（相对 wot-ui 的适配点）：
+ * - 纯展示组件：N 个格子 + 光标 + 掩码圆点，点击经 touchstart emit 'focus'；
+ *   无拖动/滑动/缩放手势，不涉及 MTS 跟手（NATIVE-REWRITE §2 仅约束
+ *   跟手交互类组件）；
+ * - 布局居中（NATIVE-REWRITE §3）：根节点显式 display: flex +
+ *   flex-direction: column（纵向「输入格 + 提示」）；__security 为
+ *   flex-direction: row + align-items: center 的格子行；__item 为
+ *   justify-content + align-items 成对的居中格并补 text-align: center；
+ *   __info 为 flex 居中文本行；
+ * - 掩码圆点 / 光标沿用 wot-ui 的「position: absolute + top/left 50% +
+ *   transform translate(-50%, -50%)」定心：两者为定尺寸装饰元素，四边 0 +
+ *   flex 居中需要额外包裹层（改 DOM 层级，违反对齐约束），且 Lynx 真机
+ *   支持百分比 transform（wd-slider 范本同款写法已真机验证），属
+ *   NATIVE-REWRITE §3.2「确有必要」的保留项；
+ * - wot-ui 用 `:not(:last-child) { border-right: none }` 与 `:first-child` /
+ *   `:last-child` 控制相邻格子的单线边框与端部圆角，Lynx 不支持结构伪类，
+ *   改为模板按索引下发的 is-first / is-last 索引类名（见 index.scss）；
+ * - customStyle 为字符串，经 parseStyle 归一为对象后绑定（CONVENTIONS §19）；
+ * - modelValue 显式传入 null 时 Vue 不套用默认值，直接读 length / 索引会在
+ *   渲染期崩溃，统一归一为字符串（空值 → ''）。
+ */
+<script lang="ts" setup>
+import './index.css'
+
+import { addUnit, parseStyle } from '@wot-lynx/core/common/util'
+import { computed } from 'vue-lynx'
+import { passwordInputProps } from './types'
+
+const props = defineProps(passwordInputProps)
+
+const emit = defineEmits(['focus'])
+
+// Vue 只对 undefined 应用 prop 默认值，显式传入的 null 不套用：
+// 模板直接读 modelValue.length / modelValue[index] 会在渲染期崩溃，
+// 统一归一为字符串（空值 → ''）。
+const value = computed(() => String(props.modelValue ?? ''))
+
+function onTouchStart(event: any) {
+  emit('focus', event)
+}
+</script>
+
+<template>
+  <view :class="`wd-password-input ${customClass}`" :style="parseStyle(customStyle)">
+    <view class="wd-password-input__security" @touchstart="onTouchStart">
+      <view
+        v-for="(_, index) in length"
+        :key="index"
+        :class="[
+          'wd-password-input__item',
+          gutter ? '' : 'is-border',
+          !gutter && index === 0 ? 'is-first' : '',
+          !gutter && index === length - 1 ? 'is-last' : ''
+        ]"
+        :style="{ 'margin-left': index !== 0 && gutter ? addUnit(gutter) : '0px' }"
+      >
+        <view v-if="focused && index === value.length" class="wd-password-input__cursor" />
+        <view v-else class="wd-password-input__value">
+          <!-- 掩码点（真机 2026-10-28 全量巡检）：原实现常驻渲染，用内联
+               `visibility: hidden/visible` 切换。Lynx 不解析 visibility，
+               真机上每个空格都会显示实心圆点——空密码看起来像已填满。
+               改 v-if 结构级挂载，只有该位有值且开启 mask 才渲染。 -->
+          <view v-if="mask && value[index]" class="wd-password-input__mask" />
+          <text v-if="!mask && value[index]">{{ value[index] }}</text>
+        </view>
+      </view>
+    </view>
+    <view v-if="info || errorInfo" :class="`wd-password-input__info ${errorInfo ? 'is-error' : ''}`">
+      <text>{{ errorInfo || info }}</text>
+    </view>
+  </view>
+</template>

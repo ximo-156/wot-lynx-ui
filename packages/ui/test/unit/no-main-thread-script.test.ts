@@ -18,10 +18,15 @@
  *   'main thread' 指令）。
  */
 import { describe, it, expect } from 'vitest'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
-const SRC_DIR = path.resolve(__dirname, '../..', 'src')
+/** 组件源码根 = 全部组件包的 src（ADR-023 多包，packages.json 为单一来源） */
+const MANIFEST_PATH = path.resolve(__dirname, '../../../..', 'docs/architecture/packages.json')
+const SRC_DIRS = (JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')).packages as Array<{ dir: string; componentRoot: string | null }>)
+  .filter((p) => p.componentRoot)
+  .map((p) => path.resolve(__dirname, '../../../..', p.dir, p.componentRoot))
+  .filter((d) => existsSync(d))
 
 /** 递归收集 src 下的 .vue / .ts 文件（跳过 icons 数据与第三方库代码） */
 function collectSourceFiles(dir: string): string[] {
@@ -53,7 +58,7 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
 ]
 
 describe('组件库 MTS 使用规范（声明式允许，命令式禁止）', () => {
-  const files = collectSourceFiles(SRC_DIR)
+  const files = SRC_DIRS.flatMap((dir) => collectSourceFiles(dir))
 
   // 读盘 + 去注释**只做一次**并缓存到 describe 作用域（旧实现每用例重读全库，
   // 单用例超 5s 致 7 个用例全部超时失败，守卫实际处于无人看守状态）。
@@ -74,7 +79,7 @@ describe('组件库 MTS 使用规范（声明式允许，命令式禁止）', ()
         }
       }
     }
-    walk(SRC_DIR)
+    for (const dir of SRC_DIRS) walk(dir)
     expect(files.length).toBe(onDisk)
     expect(files.length).toBeGreaterThan(50)
   })

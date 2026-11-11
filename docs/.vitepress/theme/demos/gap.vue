@@ -2,8 +2,8 @@
 /**
  * Gap 间距 — 文档站 H5 预览演示（手工编写）。
  */
-import WdGap from 'wot-lynx-ui/components/wd-gap/wd-gap.vue'
-import WdCell from 'wot-lynx-ui/primitives/wd-cell/wd-cell.vue'
+import WdGap from '@wot-lynx/ui-layout/wd-gap'
+import WdCell from '@wot-lynx/primitives/wd-cell'
 </script>
 
 <template>

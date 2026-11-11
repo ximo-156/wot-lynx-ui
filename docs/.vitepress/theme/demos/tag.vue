@@ -2,7 +2,7 @@
 /**
  * Tag 标签 — 文档站 H5 预览演示（手工编写）。
  */
-import WdTag from 'wot-lynx-ui/components/wd-tag/wd-tag.vue'
+import WdTag from '@wot-lynx/ui-display/wd-tag'
 </script>
 
 <template>

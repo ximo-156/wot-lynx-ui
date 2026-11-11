@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import {
-  CLOCK, FIXTURE, LOCAL, REFERENCE,
+  ALL_LOCAL_ROOTS, CLOCK, FIXTURE, LOCAL, REFERENCE,
   EXCEPTIONS, auditProps, buildOfficialFixture, canonicalFunction,
   compareProps, componentContract, createScopedLoader, formatDifference, snapshotProps
 } from '../../../../scripts/check-wot-props.mjs'
@@ -12,7 +12,7 @@ import { compDir } from '../helpers/component-roots'
 // No source reference is required in CI: expected values are pinned from the
 // official archive, never inferred from the implementation being tested.
 const official = JSON.parse(readFileSync(FIXTURE, 'utf8'))
-const loader = createScopedLoader(LOCAL, { clock: official.evaluation.clock })
+const loader = createScopedLoader(LOCAL, { clock: official.evaluation.clock, extraRoots: ALL_LOCAL_ROOTS })
 const contracts = [...Object.entries(official.components), ...Object.entries(official.internals)] as [string, any][]
 const sourcePresent = existsSync(join(REFERENCE, 'components'))
 
@@ -56,7 +56,8 @@ describe('official wot-ui 2.3.2 runtime prop parity', () => {
     expect(audit.verifiedInternals).toBe(official.coverage.verifiedInternals)
     expect(audit.unverified).toEqual([])
     expect(audit.differences.map(formatDifference)).toEqual([])
-    expect(audit.localOnly.map((item: any) => item.component)).toEqual([
+    // 发现顺序随包清单（packages.json）而变，契约是「集合」——排序后比较
+    expect(audit.localOnly.map((item: any) => item.component).sort()).toEqual([
       'wd-address-edit', 'wd-bar-code', 'wd-coupon', 'wd-pull-refresh', 'wd-share-sheet', 'wd-submit-bar'
     ])
     expect(audit.localOnly.every((item: any) => item.reason.includes('unverified'))).toBe(true)
@@ -80,7 +81,7 @@ describe('official wot-ui 2.3.2 runtime prop parity', () => {
 describe('runtime prop extractor guardrails', () => {
   it('expands real shared helpers/spreads and preserves Boolean/String order and null unions', () => {
     const exports = synthetic(`
-      import { baseProps, makeArrayProp, makeRequiredProp, numericProp, truthProp, unknownProp } from './props'
+      import { baseProps, makeArrayProp, makeRequiredProp, numericProp, truthProp, unknownProp } from '@wot-lynx/core/common/props'
       export const props = {
         ...baseProps, rows: makeArrayProp<string>(), value: makeRequiredProp(numericProp),
         enabled: truthProp, unknown: unknownProp,

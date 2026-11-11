@@ -1,0 +1,109 @@
+@use 'styles/mixin/mixin.scss' as *;
+@use 'styles/variable.scss' as *;
+
+// 折叠项头部内边距
+$collapse-item-header-padding: var(--wot-collapse-item-header-padding, $padding-extra-loose) !default;
+// 折叠项标题文字颜色
+$collapse-item-title-color: var(--wot-collapse-item-title-color, $text-main) !default;
+// 折叠项标题文字字号
+$collapse-item-title-font-size: var(--wot-collapse-item-title-font-size, $typography-body-size-extra-large) !default;
+// 折叠项标题文字行高
+$collapse-item-title-line-height: var(--wot-collapse-item-title-line-height, $typography-body-line-height-size-extra-large) !default;
+// 折叠项箭头尺寸
+$collapse-item-arrow-size: var(--wot-collapse-item-arrow-size, $n-16) !default;
+// 折叠项箭头颜色
+$collapse-item-arrow-color: var(--wot-collapse-item-arrow-color, $icon-secondary) !default;
+// 折叠项内容文字颜色
+$collapse-item-body-color: var(--wot-collapse-item-body-color, $text-auxiliary) !default;
+// 折叠项内容文字字号
+$collapse-item-body-font-size: var(--wot-collapse-item-body-font-size, $typography-label-size-large) !default;
+// 折叠项内容文字行高
+$collapse-item-body-line-height: var(--wot-collapse-item-body-line-height, $typography-label-line-height-size-large) !default;
+// 折叠项内容区域内边距
+$collapse-item-body-padding: var(--wot-collapse-item-body-padding, $padding-loose $padding-extra-loose) !default;
+
+@include b(collapse-item) {
+  position: relative;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。头部 / 折叠内容两级子节点
+  // 纵向堆叠，交叉轴拉伸令内容满宽。
+  display: flex;
+  flex-direction: column;
+
+  @include when(border) {
+    @include halfPixelBorder('top');
+
+    // 首项抑制顶部细线（wot-ui 语义：折叠面板第一项不画上边线）。
+    // 半线 border 在根节点上，抑制类必须由模板按 isFirst 推到根
+    // （挂在 header 子元素上够不到）；同特异性靠源码顺序覆盖上面的
+    // border-top-width。
+    @include when(first) {
+      border-top-width: 0;
+    }
+
+    .#{$B}__header {
+      @include when(expanded) {
+        @include halfPixelBorder('bottom');
+      }
+    }
+  }
+
+  @include e(header) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: $collapse-item-header-padding;
+    overflow: hidden;
+
+    // Lynx 适配：user-select 为 Web 专有属性，按 PORTING §4.5 删除；
+    // 参考源的 display: block（自定义标题插槽撑满头部）引擎不识别，
+    // 以 flex + column 等价表达纵向块级流（wd-step 同方案）
+    @include when(custom) {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  @include e(title) {
+    color: $collapse-item-title-color;
+    font-size: $collapse-item-title-font-size;
+    line-height: $collapse-item-title-line-height;
+  }
+
+  @include edeep(arrow) {
+    // Lynx 适配：参考源为 display: block（引擎不识别，落回 linear 默认）；
+    // 箭头图标根（wd-icon 的 view）以 flex 行 + 成对居中承载字形，
+    // 与 wd-step / wd-drop-menu-item 的图标处理同方案
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    font-size: $collapse-item-arrow-size;
+    color: $collapse-item-arrow-color;
+    transition: transform $motion-slow;
+
+    @include when(retract) {
+      transform: rotate(-180deg);
+    }
+  }
+
+  @include e(wrapper) {
+    position: relative;
+    overflow: hidden;
+
+    // Lynx 适配：will-change 为 Web 专有属性，按 PORTING §4.5 删除
+  }
+
+  @include e(body) {
+    color: $collapse-item-body-color;
+    font-size: $collapse-item-body-font-size;
+    line-height: $collapse-item-body-line-height;
+    padding: $collapse-item-body-padding;
+  }
+
+  @include when(disabled) {
+    opacity: $opacity-disabled;
+  }
+}

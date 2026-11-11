@@ -1,18 +1,19 @@
 /** Native style-channel assertions; jsdom does not evaluate OS safe-area env values. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { compile } from 'sass'
 import { resolve } from 'node:path'
 import postcss from 'postcss'
 import { h, nextTick, ref } from 'vue-lynx'
-import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
-import Navbar from '../../src/components/wd-navbar/wd-navbar.vue'
-import Notify from '../../src/components/wd-notify/wd-notify.vue'
-import Calendar from '../../src/components/wd-calendar/wd-calendar.vue'
-import { configureHost } from '../../src/common/host'
-import { getViewportOverride, setViewportOverride } from '../../src/common/viewport'
-import { pause } from '../../src/common/util'
+import Popup from '@wot-lynx/primitives/wd-popup'
+import Navbar from '@wot-lynx/ui-nav/wd-navbar'
+import Notify from '@wot-lynx/ui-feedback/wd-notify'
+import Calendar from '@wot-lynx/ui-picker/wd-calendar'
+import { configureHost } from '@wot-lynx/core/common/host'
+import { getViewportOverride, setViewportOverride } from '@wot-lynx/core/common/viewport'
+import { pause } from '@wot-lynx/core/common/util'
 import { cleanup, render } from '../render'
 import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
 const oldViewport = getViewportOverride()
 const device = (platform = 'iOS', height = 844, top = 59, bottom = 34) => setSystemInfo({
@@ -196,7 +197,7 @@ describe('calendar confirmation area', () => {
     expect(container.querySelector('.wd-calendar__confirm .wd-button')).not.toBeNull()
     expect(style(container, '.wd-popup', 'padding-bottom')).toBe('24px')
     const declarations: Record<string, string> = {}
-    postcss.parse(compile(resolve(__dirname, '../../src/components/wd-calendar/index.scss')).css).walkRules(rule => {
+    postcss.parse(compileScss(compPath('wd-calendar', 'index.scss'))).walkRules(rule => {
       if (rule.selector !== '.wd-calendar__confirm') return
       rule.walkDecls(decl => { declarations[decl.prop] = decl.value })
     })

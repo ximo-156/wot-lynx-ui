@@ -4,11 +4,11 @@ import { h, nextTick, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { nativeRuntime, restoreNativeStubs, setEngineVersion } from '../helpers/native-stubs'
-import { configureHost } from '../../src/common/host'
-import { pause } from '../../src/common/util'
-import VideoPreview from '../../src/components/wd-video-preview/wd-video-preview.vue'
-import Swiper from '../../src/components/wd-swiper/wd-swiper.vue'
-import Upload from '../../src/components/wd-upload/wd-upload.vue'
+import { configureHost } from '@wot-lynx/core/common/host'
+import { pause } from '@wot-lynx/core/common/util'
+import VideoPreview from '@wot-lynx/ui-display/wd-video-preview'
+import Swiper from '@wot-lynx/ui-display/wd-swiper'
+import Upload from '@wot-lynx/ui-form/wd-upload'
 
 const restores: Array<() => void> = []
 afterEach(() => {

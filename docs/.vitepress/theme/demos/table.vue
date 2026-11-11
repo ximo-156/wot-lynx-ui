@@ -4,8 +4,8 @@
  * 列必须由 wd-table-column 子组件声明：wd-table 没有 columns prop，
  * 传入 columns 不会渲染任何列（表头与单元格全空、内容宽度塌成 0）。
  */
-import WdTable from 'wot-lynx-ui/components/wd-table/wd-table.vue'
-import WdTableColumn from 'wot-lynx-ui/components/wd-table-column/wd-table-column.vue'
+import WdTable from '@wot-lynx/ui-display/wd-table'
+import WdTableColumn from '@wot-lynx/ui-display/wd-table-column'
 
 const data = [
   { name: '张三', age: 28, city: '北京' },

@@ -10,12 +10,25 @@
  * 不带参数时编译全部；带参数时只编译指定组件（如 wd-button wd-cell）。
  */
 import { createRequire } from 'node:module'
-import { existsSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const uiSrc = path.join(root, 'packages/ui/src')
+const coreSrc = path.join(root, 'packages/core/src')
+
+/**
+ * 包划分来自 packages.json（ADR-023）。组件 SCSS 分布在多个包；
+ * `styles/`（主题变量/mixin）住在 @wot-lynx/core，组件用 load-path 式
+ * `@use 'styles/...'` 引用——因此每个包的编译都要带 LOAD_PATHS。
+ */
+const MANIFEST = JSON.parse(readFileSync(path.join(root, 'docs/architecture/packages.json'), 'utf8'))
+const COMPONENT_PKG_SRCS = MANIFEST.packages
+  .filter((p) => p.componentRoot)
+  .map((p) => path.join(root, p.dir, p.componentRoot))
+  .filter((dir) => existsSync(dir))
+const LOAD_PATHS = [coreSrc, ...COMPONENT_PKG_SRCS]
 
 const require = createRequire(path.join(root, 'packages/ui/package.json'))
 const sass = require('sass')
@@ -63,7 +76,7 @@ function fixNestedVarFallbacks(css) {
 
 function compile(scssPath, cssPath) {
   try {
-    const result = sass.compile(scssPath, { style: 'compressed' })
+    const result = sass.compile(scssPath, { style: 'compressed', loadPaths: LOAD_PATHS })
     const fixed = fixNestedVarFallbacks(result.css)
     writeFileSync(cssPath, fixed)
     console.log(`compiled ${path.relative(root, scssPath)}`)
@@ -89,21 +102,22 @@ const THEME_ENTRIES = [
   'styles/theme/presets/compact.scss',
   'styles/theme/presets/high-contrast.scss'
 ]
+// 主题住在 @wot-lynx/core（ADR-023）；入口清单本身不变。
 
 // 1. 主题（仅在全量构建时）
 if (only.length === 0) {
   for (const rel of THEME_ENTRIES) {
-    const scss = path.join(uiSrc, rel)
+    const scss = path.join(coreSrc, rel)
     compile(scss, scss.replace(/\.scss$/, '.css'))
   }
 }
 
 // 2. 组件（含子目录，如 wd-calendar-view/year、wd-keyboard/key）
-// 两个组件根：L3.5 基础件（primitives）+ L4 业务组件（components）。
-// ⚠️ 新增组件根必须加进 COMPONENT_ROOTS，否则该根下的 index.css 不会生成，
+// 组件根 = 各组件包的 componentRoot（packages.json，ADR-023）。
+// ⚠️ 新增组件包必须落在这清单里，否则该包的 index.css 不会生成，
 //    组件的 `import './index.css'` 会静默丢失样式（ADR-012）。
 // 重写期间目录可能不存在或只有部分组件，容错跳过
-const COMPONENT_ROOTS = [path.join(uiSrc, 'primitives'), path.join(uiSrc, 'components')]
+const COMPONENT_ROOTS = COMPONENT_PKG_SRCS
 const scssFiles = []
 const collectScss = (dir) => {
   if (!existsSync(dir)) return

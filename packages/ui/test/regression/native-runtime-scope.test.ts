@@ -13,7 +13,7 @@ import { describe, expect, it, vi } from 'vitest'
  * 因而这里将完整源码转成 CommonJS，在独立 VM 中用词法参数模拟生产包装。
  * 每个用例有独立全局和可控时钟，不改测试宿主的 lynx / timers，也不模拟签名绘制。
  */
-type NativeModule = typeof import('../../src/common/native')
+type NativeModule = typeof import('@wot-lynx/core/common/native')
 type RuntimeScope = { lexical?: unknown; global?: unknown }
 type InvokeOptions = {
   method: string
@@ -22,7 +22,7 @@ type InvokeOptions = {
   fail: (result: unknown) => void
 }
 
-const sourcePath = resolve(dirname(fileURLToPath(import.meta.url)), '../../src/common/native.ts')
+const sourcePath = resolve(__dirname, '../../../core/src/common/native.ts')
 const nativeJavaScript = ts.transpileModule(readFileSync(sourcePath, 'utf8'), {
   fileName: sourcePath,
   compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS }

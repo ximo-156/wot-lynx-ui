@@ -3,9 +3,9 @@
  * SwipeAction 滑动操作 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdSwipeAction from 'wot-lynx-ui/components/wd-swipe-action/wd-swipe-action.vue'
-import WdCell from 'wot-lynx-ui/primitives/wd-cell/wd-cell.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdSwipeAction from '@wot-lynx/ui-feedback/wd-swipe-action'
+import WdCell from '@wot-lynx/primitives/wd-cell'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const cells = ref([
   { title: '单元格一', status: 'close' },

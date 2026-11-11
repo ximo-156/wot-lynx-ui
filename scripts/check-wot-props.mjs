@@ -28,7 +28,30 @@ import vm from 'node:vm'
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const REFERENCE = join(ROOT, '.wot-ref/src-2.3.2')
+/** 门面包的 src（合成 prop 样本的落地处；组件已多包化，见 LOCAL_ROOTS） */
 export const LOCAL = join(ROOT, 'packages/ui/src')
+
+/**
+ * 组件包清单（ADR-023 域包拆分后）。组件不再集中在 packages/ui/src 两个根，
+ * 而是分布在多个包；本脚本与 test/helpers/component-roots.ts 都只读
+ * docs/architecture/packages.json 这一份声明。
+ */
+const PACKAGES_MANIFEST = JSON.parse(
+  readFileSync(join(ROOT, 'docs/architecture/packages.json'), 'utf8')
+).packages
+
+/** 全部组件包的 src 根（基础件包 / 域包 / 门面） */
+export const LOCAL_ROOTS = PACKAGES_MANIFEST.filter((p) => p.componentRoot).map((p) =>
+  join(ROOT, p.dir, p.componentRoot)
+)
+/** 中立层包（@wot-lynx/core）的 src 根——prop 依赖图的解析目标 */
+const CORE_ROOT = join(ROOT, 'packages/core/src')
+/** 本地 prop 加载的完整作用域：全部组件包 + 中立层（供测试与 auditProps 共用） */
+export const ALL_LOCAL_ROOTS = [...LOCAL_ROOTS, CORE_ROOT]
+/** 包名 → src 根，供 scopedRequire 解析 @wot-lynx/* 说明符 */
+const PKG_SRC_BY_NAME = new Map(
+  PACKAGES_MANIFEST.map((p) => [p.name, join(ROOT, p.dir, 'src')])
+)
 export const FIXTURE = join(ROOT, 'packages/ui/test/fixtures/wot-ui-2.3.2-props.json')
 export const CLOCK = '2024-07-15T12:00:00.000Z'
 const require = createRequire(join(ROOT, 'packages/ui/package.json'))
@@ -95,8 +118,12 @@ export function canonicalFunction(fn) {
   return tokens.join(' ')
 }
 
-export function createScopedLoader(sourceRoot, { clock = CLOCK } = {}) {
-  const scope = realpathSync(sourceRoot)
+export function createScopedLoader(sourceRoot, { clock = CLOCK, extraRoots = [] } = {}) {
+  // 作用域是「根集合」而非单根：组件的 types.ts 分布在多个包，
+  // 且依赖图会经 @wot-lynx/core 跨包。任一根内即合法。
+  const scopes = [sourceRoot, ...extraRoots]
+    .filter((root) => existsSync(root))
+    .map((root) => realpathSync(root))
   const DateType = fixedDate(clock)
   typeNames.set(DateType, 'Date')
   const context = vm.createContext({
@@ -107,16 +134,30 @@ export function createScopedLoader(sourceRoot, { clock = CLOCK } = {}) {
   const vue = vueMock()
   function checked(file) {
     const absolute = realpathSync(file)
-    const rel = relative(scope, absolute)
-    if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel) || extname(absolute) !== '.ts') {
+    if (extname(absolute) !== '.ts') {
+      throw new Error(`Prop loader refused a module outside its .ts scope: ${absolute}`)
+    }
+    const inScope = scopes.some((root) => {
+      const rel = relative(root, absolute)
+      return rel !== '' && rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel)
+    })
+    if (!inScope) {
       throw new Error(`Prop loader refused a module outside its .ts scope: ${absolute}`)
     }
     return absolute
   }
   function scopedRequire(specifier, parent) {
     if (specifier === 'vue' || specifier === 'vue-lynx') return vue
-    if (!specifier.startsWith('.')) throw new Error(`Prop loader refused external dependency ${specifier} in ${parent}`)
-    const base = resolve(dirname(parent), specifier)
+    let base
+    if (specifier.startsWith('.')) {
+      base = resolve(dirname(parent), specifier)
+    } else {
+      // 包名说明符（@wot-lynx/core/common/props、@wot-lynx/primitives/wd-x/types）
+      const match = specifier.match(/^(@wot-lynx\/[^/]+)\/(.+)$/)
+      const srcRoot = match && PKG_SRC_BY_NAME.get(match[1])
+      if (!srcRoot) throw new Error(`Prop loader refused external dependency ${specifier} in ${parent}`)
+      base = join(srcRoot, match[2])
+    }
     const candidates = extname(base) ? [base] : [base + '.ts', join(base, 'index.ts')]
     const file = candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile())
     if (!file) throw new Error(`Cannot resolve prop dependency ${specifier} in ${parent}`)
@@ -149,7 +190,7 @@ export function createScopedLoader(sourceRoot, { clock = CLOCK } = {}) {
       return exports
     } catch (error) { cache.delete(absolute); throw error }
   }
-  return { load, evaluate, scope }
+  return { load, evaluate, scopes }
 }
 
 function valueSnapshot(value, seen = new Set()) {
@@ -208,7 +249,7 @@ function propsModule(directory, loader) {
     if (!existsSync(file)) continue
     const exports = Object.entries(loader.load(file)).filter(([name, value]) => /props$/i.test(name) && value && typeof value === 'object')
     if (exports.length > 1) throw new Error(`${file}: ambiguous runtime props exports: ${exports.map(([name]) => name).join(', ')}`)
-    if (exports.length) return { source: slash(relative(loader.scope, file)), exportName: exports[0][0], props: snapshotProps(exports[0][1]) }
+    if (exports.length) return { source: slash(relative(loader.scopes[0], file)), exportName: exports[0][0], props: snapshotProps(exports[0][1]) }
   }
   return null
 }
@@ -245,7 +286,7 @@ function sfcProps(file, loader) {
     if (ts.isFunctionDeclaration(statement) && statement.name) definitions.set(statement.name.text, statement)
     walk(statement)
   }
-  if (!expressions.length) return { source: slash(relative(loader.scope, file)), exportName: null, props: {} }
+  if (!expressions.length) return { source: slash(relative(loader.scopes[0], file)), exportName: null, props: {} }
   if (expressions.length !== 1) throw new Error(`${file}: ambiguous SFC props expressions; unverified`)
   const needed = new Set()
   function dependencies(node) {
@@ -259,7 +300,7 @@ function sfcProps(file, loader) {
   dependencies(expressions[0])
   const declarations = [...needed].sort((a, b) => a.pos - b.pos).map((node) => node.getText(ast)).join('\n')
   const exports = loader.evaluate(`${declarations}\nexport const auditProps = ${expressions[0].getText(ast)};`, file + '.ts')
-  return { source: slash(relative(loader.scope, file)), exportName: 'defineProps/SFC', props: snapshotProps(exports.auditProps) }
+  return { source: slash(relative(loader.scopes[0], file)), exportName: 'defineProps/SFC', props: snapshotProps(exports.auditProps) }
 }
 
 export function componentContract(directory, loader, name = directory.split(sep).at(-1)) {
@@ -275,23 +316,21 @@ function directories(path) {
 }
 
 /**
- * 本地组件根（ADR-012 双根）。
+ * 本地组件根（ADR-023 域包拆分后，清单驱动）。
  *
- * L3.5 基础件 `src/primitives` 与 L4 业务组件 `src/components` 是两个**平级**根。
  * 这里曾硬编码 `join(local, 'components', name)`：primitives 迁移后 12 个基础件
  * 一律「找不到运行时 prop 定义」，被 catch 吞进 unverified，覆盖率从 101 静默掉到 89。
  * 之所以长期没人发现——承载它的测试文件 import 语法坏了，整个文件从未执行。
- *
- * 与 `packages/ui/test/helpers/component-roots.ts` 同一约定；那边是 .ts、本脚本是
- * .mjs 且需零依赖运行，故各自维护一份，新增组件根时**两处都要改**。
+ * 域包拆分后根进一步多包化，故与 test/helpers/component-roots.ts 一样只读
+ * docs/architecture/packages.json 这一份声明。
  */
-function componentRoots(local) {
-  return [join(local, 'primitives'), join(local, 'components')]
+function componentRoots() {
+  return LOCAL_ROOTS
 }
 
-/** 按组件名定位本地目录；找不到时返回 components 路径，让 componentContract 抛原始错误 */
+/** 按组件名定位本地目录；找不到时返回门面 components 路径，让 componentContract 抛原始错误 */
 function resolveComponentDir(local, name) {
-  for (const root of componentRoots(local)) {
+  for (const root of componentRoots()) {
     const dir = join(root, name)
     if (existsSync(dir)) return dir
   }
@@ -358,7 +397,10 @@ export function compareProps(component, official, actual) {
 
 export function auditProps(expected, { local = LOCAL } = {}) {
   if (expected.version !== '2.3.2' || expected.schemaVersion !== 1) throw new Error('Unsupported official prop fixture')
-  const loader = createScopedLoader(local, { clock: expected.evaluation.clock })
+  const loader = createScopedLoader(local, {
+    clock: expected.evaluation.clock,
+    extraRoots: ALL_LOCAL_ROOTS
+  })
   const differences = []
   const additions = []
   const unverified = [...expected.unverified]
@@ -376,7 +418,7 @@ export function auditProps(expected, { local = LOCAL } = {}) {
       } catch (error) { unverified.push({ component, reason: error.message }) }
     }
   }
-  const localNames = [...new Set(componentRoots(local).filter((root) => existsSync(root)).flatMap(directories))]
+  const localNames = [...new Set(componentRoots().filter((root) => existsSync(root)).flatMap(directories))]
   const localOnly = localNames.filter((name) => !own(expected.components, name) && !expected.unverified.some((item) => item.component === name))
   return { version: expected.version, coverage: expected.coverage, verifiedComponents, verifiedInternals, differences, additions, unverified, localOnly: localOnly.map((component) => ({ component, reason: 'No component in the offline official 2.3.2 archive; official props unverified.' })), exceptions: EXCEPTIONS }
 }

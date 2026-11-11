@@ -31,7 +31,13 @@ import process from 'node:process'
 // ---------------------------------------------------------------------------
 
 const ROOT = process.cwd()
-const SCAN_DIRS = ['packages/ui/src', 'packages/demo/src', 'packages/ui/test']
+/** 扫描范围：全部 workspace 包的 src + demo + 门面测试（包划分见 packages.json） */
+const MANIFEST = JSON.parse(readFileSync(join(ROOT, 'docs/architecture/packages.json'), 'utf8'))
+const SCAN_DIRS = [
+  ...MANIFEST.packages.map((p) => p.dir + '/src').filter((d) => existsSync(join(ROOT, d))),
+  'packages/demo/src',
+  'packages/ui/test'
+]
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.rspeedy', 'coverage', '.vitepress', '.preview'])
 const SKIP_FILE_RE = /(^|\/)index\.css$/ // 生成物，不检查
 const BASELINE_FILE = 'review-lint.baseline.json'
@@ -532,34 +538,54 @@ function parseTags(content) {
 //   dep/lateral-contract    业务组件不得借用其他组件的 types/utils（族内除外）
 // ---------------------------------------------------------------------------
 
-const COMPONENT_PATH_RE = /^packages[\\/]ui[\\/]src[\\/](primitives|components)[\\/](wd-[a-z0-9-]+)[\\/]/
+/**
+ * 组件文件路径：任意包的 `<componentRoot>/wd-x/`（ADR-023 多包）。
+ * 捕获包目录与组件名；层与包由 manifest 反查。
+ */
+const COMPONENT_PATH_RE = /^packages[\\/]([^\\/]+)[\\/]src[\\/](?:components[\\/])?(wd-[a-z0-9-]+)[\\/]/
+const PKG_IMPORT_RE = /^(@wot-lynx\/[^/]+)\/(wd-[a-z0-9-]+)(?:\/.*)?$/
 const REL_IMPORT_RE = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g
 
 function checkLateralDeps(rel, codeLines) {
   const self = rel.match(COMPONENT_PATH_RE)
   if (!self) return []
 
-  const selfRoot = self[1]
+  const selfPkgDir = self[1] // packages/<dir>
   const selfName = self[2]
-  const selfLayer = selfRoot === 'primitives' ? 'core' : 'business'
+  const selfPkg = MANIFEST.packages.find((p) => p.dir === `packages/${selfPkgDir}`)
+  const selfLayer = selfPkg ? (selfPkg.role === 'primitives' ? 'core' : 'business') : 'business'
   const findings = []
+
+  /**
+   * 把 import 说明符解析为「目标组件 + 目标包」。跨包引用走包名
+   * （`@wot-lynx/<pkg>/wd-x[/...]`，ADR-023），同包引用走相对路径。
+   * 返回 null 表示不是组件间引用（外部依赖 / 中立层 / 自身）。
+   */
+  const resolveTarget = (spec) => {
+    if (spec.startsWith('.')) {
+      const seg = spec.match(/(?:^|\/)(wd-[a-z0-9-]+)\//)
+      if (!seg) return null
+      return { name: seg[1], pkg: selfPkg?.name }
+    }
+    const pm = spec.match(PKG_IMPORT_RE)
+    if (!pm) return null
+    const owner = MANIFEST.packages.find((p) => p.name === pm[1])
+    if (!owner) return null
+    return { name: pm[2], pkg: owner.name }
+  }
 
   codeLines.forEach((text, idx) => {
     REL_IMPORT_RE.lastIndex = 0
     let m
     while ((m = REL_IMPORT_RE.exec(text)) !== null) {
       const spec = m[1]
-      if (!spec.startsWith('.')) continue // 包名导入不构成组件间耦合
-
-      const seg = spec.match(/(?:^|\/)(wd-[a-z0-9-]+)\//)
-      if (!seg) continue
-      const target = seg[1]
+      const resolved = resolveTarget(spec)
+      if (!resolved) continue
+      const target = resolved.name
       if (target === selfName) continue
 
-      // 目标层：显式跨根路径优先；`../wd-x/` 是兄弟写法，视为同层
-      let targetLayer = selfLayer
-      if (spec.includes('primitives/')) targetLayer = 'core'
-      else if (spec.includes('components/')) targetLayer = 'business'
+      const targetPkg = MANIFEST.packages.find((p) => p.name === resolved.pkg)
+      const targetLayer = targetPkg ? (targetPkg.role === 'primitives' ? 'core' : 'business') : 'business'
 
       const push = (ruleId, message) =>
         findings.push({
@@ -582,17 +608,18 @@ function checkLateralDeps(rel, codeLines) {
         const sameFamily =
           FAMILY_OF.get(selfName) !== undefined && FAMILY_OF.get(selfName) === FAMILY_OF.get(target)
         if (sameFamily) continue
+        const crossPkg = resolved.pkg !== selfPkg?.name
         if (/\.vue['"]?\s*$/.test(spec) || /\.vue['"]/.test(text)) {
           push(
             'dep/lateral-component',
-            `业务组件不得引用其他业务组件的实现（${target}）。两条合法出路：` +
-              `① 若 ${target} 是被多个组件复用的叶子件，把它提升到 src/primitives/（ADR-012）；` +
+            `业务组件不得引用其他业务组件的实现（${target}${crossPkg ? `，且跨包（${resolved.pkg}）` : ''}）。两条合法出路：` +
+              `① 若 ${target} 是被多个组件复用的叶子件，把它提升到 @wot-lynx/primitives（ADR-012/023）；` +
               `② 若两者是不可分割的父子单元，在 docs/architecture/families.json 声明同族并写明 reason`
           )
         } else {
           push(
             'dep/lateral-contract',
-            `业务组件不得借用其他组件的契约（${target}）—— 共享类型下沉 common 或基础件 types`
+            `业务组件不得借用其他组件的契约（${target}${crossPkg ? `，且跨包（${resolved.pkg}）` : ''}）—— 共享类型下沉 @wot-lynx/core 或基础件 types`
           )
         }
       }

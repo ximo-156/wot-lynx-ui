@@ -9,9 +9,9 @@ import { join } from 'node:path'
 import { h, nextTick, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import Grid from '../../src/components/wd-grid/wd-grid.vue'
-import GridItem from '../../src/components/wd-grid-item/wd-grid-item.vue'
-import Pagination from '../../src/components/wd-pagination/wd-pagination.vue'
+import Grid from '@wot-lynx/ui-layout/wd-grid'
+import GridItem from '@wot-lynx/ui-layout/wd-grid-item'
+import Pagination from '@wot-lynx/ui-nav/wd-pagination'
 import { compRead } from '../helpers/component-roots'
 
 type Declarations = Record<string, string>

@@ -14,8 +14,8 @@ import { describe, it, expect } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { captureConsole } from '../capture-console'
-import { useSelection } from '../../src/composables/useSelection'
-import PickerView from '../../src/components/wd-picker-view/wd-picker-view.vue'
+import { useSelection } from '@wot-lynx/core/composables/useSelection'
+import PickerView from '@wot-lynx/ui-picker/wd-picker-view'
 
 describe('useSelection 脏下标兜底', () => {
   it('selectedIndex 越界 / formatColumns 为空时取值不抛 TypeError', () => {

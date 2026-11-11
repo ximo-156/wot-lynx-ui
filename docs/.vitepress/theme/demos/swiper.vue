@@ -3,7 +3,7 @@
  * Swiper 轮播图 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdSwiper from 'wot-lynx-ui/components/wd-swiper/wd-swiper.vue'
+import WdSwiper from '@wot-lynx/ui-display/wd-swiper'
 
 // 内联 SVG 占位图（离线可渲染）
 const slide = (text: string, bg: string) =>

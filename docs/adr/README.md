@@ -22,6 +22,7 @@ ADR 的目的不是记录「做了什么」（代码里有），而是记录**�
 - [008](<008-generated-css-not-committed.md>)当前采用源码分发兼容例外：生成 CSS 入库并强制 CI 校验，不按历史标题删除 CSS。
 - [012](<012-primitives-layer.md>)的双根分层继续生效；组件族与边规则以[013](<013-declarative-families.md>)的声明式来源为准，族内环合法，不自动推断族。
 - [005](<005-platform-adapter.md>) / [015](<015-platform-capabilities-scope.md>)已被[022](<022-native-capability-layer.md>)取代；不按旧文恢复 uni 层。历史零 MTS 见已撤销的[009](<009-zero-mts.md>)，现行 MTS 形态见[011](<011-declarative-mts.md>)。
+- 包边界以[023](<023-domain-package-split.md>)的[packages.json](<../architecture/packages.json>)为单一来源；组件深导入子路径已随域包拆分改变（barrel 与全局注册不变）。
 - 校准说明仅澄清已生效决策/例外；真正推翻决策仍按上述规则新增 ADR，不悄悄改写历史。
 
 ## 索引
@@ -50,3 +51,4 @@ ADR 的目的不是记录「做了什么」（代码里有），而是记录**�
 | [020](./020-visual-regression.md) | 视觉回归拍组件区域而非整页，基线按平台隔离 | 已采纳 |
 | [021](./021-test-isolation-and-sharding.md) | 测试环境复用（`isolate: false`）+ LPT 分片 | 已采纳（附顺序无关取证要求） |
 | [022](./022-native-capability-layer.md) | 移除 uni-app 兼容层，改为原生能力层 + 宿主模块契约（取代 005、015） | 已采纳 |
+| [023](./023-domain-package-split.md) | 组件域包拆分（门面零感知；满足 ADR-003 依赖图门槛） | 已采纳 |

@@ -18,12 +18,12 @@
 import { describe, it, expect } from 'vitest'
 import { h } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import Row from '../../src/components/wd-row/wd-row.vue'
-import Col from '../../src/components/wd-col/wd-col.vue'
-import Grid from '../../src/components/wd-grid/wd-grid.vue'
-import GridItem from '../../src/components/wd-grid-item/wd-grid-item.vue'
-import Sticky from '../../src/components/wd-sticky/wd-sticky.vue'
-import StickyBox from '../../src/components/wd-sticky-box/wd-sticky-box.vue'
+import Row from '@wot-lynx/ui-layout/wd-row'
+import Col from '@wot-lynx/ui-layout/wd-col'
+import Grid from '@wot-lynx/ui-layout/wd-grid'
+import GridItem from '@wot-lynx/ui-layout/wd-grid-item'
+import Sticky from '@wot-lynx/primitives/wd-sticky'
+import StickyBox from '@wot-lynx/primitives/wd-sticky-box'
 
 function styleOf(el: Element | null): string {
   return el ? el.getAttribute('style') || '' : ''

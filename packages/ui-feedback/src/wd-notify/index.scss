@@ -1,0 +1,134 @@
+@use 'sass:map';
+@use 'styles/variable.scss' as *;
+@use 'styles/mixin/mixin.scss' as *;
+
+// 通知文字颜色
+$notify-text-color: var(--wot-notify-text-color, $text-white) !default;
+// 通知内边距
+$notify-padding: var(--wot-notify-padding, $padding-tight $padding-loose) !default;
+// 通知文字字号
+$notify-font-size: var(--wot-notify-font-size, $typography-body-size-large) !default;
+// 通知文字行高
+$notify-line-height: var(--wot-notify-line-height, $typography-body-line-height-size-large) !default;
+// 主色态背景色
+$notify-primary-bg: var(--wot-notify-primary-bg, $primary-1) !default;
+// 主色态文字颜色
+$notify-primary-color: var(--wot-notify-primary-color, $primary-6) !default;
+// 成功态背景色
+$notify-success-bg: var(--wot-notify-success-bg, $success-surface) !default;
+// 成功态文字颜色
+$notify-success-color: var(--wot-notify-success-color, $success-main) !default;
+// 危险态背景色
+$notify-danger-bg: var(--wot-notify-danger-bg, $danger-surface) !default;
+// 危险态文字颜色
+$notify-danger-color: var(--wot-notify-danger-color, $danger-main) !default;
+// 警告态背景色
+$notify-warning-bg: var(--wot-notify-warning-bg, $warning-surface) !default;
+// 警告态文字颜色
+$notify-warning-color: var(--wot-notify-warning-color, $warning-main) !default;
+// 图标尺寸
+$notify-icon-size: var(--wot-notify-icon-size, $n-18) !default;
+// 图标间距
+$notify-icon-spacing: var(--wot-notify-icon-spacing, $spacing-tight) !default;
+// floating 变体背景色
+$notify-floating-bg: var(--wot-notify-floating-bg, $filled-oppo) !default;
+// floating 变体文字颜色
+$notify-floating-color: var(--wot-notify-floating-color, $text-main) !default;
+// floating 变体圆角
+$notify-floating-radius: var(--wot-notify-floating-radius, $radius-large) !default;
+// floating 变体左右间距
+$notify-floating-margin-horizontal: var(--wot-notify-floating-margin-horizontal, $spacing-loose) !default;
+// floating 变体上下间距
+$notify-floating-margin-vertical: var(--wot-notify-floating-margin-vertical, $spacing-loose) !default;
+// floating 变体阴影
+$notify-floating-shadow: var(--wot-notify-floating-shadow, 0 12px 48px 16px rgba(39, 43, 59, 0.03), 0 9px 28px 8px rgba(39, 43, 59, 0.05), 0 5px 12px 4px rgba(39, 43, 59, 0.06)) !default;
+
+// 通知类型配置映射
+$notify-types: ("primary": ("bg": $notify-primary-bg,
+    "color": $notify-primary-color),
+  "success": ("bg": $notify-success-bg,
+    "color": $notify-success-color),
+  "danger": ("bg": $notify-danger-bg,
+    "color": $notify-danger-color),
+  "warning": ("bg": $notify-warning-bg,
+    "color": $notify-warning-color));
+
+@include b(notify) {
+  // 根节点三件套（NATIVE-REWRITE §3.1）：图标 + 内容 + 关闭为横向行，
+  // 显式 flex-direction: row（Lynx 3.x 默认 linear 布局下不写即静默丢弃）；
+  // flex-shrink: 0 —— 弹层 .wd-popup 为 flex column 容器，本视图不被按
+  // 比例压缩
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: $notify-padding;
+  font-size: $notify-font-size;
+  color: $notify-text-color;
+
+  @include e(text) {
+    color: $notify-text-color;
+    font-size: $notify-font-size;
+    line-height: $notify-line-height;
+  }
+
+  @each $type,
+  $conf in $notify-types {
+    @include m($type) {
+      background: map.get($conf, "bg");
+      color: map.get($conf, "color");
+
+      .wd-notify__text { color: map.get($conf, "color"); }
+
+      /* Lynx 适配：wot-ui 在 :deep() 里给 floating 变体的前缀图标单独上色，
+         本地无 shadow DOM，直接写后代选择器 */
+      &.wd-notify--floating .wd-notify__prefix {
+        color: map.get($conf, "color");
+      }
+    }
+  }
+
+  @include m(floating) {
+    background: $notify-floating-bg;
+    color: $notify-floating-color;
+    border-radius: $notify-floating-radius;
+    box-shadow: $notify-floating-shadow;
+    /* 左右内缩落在可见条自己身上（真机 2026-11-05）：wd-popup 的面板已是
+       全宽透明层、位置由外层 harness 决定，不再接受 fixed 的 left/right；
+       内缩改用本节点 margin，视觉宽度与圆角仍然都长在这一层。 */
+    margin-left: $notify-floating-margin-horizontal;
+    margin-right: $notify-floating-margin-horizontal;
+
+    .wd-notify__text { color: $notify-floating-color; }
+
+    &.wd-notify--top {
+      margin-top: $notify-floating-margin-vertical;
+    }
+
+    &.wd-notify--bottom {
+      margin-bottom: $notify-floating-margin-vertical;
+    }
+  }
+
+  @include e(prefix) {
+    font-size: $notify-icon-size;
+    margin-right: $notify-icon-spacing;
+    flex: 0 0 auto;
+  }
+
+  @include e(close) {
+    font-size: $notify-icon-size;
+    margin-left: $notify-icon-spacing;
+    flex: 0 0 auto;
+  }
+
+  @include e(content) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+    // text-maxline 在实际文字节点上承担省略，容器不裁剪整段内容。
+  }
+}

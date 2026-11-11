@@ -1,0 +1,110 @@
+@use 'styles/mixin/mixin.scss' as *;
+@use 'styles/variable.scss' as *;
+
+// 弹窗背景色
+$popup-bg: var(--wot-popup-bg, $filled-oppo) !default;
+// 关闭图标颜色
+$popup-close-color: var(--wot-popup-close-color, $icon-auxiliary) !default;
+// 关闭图标尺寸
+$popup-close-size: var(--wot-popup-close-size, $n-24) !default;
+// 关闭图标外边距
+$popup-close-margin: var(--wot-popup-close-margin, $spacing-loose) !default;
+// 弹窗圆角：根据弹出位置自动适配
+$popup-radius: var(--wot-popup-radius, $radius-large) !default;
+
+@include b(popup) {
+  /* 定位拆两层（真机 2026-11-05 修复，见 wd-popup.vue 的 HARNESS_STYLE 注释）：
+     外层 .wd-popup-harness 是 fixed 全屏 flex 容器，负责把本节点摆到视口的
+     上/下/左/右/正中；本节点（过渡根 = 可见面板）只负责外观与动画。
+     因此这里不能再写 position: fixed + 边值：真机上「fixed + display: flex」
+     的节点会按内容尺寸收缩、边值撑不开，整片弹层会贴到屏幕左上角。
+     保留 position: relative 有两个用处：作为 .wd-popup__close 的包含块
+     （绝对定位），以及让消费方遗留的边值恒为 0px 而不产生偏移。 */
+  position: relative;
+  // 根节点三件套（NATIVE-REWRITE §3.1）：Lynx 3.x 默认 linear 布局，
+  // flex-direction 只挂在 display: flex 上才生效；弹层内容（消费方的
+  // 任意 slot 节点）按纵向排布，故显式 column
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow-y: auto;
+  background: $popup-bg;
+
+  @include edeep(close) {
+    position: absolute;
+    top: $popup-close-margin;
+    right: $popup-close-margin;
+    color: $popup-close-color;
+    font-size: $popup-close-size;
+  }
+
+  /* 参考源用 mdeep() 生成根级 `:deep() .wd-popup--<position>`；本地 m() 的
+     @at-root 产物与其归一化结果一致，mdeep() 会多带一层 .wd-popup 祖先、
+     永不命中（CONVENTIONS §5.5 同类名错配） */
+  @include m(center) {
+    /* 居中改由 harness 的 align-items/justify-content 完成：面板依旧收缩包裹
+       内容（尺寸取决于消费方 slot），背景只铺面板自身，不会涂满屏幕盖住遮罩。
+       历史写法 left/top: 50% + translate3d(-50%,-50%,0) 已移除——真机对
+       percent + translate 的居中不稳（CONVENTIONS §19 差异清单、
+       NATIVE-REWRITE §3.2 明令禁用）。 */
+    /* 缩放以面板自身中心为原点：面板已由 flex 居中，过渡帧只写 scale，
+       不再需要 translate 补偿，故 transform-origin 显式取中心，避免引擎
+       默认原点差异把缩放做成“从左上角长出来” */
+    transform-origin: 50% 50%;
+
+    @include when(round) {
+      border-radius: $popup-radius;
+    }
+
+    /* 过渡帧类名按 Vue3 约定生成 -enter-from（参考源为 -enter）；
+       特异性（两类名）已高于 wd-transition 的单类名规则，无需 !important */
+    &.wd-transition--zoom-in-enter-from,
+    &.wd-transition--zoom-in-leave-to {
+      transform: scale(0.8);
+    }
+
+    @include when(deep) {
+      &.wd-transition--zoom-in-enter-from,
+      &.wd-transition--zoom-in-leave-to {
+        transform: scale(0.1);
+      }
+    }
+  }
+
+  /* 贴边位置（top/bottom/left/right）不再写边值：位置由 harness 的
+     justify-content 决定，宽高由组件内联下发窗口像素（真机不认四边 0 的
+     尺寸推导）。此处只保留圆角。 */
+  @include m(left) {
+    @include when(round) {
+      border-radius: 0 $popup-radius $popup-radius 0;
+    }
+  }
+  @include m(right) {
+    @include when(round) {
+      border-radius: $popup-radius 0 0 $popup-radius;
+    }
+  }
+
+  @include m(top) {
+    @include when(round) {
+      border-radius: 0 0 $popup-radius $popup-radius;
+    }
+  }
+
+  @include m(bottom) {
+    @include when(round) {
+      border-radius: $popup-radius $popup-radius 0 0;
+    }
+  }
+}
+
+/* 主轴占位（真机 2026-11-05 修复）：贴边弹层的位置由本空 view 的
+   flex-grow 吸收 harness 主轴剩余空间完成——真机上 justify-content 的
+   flex-start / flex-end 被按 center 处理（center 本身正常），写边值
+   定位又会撞上「缺边按 0 锚定」（CONVENTIONS §19 差异 #2）。flex-grow
+   是真机可用路径（wd-cell 的 __left / __right 同机制），故占位只声明
+   这一项；空内容 + basis 取默认 auto（= 0）即可吃掉全部剩余空间。
+   指针事件继承 harness 的 none，不拦截遮罩关闭点击。 */
+.wd-popup-spacer {
+  flex-grow: 1;
+}

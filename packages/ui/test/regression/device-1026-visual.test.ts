@@ -14,11 +14,11 @@
  */
 import { describe, it, expect } from 'vitest'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
-import DatetimePicker from '../../src/components/wd-datetime-picker/wd-datetime-picker.vue'
-import Switch from '../../src/components/wd-switch/wd-switch.vue'
-import Search from '../../src/components/wd-search/wd-search.vue'
-import Button from '../../src/primitives/wd-button/wd-button.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import DatetimePicker from '@wot-lynx/ui-picker/wd-datetime-picker'
+import Switch from '@wot-lynx/primitives/wd-switch'
+import Search from '@wot-lynx/primitives/wd-search'
+import Button from '@wot-lynx/primitives/wd-button'
 
 function styleOf(el: Element | null): string {
   return el ? el.getAttribute('style') || '' : ''

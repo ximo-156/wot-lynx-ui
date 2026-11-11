@@ -9,6 +9,7 @@
  * 像素值（如 336px），不要用 calc 乘法。
  */
 import { describe, expect, it } from 'vitest'
+import { compCss } from '../helpers/component-roots'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
@@ -35,7 +36,7 @@ describe('generated CSS device guards', () => {
   })
 
   it('keeps a plain pixel fallback on the cascader list height', () => {
-    const css = readFileSync(path.join(SRC, 'components/wd-cascader/index.css'), 'utf8')
+    const css = compCss('wd-cascader')
     expect(css).toMatch(/\.wd-cascader__list\{height:var\(--wot-cascader-list-height,\s*336px\)/)
     expect(css).toMatch(/\.wd-cascader__panel\{position:relative;height:var\(--wot-cascader-list-height,\s*336px\)/)
   })

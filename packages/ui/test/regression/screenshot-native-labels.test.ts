@@ -1,18 +1,19 @@
 /** 原生截图文字布局回归；样式/节点契约不是 Android/iOS 像素验收。 */
 import { afterEach, describe, expect, it } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue-lynx'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cleanup, render } from '../render'
 import { restoreNativeStubs, stubNativeObserver, stubNativeQuery } from '../helpers/native-stubs'
-import Circle from '../../src/components/wd-circle/wd-circle.vue'
-import Sticky from '../../src/components/wd-sticky/wd-sticky.vue'
+import Circle from '@wot-lynx/ui-display/wd-circle'
+import Sticky from '@wot-lynx/primitives/wd-sticky'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const circleCss = postcss.parse(compile(path.resolve(here, '../../src/components/wd-circle/index.scss')).css)
+const circleCss = postcss.parse(compileScss(compPath('wd-circle', 'index.scss')))
 function declarations(element: Element, sheet = circleCss) {
   const values: Record<string, string> = {}
   sheet.walkRules((rule) => {

@@ -4,24 +4,25 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue-lynx'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
-import path from 'node:path'
+import path, { resolve } from 'node:path'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { nativeRuntime, restoreNativeStubs, stubNativeQuery } from '../helpers/native-stubs'
-import Popover from '../../src/components/wd-popover/wd-popover.vue'
-import type { PlacementType } from '../../src/components/wd-popover/types'
-import Resize from '../../src/components/wd-resize/wd-resize.vue'
+import Popover from '@wot-lynx/ui-feedback/wd-popover'
+import type { PlacementType } from '@wot-lynx/ui-feedback/wd-popover'
+import Resize from '@wot-lynx/ui-layout/wd-resize'
+import { compileScss } from '../helpers/scss'
+import { compCss, compPath } from '../helpers/component-roots'
 
 const sheets = new Map<string, ReturnType<typeof postcss.parse>>()
 function declarations(element: Element, name: string): Record<string, string> {
   if (!sheets.has(name)) {
-    const filename = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/components', name, 'index.scss')
-    sheets.set(name, postcss.parse(compile(filename).css))
+    const filename = compPath(name, 'index.scss')
+    sheets.set(name, postcss.parse(compileScss(filename)))
   }
   const values: Record<string, string> = {}
   sheets.get(name)!.walkRules((rule) => {
@@ -60,7 +61,7 @@ async function nativePopoverRules(component = 'wd-popover') {
   const serializerPath = createRequire(templatePackage).resolve('@lynx-js/css-serializer')
   const CSS = await import(pathToFileURL(serializerPath).href)
   const { genStyleInfo } = await import(pathToFileURL(path.resolve(path.dirname(templatePackage), 'lib/web/genStyleInfo.js')).href)
-  const css = readFileSync(path.resolve(here, '../../src/components', component, 'index.css'), 'utf8')
+  const css = compCss(component)
   expect(CSS.parse(css).errors).toEqual([])
   const { cssMap } = CSS.cssChunksToMap([css], [], true)
   const rules: Array<{ sel: string[][]; decl: Array<[string, string]> }> = genStyleInfo(cssMap)['0'].rules
@@ -208,7 +209,7 @@ describe('Popover 原生内容宽度', () => {
     const { container } = render(defineComponent(() => () => h(Popover, {
       modelValue: true, content: '带轮廓的气泡', placement: placement.value, visibleArrow: visibleArrow.value
     })))
-    const themeSheet = postcss.parse(compile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/styles/theme/index.scss')).css)
+    const themeSheet = postcss.parse(compileScss(resolve(__dirname, '../../../core/src/styles/theme/index.scss')))
     const themes = ['light', 'dark'].map((theme) => {
       const variables: Record<string, string> = {}
       themeSheet.walkRules((rule) => {

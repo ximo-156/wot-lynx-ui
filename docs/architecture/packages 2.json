@@ -1,0 +1,121 @@
+{
+  "$comment": [
+    "组件包划分声明 —— 域包拆分（ADR-023）的单一事实来源。",
+    "",
+    "为什么需要它：2026-10-22 架构评审判定「拆域包做不了」的真实原因是依赖图不是 DAG",
+    "（153 条业务↔业务边、5 个跨族环）。经 ADR-012 primitives 层收敛与 2026-11-11 的",
+    " building-block 提升（业务↔业务 48 → 28，跨族环 0），包级依赖图已是 DAG：",
+    "跨包边 4 条（form→layout / form→display / display→layout / picker→display），无环。",
+    "",
+    "本文件只声明**包边界**（架构决策，可评审、可 diff），不列组件清单——组件归属由",
+    "文件系统位置决定：每个包的 componentRoot 下的 wd-* 目录即该包组件。",
+    "族（原子单元）仍读 families.json；拆包按族拆，永不拆散族内成员。",
+    "",
+    "role 取值：",
+    "  infra      —— 无组件：common / composables / icons / locale / styles",
+    "  primitives —— L3.5 基础件（不得依赖任何 domain 包）",
+    "  domain     —— L4 业务组件，按域分包；domain 字段即域名",
+    "  umbrella   —— 门面包：barrel、全局注册插件、主题入口、config-provider",
+    "",
+    "约束（由 scripts/review-lint.mjs 与 scripts/analyze-deps.mjs 守护）：",
+    "  - domain 包可依赖 infra / primitives / 下游 domain，禁止反向（包级 DAG）；",
+    "  - infra 包不得依赖任何组件包；",
+    "  - 业务↔业务组件边只允许下降（deps-baseline.json 单调收敛）。"
+  ],
+  "packages": [
+    {
+      "name": "@wot-lynx/core",
+      "dir": "packages/core",
+      "role": "infra",
+      "src": "src",
+      "componentRoot": null,
+      "description": "框架中立层：common / composables / icons / locale / styles，不含组件"
+    },
+    {
+      "name": "@wot-lynx/primitives",
+      "dir": "packages/primitives",
+      "role": "primitives",
+      "src": "src",
+      "componentRoot": "src",
+      "layer": "primitives",
+      "listName": "allPrimitives",
+      "description": "L3.5 基础件：高 fan-in 叶子件与跨域复用的 building block"
+    },
+    {
+      "name": "@wot-lynx/ui-layout",
+      "dir": "packages/ui-layout",
+      "role": "domain",
+      "domain": "layout",
+      "src": "src",
+      "componentRoot": "src",
+      "layer": "components",
+      "listName": "allLayout",
+      "description": "布局：row/col、grid、collapse、cell-group、divider、resize"
+    },
+    {
+      "name": "@wot-lynx/ui-display",
+      "dir": "packages/ui-display",
+      "role": "domain",
+      "domain": "display",
+      "src": "src",
+      "componentRoot": "src",
+      "layer": "components",
+      "listName": "allDisplay",
+      "description": "展示：avatar、swiper、table、count-to、progress、tag、text 等"
+    },
+    {
+      "name": "@wot-lynx/ui-nav",
+      "dir": "packages/ui-nav",
+      "role": "domain",
+      "domain": "nav",
+      "src": "src",
+      "componentRoot": "src",
+      "layer": "components",
+      "listName": "allNav",
+      "description": "导航：tabbar、sidebar、drop-menu、index-bar、steps、pagination、navbar"
+    },
+    {
+      "name": "@wot-lynx/ui-form",
+      "dir": "packages/ui-form",
+      "role": "domain",
+      "domain": "form",
+      "src": "src",
+      "componentRoot": "src",
+      "layer": "components",
+      "listName": "allForm",
+      "description": "表单：form、rate、slider、upload、address-edit、cascader、select-picker 等"
+    },
+    {
+      "name": "@wot-lynx/ui-feedback",
+      "dir": "packages/ui-feedback",
+      "role": "domain",
+      "domain": "feedback",
+      "src": "src",
+      "componentRoot": "src",
+      "layer": "components",
+      "listName": "allFeedback",
+      "description": "反馈：dialog、notify、popover、tooltip、tour、floating-panel 等"
+    },
+    {
+      "name": "@wot-lynx/ui-picker",
+      "dir": "packages/ui-picker",
+      "role": "domain",
+      "domain": "picker",
+      "src": "src",
+      "componentRoot": "src",
+      "layer": "components",
+      "listName": "allPicker",
+      "description": "选择器：picker 族六件套（wrapper → view 原子链）"
+    },
+    {
+      "name": "wot-lynx-ui",
+      "dir": "packages/ui",
+      "role": "umbrella",
+      "src": "src",
+      "componentRoot": "src/components",
+      "layer": "components",
+      "listName": "allComponents",
+      "description": "门面包：barrel、wotLynxUI 插件、theme 入口、wd-config-provider"
+    }
+  ]
+}

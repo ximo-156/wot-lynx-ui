@@ -6,8 +6,8 @@
  * 快捷选项点击后直接写回选中值。
  */
 import { ref } from 'vue'
-import WdCalendar from 'wot-lynx-ui/components/wd-calendar/wd-calendar.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdCalendar from '@wot-lynx/ui-picker/wd-calendar'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const dateVisible = ref(false)
 const rangeVisible = ref(false)

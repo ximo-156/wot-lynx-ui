@@ -9,7 +9,7 @@ import Showcase from '../../../demo/src/showcase/Showcase.vue'
 import wotLynxUI from '../../src/index'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 
 afterEach(cleanup)
 

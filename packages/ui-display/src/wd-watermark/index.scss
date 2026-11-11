@@ -1,0 +1,91 @@
+@use 'styles/mixin/mixin.scss' as *;
+@use 'styles/variable.scss' as *;
+
+// 水印透明度
+$watermark-opacity: var(--wot-watermark-opacity, $opacity-dimmer) !default;
+
+/* Lynx 适配：参考源根节点为纯遮罩（position: absolute / is-fullscreen 时
+   fixed + inset 0 + pointer-events: none + background-repeat: repeat），
+   由 canvas 生成的 dataURL 背景平铺；Lynx 无 Canvas 2D（平台降级），且本地
+   根节点同时承载插槽内容，故根保持 relative 容器，平铺由水印图层内的真实
+   元素重复渲染承担（见 wd-watermark.vue 文件头）。全屏语义（参考源根的
+   position: fixed）改由图层在 is-fullscreen 下承担。
+   根节点保留与容器结构兼容的参考源声明（z-index / inset / background-repeat，
+   relative 定位下均无视觉副作用）；opacity 移至图层（根节点淡化会波及插槽
+   内容，参考源根无插槽无此问题）；position: absolute → relative 即平台降级点。 */
+@include b(watermark) {
+  position: relative;
+  /* 真机层序（Lynx 定位 FAQ，CONVENTIONS §19 附注；2026-11-08 真机截图缺陷）：
+     水印图层 __layer 是 absolute（is-fullscreen 时 fixed）且内联下发
+     props.zIndex（见 wd-watermark.vue 的 layerStyle），即「带 z-index 的
+     定位节点」。根节点必须同时 z-index: 0 建立层叠上下文，否则真机把这层
+     按页面根（屏幕）坐标系绘制——页面滚动后整层水印（连同根内插槽内容）
+     不跟随组件滚走，而是按滚动偏移量粘在屏幕上：演示页滚过 Watermark
+     一节时，水印与插槽文案整体下移约一个滚动偏移量，脱离 180px 容器、
+     压住面板下方内容。与 wd-avatar-group / wd-slider / wd-table 同一修法，
+     根节点先建立上下文，图层的 z-index 才能收在本节点层序内。
+     参考源把 zIndex 下发在根节点（根即遮罩）；本地根是承载插槽的相对
+     容器，层级改由真正定位的水印图层承担，根只做 containing block。 */
+  z-index: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background-repeat: repeat;
+  width: 100%;
+  // Lynx 适配（NATIVE-REWRITE §3.1 根节点三件套）：Lynx 3.x 默认 linear
+  // 布局，不显式声明 display: flex 时 flex-direction 被静默丢弃；本地根节点
+  // 同时承载插槽内容与水印图层（绝对定位、不参与流），按纵向流补全，
+  // 插槽内容自然堆叠。
+  display: flex;
+  flex-direction: column;
+
+  @include when(fullscreen) {
+    // Lynx 适配：参考源为根节点 position: fixed；此处 fixed 落在水印图层上
+    //（Lynx 的 fixed 节点会被提升到页面根节点，天然覆盖整个视口）
+    @include edeep(layer) {
+      position: fixed;
+    }
+  }
+
+  @include e(layer) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1100;
+    opacity: $watermark-opacity;
+    pointer-events: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    // 自左上角起精确平铺（对齐 background-repeat 的起点语义）
+    align-content: flex-start;
+    justify-content: flex-start;
+  }
+
+  @include e(unit) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  @include e(image) {
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  @include e(text) {
+    // 参考源 canvas 绘制时按单元宽度自动换行，此处由文本自然换行承载
+    width: 100%;
+    // Lynx 适配（NATIVE-REWRITE §3.2）：单元容器 flex 居中的同时给文本节点
+    // 补 text-align: center，与参考源 canvas textAlign='center' 的居中绘制
+    // 语义对齐（旋转前先水平居中）。
+    text-align: center;
+  }
+}

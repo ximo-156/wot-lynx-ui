@@ -6,19 +6,20 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTextVNode, Fragment, h, nextTick, ref } from 'vue-lynx'
-import { compile } from 'sass'
 import postcss, { type Root } from 'postcss'
-import path from 'node:path'
-import Button from '../../src/primitives/wd-button/wd-button.vue'
-import { buttonProps } from '../../src/primitives/wd-button/types'
-import Signature from '../../src/components/wd-signature/wd-signature.vue'
+import path, { resolve } from 'node:path'
+import Button from '@wot-lynx/primitives/wd-button'
+import { buttonProps } from '@wot-lynx/primitives/wd-button/types'
+import Signature from '@wot-lynx/ui-form/wd-signature'
 import ConfigProvider from '../../src/components/wd-config-provider/wd-config-provider.vue'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
 type Declarations = Record<string, string>
-const buttonCss = postcss.parse(compile(path.resolve(__dirname, '../../src/primitives/wd-button/index.scss')).css)
-const themeCss = postcss.parse(compile(path.resolve(__dirname, '../../src/styles/theme/index.scss')).css)
+const buttonCss = postcss.parse(compileScss(compPath('wd-button', 'index.scss')))
+const themeCss = postcss.parse(compileScss(resolve(__dirname, '../../../core/src/styles/theme/index.scss')))
 const types = ['primary', 'success', 'info', 'warning', 'danger'] as const
 const variants = ['base', 'plain', 'dashed', 'soft', 'subtle', 'text'] as const
 const palette = { primary: 'primary-6', success: 'success-main', info: 'text-main', warning: 'warning-main', danger: 'danger-main' }

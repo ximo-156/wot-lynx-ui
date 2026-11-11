@@ -5,21 +5,22 @@
  * asserted independently of browser computed layout.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import path from 'node:path'
 import { h, nextTick, ref } from 'vue-lynx'
-import Button from '../../src/primitives/wd-button/wd-button.vue'
-import Fab from '../../src/components/wd-fab/wd-fab.vue'
+import Button from '@wot-lynx/primitives/wd-button'
+import Fab from '@wot-lynx/ui-display/wd-fab'
 import ConfigProvider from '../../src/components/wd-config-provider/wd-config-provider.vue'
-import { GREEN, ORANGE, PRIMARY_COLOR, RED, THEME_TEXT_COLOR } from '../../src/common/theme'
-import { registerIconSet } from '../../src/icons/registry'
+import { GREEN, ORANGE, PRIMARY_COLOR, RED, THEME_TEXT_COLOR } from '@wot-lynx/core/common/theme'
+import { registerIconSet } from '@wot-lynx/core/icons/registry'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
-const buttonCss = postcss.parse(compile(path.resolve(__dirname, '../../src/primitives/wd-button/index.scss')).css)
-const fabCss = postcss.parse(compile(path.resolve(__dirname, '../../src/components/wd-fab/index.scss')).css)
+const buttonCss = postcss.parse(compileScss(compPath('wd-button', 'index.scss')))
+const fabCss = postcss.parse(compileScss(compPath('wd-fab', 'index.scss')))
 function rule(selector: string, css = buttonCss): Record<string, string> {
   const declarations: Record<string, string> = {}
   css.walkRules((candidate) => {

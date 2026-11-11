@@ -26,7 +26,13 @@ import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const ROOTS = ['packages/ui/src/primitives', 'packages/ui/src/components']
+/** 组件根来自 packages.json（ADR-023 域包拆分后多包分布） */
+const MANIFEST = JSON.parse(readFileSync(join(root, 'docs/architecture/packages.json'), 'utf8'))
+const ROOTS = MANIFEST.packages
+  .filter((p) => p.componentRoot)
+  .map((p) => join(p.dir, p.componentRoot))
+  // 拆分过渡期：清单里已声明但尚未落地的包不参与校验
+  .filter((dir) => existsSync(join(root, dir)))
 const DEVICE_ENTRY = 'packages/demo/src/device-test/index.ts'
 const MAIN_ENTRY = 'packages/demo/src/index.ts'
 

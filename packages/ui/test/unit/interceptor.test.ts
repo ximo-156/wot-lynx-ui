@@ -10,7 +10,7 @@
  * 回调；没有 error 回调时只 console.error，不向上抛出。
  */
 import { describe, it, expect, vi } from 'vitest'
-import { callInterceptor } from '../../src/common/interceptor'
+import { callInterceptor } from '@wot-lynx/core/common/interceptor'
 import { captureConsole } from '../capture-console'
 
 describe('callInterceptor 异常兜底', () => {

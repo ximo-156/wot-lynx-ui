@@ -1,0 +1,184 @@
+@use 'styles/mixin/mixin.scss' as *;
+@use 'styles/variable.scss' as *;
+
+// 表格背景色
+$table-bg: var(--wot-table-bg, $filled-oppo) !default;
+// 表格文字颜色
+$table-color: var(--wot-table-color, $text-main) !default;
+// 斑马纹背景色
+$table-stripe-bg: var(--wot-table-stripe-bg, $filled-bottom) !default;
+// 边框颜色
+$table-border-color: var(--wot-table-border-color, $border-main) !default;
+// 边框宽度
+$table-border-width: var(--wot-table-border-width, $stroke-main) !default;
+// 单元格字号
+$table-cell-font-size: var(--wot-table-cell-font-size, $typography-body-size-main) !default;
+// 单元格行高
+$table-cell-line-height: var(--wot-table-cell-line-height, $typography-body-line-height-size-main) !default;
+// 单元格内边距
+$table-cell-padding: var(--wot-table-cell-padding, $padding-loose $padding-extra-loose) !default;
+// 固定列阴影渐变背景
+$table-shadow-gradient: var(--wot-table-shadow-gradient, linear-gradient(270deg, $base-transparent 0%, $opac-2_04 100%)) !default;
+// 滚动阴影宽度（此前只有 var() 引用、无令牌声明，30px 是裸值）
+$table-shadow-width: var(--wot-table-shadow-width, $n-32) !default;
+// 排序按钮高度
+$table-sort-button-height: var(--wot-table-sort-button-height, $n-20) !default;
+
+@include b(table) {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: $table-bg;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。滚动容器（scroll-view）
+  // 为唯一流式子节点，纵向堆叠 + 交叉轴拉伸令其撑满宽度。
+  display: flex;
+  flex-direction: column;
+  // 真机层序（CONVENTIONS §19 定位 FAQ，2026-11-05 真机缺陷）：根节点先建立
+  // 层叠上下文，表头与固定列的 z-index 才能收在表内排序。缺这一层时表头
+  // （z-index:2）挂在没有层叠上下文的 __content 上，真机整棵表头子树不
+  // 绘制——只剩表头高度的空白，看起来就是「表头消失了」（与 2026-11-03
+  // wd-slider 滑轨不绘制同款：布局占位在、绘制整棵丢）。
+  z-index: 0;
+
+  @include when(border) {
+    border: $table-border-width solid $table-border-color;
+  }
+
+  @include e(scroll) {
+    width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+
+  // Lynx 适配：参考源表头为 CSS Grid 行，Lynx 无 Grid，改为 flex 行
+  // （列宽由单元格内联 width 下发，flex-shrink:0 防压缩）。
+  @include e(content) {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    min-width: 100%;
+    // 表头（z-index:2 + sticky）的直接父级：必须自带层叠上下文，否则真机
+    // 不绘制整棵表头（见根节点注释）。flex 子项上 z-index 即生成层叠上下文，
+    // position:relative 让语义与 wd-picker-view __main 的修法保持一致。
+    position: relative;
+    z-index: 0;
+  }
+
+  @include e(header) {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    background: $table-bg;
+    z-index: 2;
+
+    @include when(sticky) {
+      position: sticky;
+      top: 0;
+    }
+  }
+
+  // Lynx 适配：表体为「列主」flex 行（每个 wd-table-column 是纵向容器），
+  // 替代参考源的 display:grid + grid-template-columns。
+  @include e(body) {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    width: 100%;
+    // 固定列（.wd-table-column.is-fixed 的 sticky + z-index:2）的直接父级：
+    // 同 __content，自带层叠上下文把列层级收在表体以内（真机层序）。
+    position: relative;
+    z-index: 0;
+  }
+
+  @include e(cell) {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    box-sizing: border-box;
+    background: $table-bg;
+    padding: $table-cell-padding;
+    font-size: $table-cell-font-size;
+    line-height: $table-cell-line-height;
+    color: $table-color;
+    // Lynx 适配：flex 行内的单元格不允许被压缩（参考源的 grid 列宽是刚性的）
+    flex-shrink: 0;
+    --wot-sort-button-height: #{$table-sort-button-height};
+
+    // Lynx 适配：参考源的 ::before 边框（伪元素）改为单元格真实 border
+    // （PORTING §4.4：边框技巧 → 主元素真实 border）
+    @include when(border) {
+      border-right: $table-border-width solid $table-border-color;
+      border-bottom: $table-border-width solid $table-border-color;
+
+      @include when(last) {
+        border-right: none;
+      }
+    }
+
+    @include when(stripe) {
+      background: $table-stripe-bg;
+    }
+
+    @include when(fixed) {
+      position: sticky;
+      z-index: 1;
+    }
+
+    // Lynx 适配：is-shadow 的 ::after 渐变阴影改为模板真实元素
+    // wd-table__shadow（样式见 wd-table-column/index.scss）
+
+    @include when(hidden) {
+      display: none;
+    }
+
+    @include when(left) {
+      justify-content: flex-start;
+    }
+
+    // Lynx 适配：flex 子项（text）被 justify-content 以盒子为单位对齐，
+    // 换行 / 省略（text-maxline）时盒子撑满单元格、内部文本仍左对齐——
+    // 故按对齐方式同步文本 text-align（NATIVE-REWRITE §3.2 文本居中）
+    @include when(center) {
+      justify-content: center;
+
+      @include edeep(value) {
+        text-align: center;
+      }
+    }
+
+    @include when(right) {
+      justify-content: flex-end;
+
+      @include edeep(value) {
+        text-align: right;
+      }
+    }
+  }
+
+  // 固定列阴影：官方 30rpx（Lynx 无 rpx），改用 px 并保留 --wot-table-shadow-width
+  @include e(shadow) {
+    position: absolute;
+    top: 0;
+    right: calc(-1 * $table-shadow-width);
+    width: $table-shadow-width;
+    height: 100%;
+    background: $table-shadow-gradient;
+    pointer-events: none;
+  }
+
+  @include e(value) {
+    min-width: 0;
+    font-size: $table-cell-font-size;
+    line-height: $table-cell-line-height;
+    color: $table-color;
+    white-space: normal;
+    @include when(ellipsis) {
+      word-break: break-all;
+      @include multiEllipsis(2);
+    }
+  }
+}

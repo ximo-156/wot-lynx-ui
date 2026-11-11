@@ -3,7 +3,7 @@
  * Rate 评分 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdRate from 'wot-lynx-ui/components/wd-rate/wd-rate.vue'
+import WdRate from '@wot-lynx/ui-form/wd-rate'
 
 const value = ref(3)
 </script>

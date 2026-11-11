@@ -19,12 +19,12 @@
 import { describe, it, expect } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { getSystemInfo, pause } from '../../src/common/util'
+import { getSystemInfo, pause } from '@wot-lynx/core/common/util'
 import { fireEvent } from '../fire-event'
-import Keyboard from '../../src/components/wd-keyboard/wd-keyboard.vue'
-import PasswordInput from '../../src/components/wd-password-input/wd-password-input.vue'
-import Overlay from '../../src/primitives/wd-overlay/wd-overlay.vue'
-import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
+import Keyboard from '@wot-lynx/ui-form/wd-keyboard'
+import PasswordInput from '@wot-lynx/ui-form/wd-password-input'
+import Overlay from '@wot-lynx/primitives/wd-overlay'
+import Popup from '@wot-lynx/primitives/wd-popup'
 
 /** 等待过渡入场（pause 约 33ms 一帧，enter 需 2 帧置 display） */
 async function frames(n = 6) {

@@ -9,10 +9,11 @@ import DeviceApp from '../../../demo/src/device-test/App.vue'
 import ShowcaseLayout from '../../../demo/src/showcase/ShowcaseLayout'
 import DemoSection from '../../../demo/src/showcase/DemoSection'
 import wotLynxUI from '../../src/index'
+import { listComponents } from '../helpers/component-roots'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { getViewportOverride, setViewportOverride } from '../../src/common/viewport'
-import { pause } from '../../src/common/util'
+import { getViewportOverride, setViewportOverride } from '@wot-lynx/core/common/viewport'
+import { pause } from '@wot-lynx/core/common/util'
 import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
 
 async function select(container: Element, prefix: string, name: string) {
@@ -175,11 +176,8 @@ describe('bounded demo workload', () => {
     const pkgRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
     const showcase = readFileSync(path.join(pkgRoot, 'demo/src/showcase/Showcase.vue'), 'utf8')
     const names = [...showcase.matchAll(/<DemoSection\s+name="([^"]+)"/g)].map((m) => m[1])
-    const components = (['primitives', 'components'] as const).flatMap((dir) =>
-      readdirSync(path.join(pkgRoot, 'ui/src', dir), { withFileTypes: true })
-        .filter((entry) => entry.isDirectory() && entry.name.startsWith('wd-'))
-        .map((entry) => entry.name)
-    ).sort()
+    // 组件已多包化（ADR-023）：经 helper 按 packages.json 发现，不拼相对路径
+    const components = listComponents()
     // 一个组件一节，节名即组件标签：目录逐页浏览时每个组件都有自己的页面
     expect([...names].sort()).toEqual(components)
     expect(new Set(names).size, 'demo section names must be unique').toBe(names.length)

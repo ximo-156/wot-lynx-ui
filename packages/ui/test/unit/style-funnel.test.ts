@@ -8,7 +8,7 @@
  * `inline-style-regression.test.ts` 与真机验收清单。
  */
 import { describe, it, expect } from 'vitest'
-import { defineStyleKeys, resolveStyle } from '../../src/common/style'
+import { defineStyleKeys, resolveStyle } from '@wot-lynx/core/common/style'
 
 describe('defineStyleKeys', () => {
   it('原样返回中性值声明（仅做类型收敛）', () => {

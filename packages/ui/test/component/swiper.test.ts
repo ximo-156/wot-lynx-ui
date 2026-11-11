@@ -5,8 +5,8 @@ import { describe, it, expect } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import Swiper from '../../src/components/wd-swiper/wd-swiper.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Swiper from '@wot-lynx/ui-display/wd-swiper'
 
 const list = [
   { url: 'https://example.com/1.png' },

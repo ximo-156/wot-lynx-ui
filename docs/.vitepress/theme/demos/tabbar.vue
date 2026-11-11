@@ -3,8 +3,8 @@
  * Tabbar 标签栏 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdTabbar from 'wot-lynx-ui/components/wd-tabbar/wd-tabbar.vue'
-import WdTabbarItem from 'wot-lynx-ui/components/wd-tabbar-item/wd-tabbar-item.vue'
+import WdTabbar from '@wot-lynx/ui-nav/wd-tabbar'
+import WdTabbarItem from '@wot-lynx/ui-nav/wd-tabbar-item'
 
 const value = ref(0)
 const roundValue = ref(1)

@@ -11,6 +11,13 @@
     "dev:worklet-repro": "rspeedy dev -c lynx.config.worklet-repro.ts"
   },
   "dependencies": {
+    "@wot-lynx/primitives": "workspace:*",
+    "@wot-lynx/ui-display": "workspace:*",
+    "@wot-lynx/ui-feedback": "workspace:*",
+    "@wot-lynx/ui-form": "workspace:*",
+    "@wot-lynx/ui-layout": "workspace:*",
+    "@wot-lynx/ui-nav": "workspace:*",
+    "@wot-lynx/ui-picker": "workspace:*",
     "vue": "^3.5.30",
     "vue-lynx": "^0.5.1",
     "wot-lynx-ui": "workspace:*"

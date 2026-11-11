@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import './UploadEvokeButton.css'
 
-import WdIcon from 'wot-lynx-ui/primitives/wd-icon'
+import WdIcon from '@wot-lynx/primitives/wd-icon'
 
 /*
  * 上传唤起项只负责外观，点击交给父级 Upload 的 beforeChoose / chooseMedia

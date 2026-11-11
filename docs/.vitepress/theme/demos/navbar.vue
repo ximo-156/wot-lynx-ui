@@ -2,8 +2,8 @@
 /**
  * Navbar 导航栏 — 文档站 H5 预览演示（手工编写）。
  */
-import WdNavbar from 'wot-lynx-ui/components/wd-navbar/wd-navbar.vue'
-import WdNavbarCapsule from 'wot-lynx-ui/components/wd-navbar-capsule/wd-navbar-capsule.vue'
+import WdNavbar from '@wot-lynx/ui-nav/wd-navbar'
+import WdNavbarCapsule from '@wot-lynx/ui-nav/wd-navbar-capsule'
 </script>
 
 <template>

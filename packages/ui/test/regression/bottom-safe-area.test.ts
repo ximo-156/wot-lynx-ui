@@ -6,18 +6,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
 import postcss from 'postcss'
-import { compile } from 'sass'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { compCss, compPath } from '../helpers/component-roots'
+import { compileScss } from '../helpers/scss'
 import { nativeRuntime, restoreNativeStubs, setSystemInfo, stubNativeQuery } from '../helpers/native-stubs'
-import { configureHost } from '../../src/common/host'
-import { setViewportOverride } from '../../src/common/viewport-state'
-import type { SafeAreaInsets } from '../../src/common/safe-area'
-import Tabbar from '../../src/components/wd-tabbar/wd-tabbar.vue'
-import SubmitBar from '../../src/components/wd-submit-bar/wd-submit-bar.vue'
-import Gap from '../../src/components/wd-gap/wd-gap.vue'
-import FloatingPanel from '../../src/components/wd-floating-panel/wd-floating-panel.vue'
+import { configureHost } from '@wot-lynx/core/common/host'
+import { setViewportOverride } from '@wot-lynx/core/common/viewport-state'
+import type { SafeAreaInsets } from '@wot-lynx/core/common/safe-area'
+import Tabbar from '@wot-lynx/ui-nav/wd-tabbar'
+import SubmitBar from '@wot-lynx/ui-display/wd-submit-bar'
+import Gap from '@wot-lynx/ui-layout/wd-gap'
+import FloatingPanel from '@wot-lynx/ui-feedback/wd-floating-panel'
 
 type NativeStyle = Record<string, string>
 type CustomStyle = string | Record<string, string>
@@ -428,7 +428,7 @@ describe('bottom component layout and lifecycle contracts', () => {
     const sheets = new Map<string, ReturnType<typeof postcss.parse>>()
     const rule = (name: string, selector: string) => {
       // Compile only these component sheets in memory; never run/write CSS generators.
-      if (!sheets.has(name)) sheets.set(name, postcss.parse(compile(compPath(name, 'index.scss')).css))
+      if (!sheets.has(name)) sheets.set(name, postcss.parse(compileScss(compPath(name, 'index.scss'))))
       const values: Record<string, string> = {}
       sheets.get(name)!.walkRules((entry) => {
         if (entry.selectors.includes(selector)) entry.walkDecls((decl) => { values[decl.prop] = decl.value })

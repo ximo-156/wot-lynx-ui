@@ -18,9 +18,9 @@ import { describe, it, expect } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import SwipeAction from '../../src/components/wd-swipe-action/wd-swipe-action.vue'
-import CalendarView from '../../src/components/wd-calendar-view/wd-calendar-view.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import SwipeAction from '@wot-lynx/ui-feedback/wd-swipe-action'
+import CalendarView from '@wot-lynx/ui-picker/wd-calendar-view'
 
 async function frames(n = 8) {
   for (let i = 0; i < n; i++) await pause()

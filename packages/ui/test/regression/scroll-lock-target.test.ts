@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { h, nextTick, provide, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
-import { SCROLL_LOCK_TARGET_KEY, useLockScroll, usePageScrollLock } from '../../src/composables/useLockScroll'
+import { SCROLL_LOCK_TARGET_KEY, useLockScroll, usePageScrollLock } from '@wot-lynx/core/composables/useLockScroll'
 
 afterEach(cleanup)
 

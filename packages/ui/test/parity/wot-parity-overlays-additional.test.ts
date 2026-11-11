@@ -4,26 +4,27 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { getSystemInfo, pause } from '../../src/common/util'
-import { configureHost } from '../../src/common/host'
+import { getSystemInfo, pause } from '@wot-lynx/core/common/util'
+import { configureHost } from '@wot-lynx/core/common/host'
 import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
-import Overlay from '../../src/primitives/wd-overlay/wd-overlay.vue'
-import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
-import Dialog from '../../src/components/wd-dialog/wd-dialog.vue'
-import ActionSheet from '../../src/components/wd-action-sheet/wd-action-sheet.vue'
-import Toast from '../../src/components/wd-toast/wd-toast.vue'
-import Notify from '../../src/components/wd-notify/wd-notify.vue'
-import Popover from '../../src/components/wd-popover/wd-popover.vue'
-import Tooltip from '../../src/components/wd-tooltip/wd-tooltip.vue'
-import Curtain from '../../src/components/wd-curtain/wd-curtain.vue'
-import ImagePreview from '../../src/components/wd-image-preview/wd-image-preview.vue'
-import VideoPreview from '../../src/components/wd-video-preview/wd-video-preview.vue'
-import Tour from '../../src/components/wd-tour/wd-tour.vue'
-import { getDialogDefaultOptionKey, useDialog } from '../../src/components/wd-dialog'
-import { getToastOptionKey, useToast } from '../../src/components/wd-toast'
-import { getNotifyOptionKey, resetNotifyDefaultOptions, setNotifyDefaultOptions, useNotify } from '../../src/components/wd-notify'
-import { getImagePreviewOptionKey, useImagePreview } from '../../src/components/wd-image-preview'
-import { getVideoPreviewOptionKey, useVideoPreview } from '../../src/components/wd-video-preview'
+import Overlay from '@wot-lynx/primitives/wd-overlay'
+import Popup from '@wot-lynx/primitives/wd-popup'
+import Dialog from '@wot-lynx/ui-feedback/wd-dialog'
+import ActionSheet from '@wot-lynx/primitives/wd-action-sheet'
+import Toast from '@wot-lynx/primitives/wd-toast'
+import Notify from '@wot-lynx/ui-feedback/wd-notify'
+import Popover from '@wot-lynx/ui-feedback/wd-popover'
+import Tooltip from '@wot-lynx/ui-feedback/wd-tooltip'
+import Curtain from '@wot-lynx/ui-feedback/wd-curtain'
+import ImagePreview from '@wot-lynx/ui-display/wd-image-preview'
+import VideoPreview from '@wot-lynx/ui-display/wd-video-preview'
+import Tour from '@wot-lynx/ui-feedback/wd-tour'
+import { getDialogDefaultOptionKey, useDialog } from '@wot-lynx/ui-feedback/wd-dialog'
+import { getToastOptionKey, useToast } from '@wot-lynx/primitives/wd-toast'
+import { getNotifyOptionKey, resetNotifyDefaultOptions, setNotifyDefaultOptions, useNotify } from '@wot-lynx/ui-feedback/wd-notify'
+import { getImagePreviewOptionKey, useImagePreview } from '@wot-lynx/ui-display/wd-image-preview'
+import { getVideoPreviewOptionKey, useVideoPreview } from '@wot-lynx/ui-display/wd-video-preview'
+import { compCss } from '../helpers/component-roots'
 
 const restores: Array<() => void> = []
 afterEach(() => {
@@ -310,7 +311,7 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
     expect(mounted.container.querySelector('.wd-overlay')!.getAttribute('style')).toContain('background-color: transparent')
     expect(mounted.container.querySelector('.wd-loading')).not.toBeNull()
     expect(opened).toHaveBeenCalledOnce()
-    const css = readFileSync(path.resolve(__dirname, '../../src/components/wd-toast/index.css'), 'utf8')
+    const css = compCss('wd-toast')
     const rule = css.match(/\.wd-toast--with-icon\{([^}]*)\}/)![1]
     expect(rule).not.toContain('flex-direction:row')
     api!.close(); await settled(); expect(closed).toHaveBeenCalledOnce()

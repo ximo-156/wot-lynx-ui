@@ -17,9 +17,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { h, ref, type Ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
-import WdTransition from '../../src/primitives/wd-transition/wd-transition.vue'
-import { AbortablePromise } from '../../src/common/AbortablePromise'
+import { pause } from '@wot-lynx/core/common/util'
+import WdTransition from '@wot-lynx/primitives/wd-transition'
+import { AbortablePromise } from '@wot-lynx/core/common/AbortablePromise'
 
 /** 等待 enter 完成（pause 约 33ms 一帧，enter 需 3 帧） */
 async function waitEnterFrames() {

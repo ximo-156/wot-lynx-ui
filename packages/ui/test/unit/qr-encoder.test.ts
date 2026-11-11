@@ -5,7 +5,7 @@
  * 已知模式（版本选择、填充字节行为）。
  */
 import { describe, it, expect } from 'vitest'
-import { encodeQr } from '../../src/components/wd-qr-code/qr-encoder'
+import { encodeQr } from '../../../ui-display/src/wd-qr-code/qr-encoder'
 
 describe('QR 编码器', () => {
   it('短内容选择版本 1 且尺寸 21', () => {

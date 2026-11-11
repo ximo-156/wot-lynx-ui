@@ -2,12 +2,12 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { h } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import { fireEvent } from '../fire-event'
-import Signature from '../../src/components/wd-signature/wd-signature.vue'
-import { configureHost } from '../../src/common/host'
-import { getStrokeSegments, segmentStyle } from '../../src/components/wd-signature/stroke'
-import type { Line } from '../../src/components/wd-signature/types'
+import Signature from '@wot-lynx/ui-form/wd-signature'
+import { configureHost } from '@wot-lynx/core/common/host'
+import { getStrokeSegments, segmentStyle } from '../../../ui-form/src/wd-signature/stroke'
+import type { Line } from '@wot-lynx/ui-form/wd-signature/types'
 
 const RECT = { id: '', left: 10, top: 20, right: 310, bottom: 220, width: 300, height: 200 }
 const restores: Array<() => void> = []

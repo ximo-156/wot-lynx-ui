@@ -3,7 +3,7 @@
  * Slider 滑块 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdSlider from 'wot-lynx-ui/components/wd-slider/wd-slider.vue'
+import WdSlider from '@wot-lynx/ui-form/wd-slider'
 
 const value = ref(50)
 </script>

@@ -18,10 +18,10 @@
 import { describe, it, expect } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import { fireEvent } from '../fire-event'
-import Overlay from '../../src/primitives/wd-overlay/wd-overlay.vue'
-import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
+import Overlay from '@wot-lynx/primitives/wd-overlay'
+import Popup from '@wot-lynx/primitives/wd-popup'
 
 /** 等待过渡入场（pause 约 33ms 一帧，enter 需 2 帧置 display） */
 async function frames(n = 6) {

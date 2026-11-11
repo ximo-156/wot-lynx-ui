@@ -11,22 +11,23 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { computed, defineComponent, h, nextTick, provide, ref } from 'vue-lynx'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import path from 'node:path'
-import Button from '../../src/primitives/wd-button/wd-button.vue'
-import { buttonProps } from '../../src/primitives/wd-button/types'
+import Button from '@wot-lynx/primitives/wd-button'
+import { buttonProps } from '@wot-lynx/primitives/wd-button/types'
 import ConfigProvider from '../../src/components/wd-config-provider/wd-config-provider.vue'
 import {
   CONFIG_PROVIDER_KEY, DEFAULT_GLOBAL_CONFIG, mergeConfig,
   type ButtonConfig, type GlobalConfig
-} from '../../src/composables/global-config'
-import { useConfigProvider } from '../../src/composables/useConfigProvider'
-import { useGlobalConfig } from '../../src/composables/useGlobalConfig'
+} from '@wot-lynx/core/composables/global-config'
+import { useConfigProvider } from '@wot-lynx/core/composables/useConfigProvider'
+import { useGlobalConfig } from '@wot-lynx/core/composables/useGlobalConfig'
 import { cleanup, render } from '../render'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
-const buttonCss = postcss.parse(compile(path.resolve(__dirname, '../../src/primitives/wd-button/index.scss')).css)
-const dialogCss = postcss.parse(compile(path.resolve(__dirname, '../../src/components/wd-dialog/index.scss')).css)
+const buttonCss = postcss.parse(compileScss(compPath('wd-button', 'index.scss')))
+const dialogCss = postcss.parse(compileScss(compPath('wd-dialog', 'index.scss')))
 function rule(selector: string, css = buttonCss): Record<string, string> {
   const declarations: Record<string, string> = {}
   css.walkRules((candidate) => {

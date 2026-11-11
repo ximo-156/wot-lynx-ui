@@ -1,0 +1,80 @@
+@use 'styles/variable.scss' as *;
+@use 'styles/mixin/mixin.scss' as *;
+
+// 轮播容器圆角
+$swiper-border-radius: var(--wot-swiper-border-radius, $radius-zero) !default;
+// 轮播项内边距
+$swiper-item-padding: var(--wot-swiper-item-padding, $padding-zero) !default;
+// 轮播文案颜色
+$swiper-item-text-color: var(--wot-swiper-item-text-color, $text-white) !default;
+// 轮播文案字号
+$swiper-item-text-font-size: var(--wot-swiper-item-text-font-size, $typography-body-size-extra-large) !default;
+// 轮播文案定位间距
+$swiper-item-text-spacing: var(--wot-swiper-item-text-spacing, $spacing-loose) !default;
+
+@include b(swiper) {
+  position: relative;
+  // 根节点三件套（CONVENTIONS §3.1 / NATIVE-REWRITE §3.1）：Lynx 3.x 默认
+  // linear 布局，flex 属性只对 display:flex 生效。分页视口（scroll-view）
+  // 与指示器（wd-swiper-nav，绝对定位）为仅有的两类子节点，纵向堆叠 +
+  // 交叉轴拉伸令视口撑满容器宽度。
+  display: flex;
+  flex-direction: column;
+
+  // Lynx 适配：参考源的 swiper 元素由 scroll-view 承担（见 wd-swiper.vue 头部注释），
+  // 高度与圆角经 swiperStyle 内联下发；overflow 由内容轨道 track-inner 承担，
+  // 避免覆盖 scroll-view 自身的滚动 overflow。
+  @include e(track) {
+    border-radius: $swiper-border-radius;
+    transform: translateY(0);
+  }
+
+  // Lynx 适配：scroll-view 的内容轨道（平台必需包裹层），横向排列显式 display:flex
+  // （Lynx 3.x 默认 linear 布局，flex 属性只对 display:flex 生效，CONVENTIONS §15），
+  // 纵向方向由内联 flex-direction 切换。
+  @include e(track-inner) {
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    box-sizing: border-box;
+    flex-shrink: 0;
+  }
+
+  @include e(item) {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: row;
+    // 成对居中（NATIVE-REWRITE §3.2）：滑块内的图片 / 视频 / 自定义插槽
+    // 内容在纵横两个方向均居中
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: $swiper-item-padding;
+
+    // Lynx 适配：参考源此处为 MP 条件编译包裹的 :deep() view 尺寸 hack
+    // （问题来自 dcloudio/uni-app#4629）。Lynx 无 shadow DOM，:deep()
+    // 直接写成后代选择器即可；参考源的 MP-WEIXIN 变体使用属性选择器
+    // view:not([class])，Lynx 不支持属性选择器，略过。
+    @include m(slot) {
+      view {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+
+  @include e(image, video) {
+    width: 100%;
+    transition: opacity $motion-slow $easing-standard, transform $motion-slow $easing-standard;
+  }
+
+  @include e(text) {
+    // 随便搞个样式，反正用户还是会覆盖的
+    position: absolute;
+    right: $swiper-item-text-spacing;
+    top: $swiper-item-text-spacing;
+    color: $swiper-item-text-color;
+    font-size: $swiper-item-text-font-size;
+  }
+}

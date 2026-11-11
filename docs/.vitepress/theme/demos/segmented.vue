@@ -3,7 +3,7 @@
  * Segmented 分段器 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdSegmented from 'wot-lynx-ui/components/wd-segmented/wd-segmented.vue'
+import WdSegmented from '@wot-lynx/ui-form/wd-segmented'
 
 const value = ref('a')
 </script>

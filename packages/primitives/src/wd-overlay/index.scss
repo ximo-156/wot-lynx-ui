@@ -1,0 +1,25 @@
+@use 'styles/mixin/mixin.scss' as *;
+@use 'styles/variable.scss' as *;
+
+// 遮罩层背景色
+$overlay-bg: var(--wot-overlay-bg, $opac-7_55) !default;
+
+@include b(overlay) {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  // 根节点三件套（CONVENTIONS §15）：Lynx 3.x 默认 linear 布局，子项的
+  // `flex: 1` 只在父级 `display: flex` 上才生效。真机 2026-11-01 缺陷：
+  // 遮罩插槽内容（消费方写 `flex: 1` 撑满 + 居中）在 linear 下 flex 失效，
+  // 塌成内容尺寸贴在屏幕左上角——遮罩铺满、内容却挤在角上。
+  display: flex;
+  flex-direction: column;
+  background: $overlay-bg;
+  // ⚠️ 宽高不要只靠四边 0：`position: fixed` + `display: flex` 的节点在
+  // 真机上按内容尺寸收缩（CONVENTIONS §19 差异 #10，wd-toast 2026-11-01 /
+  // wd-popup 2026-11-05 同款），空插槽会塌成 0×0、带插槽塌成内容尺寸。
+  // 尺寸由 wd-overlay.vue 经 Style Funnel 按 getSystemInfo() 显式下发
+  // （width/height 内联像素），四边 0 仅作 Web 兜底与定位基准。
+}

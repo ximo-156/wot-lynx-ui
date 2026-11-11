@@ -4,6 +4,22 @@ import { componentsSidebar } from './components-sidebar'
 
 const here = __dirname
 const uiSrc = path.resolve(here, '../../packages/ui/src')
+const coreSrc = path.resolve(here, '../../packages/core/src')
+
+/**
+ * 组件包源码别名（ADR-023 域包拆分）。docs 不安装 workspace 依赖，
+ * 按源码路径别名，与各包 exports 的 source 条件对齐。
+ * 包清单见 docs/architecture/packages.json。
+ */
+const componentPkgAliases = ['primitives', 'ui-layout', 'ui-display', 'ui-nav', 'ui-form', 'ui-feedback', 'ui-picker']
+  .map((dir) => {
+    const src = path.resolve(here, `../../packages/${dir}/src`)
+    return [
+      { find: new RegExp(`^@wot-lynx/${dir}/(.+)$`), replacement: path.join(src, '$1') },
+      { find: new RegExp(`^@wot-lynx/${dir}$`), replacement: path.join(src, 'index.ts') }
+    ]
+  })
+  .flat()
 
 /**
  * Lynx 原生元素集合（与 packages/ui/vitest.config.ts 的 LYNX_NATIVE_TAGS 对齐）。
@@ -46,14 +62,15 @@ export default defineConfig({
       alias: [
         // vue-lynx → 浏览器 DOM 渲染垫片（docs/.vitepress/theme/lynx-dom.ts）
         { find: /^vue-lynx$/, replacement: path.resolve(here, 'theme/lynx-dom.ts') },
-        // wot-lynx-ui 工作区包（docs 未安装该依赖，按源码路径别名，与其 exports 对齐）
+        // wot-lynx-ui 门面包（docs 未安装该依赖，按源码路径别名，与其 exports 对齐）
         { find: /^wot-lynx-ui$/, replacement: path.join(uiSrc, 'index.ts') },
-        { find: /^wot-lynx-ui\/theme$/, replacement: path.join(uiSrc, 'styles/theme/index.css') },
+        // 主题 CSS 编译在 @wot-lynx/core（ADR-023）；门面 src 只剩转发 scss
+        { find: /^wot-lynx-ui\/theme$/, replacement: path.join(coreSrc, 'styles/theme/index.css') },
         { find: /^wot-lynx-ui\/components\/(.+)$/, replacement: path.join(uiSrc, 'components/$1') },
-        // L3.5 基础件根（ADR-012）。demo 从 components 迁到 primitives 后必须
-        // 有这条别名，否则 Vite 解析到不存在的 src/components/wd-cell/… 而失败。
-        { find: /^wot-lynx-ui\/primitives\/(.+)$/, replacement: path.join(uiSrc, 'primitives/$1') },
-        { find: /^wot-lynx-ui\/styles\/(.+)$/, replacement: path.join(uiSrc, 'styles/$1') }
+        // 中立层源码别名（common / composables / icons / locale / styles）
+        { find: /^@wot-lynx\/core\/(.+)$/, replacement: path.join(coreSrc, '$1') },
+        // 组件包源码别名（基础件 / 域包）
+        ...componentPkgAliases
       ]
     }
   },

@@ -22,9 +22,9 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import { fireEvent } from '../fire-event'
-import FloatingPanel from '../../src/components/wd-floating-panel/wd-floating-panel.vue'
+import FloatingPanel from '@wot-lynx/ui-feedback/wd-floating-panel'
 
 const styleOf = (el: Element | null): string => (el ? el.getAttribute('style') || '' : '')
 

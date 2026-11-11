@@ -1,13 +1,14 @@
 /** The exact province/city/district header from the reported screenshot. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, ref } from 'vue-lynx'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import path from 'node:path'
-import Cascader from '../../src/components/wd-cascader/wd-cascader.vue'
+import Cascader from '@wot-lynx/ui-form/wd-cascader'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
 import { restoreNativeStubs, stubNativeQuery } from '../helpers/native-stubs'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
 const options = [
   { value: 'zj', text: '浙江省', children: [
@@ -104,7 +105,7 @@ describe('cascader header alignment', () => {
   })
 
   it('uses native flex centering for theme-owned widths and a spacer for vertical alignment', () => {
-    const css = postcss.parse(compile(path.resolve(__dirname, '../../src/components/wd-tabs/index.scss')).css)
+    const css = postcss.parse(compileScss(compPath('wd-tabs', 'index.scss')))
     const rule = (selector: string) => {
       const declarations: Record<string, string> = {}
       css.walkRules(candidate => {

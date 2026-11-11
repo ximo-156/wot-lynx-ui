@@ -25,10 +25,10 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import { fireEvent } from '../fire-event'
-import { configureHost } from '../../src/common/host'
-import ImgCropper from '../../src/components/wd-img-cropper/wd-img-cropper.vue'
+import { configureHost } from '@wot-lynx/core/common/host'
+import ImgCropper from '@wot-lynx/ui-form/wd-img-cropper'
 
 const IMG_W = 200
 const IMG_H = 100

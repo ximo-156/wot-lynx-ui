@@ -3,7 +3,7 @@
  * Pagination 分页器 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdPagination from 'wot-lynx-ui/components/wd-pagination/wd-pagination.vue'
+import WdPagination from '@wot-lynx/ui-nav/wd-pagination'
 
 const page = ref(1)
 </script>

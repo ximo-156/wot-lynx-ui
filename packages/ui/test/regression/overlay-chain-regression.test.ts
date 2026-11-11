@@ -26,14 +26,14 @@
 import { describe, it, expect } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import { fireEvent } from '../fire-event'
-import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
-import Overlay from '../../src/primitives/wd-overlay/wd-overlay.vue'
-import Dialog from '../../src/components/wd-dialog/wd-dialog.vue'
-import ActionSheet from '../../src/components/wd-action-sheet/wd-action-sheet.vue'
-import Toast from '../../src/components/wd-toast/wd-toast.vue'
-import { useToast } from '../../src/components/wd-toast'
+import Popup from '@wot-lynx/primitives/wd-popup'
+import Overlay from '@wot-lynx/primitives/wd-overlay'
+import Dialog from '@wot-lynx/ui-feedback/wd-dialog'
+import ActionSheet from '@wot-lynx/primitives/wd-action-sheet'
+import Toast from '@wot-lynx/primitives/wd-toast'
+import { useToast } from '@wot-lynx/primitives/wd-toast'
 
 /** 等待过渡入场（pause 约 33ms 一帧，enter 需 2 帧置 display） */
 async function frames(n = 6) {

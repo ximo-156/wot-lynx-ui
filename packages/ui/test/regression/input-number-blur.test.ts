@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { useChildren } from '../../src/composables/useChildren'
-import { FORM_ITEM_VALIDATE_KEY } from '../../src/composables/useFormItemValidate'
-import InputNumber from '../../src/components/wd-input-number/wd-input-number.vue'
+import { useChildren } from '@wot-lynx/core/composables/useChildren'
+import { FORM_ITEM_VALIDATE_KEY } from '@wot-lynx/core/composables/useFormItemValidate'
+import InputNumber from '@wot-lynx/ui-form/wd-input-number'
 
 afterEach(() => cleanup())
 

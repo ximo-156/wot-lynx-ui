@@ -3,8 +3,8 @@
  * Skeleton 骨架屏 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdSkeleton from 'wot-lynx-ui/components/wd-skeleton/wd-skeleton.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdSkeleton from '@wot-lynx/ui-display/wd-skeleton'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const loading = ref(true)
 const rowCol = ref<Array<number | Record<string, string>>>([{ width: '40%' }, 3, { width: '96px', height: '96px' }])

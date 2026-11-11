@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import * as util from '../../src/common/util'
-import { getViewportOverride, setViewportOverride } from '../../src/common/viewport-state'
+import * as util from '@wot-lynx/core/common/util'
+import { getViewportOverride, setViewportOverride } from '@wot-lynx/core/common/viewport-state'
 import { compRead } from '../helpers/component-roots'
-import Table from '../../src/components/wd-table/wd-table.vue'
-import TableColumn from '../../src/components/wd-table-column/wd-table-column.vue'
+import Table from '@wot-lynx/ui-display/wd-table'
+import TableColumn from '@wot-lynx/ui-display/wd-table-column'
 
 async function frames(count = 3) { for (let i = 0; i < count; i++) await util.pause() }
 const node = (root: Element, selector: string) => root.querySelector(selector)! as HTMLElement

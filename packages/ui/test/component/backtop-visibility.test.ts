@@ -16,8 +16,8 @@ import { describe, it, expect } from 'vitest'
 import { h } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import Backtop from '../../src/components/wd-backtop/wd-backtop.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Backtop from '@wot-lynx/ui-display/wd-backtop'
 
 async function frames(n = 6) {
   for (let i = 0; i < n; i++) await pause()

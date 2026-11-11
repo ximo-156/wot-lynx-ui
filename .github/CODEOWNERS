@@ -21,8 +21,8 @@
 # ---------------------------------------------------------------------------
 # 跨组件公共契约（影响面最大，对应 CONVENTIONS §7 的依赖方向约定）
 # ---------------------------------------------------------------------------
-/packages/ui/src/common/            @arch-owner
-/packages/ui/src/composables/       @arch-owner
+/packages/core/src/common/            @arch-owner
+/packages/core/src/composables/       @arch-owner
 /packages/ui/src/index.ts           @arch-owner
 /packages/ui/tsconfig.json          @arch-owner
 
@@ -57,26 +57,26 @@
 
 # 基础组件（Tier 1）
 /packages/ui/src/components/wd-config-provider/   @arch-owner
-/packages/ui/src/components/wd-icon/              @icon-owner
-/packages/ui/src/components/wd-transition/        @arch-owner
-/packages/ui/src/components/wd-overlay/           @arch-owner
-/packages/ui/src/components/wd-root-portal/       @arch-owner
+/packages/primitives/src/wd-icon/              @icon-owner
+/packages/primitives/src/wd-transition/        @arch-owner
+/packages/primitives/src/wd-overlay/           @arch-owner
+/packages/primitives/src/wd-root-portal/       @arch-owner
 
 # 表单体系（Tier 2）—— 交互密集，事件风险高
-/packages/ui/src/components/wd-form/              @arch-owner
-/packages/ui/src/components/wd-form-item/         @arch-owner
-/packages/ui/src/components/wd-slider/            @arch-owner
-/packages/ui/src/components/wd-picker-view/       @arch-owner
+/packages/ui-ui-form/src/wd-form/              @arch-owner
+/packages/ui-ui-form/src/wd-form-item/         @arch-owner
+/packages/ui-ui-form/src/wd-slider/            @arch-owner
+/packages/ui-ui-picker/src/wd-picker-view/       @arch-owner
 
 # 弹层体系（Tier 3）—— 根链最终都落到 transition，事件风险高
-/packages/ui/src/components/wd-popup/             @arch-owner
-/packages/ui/src/components/wd-dialog/            @arch-owner
-/packages/ui/src/components/wd-action-sheet/      @arch-owner
-/packages/ui/src/components/wd-toast/             @arch-owner
+/packages/primitives/src/wd-popup/             @arch-owner
+/packages/ui-ui-feedback/src/wd-dialog/            @arch-owner
+/packages/primitives/src/wd-action-sheet/      @arch-owner
+/packages/primitives/src/wd-toast/             @arch-owner
 
 # 图形码（Tier 4）—— SVG 白名单硬约束
-/packages/ui/src/components/wd-qr-code/           @icon-owner
-/packages/ui/src/components/wd-bar-code/          @icon-owner
+/packages/ui-ui-display/src/wd-qr-code/           @icon-owner
+/packages/ui-ui-display/src/wd-bar-code/          @icon-owner
 
 # ---------------------------------------------------------------------------
 # 文档与演示

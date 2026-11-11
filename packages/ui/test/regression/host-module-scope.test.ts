@@ -10,15 +10,15 @@ import { describe, expect, it, vi } from 'vitest'
  * A ordinary import sees the test runner's globals and would mask this bug.
  * No production function is copied, and no shared test SDK or timer is changed.
  */
-type NativeApi = typeof import('../../src/common/native')
-type HostApi = typeof import('../../src/common/host')
+type NativeApi = typeof import('@wot-lynx/core/common/native')
+type HostApi = typeof import('@wot-lynx/core/common/host')
 type Scope = {
   lexicalModules?: unknown
   globalModules?: unknown
   lexicalLynx?: unknown
   globalLynx?: unknown
 }
-const sourceDir = resolve(dirname(fileURLToPath(import.meta.url)), '../../src/common')
+const sourceDir = resolve(__dirname, '../../../core/src/common')
 function compile(name: string) {
   const path = resolve(sourceDir, `${name}.ts`)
   return ts.transpileModule(readFileSync(path, 'utf8'), {

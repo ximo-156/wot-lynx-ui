@@ -4,11 +4,11 @@ import { resolve } from 'node:path'
 import { h, nextTick, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import Icon from '../../src/primitives/wd-icon/wd-icon.vue'
-import Grid from '../../src/components/wd-grid/wd-grid.vue'
-import GridItem from '../../src/components/wd-grid-item/wd-grid-item.vue'
-import Pagination from '../../src/components/wd-pagination/wd-pagination.vue'
-import { hasIcon, registerIconSet, resolveIcon } from '../../src/icons/registry'
+import Icon from '@wot-lynx/primitives/wd-icon'
+import Grid from '@wot-lynx/ui-layout/wd-grid'
+import GridItem from '@wot-lynx/ui-layout/wd-grid-item'
+import Pagination from '@wot-lynx/ui-nav/wd-pagination'
+import { hasIcon, registerIconSet, resolveIcon } from '@wot-lynx/core/icons/registry'
 import { hasWotRef } from '../helpers/wot-ref'
 
 // .wot-ref 是 gitignore 掉的本地对照副本，CI 上必然缺失。静态 import 会让整个
@@ -23,7 +23,8 @@ const officialIcon = refProp('wd-icon', 'iconProps')
 const officialGrid = refProp('wd-grid', 'gridProps')
 const officialGridItem = refProp('wd-grid-item', 'gridItemProps')
 const officialPagination = refProp('wd-pagination', 'paginationProps')
-import { wotIconsSet } from '../../src/icons/sets/wot-icons'
+import { wotIconsSet } from '@wot-lynx/core/icons/sets/wot-icons'
+import { compRead } from '../helpers/component-roots'
 
 async function frames() {
   for (let i = 0; i < 3; i++) {
@@ -60,7 +61,7 @@ describe.skipIf(!hasWotRef())('icon / grid / pagination independent official 2.3
     const expected = Object.fromEntries([...source.matchAll(/\.wd-icon-([^:]+):before\s*\{\s*content:\s*"\\([\da-f]+)";/g)].map((match) => [match[1], match[2]]))
     expect(Object.keys(expected)).toHaveLength(305)
     expect(wotIconsSet.unicodes).toEqual(expected)
-    expect(readFileSync(resolve(__dirname, '../../src/icons/fonts/wot-icons.ttf'))).toEqual(readFileSync(resolve(reference, 'iconfont.ttf')))
+    expect(readFileSync(resolve(__dirname, '../../../core/src/icons/fonts/wot-icons.ttf'))).toEqual(readFileSync(resolve(reference, 'iconfont.ttf')))
   })
 
   it('never resolves inherited Object keys as glyphs or SVG paths', () => {
@@ -136,7 +137,7 @@ describe.skipIf(!hasWotRef())('icon / grid / pagination independent official 2.3
     expect(container.querySelectorAll('.wd-grid-item__line--top')).toHaveLength(3)
     expect(container.querySelectorAll('.wd-grid-item__line--right')).toHaveLength(2)
     expect(container.querySelectorAll('.wd-grid-item__text.is-spaced')).toHaveLength(1)
-    const scss = readFileSync(resolve(__dirname, '../../src/components/wd-grid-item/index.scss'), 'utf8')
+    const scss = compRead('wd-grid-item', 'index.scss')
     expect(scss).toMatch(/gap:\s*0/)
     expect(scss).toContain('.wd-grid-item__text.is-spaced')
   })

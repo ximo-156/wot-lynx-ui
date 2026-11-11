@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import Fab from '../../src/components/wd-fab/wd-fab.vue'
-import SwipeAction from '../../src/components/wd-swipe-action/wd-swipe-action.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Fab from '@wot-lynx/ui-display/wd-fab'
+import SwipeAction from '@wot-lynx/ui-feedback/wd-swipe-action'
 
 // These tests execute the repository's declarative MTS shim + BG event pipeline.
 // Geometry is stubbed: this is NOT native layout/scroll arbitration verification.

@@ -2,8 +2,8 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import Rate from '../../src/components/wd-rate/wd-rate.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Rate from '@wot-lynx/ui-form/wd-rate'
 
 const styleOf = (el: Element | null): string => (el ? el.getAttribute('style') || '' : '')
 

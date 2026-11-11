@@ -4,18 +4,19 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
-import { compile } from 'sass'
 import postcss from 'postcss'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import SlideVerify from '../../src/components/wd-slide-verify/wd-slide-verify.vue'
-import { usePageScrollLock } from '../../src/composables/useLockScroll'
+import SlideVerify from '@wot-lynx/ui-form/wd-slide-verify'
+import { usePageScrollLock } from '@wot-lynx/core/composables/useLockScroll'
+import { compileScss } from '../helpers/scss'
+import { compPath } from '../helpers/component-roots'
 
-const scss = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/components/wd-slide-verify/index.scss')
+const scss = compPath('wd-slide-verify', 'index.scss')
 const rules: Array<{ selector: string; specificity: number; declarations: Record<string, string> }> = []
-postcss.parse(compile(scss, { style: 'expanded' }).css).walkRules((rule) => {
+postcss.parse(compileScss(scss)).walkRules((rule) => {
   if (rule.parent?.type !== 'root') return
   const declarations: Record<string, string> = {}
   rule.walkDecls((decl) => { declarations[decl.prop] = decl.value })

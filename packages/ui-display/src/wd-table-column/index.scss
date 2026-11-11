@@ -1,0 +1,51 @@
+@use 'styles/mixin/mixin.scss' as *;
+@use '../wd-table/index.scss' as *;
+
+@include b(table-column) {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+  // 真机层序（CONVENTIONS §19 定位 FAQ）：列根是固定单元格
+  // （.wd-table__cell.is-fixed 的 sticky + z-index:1）的直接父级，必须自带
+  // 层叠上下文把列层级收在表体以内；缺这一层时真机不绘制整棵列子树
+  // （与 wd-slider __bar / wd-table __content 同款修法）。
+  z-index: 0;
+  overflow: visible;
+
+  @include when(fixed) {
+    position: sticky;
+    z-index: 2;
+  }
+
+  // 每个格子按共享行轨道定位，跨行或隐藏格不会移动后续行。
+  .wd-table__cell {
+    position: absolute;
+    padding: 0;
+    overflow: visible;
+  }
+  .wd-table__cell.is-last-row.is-border { border-bottom: none; }
+  .wd-table__cell-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    padding: $table-cell-padding;
+    min-width: 0;
+  }
+  // 固定列阴影宽度/偏移：官方为 30rpx（小程序专有单位，Lynx 不识别），改 px。
+  // 保留 --wot-table-shadow-width 主题变量；只把回退值从 4vw 换成 30px。
+  .wd-table__shadow {
+    position: absolute;
+    top: 0;
+    right: calc(-1 * $table-shadow-width);
+    width: $table-shadow-width;
+    height: 100%;
+    background: $table-shadow-gradient;
+    pointer-events: none;
+  }
+  .wd-table__cell-content.is-left { justify-content: flex-start; }
+  .wd-table__cell-content.is-center { justify-content: center; }
+  .wd-table__cell-content.is-right { justify-content: flex-end; }
+}

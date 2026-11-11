@@ -2,12 +2,12 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { h, nextTick } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import { configureHost } from '../../src/common/host'
-import { setViewportOverride } from '../../src/common/viewport'
-import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
-import DropMenu from '../../src/components/wd-drop-menu/wd-drop-menu.vue'
-import DropMenuItem from '../../src/components/wd-drop-menu-item/wd-drop-menu-item.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import { configureHost } from '@wot-lynx/core/common/host'
+import { setViewportOverride } from '@wot-lynx/core/common/viewport'
+import Popup from '@wot-lynx/primitives/wd-popup'
+import DropMenu from '@wot-lynx/ui-nav/wd-drop-menu'
+import DropMenuItem from '@wot-lynx/ui-nav/wd-drop-menu-item'
 
 async function frames(n = 4) { for (let i = 0; i < n; i++) await pause() }
 function width(el: Element | null) {

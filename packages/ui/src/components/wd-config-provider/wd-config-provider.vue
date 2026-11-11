@@ -6,12 +6,12 @@
 import './index.css'
 import { computed, getCurrentInstance, inject, onBeforeUpdate, ref } from 'vue-lynx'
 import { configProviderProps } from './types'
-import { parseStyle } from '../../common/util'
-import { createStyleResolver } from '../../common/style'
-import { useChildren } from '../../composables/useChildren'
-import { useParent } from '../../composables/useParent'
-import { mapThemeVarsToCSSVars, USE_CONFIG_PROVIDER_KEY } from '../../composables/useConfigProvider'
-import { CONFIG_PROVIDER_KEY, mergeConfig, type ConfigProviderInput, type ConfigProviderProvide, type GlobalConfig } from '../../composables/global-config'
+import { parseStyle } from '@wot-lynx/core/common/util'
+import { createStyleResolver } from '@wot-lynx/core/common/style'
+import { useChildren } from '@wot-lynx/core/composables/useChildren'
+import { useParent } from '@wot-lynx/core/composables/useParent'
+import { mapThemeVarsToCSSVars, USE_CONFIG_PROVIDER_KEY } from '@wot-lynx/core/composables/useConfigProvider'
+import { CONFIG_PROVIDER_KEY, mergeConfig, type ConfigProviderInput, type ConfigProviderProvide, type GlobalConfig } from '@wot-lynx/core/composables/global-config'
 
 const props = defineProps(configProviderProps)
 const instance = getCurrentInstance()!

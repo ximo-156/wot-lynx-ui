@@ -3,8 +3,8 @@
  * Tour 新手引导 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdTour from 'wot-lynx-ui/components/wd-tour/wd-tour.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdTour from '@wot-lynx/ui-feedback/wd-tour'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const visible = ref(false)
 const steps = ref([

@@ -2,9 +2,9 @@
 /**
  * Watermark 水印 — 文档站 H5 预览演示（手工编写）。
  */
-import WdWatermark from 'wot-lynx-ui/components/wd-watermark/wd-watermark.vue'
-import WdCell from 'wot-lynx-ui/primitives/wd-cell/wd-cell.vue'
-import WdCellGroup from 'wot-lynx-ui/components/wd-cell-group/wd-cell-group.vue'
+import WdWatermark from '@wot-lynx/ui-display/wd-watermark'
+import WdCell from '@wot-lynx/primitives/wd-cell'
+import WdCellGroup from '@wot-lynx/ui-layout/wd-cell-group'
 </script>
 
 <template>

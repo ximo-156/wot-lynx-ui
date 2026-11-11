@@ -27,9 +27,9 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { h, nextTick } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import IndexBar from '../../src/components/wd-index-bar/wd-index-bar.vue'
-import IndexAnchor from '../../src/components/wd-index-anchor/wd-index-anchor.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import IndexBar from '@wot-lynx/ui-nav/wd-index-bar'
+import IndexAnchor from '@wot-lynx/ui-nav/wd-index-anchor'
 
 interface InvokeCall {
   selector: string

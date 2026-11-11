@@ -3,8 +3,8 @@
  * ImagePreview 图片预览 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdImagePreview from 'wot-lynx-ui/components/wd-image-preview/wd-image-preview.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdImagePreview from '@wot-lynx/ui-display/wd-image-preview'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const previewRef = ref<any>(null)
 

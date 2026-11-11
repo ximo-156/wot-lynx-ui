@@ -12,12 +12,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, onUnmounted, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import Transition from '../../src/primitives/wd-transition/wd-transition.vue'
-import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
-import DatetimePicker from '../../src/components/wd-datetime-picker/wd-datetime-picker.vue'
-import Toast from '../../src/components/wd-toast/wd-toast.vue'
-import { useToast } from '../../src/components/wd-toast'
-import { usePageScrollLock } from '../../src/composables/useLockScroll'
+import Transition from '@wot-lynx/primitives/wd-transition'
+import Popup from '@wot-lynx/primitives/wd-popup'
+import DatetimePicker from '@wot-lynx/ui-picker/wd-datetime-picker'
+import Toast from '@wot-lynx/primitives/wd-toast'
+import { useToast } from '@wot-lynx/primitives/wd-toast'
+import { usePageScrollLock } from '@wot-lynx/core/composables/useLockScroll'
 
 type NativeStyle = Record<string, string>
 let styles: Map<Element, NativeStyle>

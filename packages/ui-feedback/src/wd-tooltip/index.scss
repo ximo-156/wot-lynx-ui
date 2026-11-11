@@ -1,0 +1,105 @@
+@use 'styles/mixin/mixin.scss' as *;
+@use 'styles/variable.scss' as *;
+
+// 背景色
+$tooltip-bg: var(--wot-tooltip-bg, $filled-oppo) !default;
+// 气泡最小宽度：138px 是让两行文案不被压断的实测值，不在刻度上
+// （$n-140 不存在、$n-128 会断行），收敛成组件令牌。
+$tooltip-min-width: var(--wot-tooltip-min-width, 138px) !default;
+// 文字颜色
+$tooltip-color: var(--wot-tooltip-color, $text-secondary) !default;
+// 阴影效果
+$tooltip-box-shadow: var(--wot-tooltip-box-shadow, 0 12px 48px 16px rgba(39, 43, 59, 0.03), 0 9px 28px 8px rgba(39, 43, 59, 0.05), 0 5px 12px 4px rgba(39, 43, 59, 0.06)) !default;
+// 箭头阴影效果
+$tooltip-arrow-box-shadow: var(--wot-tooltip-arrow-box-shadow, 0 12px 48px 16px rgba(39, 43, 59, 0.03), 0 9px 28px 8px rgba(39, 43, 59, 0.05), 0 5px 12px 4px rgba(39, 43, 59, 0.06)) !default;
+// 圆角大小
+$tooltip-radius: var(--wot-tooltip-radius, $radius-main) !default;
+// 箭头大小
+$tooltip-arrow-size: var(--wot-tooltip-arrow-size, $n-8) !default;
+// 字号
+$tooltip-font-size: var(--wot-tooltip-font-size, $typography-body-size-main) !default;
+// 内边距
+$tooltip-padding: var(--wot-tooltip-padding, $padding-loose) !default;
+// 关闭按钮大小
+$tooltip-close-icon-size: var(--wot-tooltip-close-icon-size, $n-12) !default;
+// 关闭按钮颜色
+$tooltip-close-icon-color: var(--wot-tooltip-close-icon-color, $icon-secondary) !default;
+// 关闭按钮内边距
+$tooltip-close-icon-padding: var(--wot-tooltip-close-icon-padding, $padding-super-tight) !default;
+// 层级
+$tooltip-z-index: var(--wot-tooltip-z-index, 500) !default;
+// 行高
+$tooltip-line-height: var(--wot-tooltip-line-height, $typography-body-line-height-size-main) !default;
+
+@include b(tooltip) {
+  position: relative;
+  // Lynx 适配：wot-ui 为 inline-block（内容宽度自适应），Lynx 不识别
+  // inline-block，改为 display: flex + row（CONVENTIONS §15）
+  display: flex;
+  flex-direction: row;
+
+  @include edeep(pos) {
+    position: absolute;
+    box-sizing: border-box;
+    min-width: $tooltip-min-width;
+    background-clip: padding-box;
+    z-index: $tooltip-z-index;
+  }
+
+  @include e(hidden) {
+    // 度量副本：保留布局盒供 getRect 量宽高，但必须彻底移出视口。
+    // 真机 2026-10-28 全量巡检：visibility 在 Lynx 不生效、百分比偏移对
+    // absolute 元素的解析也不保证，任一失效副本就会画在原位与真实气泡
+    // 叠印。改用具体像素偏移（不依赖百分比），visibility 仅作 Web 兜底。
+    left: -9999px;
+    top: -9999px;
+    /* audit-ignore: 已被像素偏移移出视口，visibility 仅作 Web 兜底 */
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  @include e(container) {
+    position: relative;
+    z-index: $tooltip-z-index;
+    box-shadow: $tooltip-box-shadow;
+    border-radius: $tooltip-radius;
+    background: $tooltip-bg;
+  }
+
+  @include e(inner) {
+    position: relative;
+    // Lynx 适配：弹层内容显式 flex 行 + 成对居中（CONVENTIONS §3）——__pos 有
+    // min-width: 138px，气泡宽于文字时靠 flex 居中而非 text-align 继承
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: $tooltip-padding;
+    white-space: nowrap;
+    line-height: $tooltip-line-height;
+    font-size: $tooltip-font-size;
+    text-align: center;
+    color: $tooltip-color;
+  }
+
+  @include edeep(close-icon) {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-size: $tooltip-close-icon-size;
+    padding: $tooltip-close-icon-padding;
+    color: $tooltip-close-icon-color;
+  }
+
+  @include triangleArrow($tooltip-arrow-size, $tooltip-bg);
+
+  // 点击空白关闭的透明全屏 backdrop（fixed 提升至页面根，z-index 低于气泡与触发元素）
+  @include e(backdrop) {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+  }
+}

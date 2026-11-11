@@ -2,8 +2,8 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import Slider from '../../src/components/wd-slider/wd-slider.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Slider from '@wot-lynx/ui-form/wd-slider'
 
 const styleOf = (el: Element): string => el.getAttribute('style') || ''
 const restores: Array<() => void> = []

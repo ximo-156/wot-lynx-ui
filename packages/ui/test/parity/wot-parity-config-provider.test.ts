@@ -13,12 +13,12 @@
 import { describe, it, expect } from 'vitest'
 import { h, ref, defineComponent } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import ConfigProvider from '../../src/components/wd-config-provider/wd-config-provider.vue'
-import RootPortal from '../../src/primitives/wd-root-portal/wd-root-portal.vue'
-import Button from '../../src/primitives/wd-button/wd-button.vue'
-import { useConfigProvider, USE_CONFIG_PROVIDER_KEY } from '../../src/composables/useConfigProvider'
-import { CONFIG_PROVIDER_KEY } from '../../src/composables/global-config'
+import RootPortal from '@wot-lynx/primitives/wd-root-portal'
+import Button from '@wot-lynx/primitives/wd-button'
+import { useConfigProvider, USE_CONFIG_PROVIDER_KEY } from '@wot-lynx/core/composables/useConfigProvider'
+import { CONFIG_PROVIDER_KEY } from '@wot-lynx/core/composables/global-config'
 
 const styleOf = (el: Element | null): string => (el ? el.getAttribute('style') || '' : '')
 

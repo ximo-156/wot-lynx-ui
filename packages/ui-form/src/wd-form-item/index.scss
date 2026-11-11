@@ -1,0 +1,46 @@
+@use 'styles/variable.scss' as *;
+@use 'styles/mixin/mixin.scss' as *;
+
+// 错误提示文字颜色
+$form-item-error-message-color: var(--wot-form-item-error-message-color, $danger-main) !default;
+// 错误提示文字字号
+$form-item-error-message-font-size: var(--wot-form-item-error-message-font-size, $typography-label-size-main) !default;
+// 错误提示文字行高
+$form-item-error-message-line-height: var(--wot-form-item-error-message-line-height, $typography-label-line-height-size-small) !default;
+// 错误提示顶部外边距
+$form-item-error-message-margin-top: var(--wot-form-item-error-message-margin-top, $spacing-super-tight) !default;
+// 占位符文字颜色
+$form-item-placeholder-color: var(--wot-form-item-placeholder-color, $text-placeholder) !default;
+
+// 禁用文字颜色
+$form-item-disabled-color: var(--wot-form-item-disabled-color, $text-disabled) !default;
+
+@include b(form-item) {
+  // 根节点三件套（NATIVE-REWRITE §3.1）：wd-form-item 的 DOM 根视图由
+  // wd-cell 提供（custom-class 把 wd-form-item 类落到 cell 根视图上），
+  // Lynx 3.x 默认 linear 布局，显式 display:flex + flex-direction:column
+  // 保证单元格纵向堆叠、宽度撑满表单。wd-cell 自身根视图亦声明同款三件套
+  // （布局批次），两处取值一致、无冲突；此处保留使 form-item 自成体系，
+  // 不依赖其它组件的样式演进。
+  display: flex;
+  flex-direction: column;
+
+  @include when(disabled) {
+    .wd-cell__title,
+    .wd-cell__value,
+    .wd-form-item__placeholder {
+      color: $form-item-disabled-color;
+    }
+  }
+
+  @include e(placeholder) {
+    color: $form-item-placeholder-color;
+  }
+
+  @include e(error-message) {
+    color: $form-item-error-message-color;
+    font-size: $form-item-error-message-font-size;
+    line-height: $form-item-error-message-line-height;
+    margin-top: $form-item-error-message-margin-top;
+  }
+}

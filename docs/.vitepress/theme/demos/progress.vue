@@ -3,7 +3,7 @@
  * Progress 进度条 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdProgress from 'wot-lynx-ui/components/wd-progress/wd-progress.vue'
+import WdProgress from '@wot-lynx/ui-display/wd-progress'
 
 const value = ref(60)
 </script>

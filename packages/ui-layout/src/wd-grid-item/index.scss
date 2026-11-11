@@ -1,0 +1,144 @@
+@use 'styles/variable.scss' as *;
+@use 'styles/mixin/mixin.scss' as *;
+
+// 网格项文字字号
+$grid-item-font-size: var(--wot-grid-item-font-size, $typography-body-size-extra-large) !default;
+// 网格项文字行高
+$grid-item-line-height: var(--wot-grid-item-line-height, $typography-body-line-height-size-extra-large) !default;
+// 网格项背景色
+$grid-item-bg: var(--wot-grid-item-bg, $filled-oppo) !default;
+// 网格项内容内边距
+$grid-item-padding: var(--wot-grid-item-padding, $padding-loose $padding-loose) !default;
+// 网格项悬浮背景色
+$grid-item-hover-bg: var(--wot-grid-item-hover-bg, $feedback-hover) !default;
+// 网格项图标尺寸
+$grid-item-icon-size: var(--wot-grid-item-icon-size, $n-32) !default;
+// 网格项图标颜色
+$grid-item-icon-color: var(--wot-grid-item-icon-color, $icon-secondary) !default;
+// 网格项边框宽度
+$grid-item-border-width: var(--wot-grid-item-border-width, $stroke-main) !default;
+// 网格项边框颜色
+$grid-item-border-color: var(--wot-grid-item-border-color, $border-main) !default;
+// 网格项文字颜色
+$grid-item-text-color: var(--wot-grid-item-text-color, $text-main) !default;
+// 网格项文字间距
+$grid-item-text-spacing: var(--wot-grid-item-text-spacing, $spacing-super-tight) !default;
+
+@include b(grid-item) {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+
+  // 真实线段不参与宽度计算；厚度令牌保持官方 0.5 缩放。
+  @include e(line) {
+    position: absolute;
+    background-color: $grid-item-border-color;
+    pointer-events: none;
+    z-index: 1;
+    @include m(top) { top: 0; left: 0; width: 100%; height: $grid-item-border-width; transform: scaleY(0.5); }
+    @include m(right) { top: 0; right: 0; height: 100%; width: $grid-item-border-width; transform: scaleX(0.5); }
+  }
+  @include e(around) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 200%;
+    border: $grid-item-border-width solid $grid-item-border-color;
+    transform-origin: top left;
+    transform: scale(0.5);
+    box-sizing: border-box;
+    pointer-events: none;
+  }
+
+  @include e(wrapper) {
+    display: flex;
+    flex-direction: row;
+    /* 图标与文字同级成行：交叉轴居中保证图标在行内垂直居中
+       （NATIVE-REWRITE §3.2 图标与文字基线场景） */
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(content) {
+    height: 100%;
+    padding: $grid-item-padding;
+    background: $grid-item-bg;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    // fallback text 有图标时才有间距，不给任意 default slot 强加 gap。
+    gap: 0;
+    .wd-grid-item__text.is-spaced { margin-top: $grid-item-text-spacing; }
+    &.is-horizontal .wd-grid-item__text.is-spaced { margin-top: 0; margin-left: $grid-item-text-spacing; }
+    &.is-reverse .wd-grid-item__text.is-spaced { margin-top: 0; margin-bottom: $grid-item-text-spacing; }
+    &.is-reverse.is-horizontal .wd-grid-item__text.is-spaced { margin-left: 0; margin-bottom: 0; margin-right: $grid-item-text-spacing; }
+
+    @include when(square) {
+      box-sizing: border-box;
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 100%;
+    }
+
+    @include when(center) {
+      align-items: center;
+      justify-content: center;
+    }
+
+    @include when(horizontal) {
+      flex-direction: row;
+    }
+
+    @include when(reverse) {
+      flex-direction: column-reverse;
+
+      /* 参考源嵌套的 &.is-horizontal：reverse + horizontal 为 row-reverse */
+      &.is-horizontal {
+        flex-direction: row-reverse;
+      }
+    }
+
+    /* Lynx 适配：参考源 m(hover) 为 hover-class 的按压背景（带 !important
+       以压过 bgColor 内联样式）；Lynx 无 hover-class 与 !important，改为
+       :active + CSS 变量驱动（bgColor 经 --wot-grid-item-bg 下发），
+       按压背景由更具特异性的 :active 规则胜出 */
+    @include m(hover) {
+      &:active {
+        background-color: $grid-item-hover-bg;
+      }
+    }
+  }
+
+  @include e(text) {
+    width: 100%;
+    font-size: $grid-item-font-size;
+    line-height: $grid-item-line-height;
+    color: $grid-item-text-color;
+    /* 文本居中（NATIVE-REWRITE §3.2）：除容器 flex 居中之外，文本元素自身
+       显式 text-align: center——Lynx 不开 CSS 继承时父级 text-align 不会
+       下发到子 text，写了才真正居中 */
+    text-align: center;
+
+    @include when(ellipsis) {
+      @include lineEllipsis;
+    }
+  }
+
+  @include edeep(icon) {
+    font-size: $grid-item-icon-size;
+    color: $grid-item-icon-color;
+  }
+
+  @include e(badge) {
+    display: flex;
+    flex-direction: row;
+  }
+}

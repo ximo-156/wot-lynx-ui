@@ -2,7 +2,7 @@
 /**
  * Circle 环形进度 — 文档站 H5 预览演示（手工编写）。
  */
-import WdCircle from 'wot-lynx-ui/components/wd-circle/wd-circle.vue'
+import WdCircle from '@wot-lynx/ui-display/wd-circle'
 </script>
 
 <template>

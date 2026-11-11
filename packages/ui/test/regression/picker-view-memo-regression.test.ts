@@ -17,9 +17,9 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import { fireEvent } from '../fire-event'
-import PickerView from '../../src/components/wd-picker-view/wd-picker-view.vue'
+import PickerView from '@wot-lynx/ui-picker/wd-picker-view'
 
 const styleOf = (el: Element | null): string => (el ? el.getAttribute('style') || '' : '')
 

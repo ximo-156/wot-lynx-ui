@@ -16,7 +16,7 @@ import {
   CODE128_STOP,
   code128Checksum,
   encodeCode128B
-} from '../../src/components/wd-bar-code/code128'
+} from '../../../ui-display/src/wd-bar-code/code128'
 
 /** 规范码表（value 0-102），来源见文件头 */
 const SPEC_PATTERNS = [

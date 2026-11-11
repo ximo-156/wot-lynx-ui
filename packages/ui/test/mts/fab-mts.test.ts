@@ -12,8 +12,8 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import Fab from '../../src/components/wd-fab/wd-fab.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Fab from '@wot-lynx/ui-display/wd-fab'
 
 const styleOf = (el: Element | null): string => (el ? el.getAttribute('style') || '' : '')
 

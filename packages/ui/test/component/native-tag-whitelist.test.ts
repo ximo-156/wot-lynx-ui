@@ -27,7 +27,7 @@ import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { captureConsole } from '../capture-console'
 import { listComponents } from '../helpers/component-roots'
-import SelectPicker from '../../src/components/wd-select-picker/wd-select-picker.vue'
+import SelectPicker from '@wot-lynx/ui-form/wd-select-picker'
 
 /** 从 cwd 向上找 monorepo 根（vitest 的 cwd 为 packages/ui） */
 function findRepoRoot(start: string): string {

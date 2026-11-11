@@ -1,6 +1,6 @@
-@use '../../styles/theme/dark.scss' as dark;
-@use '../../styles/theme/light.scss' as light;
-@use '../../styles/mixin/mixin.scss' as *;
+@use 'styles/theme/dark.scss' as dark;
+@use 'styles/theme/light.scss' as light;
+@use 'styles/mixin/mixin.scss' as *;
 
 // 主题类由 WdConfigProvider / WdRootPortal 挂载到根 view：
 // 语义令牌在 styles/theme 中定义，此处按 wot-ui 的结构把两套主题变量

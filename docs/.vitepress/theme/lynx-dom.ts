@@ -29,7 +29,7 @@ import {
   type RendererElement,
   type RendererNode
 } from 'vue'
-import { getViewportOverride, normalizeViewportSize, setViewportOverride } from '../../../packages/ui/src/common/viewport-state'
+import { getViewportOverride, normalizeViewportSize, setViewportOverride } from '../../../packages/core/src/common/viewport-state'
 
 export * from 'vue'
 

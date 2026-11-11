@@ -26,11 +26,8 @@
     },
     "./components/*": {
       "source": "./src/components/*/*.vue",
-      "import": "./dist/components/*/index.mjs"
-    },
-    "./primitives/*": {
-      "source": "./src/primitives/*/*.vue",
-      "import": "./dist/primitives/*/index.mjs"
+      "import": "./dist/components/*/index.mjs",
+      "types": "./dist/components/*/index.d.ts"
     },
     "./package.json": "./package.json",
     "./plugin": "./plugin/index.js"
@@ -89,6 +86,13 @@
   },
   "homepage": "https://wot-lynx-ui.github.io",
   "dependencies": {
-    "dayjs": "^1.11.23"
+    "@wot-lynx/core": "workspace:*",
+    "@wot-lynx/primitives": "workspace:*",
+    "@wot-lynx/ui-display": "workspace:*",
+    "@wot-lynx/ui-feedback": "workspace:*",
+    "@wot-lynx/ui-form": "workspace:*",
+    "@wot-lynx/ui-layout": "workspace:*",
+    "@wot-lynx/ui-nav": "workspace:*",
+    "@wot-lynx/ui-picker": "workspace:*"
   }
 }

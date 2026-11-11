@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { useNativeInputValue } from '../../src/composables/useNativeInputValue'
-import InputNumber from '../../src/components/wd-input-number/wd-input-number.vue'
+import { useNativeInputValue } from '@wot-lynx/core/composables/useNativeInputValue'
+import InputNumber from '@wot-lynx/ui-form/wd-input-number'
 
 type InvokeOptions = {
   method: string

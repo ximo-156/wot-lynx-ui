@@ -3,8 +3,8 @@
  * CheckboxGroup 多选组 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdCheckbox from 'wot-lynx-ui/components/wd-checkbox/wd-checkbox.vue'
-import WdCheckboxGroup from 'wot-lynx-ui/components/wd-checkbox-group/wd-checkbox-group.vue'
+import WdCheckbox from '@wot-lynx/primitives/wd-checkbox'
+import WdCheckboxGroup from '@wot-lynx/primitives/wd-checkbox-group'
 
 const values = ref<string[]>(['a'])
 </script>

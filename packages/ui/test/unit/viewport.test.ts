@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { getSystemInfo } from '../../src/common/util'
-import { resolveSafeAreaInsets } from '../../src/common/safe-area'
-import { getViewportSize, getViewportOverride, hasViewportOverride, isDesktopViewport, isWideViewport, setViewportOverride, VIEWPORT_BREAKPOINTS } from '../../src/common/viewport'
-import { subscribeViewportChange } from '../../src/common/viewport-state'
+import { getSystemInfo } from '@wot-lynx/core/common/util'
+import { resolveSafeAreaInsets } from '@wot-lynx/core/common/safe-area'
+import { getViewportSize, getViewportOverride, hasViewportOverride, isDesktopViewport, isWideViewport, setViewportOverride, VIEWPORT_BREAKPOINTS } from '@wot-lynx/core/common/viewport'
+import { subscribeViewportChange } from '@wot-lynx/core/common/viewport-state'
 
 const g = globalThis as any
 const originals = new Map(['window', 'SystemInfo', 'lynx'].map(key => [key, Object.getOwnPropertyDescriptor(g, key)]))

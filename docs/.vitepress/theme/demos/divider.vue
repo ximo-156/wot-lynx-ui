@@ -2,7 +2,7 @@
 /**
  * Divider 分割线 — 文档站 H5 预览演示（手工编写）。
  */
-import WdDivider from 'wot-lynx-ui/components/wd-divider/wd-divider.vue'
+import WdDivider from '@wot-lynx/ui-layout/wd-divider'
 </script>
 
 <template>

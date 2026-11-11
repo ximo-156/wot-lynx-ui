@@ -3,9 +3,9 @@
  * Switch 开关 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdSwitch from 'wot-lynx-ui/components/wd-switch/wd-switch.vue'
-import WdCell from 'wot-lynx-ui/primitives/wd-cell/wd-cell.vue'
-import WdCellGroup from 'wot-lynx-ui/components/wd-cell-group/wd-cell-group.vue'
+import WdSwitch from '@wot-lynx/primitives/wd-switch'
+import WdCell from '@wot-lynx/primitives/wd-cell'
+import WdCellGroup from '@wot-lynx/ui-layout/wd-cell-group'
 
 const value = ref(true)
 const cellValue = ref(true)

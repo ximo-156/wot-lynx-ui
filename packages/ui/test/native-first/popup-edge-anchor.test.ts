@@ -24,8 +24,8 @@
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
-import Popup from '../../src/primitives/wd-popup/wd-popup.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Popup from '@wot-lynx/primitives/wd-popup'
 import { compRead } from '../helpers/component-roots'
 
 const css = (rel: string) => compRead(...rel.split('/'))

@@ -3,8 +3,8 @@
  * Tabs 选项卡 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdTabs from 'wot-lynx-ui/components/wd-tabs/wd-tabs.vue'
-import WdTab from 'wot-lynx-ui/components/wd-tab/wd-tab.vue'
+import WdTabs from '@wot-lynx/primitives/wd-tabs'
+import WdTab from '@wot-lynx/primitives/wd-tab'
 
 const value = ref(0)
 </script>

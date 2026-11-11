@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { configureHost } from '../../src/common/host'
-import { getSafeAreaInsets, resolveSafeAreaInsets } from '../../src/common/safe-area'
-import type { SystemInfo } from '../../src/common/util'
+import { configureHost } from '@wot-lynx/core/common/host'
+import { getSafeAreaInsets, resolveSafeAreaInsets } from '@wot-lynx/core/common/safe-area'
+import type { SystemInfo } from '@wot-lynx/core/common/util'
 
 const screen: SystemInfo = { platform: 'ios', screenWidth: 390, screenHeight: 844, windowWidth: 390, windowHeight: 844, windowTop: 0, windowLeft: 0, statusBarHeight: 0, pixelRatio: 3 }
 afterEach(() => configureHost(null))

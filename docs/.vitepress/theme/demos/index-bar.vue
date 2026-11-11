@@ -2,8 +2,8 @@
 /**
  * IndexBar 索引栏 — 文档站 H5 预览演示（手工编写）。
  */
-import WdIndexBar from 'wot-lynx-ui/components/wd-index-bar/wd-index-bar.vue'
-import WdIndexAnchor from 'wot-lynx-ui/components/wd-index-anchor/wd-index-anchor.vue'
+import WdIndexBar from '@wot-lynx/ui-nav/wd-index-bar'
+import WdIndexAnchor from '@wot-lynx/ui-nav/wd-index-anchor'
 
 const groups = [
   { index: 'A', cities: ['北京', '蚌埠', '保定'] },

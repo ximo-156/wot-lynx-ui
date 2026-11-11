@@ -2,7 +2,7 @@
 /**
  * NoticeBar 通知栏 — 文档站 H5 预览演示（手工编写）。
  */
-import WdNoticeBar from 'wot-lynx-ui/components/wd-notice-bar/wd-notice-bar.vue'
+import WdNoticeBar from '@wot-lynx/ui-display/wd-notice-bar'
 </script>
 
 <template>

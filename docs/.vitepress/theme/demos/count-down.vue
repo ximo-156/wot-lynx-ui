@@ -2,7 +2,7 @@
 /**
  * CountDown 倒计时 — 文档站 H5 预览演示（手工编写）。
  */
-import WdCountDown from 'wot-lynx-ui/components/wd-count-down/wd-count-down.vue'
+import WdCountDown from '@wot-lynx/ui-display/wd-count-down'
 </script>
 
 <template>

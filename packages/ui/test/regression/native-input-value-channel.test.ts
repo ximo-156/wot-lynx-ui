@@ -22,9 +22,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import InputNumber from '../../src/components/wd-input-number/wd-input-number.vue'
-import Input from '../../src/primitives/wd-input/wd-input.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import InputNumber from '@wot-lynx/ui-form/wd-input-number'
+import Input from '@wot-lynx/primitives/wd-input'
 
 afterEach(() => cleanup())
 

@@ -21,9 +21,9 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import Tabs from '../../src/components/wd-tabs/wd-tabs.vue'
-import Tab from '../../src/components/wd-tab/wd-tab.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Tabs from '@wot-lynx/primitives/wd-tabs'
+import Tab from '@wot-lynx/primitives/wd-tab'
 
 const styleOf = (el: Element | null): string => (el ? el.getAttribute('style') || '' : '')
 

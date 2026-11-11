@@ -2,8 +2,8 @@
 /**
  * Text 文本 — 文档站 H5 预览演示（手工编写）。
  */
-import WdText from 'wot-lynx-ui/components/wd-text/wd-text.vue'
-import WdDivider from 'wot-lynx-ui/components/wd-divider/wd-divider.vue'
+import WdText from '@wot-lynx/ui-display/wd-text'
+import WdDivider from '@wot-lynx/ui-layout/wd-divider'
 </script>
 
 <template>

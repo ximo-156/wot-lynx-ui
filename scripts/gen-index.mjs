@@ -8,15 +8,17 @@
  * 插件里的数组）。101 个组件全靠人工同步，漏一个就是「按需引入可用、全局注册
  * 不可用」的静默缺陷。
  *
- * 现在组件清单只在**文件系统**里定义一次，由本脚本产出两份 barrel：
+ * 现在组件清单只在**文件系统**里定义一次，由本脚本为每个组件包产出 barrel
+ * （ADR-023 域包拆分后包边界声明于 `docs/architecture/packages.json`）：
  *
- * | 根 | 产物 | 层 |
+ * | 包 | 组件根 | 产物 |
  * |---|---|---|
- * | `src/primitives/wd-*` | `src/primitives/index.ts` | L3.5 基础件 |
- * | `src/components/wd-*` | `src/components/index.ts` | L4 业务组件 |
+ * | `@wot-lynx/primitives` | `src/wd-*` | `src/index.ts`（`allPrimitives`） |
+ * | `@wot-lynx/ui-<domain>` | `src/wd-*` | `src/index.ts`（`all<Domain>`） |
+ * | `wot-lynx-ui`（门面） | `src/components/wd-*` | `src/components/index.ts`（`allComponents`） |
  *
  * 每份 barrel 含：组件默认导出、`<Pascal>Props` 类型导出、`all*` 注册清单。
- * 分层依据见 `docs/adr/012-primitives-layer.md`。
+ * 分层依据见 `docs/adr/012-primitives-layer.md`；包划分见 ADR-023。
  *
  * ## 用法
  *
@@ -31,16 +33,21 @@ import { fileURLToPath } from 'node:url'
 import process from 'node:process'
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..')
-const UI_SRC = join(ROOT, 'packages/ui/src')
 
 /**
- * 两个组件根。顺序即全局注册顺序（基础件在前，业务组件在后）：
- * 基础件不依赖业务组件，先注册不会产生解析顺序问题。
+ * 组件根来自 `docs/architecture/packages.json`（ADR-023）。顺序即全局注册顺序：
+ * 基础件在前、域包其后、门面自己的组件最后——基础件不依赖业务组件，
+ * 先注册不会产生解析顺序问题。清单里尚未落地的包（拆分过渡期）自动跳过。
  */
-const ROOTS = [
-  { key: 'primitives', dir: join(UI_SRC, 'primitives'), listName: 'allPrimitives', label: 'L3.5 基础件' },
-  { key: 'components', dir: join(UI_SRC, 'components'), listName: 'allComponents', label: 'L4 业务组件' }
-]
+const MANIFEST = JSON.parse(readFileSync(join(ROOT, 'docs/architecture/packages.json'), 'utf8'))
+const ROOTS = MANIFEST.packages
+  .filter((p) => p.componentRoot && existsSync(join(ROOT, p.dir, p.componentRoot)))
+  .map((p) => ({
+    key: p.role === 'umbrella' ? 'components' : p.role,
+    dir: join(ROOT, p.dir, p.componentRoot),
+    listName: p.listName,
+    label: `${p.name}（${p.role}${p.domain ? `/${p.domain}` : ''}）`
+  }))
 
 const checkOnly = process.argv.includes('--check')
 

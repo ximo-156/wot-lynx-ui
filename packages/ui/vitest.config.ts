@@ -20,11 +20,11 @@ function mtsWorkletPlugin() {
     name: 'wot-lynx-mts-worklet-shim',
     enforce: 'post' as const,
     transform(code: string, id: string) {
-      // 覆盖两个组件根：L3.5 基础件（src/primitives）与 L4 业务组件（src/components）。
-      // ⚠️ 新增组件根时必须同步这里，否则该根的 worklet 不会被包装，
-      //    主线程事件 ctx 为 null → applySetWorkletEvent 崩（`_workletType` on null）。
-      //    分层依据见 docs/adr/012-primitives-layer.md。
-      if (!/\/src\/(?:components|primitives)\//.test(id) || !id.endsWith('.vue')) return null
+      // 覆盖全部组件包的 src（基础件包 / 域包 / 门面，ADR-023）。
+      // ⚠️ 新增组件包时必须落在 packages/<pkg>/src/ 下，否则该包的 worklet
+      //    不会被包装，主线程事件 ctx 为 null → applySetWorkletEvent 崩
+      //    （`_workletType` on null）。
+      if (!/\/packages\/[^/]+\/src\//.test(id) || !id.endsWith('.vue')) return null
       // SFC 编译器会把指令字符串规范成双引号，两种引号都认
       if (!code.includes("'main thread'") && !code.includes('"main thread"')) return null
 
@@ -225,7 +225,17 @@ export default defineConfig({
       }
     ]
   },
+  // vitest 的测试文件走 SSR 变换，包名解析用 ssr.resolve.conditions，
+  // 与 resolve.conditions 是两套——两边都要加 'source'。
+  ssr: {
+    resolve: {
+      conditions: ['source', 'import', 'module', 'browser', 'default']
+    }
+  },
   resolve: {
+    // 域包拆分后（ADR-023），测试经包名引用 @wot-lynx/*；这些包的 exports
+    // 用 `source` 条件指向 src 源码（与 Rspeedy 的 conditionNames 口径一致）。
+    conditions: ['source', 'import', 'module', 'browser', 'default'],
     alias: [
       {
         find: 'vue-lynx/entry-background',

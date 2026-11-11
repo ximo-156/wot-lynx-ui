@@ -47,7 +47,7 @@ describe('document-level Lynx Web icon font', () => {
     for (const [, family, base64] of blocks) {
       const file = family === 'wd-wot-icons' ? 'wot-icons.ttf' : 'iconfont.ttf'
       // 原样注入 TTF 字节，不做子集化/重编码
-      expect(Buffer.from(base64!, 'base64')).toEqual(readFileSync(fileURLToPath(new URL(`../../src/icons/fonts/${file}`, import.meta.url))))
+      expect(Buffer.from(base64!, 'base64')).toEqual(readFileSync(fileURLToPath(new URL(`../../../core/src/icons/fonts/${file}`, import.meta.url))))
     }
   })
 

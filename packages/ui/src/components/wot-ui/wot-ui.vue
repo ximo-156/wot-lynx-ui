@@ -5,7 +5,7 @@
  */
 <script lang="ts" setup>
 import './index.css'
-import { parseStyle } from '../../common/util'
+import { parseStyle } from '@wot-lynx/core/common/util'
 
 import { wotUiProps } from './types'
 

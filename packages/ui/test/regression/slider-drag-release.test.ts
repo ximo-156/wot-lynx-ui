@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import { usePageScrollLock } from '../../src/composables/useLockScroll'
-import Slider from '../../src/components/wd-slider/wd-slider.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import { usePageScrollLock } from '@wot-lynx/core/composables/useLockScroll'
+import Slider from '@wot-lynx/ui-form/wd-slider'
 
 const restores: Array<() => void> = []
 const scrollLocked = usePageScrollLock()

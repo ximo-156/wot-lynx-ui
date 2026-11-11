@@ -3,8 +3,8 @@
  * ActionSheet 动作面板 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdActionSheet from 'wot-lynx-ui/components/wd-action-sheet/wd-action-sheet.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdActionSheet from '@wot-lynx/primitives/wd-action-sheet'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const visible = ref(false)
 const actions = ref([

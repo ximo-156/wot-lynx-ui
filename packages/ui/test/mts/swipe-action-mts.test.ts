@@ -26,8 +26,8 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import SwipeAction from '../../src/components/wd-swipe-action/wd-swipe-action.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import SwipeAction from '@wot-lynx/ui-feedback/wd-swipe-action'
 
 const styleOf = (el: Element | null): string => (el ? el.getAttribute('style') || '' : '')
 

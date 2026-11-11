@@ -8,10 +8,10 @@
 import { describe, it, expect } from 'vitest'
 import { h } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
-import Sticky from '../../src/components/wd-sticky/wd-sticky.vue'
-import StickyBox from '../../src/components/wd-sticky-box/wd-sticky-box.vue'
-import CountTo from '../../src/components/wd-count-to/wd-count-to.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Sticky from '@wot-lynx/primitives/wd-sticky'
+import StickyBox from '@wot-lynx/primitives/wd-sticky-box'
+import CountTo from '@wot-lynx/ui-display/wd-count-to'
 
 async function frames(n = 6) {
   for (let i = 0; i < n; i++) await pause()

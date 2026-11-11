@@ -2,9 +2,9 @@
 /**
  * Grid 宫格 — 文档站 H5 预览演示（手工编写）。
  */
-import WdGrid from 'wot-lynx-ui/components/wd-grid/wd-grid.vue'
-import WdGridItem from 'wot-lynx-ui/components/wd-grid-item/wd-grid-item.vue'
-import WdBadge from 'wot-lynx-ui/primitives/wd-badge/wd-badge.vue'
+import WdGrid from '@wot-lynx/ui-layout/wd-grid'
+import WdGridItem from '@wot-lynx/ui-layout/wd-grid-item'
+import WdBadge from '@wot-lynx/primitives/wd-badge'
 </script>
 
 <template>

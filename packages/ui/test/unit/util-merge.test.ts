@@ -11,7 +11,7 @@
  * 另锁定 isEqual 的普通对象结构比较（wd-upload 的「无变化则跳过」守卫依赖它）。
  */
 import { describe, it, expect, vi } from 'vitest'
-import { closest, debounce, deepMerge, isEqual, isObj } from '../../src/common/util'
+import { closest, debounce, deepMerge, isEqual, isObj } from '@wot-lynx/core/common/util'
 
 describe('isObj', () => {
   it('只把普通对象判为对象', () => {

@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
-import { configureHost, getHost, subscribeHostChange, type WotLynxHost } from '../../src/common/host'
-import { getViewportOverride, setViewportOverride } from '../../src/common/viewport-state'
-import { useSafeArea } from '../../src/composables/useSafeArea'
+import { configureHost, getHost, subscribeHostChange, type WotLynxHost } from '@wot-lynx/core/common/host'
+import { getViewportOverride, setViewportOverride } from '@wot-lynx/core/common/viewport-state'
+import { useSafeArea } from '@wot-lynx/core/composables/useSafeArea'
 
 type ResizeListener = (event: unknown) => void
 let restores: Array<() => void>

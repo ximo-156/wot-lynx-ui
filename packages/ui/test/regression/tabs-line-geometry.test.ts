@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, ref } from 'vue-lynx'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import Tabs from '../../src/components/wd-tabs/wd-tabs.vue'
-import Tab from '../../src/components/wd-tab/wd-tab.vue'
+import Tabs from '@wot-lynx/primitives/wd-tabs'
+import Tab from '@wot-lynx/primitives/wd-tab'
 import { restoreNativeStubs, stubNativeQuery } from '../helpers/native-stubs'
 
 const empty = { width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 }

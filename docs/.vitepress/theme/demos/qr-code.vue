@@ -2,8 +2,8 @@
 /**
  * QRCode 二维码 — 文档站 H5 预览演示（手工编写）。
  */
-import WdQrCode from 'wot-lynx-ui/components/wd-qr-code/wd-qr-code.vue'
-import WdBarCode from 'wot-lynx-ui/components/wd-bar-code/wd-bar-code.vue'
+import WdQrCode from '@wot-lynx/ui-display/wd-qr-code'
+import WdBarCode from '@wot-lynx/ui-display/wd-bar-code'
 </script>
 
 <template>

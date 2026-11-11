@@ -13,7 +13,7 @@
  *
  * 仅服务于文档预览，不进入组件库产物。
  */
-import { configureHost } from '../../../packages/ui/src/common/host'
+import { configureHost } from '../../../packages/core/src/common/host'
 
 let installed = false
 

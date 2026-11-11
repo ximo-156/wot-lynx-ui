@@ -4,9 +4,10 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { cleanup, render } from '../render'
 import { fireEvent } from '../fire-event'
-import { configureHost } from '../../src/common/host'
-import Button from '../../src/primitives/wd-button/wd-button.vue'
+import { configureHost } from '@wot-lynx/core/common/host'
+import Button from '@wot-lynx/primitives/wd-button'
 import ConfigProvider from '../../src/components/wd-config-provider/wd-config-provider.vue'
+import { compCss } from '../helpers/component-roots'
 
 const restores: Array<() => void> = []
 afterEach(() => {
@@ -20,7 +21,7 @@ function mount(initial: Record<string, any> = {}, slots?: any) {
   const mounted = render({ setup: () => () => h('view', { class: 'button-test-host' }, [h(Button, props.value, slots)]) } as any)
   return { ...mounted, props, button: () => mounted.container.querySelector('.wd-button') as HTMLElement }
 }
-const css = () => readFileSync(path.resolve(__dirname, '../../src/primitives/wd-button/index.css'), 'utf8')
+const css = () => compCss('wd-button')
 function rule(selector: string) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = css().match(new RegExp(`(?:^|[,}])${escaped}\\{([^{}]*)\\}`))

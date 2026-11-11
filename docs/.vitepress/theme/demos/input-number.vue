@@ -3,7 +3,7 @@
  * InputNumber 步进器 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdInputNumber from 'wot-lynx-ui/components/wd-input-number/wd-input-number.vue'
+import WdInputNumber from '@wot-lynx/ui-form/wd-input-number'
 
 const value = ref(5)
 </script>

@@ -3,8 +3,8 @@
  * Dialog 对话框 — 文档站 H5 预览演示（手工编写）。
  */
 import { ref } from 'vue'
-import WdDialog from 'wot-lynx-ui/components/wd-dialog/wd-dialog.vue'
-import WdButton from 'wot-lynx-ui/primitives/wd-button/wd-button.vue'
+import WdDialog from '@wot-lynx/ui-feedback/wd-dialog'
+import WdButton from '@wot-lynx/primitives/wd-button'
 
 const dialogRef = ref<any>(null)
 

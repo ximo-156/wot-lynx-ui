@@ -1,0 +1,110 @@
+/*
+ * wd-img — 图片
+ * 保留官方 image/image-failloading 图标与 loading/error 插槽；tap 映射 click。
+ *
+ * 原生实现说明（ADR-022：移除 uni 兼容层）：
+ * - 预览优先交给宿主系统预览（宿主原生模块 `previewImage`）；
+ * - 宿主没有该能力时，用**库内原生遮罩**预览：position:fixed 提升到页面根，
+ *   原生 image> 渲染，点击任意处关闭。不再依赖任何小程序 API。
+ * - src 变化重置加载态；圆角与尺寸用完整样式键避免动态更新残留。
+ */
+<script lang="ts" setup>
+import './index.css'
+
+import { computed, ref, watch } from 'vue-lynx'
+import WdIcon from '../wd-icon/wd-icon.vue'
+import { imgProps } from './types'
+import { addUnit, isDef, parseStyle } from '@wot-lynx/core/common/util'
+import { defineStyleKeys, resolveStyle } from '@wot-lynx/core/common/style'
+import { getHost } from '@wot-lynx/core/common/host'
+
+const props = defineProps(imgProps)
+const emit = defineEmits(['load', 'error', 'click', 'tap', 'preview'])
+const status = ref<'loading' | 'success' | 'error'>('loading')
+watch(() => props.src, () => { status.value = 'loading' })
+
+/** 库内原生预览遮罩的显示状态。 */
+const previewVisible = ref(false)
+const previewSource = ref('')
+
+const rootClass = computed(() => ['wd-img', { 'is-round': props.round }, props.customClass])
+/**
+ * 圆角不再用 `overflow: hidden` 裁（真机 2026-11-03）：
+ * CONVENTIONS §19 差异 #9 —— 圆角容器上的 overflow:hidden 在真机会把内容
+ * **整段裁空**（wd-segmented 白字、wd-slider 手柄图标都是这个成因）。wd-img
+ * 之前靠它做圆角，等于给「带 radius/round 的图片」埋了同一个坑：圆角图片在
+ * 真机上直接不显示。改成圆角只写在节点上 + __image 自身 `border-radius:
+ * inherit`（见 index.scss），图片元素自己带圆角，无需裁剪。
+ * overflow 键仍需恒定为合法值（CONVENTIONS §20），否则历史值会残留。
+ */
+const IMG_STYLE = defineStyleKeys({ height: '', width: '', 'border-radius': '', overflow: 'visible' })
+const rootStyle = computed(() => resolveStyle(IMG_STYLE, {
+  height: isDef(props.height) ? addUnit(props.height) : '',
+  width: isDef(props.width) ? addUnit(props.width) : '',
+  'border-radius': isDef(props.radius) ? addUnit(props.radius) : '',
+  overflow: 'visible'
+}, parseStyle(props.customStyle)))
+
+function handleLoad(event: any) {
+  status.value = 'success'
+  emit('load', event)
+}
+function handleError(event: any) {
+  status.value = 'error'
+  emit('error', event)
+}
+function openPreview() {
+  const source = props.previewSrc || props.src
+  if (!source) return
+  const host = getHost()
+  if (typeof host.previewImage === 'function') {
+    // 宿主系统预览（相册级体验，支持捏合缩放）。
+    host.previewImage({ urls: [source], current: source })
+    emit('preview', { src: source })
+    return
+  }
+  // 无宿主能力：库内原生遮罩预览。
+  previewSource.value = source
+  previewVisible.value = true
+  emit('preview', { src: source })
+}
+function closePreview() {
+  previewVisible.value = false
+}
+function handleClick(event: any) {
+  if (props.enablePreview && props.src && status.value === 'success') {
+    openPreview()
+  }
+  emit('click', event)
+  emit('tap', event)
+}
+</script>
+
+<template>
+  <view :class="rootClass" :style="rootStyle" @tap="handleClick">
+    <image
+      v-if="status !== 'error'"
+      :class="`wd-img__image ${customImage}`"
+      :src="src"
+      :mode="mode"
+      :show-menu-by-longpress="showMenuByLongpress"
+      :lazy-load="lazyLoad"
+      @load="handleLoad"
+      @error="handleError"
+    />
+    <view v-if="status === 'loading' && showLoading" class="wd-img__loading">
+      <slot name="loading">
+        <WdIcon name="image" custom-class="wd-img__loading-icon" />
+      </slot>
+    </view>
+    <view v-if="status === 'error' && showError" class="wd-img__error">
+      <slot name="error">
+        <WdIcon name="image-failloading" custom-class="wd-img__error-icon" />
+      </slot>
+    </view>
+  </view>
+  <!-- 库内原生预览遮罩：fixed 节点由引擎提升到页面根，点击关闭 -->
+  <view v-if="previewVisible" class="wd-img__preview" @tap="closePreview">
+    <image class="wd-img__preview-image" :src="previewSource" mode="aspectFit" />
+  </view>
+</template>

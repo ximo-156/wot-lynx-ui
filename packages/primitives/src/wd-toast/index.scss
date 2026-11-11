@@ -1,0 +1,113 @@
+@use 'styles/mixin/mixin.scss' as *;
+@use 'styles/variable.scss' as *;
+
+// ==================== Toast 组件变量 ====================
+
+// 文字颜色
+$toast-color: var(--wot-toast-color, $text-white) !default;
+// 内边距
+$toast-padding: var(--wot-toast-padding, $padding-extra-loose) !default;
+// 最大宽度
+$toast-max-width: var(--wot-toast-max-width, 300px) !default;
+// 圆角大小
+$toast-border-radius: var(--wot-toast-border-radius, $radius-large) !default;
+// 背景色
+$toast-bg: var(--wot-toast-bg, $opacfilled-tooltip-toast-cover) !default;
+// 字号
+$toast-font-size: var(--wot-toast-font-size, $typography-body-size-extra-large) !default;
+// 行高
+$toast-line-height: var(--wot-toast-line-height, $typography-body-line-height-size-extra-large) !default;
+// 图标大小
+$toast-icon-size: var(--wot-toast-icon-size, $n-24) !default;
+// 消息内容左边距
+$toast-msg-margin-left: var(--wot-toast-msg-margin-left, $spacing-tight) !default;
+// 图标下边距
+$toast-icon-margin-bottom: var(--wot-toast-icon-margin-bottom, $spacing-extra-tight) !default;
+// loading 状态下的 padding
+$toast-loading-padding: var(--wot-toast-loading-padding, $padding-main) !default;
+// loading 动画的 margin-bottom
+$toast-loading-margin-bottom: var(--wot-toast-loading-margin-bottom, $spacing-extra-loose) !default;
+
+// ==================== Toast 组件样式 ====================
+
+@include b(toast) {
+  // Lynx 适配：wot-ui 为 display: inline-block（行内流式），Lynx 只认 flex /
+  // none / linear，改为 flex + row（CONVENTIONS §15）
+  display: flex;
+  flex-direction: row;
+  max-width: $toast-max-width;
+  padding: $toast-padding;
+  background: $toast-bg;
+  border-radius: $toast-border-radius;
+  color: $toast-color;
+  transition: opacity $motion-base, transform $motion-base;
+  font-size: $toast-font-size;
+  box-sizing: border-box;
+
+  @include when(vertical) {
+    flex-direction: column;
+  }
+
+  @include e(msg) {
+    font-size: $toast-font-size;
+    word-break: break-all;
+    line-height: $toast-line-height;
+    text-align: left;
+  }
+
+  @include edeep(icon) {
+    font-size: $toast-icon-size;
+
+    @include when(vertical) {
+      margin-bottom: $toast-icon-margin-bottom;
+    }
+  }
+
+  @include e(loading) {
+    margin-bottom: $toast-loading-margin-bottom;
+    // Lynx 适配：wot-ui 为 display: inline-block，改为 flex（CONVENTIONS §15）
+    display: flex;
+  }
+
+  @include m(top) {
+    transform: translate3d(0, -40vh, 0);
+  }
+
+  @include m(middle-top) {
+    transform: translate3d(0%, -18.8vh, 0);
+  }
+
+  @include m(middle) {
+    /* 垂直居中由过渡根视图的「四边 0 + flex 成对居中」承担
+       （NATIVE-REWRITE §3.2 / CONVENTIONS §9）：参考源在 top: 50% 的
+       基准上用 translate3d(0,-50%,0) 找中心，新基准下已居中，该变换会
+       造成二次上移，故取中性值 none（ Style Funnel 中性值语义） */
+    transform: none;
+  }
+
+  @include m(bottom) {
+    transform: translate3d(0, 40vh, 0);
+  }
+
+  @include m(with-icon) {
+    // 水平布局由根规则承担；不得覆盖 is-vertical 的列布局。
+    display: flex;
+    // 图标 + 文本行成对居中（NATIVE-REWRITE §3.2）：文案触达 max-width 时
+    // 图标与文本组仍在行内居中，不贴左
+    align-items: center;
+    justify-content: center;
+
+    @include me(msg) {
+      margin-left: $toast-msg-margin-left;
+
+      @include when(vertical) {
+        margin-left: 0;
+      }
+    }
+  }
+
+  @include m(loading) {
+    min-width: auto;
+    padding: $toast-loading-padding;
+  }
+}

@@ -14,13 +14,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { h } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
+import { pause } from '@wot-lynx/core/common/util'
 import { fireEvent } from '../fire-event'
-import { configureHost } from '../../src/common/host'
+import { configureHost } from '@wot-lynx/core/common/host'
 import { restoreNativeStubs, setSystemInfo } from '../helpers/native-stubs'
-import { getPlatform, configurePlatform, mockPlatform } from '../../src/common/platform'
-import Backtop from '../../src/components/wd-backtop/wd-backtop.vue'
-import Signature from '../../src/components/wd-signature/wd-signature.vue'
+import { getPlatform, configurePlatform, mockPlatform } from '@wot-lynx/core/common/platform'
+import Backtop from '@wot-lynx/ui-display/wd-backtop'
+import Signature from '@wot-lynx/ui-form/wd-signature'
 
 /** 本模块关心的宿主能力键；测试之间必须清干净，否则相互污染 */
 const HOST_KEYS = ['createCanvasContext', 'canvasToTempFilePath', 'pageScrollTo', 'supportsVideoElement'] as const

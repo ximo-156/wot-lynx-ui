@@ -12,10 +12,13 @@
  *
  * 本脚本把「横向耦合」变成可度量、可断言的数字（ADR-012）。
  *
- * ## 判据
+ * ## 判据（ADR-023 域包拆分后）
  *
- * - `core`（L3.5，`src/primitives/`）：可被业务组件依赖；**禁止**依赖业务组件、禁止 core 之间互引。
- * - `business`（L4，`src/components/`）：可依赖 core；**禁止**依赖其他 business。
+ * - `infra`（`@wot-lynx/core`）：中立层，不得依赖任何组件包。
+ * - `core`（`@wot-lynx/primitives`）：可被业务组件依赖；**禁止**依赖业务组件。
+ * - `business`（`@wot-lynx/ui-<domain>` 与门面）：可依赖 core；**禁止**跨包依赖
+ *   其他 business（族内父子互引除外，见 families.json）。
+ * - 组件间引用跨包后走**包名**（`@wot-lynx/<pkg>/wd-x`），本脚本同样解析。
  *
  * ## 用法
  *
@@ -33,9 +36,15 @@ import { fileURLToPath } from 'node:url'
 import process from 'node:process'
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..')
-const UI_SRC = join(ROOT, 'packages/ui/src')
-const CORE_DIR = join(UI_SRC, 'primitives')
-const BUSINESS_DIR = join(UI_SRC, 'components')
+
+/**
+ * 包划分来自 packages.json（ADR-023）。组件分布在多个包的 componentRoot 下；
+ * `pkgOfName` 供包名说明符解析：`@wot-lynx/ui-form/wd-form` → 该包 src 下的
+ * `wd-form` 目录。层（core/business）由 manifest 的 role 推导。
+ */
+const MANIFEST = JSON.parse(readFileSync(join(ROOT, 'docs/architecture/packages.json'), 'utf8'))
+const PKG_BY_NAME = new Map(MANIFEST.packages.map((p) => [p.name, p]))
+const layerOfRole = (role) => (role === 'primitives' ? 'core' : 'business')
 const OUT_DIR = join(ROOT, 'docs/architecture')
 const BASELINE_PATH = join(OUT_DIR, 'deps-baseline.json')
 const REPORT_PATH = join(OUT_DIR, 'DEPS.md')
@@ -47,18 +56,19 @@ const jsonMode = process.argv.includes('--json')
 // 收集组件（core + business）
 // ---------------------------------------------------------------------------
 
-/** 目录名 → 层级。目录不存在时返回空。 */
-function listComponents(dir, layer) {
+/** 目录名 → 组件记录（含所属包与层）。目录不存在时返回空。 */
+function listComponents(dir, layer, pkg) {
   if (!existsSync(dir)) return []
   return readdirSync(dir)
     .filter((name) => /^wd-/.test(name) && statSync(join(dir, name)).isDirectory())
-    .map((name) => ({ name, layer, dir: join(dir, name) }))
+    .map((name) => ({ name, layer, pkg, dir: join(dir, name) }))
 }
 
-const components = [
-  ...listComponents(CORE_DIR, 'core'),
-  ...listComponents(BUSINESS_DIR, 'business')
-]
+const components = MANIFEST.packages
+  .filter((p) => p.componentRoot)
+  .flatMap((p) =>
+    listComponents(join(ROOT, p.dir, p.componentRoot), layerOfRole(p.role), p.name)
+  )
 const byName = new Map(components.map((c) => [c.name, c]))
 const coreNames = new Set(components.filter((c) => c.layer === 'core').map((c) => c.name))
 
@@ -94,6 +104,8 @@ function classify(pathInTarget, lineText) {
   if (IMPORT_TYPE_RE.test(lineText)) return 'type-contract'
   if (pathInTarget.endsWith('.vue')) return 'compose'
   if (/(^|\/)utils$/.test(pathInTarget)) return 'util-borrow'
+  // 包名说明符且无子路径尾巴（`@pkg/wd-x`）→ 组件入口（index.ts 转出 .vue）= 组合
+  if (pathInTarget === '') return 'compose'
   return 'other'
 }
 
@@ -109,11 +121,23 @@ for (const comp of components) {
       let m
       while ((m = SPECIFIER_RE.exec(lineText)) !== null) {
         const spec = m[1]
-        // 只处理相对路径；包名导入（wot-lynx-ui）不构成组件间耦合
-        if (!spec.startsWith('.')) continue
-        const seg = spec.match(WD_SEGMENT_RE)
-        if (!seg) continue
-        const target = seg[1]
+        let target = null
+        if (spec.startsWith('.')) {
+          // 同包相对路径：从说明符里抽 wd-xxx 段
+          const seg = spec.match(WD_SEGMENT_RE)
+          if (!seg) continue
+          target = seg[1]
+        } else {
+          // 包名说明符（跨包引用）：@wot-lynx/<pkg>/wd-x[/...]
+          const pm = spec.match(/^(@wot-lynx\/[^/]+)\/(wd-[a-z0-9-]+)(?:\/.*)?$/)
+          if (!pm) continue
+          const owner = byName.get(pm[2])
+          if (!owner || owner.pkg !== pm[1]) {
+            unresolved.push({ from: comp.name, target: pm[2], file: relative(ROOT, file), line: idx + 1 })
+            continue
+          }
+          target = pm[2]
+        }
         if (target === comp.name) continue
         if (!byName.has(target)) {
           unresolved.push({ from: comp.name, target, file: relative(ROOT, file), line: idx + 1 })
@@ -164,6 +188,8 @@ const businessToCore = pairs.filter((p) => byName.get(p.from).layer === 'busines
 const businessToBusiness = pairs.filter(
   (p) => byName.get(p.from).layer === 'business' && byName.get(p.to).layer === 'business'
 )
+/** 跨包业务边：拆包后真正的包级耦合（ADR-023 的包图 DAG 指标） */
+const crossPackage = businessToBusiness.filter((p) => byName.get(p.from).pkg !== byName.get(p.to).pkg)
 
 /**
  * 环检测（Tarjan 强连通分量）。
@@ -380,6 +406,7 @@ const metrics = {
   importLines: edges.length,
   edges: pairs.length,
   businessToBusiness: businessToBusiness.length,
+  crossPackage: crossPackage.length,
   businessToCore: businessToCore.length,
   coreToCore: coreToCore.length,
   coreToBusiness: coreToBusiness.length,
@@ -395,6 +422,7 @@ const baseline = {
   $comment: '由 scripts/analyze-deps.mjs 生成。业务↔业务边数是单调收敛指标：允许下降，禁止上升（ADR-012）。',
   generatedAt: new Date().toISOString().slice(0, 10),
   metrics,
+  crossPackagePairs: crossPackage.map((p) => `${p.from}->${p.to}`).sort(),
   families: families.map((f) => f.members.join('+')),
   businessPairs: businessToBusiness.map((p) => `${p.from}->${p.to}`).sort()
 }
@@ -473,7 +501,7 @@ const lines = []
 lines.push('# 组件横向依赖报告')
 lines.push('')
 lines.push('> 由 `scripts/analyze-deps.mjs` 自动生成，请勿手动编辑。')
-lines.push(`> 生成日期：${baseline.generatedAt} ｜ 判据见 [ADR-012](../adr/012-primitives-layer.md)`)
+lines.push(`> 生成日期：${baseline.generatedAt} ｜ 判据见 [ADR-012](../adr/012-primitives-layer.md)；包边界见 [ADR-023](../adr/023-domain-package-split.md)`)
 lines.push('')
 lines.push('## 总量')
 lines.push('')
@@ -484,6 +512,7 @@ lines.push(`| import 行数 | ${metrics.importLines} | — |`)
 lines.push(`| 去重依赖边 | ${metrics.edges} | — |`)
 lines.push(`| 业务 → 基础件 | ${metrics.businessToCore} | ↑ 越多越好 |`)
 lines.push(`| **业务 ↔ 业务** | **${metrics.businessToBusiness}** | ≤ 60（拆包门槛 ≤ 30） |`)
+lines.push(`| **跨包业务边** | **${metrics.crossPackage}** | 包级 DAG：允许单向，禁止成环 |`)
 lines.push(`| 契约借用 | ${metrics.contractBorrow} | 0 |`)
 lines.push(`| **跨族环** | **${metrics.cyclesCrossFamily}** | 0 |`)
 lines.push(`| 族内环（父子组件对） | ${metrics.cycles} | 允许（原子单元） |`)
@@ -501,18 +530,18 @@ lines.push('| util-borrow | ' + (kindCount['util-borrow'] || 0) + ' | 借 utils�
 lines.push('')
 lines.push('## fan-in Top（被依赖最多）')
 lines.push('')
-lines.push('| 组件 | 层 | fan-in | fan-out |')
+lines.push('| 组件 | 包 | fan-in | fan-out |')
 lines.push('|---|---|---|---|')
 for (const [name, count] of topFanIn) {
-  lines.push(`| \`${name}\` | ${byName.get(name).layer} | ${count} | ${fanOut[name] || 0} |`)
+  lines.push(`| \`${name}\` | ${byName.get(name).pkg} | ${count} | ${fanOut[name] || 0} |`)
 }
 lines.push('')
 lines.push('## fan-out Top（依赖最多）')
 lines.push('')
-lines.push('| 组件 | 层 | fan-out |')
+lines.push('| 组件 | 包 | fan-out |')
 lines.push('|---|---|---|')
 for (const [name, count] of topFanOut) {
-  lines.push(`| \`${name}\` | ${byName.get(name).layer} | ${count} |`)
+  lines.push(`| \`${name}\` | ${byName.get(name).pkg} | ${count} |`)
 }
 lines.push('')
 lines.push('## 循环依赖')

@@ -1,0 +1,200 @@
+@use 'styles/mixin/mixin.scss' as *;
+@use '../index.scss' as *;
+
+@include b(month) {
+  display: flex;
+  flex-direction: column;
+
+  @include e(title) {
+    font-size: $calendar-view-panel-title-font-size;
+    line-height: $calendar-view-panel-title-line-height;
+    color: $calendar-view-panel-title-color;
+    padding: $calendar-view-panel-title-padding;
+    font-weight: $calendar-view-panel-title-font-weight;
+    margin: $calendar-view-panel-title-margin;
+  }
+
+  @include e(days) {
+    // 真机多行 flex-wrap 高度结算不可靠：每周一个真实 row，逐行累加高度。
+    display: flex;
+    flex-direction: column;
+    padding: $calendar-view-item-padding;
+  }
+
+  @include e(row) {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: flex-start;
+
+    // 空位格没有 item，最后一行的间距统一由行级类收敛。
+    &.is-last-row .wd-month__day {
+      margin-bottom: 0;
+    }
+  }
+
+  @include e(day) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    // 行内 7 等分；内容盒明确占满日期格，不借 view 的行高撑开。
+    flex: 1;
+    height: $calendar-view-day-height;
+    margin-bottom: $calendar-view-item-margin-bottom;
+
+    &--empty {
+      pointer-events: none;
+    }
+
+    // 状态色直接落到日期与辅助 text，不依赖跨 view 的字体继承。
+    @include when(disabled) {
+      .wd-month__day-text,
+      .wd-month__day-info {
+        color: $calendar-view-color-disabled;
+      }
+    }
+
+    @include when(current) {
+      .wd-month__day-text,
+      .wd-month__day-info {
+        color: $calendar-view-color-active;
+      }
+    }
+
+    // 高亮只包住日期文字，不把七等分的整格拉成长椭圆。
+    // 多选连续日期仍保留各自的圆形，与区间选择的连接带区分。
+    @include when(selected, multiple-selected, multiple-middle, start, end, same) {
+      .wd-month__day-value {
+        border-radius: $calendar-view-border-radius-active;
+        background: $calendar-view-color-active;
+      }
+
+      .wd-month__day-text {
+        color: $calendar-view-color-selected;
+      }
+
+      // 辅助信息在圆形之外，不能沿用圆内白字。
+      .wd-month__day-info {
+        color: $calendar-view-color-active;
+      }
+    }
+
+    @include when(middle) {
+      .wd-month__day-text,
+      .wd-month__day-info {
+        color: $calendar-view-range-color;
+      }
+    }
+
+    // 范围装饰仅在格子内局部层叠，普通日期不升层。
+    // CONVENTIONS §19：带 z-index 的定位子节点要求父级同时 z-index: 0。
+    @include when(start, end, middle) {
+      z-index: 0;
+
+      .wd-month__day-container {
+        z-index: 2;
+      }
+    }
+
+    @include when(start) {
+      .wd-month__day-range {
+        left: 50%;
+      }
+
+      &.is-without-end {
+        .wd-month__day-range {
+          display: none;
+        }
+      }
+    }
+
+    @include when(end) {
+      .wd-month__day-range {
+        right: 50%;
+      }
+    }
+
+    @include when(last-row) {
+      margin-bottom: 0;
+    }
+  }
+
+  @include e(day-container) {
+    position: relative;
+    // 带 class 的 text 不保证继承 view 的字体参数。日期格负责高度，
+    // 内容盒显式填满；行高只交给下方 text 节点，不承担 view 的定高职责。
+    width: 100%;
+    height: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(day-value) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: $calendar-view-day-size;
+    height: $calendar-view-day-size;
+
+    // 60px 行内同时容纳上下辅助信息，不裁字也不把圆形拉高。
+    &.has-info {
+      width: $calendar-view-day-size-with-info;
+      height: $calendar-view-day-size-with-info;
+    }
+  }
+
+  @include e(day-range) {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: $calendar-view-day-size;
+    transform: translateY(-50%);
+    background: $calendar-view-range-bg;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  @include e(day-text) {
+    color: $calendar-view-day-color;
+    font-size: $calendar-view-day-font-size;
+    line-height: $calendar-view-day-font-size;
+    font-weight: $calendar-view-day-font-weight;
+    text-align: center;
+  }
+
+  @include e(day-info) {
+    color: $calendar-view-day-color;
+    font-size: $calendar-view-info-font-size;
+    line-height: $calendar-view-info-line-height;
+    font-weight: $calendar-view-day-font-weight;
+    text-align: center;
+  }
+
+  @include e(day-top) {
+    position: absolute;
+    top: $calendar-view-info-position;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @include e(day-bottom) {
+    position: absolute;
+    bottom: $calendar-view-info-position;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+}

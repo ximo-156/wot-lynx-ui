@@ -27,9 +27,9 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
 import { fireEvent } from '../fire-event'
-import { pause } from '../../src/common/util'
-import Swiper from '../../src/components/wd-swiper/wd-swiper.vue'
-import SwiperNav from '../../src/components/wd-swiper-nav/wd-swiper-nav.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Swiper from '@wot-lynx/ui-display/wd-swiper'
+import SwiperNav from '@wot-lynx/ui-display/wd-swiper-nav'
 import { compRead } from '../helpers/component-roots'
 
 

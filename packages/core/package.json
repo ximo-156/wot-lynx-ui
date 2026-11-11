@@ -1,0 +1,58 @@
+{
+  "name": "@wot-lynx/core",
+  "version": "0.1.0",
+  "description": "wot-lynx-ui 框架中立层：common / composables / icons / locale / styles（无组件）",
+  "type": "module",
+  "exports": {
+    "./locale": {
+      "source": "./src/locale/index.ts",
+      "types": "./src/locale/index.ts"
+    },
+    "./common/*": {
+      "source": "./src/common/*.ts",
+      "types": "./src/common/*.ts"
+    },
+    "./composables/*": {
+      "source": "./src/composables/*.ts",
+      "types": "./src/composables/*.ts"
+    },
+    "./icons/*.css": {
+      "source": "./src/icons/*.css"
+    },
+    "./icons/*": {
+      "source": "./src/icons/*.ts",
+      "types": "./src/icons/*.ts"
+    },
+    "./locale/*": {
+      "source": "./src/locale/*.ts",
+      "types": "./src/locale/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src"
+  ],
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss",
+    "**/*.ttf"
+  ],
+  "scripts": {
+    "build:css": "node ../../scripts/build-css.mjs"
+  },
+  "keywords": [
+    "vue",
+    "lynx",
+    "vue-lynx",
+    "wot-ui",
+    "design-tokens"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "vue-lynx": "^0.5.0"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.23"
+  }
+}

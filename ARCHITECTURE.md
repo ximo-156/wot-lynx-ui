@@ -24,7 +24,7 @@ v1.0 于 2026-10-16 写成。此后仓库发生两次全库级重写（`a00b6b9`
 | C3 | §3.3 Style Funnel「待引入」（Phase 0.4） | **已落地。** `common/style.ts` 提供 `resolveStyle` / `defineStyleKeys` / `createStyleResolver`，带单测 | `common/style.ts`、`test/unit/style-funnel.test.ts` |
 | C4 | §1.1「`docs/` 8 篇指南 + 101 篇组件文档」 | **更正。** `docs/components/` 由 `gen-docs.mjs` 按需生成，不入库 | 目录实测 |
 | C5 | §3.1「组件之间不得互相 import 实现」 | **改写。** 该禁令从未生效（实存 153 条边），且方向错误。改为三条边规则（见 §5） | 依赖图实测 |
-| C6 | §3.2 / ADR-003：拆域包「暂不做」，条件为「单域 > 40 组件」 | **改写。** 拆域包的真实障碍是依赖图有环（5 个）且稠密（153 边），不是版本管理成本。前提条件改为「业务↔业务边 ≤ 60 且跨族环 = 0」 | 依赖图实测 |
+| C6 | §3.2 / ADR-003：拆域包「暂不做」，条件为「单域 > 40 组件」 | **已执行。** 拆域包的真实障碍是依赖图有环且稠密（不是版本管理成本）；前提改为「业务↔业务边 ≤ 60 且跨族环 = 0」后，2026-11-11 收敛到 28 / 0 并完成六个域包拆分（ADR-023，门面零感知） | 依赖图实测 + `pnpm verify` |
 
 另新增两个 ADR：**ADR-011 声明式 MTS**、**ADR-012 Primitives 层**。
 
@@ -39,24 +39,26 @@ v1.0 于 2026-10-16 写成。此后仓库发生两次全库级重写（`a00b6b9`
 ### 1.1 当前目录与规模入口
 
 ```text
-packages/ui/
-├── src/
-│   ├── primitives/      基础件（L3.5）
-│   ├── components/      业务组件（L4），另有不公开的参考占位
-│   ├── composables/     父子通信、表单、触摸等
-│   ├── common/          样式、原生/宿主能力、平台、工具、日期、过渡
-│   ├── styles/          原始刻度、品牌、亮暗语义与预设
-│   ├── icons/           字体/图标注册表
-│   └── locale/          多语言资源
-├── plugin/              标签、按需导入、Web 宿主插件
-├── test/                unit/component/parity/native-first/mts/regression
-└── meta.json            源码推导的组件 API 目录
+packages/
+├── core/                @wot-lynx/core：common / composables / icons / locale / styles（无组件）
+├── primitives/          @wot-lynx/primitives：24 基础件（L3.5）
+├── ui-layout/           @wot-lynx/ui-layout：布局域 10 件
+├── ui-display/          @wot-lynx/ui-display：展示域 28 件
+├── ui-nav/              @wot-lynx/ui-nav：导航域 13 件
+├── ui-form/             @wot-lynx/ui-form：表单域 15 件
+├── ui-feedback/         @wot-lynx/ui-feedback：反馈域 9 件
+├── ui-picker/           @wot-lynx/ui-picker：选择器域 6 件（picker 族原子链）
+└── ui/                  wot-lynx-ui 门面：barrel、wotLynxUI 插件、theme 入口、
+                         wd-config-provider；test/ 与 meta.json 仍在此
 packages/demo/           Rspeedy 双端示例与设备清单
 docs/                    手写指南、决策、生成组件页与浏览器预览
 scripts/                 生成、构建、契约检查、迁移
 ```
 
-组件公开集合以[基础件 barrel](<packages/ui/src/primitives/index.ts>)、[业务 barrel](<packages/ui/src/components/index.ts>)及[主入口](<packages/ui/src/index.ts>)及 `pnpm check:index` 为准；目录/源码规模和测试文件数见[快照](<docs/architecture/SNAPSHOT.md>)，依赖关系见[依赖报告](<docs/architecture/DEPS.md>)与 `pnpm check:deps`。不再维护另一套手写 LOC/测试数字，快照校验失败时不能把旧值当当前事实。
+包边界声明于 `docs/architecture/packages.json`（ADR-023），组件归属由文件系统
+位置决定；`analyze-deps` 输出组件级「业务↔业务」与包级「跨包业务边」双口径。
+
+组件公开集合以[基础件 barrel](<packages/primitives/src/index.ts>)、各[域包 barrel](<packages/ui-layout/src/index.ts>)（包边界见 [packages.json](<docs/architecture/packages.json>)、ADR-023）及[门面主入口](<packages/ui/src/index.ts>)及 `pnpm check:index` 为准；目录/源码规模和测试文件数见[快照](<docs/architecture/SNAPSHOT.md>)，依赖关系见[依赖报告](<docs/architecture/DEPS.md>)与 `pnpm check:deps`。不再维护另一套手写 LOC/测试数字，快照校验失败时不能把旧值当当前事实。
 
 ### 1.2 当前分层与历史收敛
 
@@ -150,13 +152,13 @@ scripts/                 生成、构建、契约检查、迁移
 │ L5  交付与生态层                                                        │
 │     demo / docs / cli / rspeedy-plugins / unocss-preset                │
 ├───────────────────────────────────────────────────────────────────────┤
-│ L4  业务组件层   src/components/wd-*                                    │
+│ L4  业务组件层   @wot-lynx/ui-<domain>/src/wd-*（六个域包）             │
 │     calendar / select-picker / tabs / form / table …                   │
-│     可依赖 L3.5；族内互引允许，跨族边受门禁约束                          │
+│     可依赖 L3.5 与下游域；族内互引允许，跨族/跨包边受门禁约束             │
 ├───────────────────────────────────────────────────────────────────────┤
-│ L3.5 基础件层 ★v2.0 新增   src/primitives/wd-*                          │
+│ L3.5 基础件层 ★v2.0 新增   @wot-lynx/primitives/src/wd-*                │
 │     icon · loading · transition · overlay · popup · root-portal         │
-│     badge · button · img · cell · input · textarea                                │
+│     badge · button · img · cell · input · textarea …                    │
 │     可组合基础件及公共层；禁止依赖 L4                    │
 ├───────────────────────────────────────────────────────────────────────┤
 │ L3  组合式层   src/composables                                          │
@@ -210,16 +212,20 @@ wd-button wd-popup wd-img wd-cell wd-input wd-root-portal wd-textarea
 
 | 包 | 内容 | 时机 |
 |---|---|---|
-| `@wot-lynx/tokens` | `styles/*` + 预设主题 + `common/theme.ts` JS 镜像 | P3 |
-| `@wot-lynx/runtime` | `common/*`（含 Style Funnel + PlatformAdapter） | P3 |
-| `@wot-lynx/composables` | `composables/*` | P3 |
-| `@wot-lynx/primitives` | `src/primitives/*`（★v2.0） | P3（先目录分层，后拆包） |
-| `@wot-lynx/icons` / `@wot-lynx/locale` | 资产包 | P3 |
-| `@wot-lynx/components` | `src/components/*` + 生成 barrel | 保持整包 |
+| `@wot-lynx/core` | `common/*` + `composables/*` + `icons/*` + `locale/*` + `styles/*` | **已拆分**（2026-11-11，ADR-023） |
+| `@wot-lynx/primitives` | `src/wd-*`（24 基础件，★v2.0） | **已拆分** |
+| `@wot-lynx/ui-layout` | `src/wd-*`（布局域 10 件） | **已拆分** |
+| `@wot-lynx/ui-display` | `src/wd-*`（展示域 28 件） | **已拆分** |
+| `@wot-lynx/ui-nav` | `src/wd-*`（导航域 13 件） | **已拆分** |
+| `@wot-lynx/ui-form` | `src/wd-*`（表单域 15 件） | **已拆分** |
+| `@wot-lynx/ui-feedback` | `src/wd-*`（反馈域 9 件） | **已拆分** |
+| `@wot-lynx/ui-picker` | `src/wd-*`（选择器域 6 件） | **已拆分** |
 | `@wot-lynx/cli` | scaffold / gen-* / codemod | P2 |
-| `wot-lynx-ui`（保留） | 兼容层：re-export 全部，存量零改动 | 全程 |
+| `wot-lynx-ui`（门面） | re-export 全部 + 全局注册插件 + theme 入口 | **已落地**（存量 barrel 用法零改动） |
 
-**按域拆组件包的前提**：`业务↔业务边 ≤ 60 且跨族环 = 0`。
+**按域拆组件包的前提**（ADR-003）：`业务↔业务边 ≤ 60 且跨族环 = 0`——已达成
+（28 / 0），ADR-023 据此执行了拆分；包级 DAG 要求跨包业务边单向、不成环
+（当前 4 条，全部单向）。
 
 ---
 

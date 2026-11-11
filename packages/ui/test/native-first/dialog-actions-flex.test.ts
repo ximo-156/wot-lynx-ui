@@ -29,8 +29,8 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { h, ref } from 'vue-lynx'
 import { render, cleanup } from '../render'
-import { pause } from '../../src/common/util'
-import Dialog from '../../src/components/wd-dialog/wd-dialog.vue'
+import { pause } from '@wot-lynx/core/common/util'
+import Dialog from '@wot-lynx/ui-feedback/wd-dialog'
 import { compRead } from '../helpers/component-roots'
 
 const css = (rel: string) => compRead(...rel.split('/'))
