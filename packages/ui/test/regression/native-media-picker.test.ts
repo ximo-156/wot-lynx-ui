@@ -173,6 +173,28 @@ describe('WotMediaPicker native ABI facade', () => {
 })
 
 describe('native media receipt to real Upload pipeline', () => {
+  it('settles an image-size measurement when Upload unmounts before native load/error', async () => {
+    let respond: ((result: NativeMediaResult) => void) | undefined
+    const chooseMedia = vi.fn((_options: NativeMediaOptions, callback: (result: NativeMediaResult) => void) => { respond = callback })
+    configureHost(createNativeMediaPickerHost({ chooseMedia }))
+    const errors: unknown[] = []
+    const updates: unknown[] = []
+    const mounted = render({ setup: () => () => h(Upload, {
+      fileList: [], autoUpload: false, accept: 'image',
+      'onUpdate:fileList': (value: unknown) => updates.push(value),
+      onChooseerror: (error: unknown) => errors.push(error)
+    }) } as never)
+    fireEvent.tap(mounted.container.querySelector('.wd-upload__evoke')!, { bubbles: true })
+    expect(chooseMedia).toHaveBeenCalledOnce()
+    respond!({ success: true, tempFiles: [{ fileType: 'image', tempFilePath: '/pending-measurement.jpg', name: 'pending.jpg', size: 0 }] })
+    await flush()
+    expect(mounted.container.querySelector('image[src="/pending-measurement.jpg"]')).not.toBeNull()
+    mounted.unmount()
+    await flush()
+    expect(errors).toHaveLength(0)
+    expect(updates).toHaveLength(0)
+  })
+
   it('maps multi-image native receipts into Upload fileList and previews through one tap', async () => {
     const picker = pendingPicker()
     configureHost(createNativeMediaPickerHost(picker.module))

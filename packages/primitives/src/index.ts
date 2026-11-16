@@ -1,7 +1,7 @@
 /*
  * ⚠️ 本文件由 scripts/gen-index.mjs 自动生成，请勿手动编辑。
  *
- * @wot-lynx/primitives（primitives）的清单单一来源：src/primitives/ 下的目录（含 <dir>.vue 与 types.ts）。
+ * @wot-lynx/primitives（primitives）的清单单一来源：src/ 下的目录（含 <dir>.vue 与 types.ts）。
  * 新增 / 删除组件后运行：pnpm gen:index
  */
 

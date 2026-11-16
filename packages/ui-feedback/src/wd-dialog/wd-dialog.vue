@@ -67,6 +67,7 @@ import type { ButtonProps, ButtonVariant } from '@wot-lynx/primitives/wd-button/
 const props = defineProps(dialogProps)
 const isAlive = useAlive()
 let actionRequest = 0
+let customActionRequest = 0
 
 const { translate } = useTranslate('dialog')
 
@@ -298,6 +299,7 @@ function toggleModal(action: 'confirm' | 'cancel' | 'modal' | 'close') {
     return
   }
   const request = ++actionRequest
+  ++customActionRequest
   const option = messageOption.value
   const value = inputVal.value
   switch (action) {
@@ -335,14 +337,20 @@ function toggleModal(action: 'confirm' | 'cancel' | 'modal' | 'close') {
  * @param action 按钮配置
  * @param index 索引
  */
-function handleAction(action: DialogAction) {
+async function handleAction(action: DialogAction) {
   if (!isAlive() || !dialogState.show || action.disabled || action.loading) return
 
+  const request = ++customActionRequest
   const option = messageOption.value
   if (isFunction(action.click)) {
-    action.click()
+    try {
+      await action.click()
+    } catch {
+      // A rejected action is an aborted confirmation; keep the dialog open.
+      return
+    }
   }
-  if (option !== messageOption.value) return
+  if (!isAlive() || !dialogState.show || request !== customActionRequest || option !== messageOption.value) return
 
   handleConfirm({
     action: 'confirm',
@@ -421,6 +429,7 @@ watch(
 function reset(option: DialogOptionsWithCallBack) {
   if (!isAlive()) return
   ++actionRequest
+  ++customActionRequest
   if (option) {
     dialogState.title = isDef(option.title) ? option.title : ''
     dialogState.show = option.show

@@ -14,6 +14,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowR
 import WdSortButton from '../wd-sort-button/wd-sort-button.vue'
 import WdTableColumn from '../wd-table-column/wd-table-column.vue'
 import { addUnit, getRect, isDef, isObj, parseStyle, throttle, uuid } from '@wot-lynx/core/common/util'
+import { createStyleResolver } from '@wot-lynx/core/common/style'
 import { useChildren } from '@wot-lynx/core/composables/useChildren'
 import { useTranslate } from '@wot-lynx/core/composables/useTranslate'
 import { useViewportWidth } from '@wot-lynx/core/composables/useWideViewport'
@@ -22,6 +23,7 @@ import { TABLE_KEY, tableProps, type TableProvide } from './types'
 import { normalizeTableSpan, resolveTableColumnWidths, resolveTableRows, type TableCellMeasure } from './layout'
 
 const props = defineProps(tableProps)
+const resolveCustomStyle = createStyleResolver()
 const emit = defineEmits(['sort-method', 'row-click'])
 const { translate } = useTranslate('tableCol')
 const state = reactive({ scrollLeft: 0, scrollTop: 0 })
@@ -142,7 +144,7 @@ function handleSortChange(value: SortDirection, uid: number) {
 </script>
 
 <template>
-  <view :class="['wd-table', { 'is-border': border }, customClass]" :style="parseStyle(customStyle)">
+  <view :class="['wd-table', { 'is-border': border }, customClass]" :style="resolveCustomStyle(parseStyle(props.customStyle))">
     <scroll-view :id="viewportId" class="wd-table__scroll" :scroll-x="true" :scroll-y="scrollY" :style="scrollStyle" @layoutchange="handleViewportLayout" @scroll="handleScrollThrottled">
       <view class="wd-table__content" :style="contentStyle">
         <view v-if="showHeader" :class="['wd-table__header', { 'is-sticky': fixedHeader }]">

@@ -12,7 +12,7 @@ import { computed, onBeforeUnmount, ref, useMainThreadRef, watch } from 'vue-lyn
 import WdLoading from '@wot-lynx/primitives/wd-loading'
 import { pullRefreshProps } from './types'
 import { parseStyle } from '@wot-lynx/core/common/util'
-import { defineStyleKeys, resolveStyle } from '@wot-lynx/core/common/style'
+import { createStyleResolver, defineStyleKeys, resolveStyle } from '@wot-lynx/core/common/style'
 
 const props = defineProps(pullRefreshProps)
 const emit = defineEmits(['refresh', 'update:modelValue', 'scroll', 'touchstart', 'touchmove', 'touchend', 'touchcancel'])
@@ -31,7 +31,8 @@ function duration(value: number, fallback: number) {
 const headSize = computed(() => Number.isFinite(props.headHeight) && props.headHeight > 0 ? props.headHeight : 50)
 const animationMs = computed(() => duration(props.animationDuration, 300))
 const blocked = computed(() => props.disabled || props.modelValue || status.value !== 'normal')
-const rootStyle = computed(() => parseStyle(props.customStyle))
+const resolveRootStyle = createStyleResolver()
+const rootStyle = computed(() => resolveRootStyle(parseStyle(props.customStyle)))
 const TRACK_STYLE = defineStyleKeys({ transform: 'translateY(0px)', transition: 'none' })
 const trackStyle = computed(() => {
   void commitTick.value

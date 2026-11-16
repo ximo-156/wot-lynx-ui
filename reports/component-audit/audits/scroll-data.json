@@ -1,0 +1,71 @@
+{
+  "package": "@wot-lynx/ui-display",
+  "componentsRead": [
+    "wd-backtop",
+    "wd-bar-code",
+    "wd-image-preview",
+    "wd-loadmore",
+    "wd-pull-refresh",
+    "wd-qr-code",
+    "wd-swiper",
+    "wd-swiper-nav",
+    "wd-table",
+    "wd-table-column",
+    "wd-video-preview"
+  ],
+  "findings": [
+    {
+      "severity": "medium",
+      "component": "wd-backtop",
+      "title": "customStyle 根样式没有通过 Style Funnel 清除动态键",
+      "evidence": "wd-backtop.vue 的 rootStyle (L51-L56) 每次只返回固定定位键加 parseStyle(props.customStyle)；动态 customStyle 键被移除时没有对旧键显式赋空值。项目约定要求动态 customStyle 使用每元素独立 Style Funnel，否则 Lynx 内联样式可能残留。",
+      "tests": [
+        "packages/ui/test/parity/wot-parity-scroll-additional.test.ts：backtop 覆盖自定义样式初始绑定和宿主滚动，但没有 customStyle 键移除后清除的往返断言"
+      ],
+      "reproducible": true
+    },
+    {
+      "severity": "medium",
+      "component": "wd-pull-refresh",
+      "title": "customStyle 根样式没有通过 Style Funnel 清除动态键",
+      "evidence": "wd-pull-refresh.vue 的 rootStyle (L34) 仅返回 parseStyle(props.customStyle)，未使用 createStyleResolver/Funnel；当同一实例的 customStyle 删除先前设置的键时，没有显式复位旧键。",
+      "tests": [],
+      "reproducible": true
+    },
+    {
+      "severity": "medium",
+      "component": "wd-swiper",
+      "title": "根节点与标题的动态样式未使用 Style Funnel",
+      "evidence": "wd-swiper.vue 模板 L315 将 parseStyle(customStyle) 直接绑定根节点，L369 将 parseStyle(customTextStyle) 直接绑定文本节点；两组动态样式均未显式复位移除的键，不符合动态 customStyle 每元素独立 Style Funnel 约定。",
+      "tests": [
+        "packages/ui/test/parity/wot-parity-scroll-additional.test.ts：swiper 覆盖初始 customStyle/customTextStyle 呈现，没有动态删除键清除的断言"
+      ],
+      "reproducible": true
+    },
+    {
+      "severity": "medium",
+      "component": "wd-swiper-nav",
+      "title": "customStyle 动态移除键没有 Style Funnel 复位",
+      "evidence": "wd-swiper-nav.vue 模板 L41-L45 在导航根节点直接绑定 parseStyle(customStyle)，未使用独立 Style Funnel；动态移除已有键无法保证在 Lynx 节点上清除旧样式。",
+      "tests": [
+        "packages/ui/test/parity/wot-parity-scroll-additional.test.ts：有导航渲染及位置/类型断言，未覆盖动态 customStyle 键删除"
+      ],
+      "reproducible": true
+    },
+    {
+      "severity": "medium",
+      "component": "wd-table",
+      "title": "根节点 customStyle 动态移除键没有显式清除",
+      "evidence": "wd-table.vue 模板 L145 直接把 parseStyle(customStyle) 绑定到根 view，未使用独立 Style Funnel；从 customStyle 移除已设置属性时没有显式空值复位。",
+      "tests": [
+        "packages/ui/test/parity/wot-parity-layout-additional.test.ts：覆盖表格动态列/fixed 样式复位与行测量卸载，但未验证根 customStyle 键移除"
+      ],
+      "reproducible": true
+    }
+  ],
+  "gaps": [
+    "wd-pull-refresh 在 packages/ui/test 中只有属性契约列举，没有对应触摸阈值、cancel、受控 modelValue、success timer 及卸载回归；其 MTS 与后台事件配合未在本轮执行真实 Lynx 设备验证。",
+    "没有执行测试套件、双端构建或真机验证；审查仅基于读取到的源码与现有测试。",
+    "wd-backtop 的 parity 描述位于 skipIf(!hasWotRef()) 区块，具体回归是否执行取决于本机参考源码可用性；不将此作为事件错误发现。"
+  ]
+}

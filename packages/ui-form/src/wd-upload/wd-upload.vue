@@ -83,7 +83,13 @@ const isAlive = useAlive()
 
 const uploadFiles = ref<UploadFileItem[]>([])
 const preparingUploads = new Set<number>()
-onUnmounted(() => abort())
+onUnmounted(() => {
+  abort()
+  measuringReject?.(new Error('Upload unmounted while measuring image'))
+  measuringResolve = null
+  measuringReject = null
+  measuringSrc.value = ''
+})
 
 const showUpload = computed(() => !props.limit || uploadFiles.value.length < props.limit)
 /** 引擎是否提供原生 video 元素（Lynx 4.1+；未注册 XElement 时降级为文件占位）。 */

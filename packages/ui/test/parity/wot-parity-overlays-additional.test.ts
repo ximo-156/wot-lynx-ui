@@ -251,6 +251,38 @@ describe('wot 2.3.2 overlays — additional behavior', () => {
     expect(hidden(popup(mounted.container))).toBe(false)
   })
 
+  it('dialog awaits asynchronous custom actions, keeps rejected actions open, and ignores stale completions', async () => {
+    let resolveClick!: () => void, rejectClick!: (error: Error) => void
+    const mounted = mount(Dialog)
+    const result = mounted.exposed.value.alert({
+      actions: [{ text: 'async', click: () => new Promise<void>((resolve, reject) => { resolveClick = resolve; rejectClick = reject }) }]
+    })
+    await frames(2)
+    fireEvent.tap(mounted.container.querySelector('.wd-dialog__actions .wd-button')!)
+    expect(hidden(popup(mounted.container))).toBe(false)
+    expect(mounted.container.textContent).toContain('async')
+    rejectClick(new Error('action rejected'))
+    await frames(2)
+    expect(hidden(popup(mounted.container))).toBe(false)
+    expect(mounted.container.textContent).toContain('async')
+
+    const pending = mounted.exposed.value.alert({ actions: [{ text: 'finish', click: () => new Promise<void>((resolve) => { resolveClick = resolve }) }] })
+    await frames(2)
+    fireEvent.tap(mounted.container.querySelector('.wd-dialog__actions .wd-button')!)
+    expect(hidden(popup(mounted.container))).toBe(false)
+    resolveClick()
+    await expect(pending).resolves.toMatchObject({ action: 'confirm' })
+
+    mounted.exposed.value.alert({ actions: [{ text: 'stale', click: () => new Promise<void>((resolve) => { resolveClick = resolve }) }] })
+    await frames(2)
+    fireEvent.tap(mounted.container.querySelector('.wd-dialog__actions .wd-button')!)
+    mounted.exposed.value.alert({ title: 'replacement' })
+    resolveClick()
+    await frames(2)
+    expect(mounted.container.textContent).toContain('replacement')
+    expect(hidden(popup(mounted.container))).toBe(false)
+  })
+
   it('useDialog cancellation rejects exact action and stale success cannot close a new request', async () => {
     let api: ReturnType<typeof useDialog>, option: any
     const Consumer = { setup() { option = inject(getDialogDefaultOptionKey('hook-dialog')); return () => h(Dialog, { selector: 'hook-dialog' }) } }

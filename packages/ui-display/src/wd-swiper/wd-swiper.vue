@@ -19,7 +19,7 @@ import WdSwiperNav from '../wd-swiper-nav/wd-swiper-nav.vue'
 import { swiperProps, type SwiperItem } from './types'
 import type { SwiperNavProps } from '../wd-swiper-nav/types'
 import { addUnit, getRect, isObj, isVideoUrl, parseStyle, scrollViewTo, uuid } from '@wot-lynx/core/common/util'
-import { defineStyleKeys, resolveStyle } from '@wot-lynx/core/common/style'
+import { createStyleResolver, defineStyleKeys, resolveStyle } from '@wot-lynx/core/common/style'
 import { invokeNative } from '@wot-lynx/core/common/native'
 import { getPlatform } from '@wot-lynx/core/common/platform'
 import { useAlive } from '@wot-lynx/core/composables/useAlive'
@@ -30,6 +30,16 @@ const slots = useSlots()
 const isAlive = useAlive()
 const uid = uuid()
 const swiperId = `wd-swiper-${uid}`
+const resolveRootCustomStyle = createStyleResolver()
+const textStyleResolvers = new Map<number, ReturnType<typeof createStyleResolver>>()
+function textStyleFor(index: number) {
+  let resolver = textStyleResolvers.get(index)
+  if (!resolver) {
+    resolver = createStyleResolver()
+    textStyleResolvers.set(index, resolver)
+  }
+  return resolver(parseStyle(props.customTextStyle))
+}
 const currentValue = ref(normalizeCurrent(props.current))
 const containerWidth = ref(0)
 const containerHeight = ref(0)
@@ -44,6 +54,9 @@ let pendingNavigation: { version: number; current: number; source: string; offse
 
 const isVertical = computed(() => props.direction === 'vertical')
 const itemCount = computed(() => props.list.length)
+watch(itemCount, (count) => {
+  for (const index of textStyleResolvers.keys()) if (index >= count) textStyleResolvers.delete(index)
+})
 const displayCount = computed(() => Math.max(1, Math.min(itemCount.value || 1, Math.trunc(Number(props.displayMultipleItems)) || 1)))
 const viewportSize = computed(() => isVertical.value ? containerHeight.value : containerWidth.value)
 const previousMarginPx = computed(() => toPixel(props.previousMargin))
@@ -312,7 +325,7 @@ function handleLongPress(index: number, item: string | SwiperItem) {
 </script>
 
 <template>
-  <view :class="`wd-swiper ${customClass}`" :style="parseStyle(customStyle)">
+  <view :class="`wd-swiper ${customClass}`" :style="resolveRootCustomStyle(parseStyle(customStyle))">
     <scroll-view
       :id="swiperId"
       class="wd-swiper__track"
@@ -366,7 +379,7 @@ function handleLongPress(index: number, item: string | SwiperItem) {
               @tap="handleClick(index, item, $event)"
               @longpress="handleLongPress(index, item)"
             />
-            <text v-if="isObj(item) && item[textKey]" :class="`wd-swiper__text ${customTextClass}`" :style="parseStyle(customTextStyle)">{{ item[textKey] }}</text>
+            <text v-if="isObj(item) && item[textKey]" :class="`wd-swiper__text ${customTextClass}`" :style="textStyleFor(index)">{{ item[textKey] }}</text>
           </slot>
         </view>
       </view>

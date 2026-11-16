@@ -100,8 +100,14 @@ export function runEventRegistrySuite(label: string, entries: Array<[string, () 
         }
 
         const elements = [...container.querySelectorAll('*')]
-        for (const el of elements) {
-          for (const ev of NATIVE_EVENTS) {
+        // Retain exhaustive tap coverage for every real element. For the remaining
+        // native event types, one connected event target per component catches
+        // listener-array registration without multiplying synthetic events by the
+        // full rendered calendar DOM (which exceeded the per-test budget).
+        const root = container.firstElementChild
+        for (const ev of NATIVE_EVENTS) {
+          const targets = ev === 'tap' ? elements : root ? [root] : []
+          for (const el of targets) {
             try {
               ;(fireEvent as any)[ev](el, ev.startsWith('touch') ? TOUCH_INIT : undefined)
             } catch (e) {

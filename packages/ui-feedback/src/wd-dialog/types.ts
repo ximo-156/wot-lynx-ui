@@ -66,6 +66,7 @@ export const OPEN_TYPE_EVENT_KEYS: (keyof DialogButtonOpenTypeEvents)[] = [
 export type DialogAction = Partial<ButtonProps> &
   DialogButtonOpenTypeEvents & {
     text?: string
+    /** Optional action hook; async work is awaited. Rejecting aborts confirmation and leaves the dialog open. */
     click?: () => void | Promise<void>
   }
 

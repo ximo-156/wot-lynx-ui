@@ -18,7 +18,7 @@ import { parseStyle } from '@wot-lynx/core/common/util'
 import WdIcon from '@wot-lynx/primitives/wd-icon'
 import { swiperNavprops } from './types'
 
-defineProps(swiperNavprops)
+const props = defineProps(swiperNavprops)
 
 const emit = defineEmits(['change', 'tap'])
 
@@ -40,7 +40,7 @@ function handleNav(dir: 'prev' | 'next', event: any) {
   </template>
   <view
     v-if="total >= minShowNum"
-    :style="parseStyle(customStyle)"
+    :style="parseStyle(props.customStyle)"
     :class="`wd-swiper-nav wd-swiper-nav--${direction} wd-swiper-nav--${type} wd-swiper-nav--${indicatorPosition} ${customClass}`"
   >
     <template v-if="type === 'dots' || type === 'dots-bar'">

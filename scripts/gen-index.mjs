@@ -43,7 +43,8 @@ const MANIFEST = JSON.parse(readFileSync(join(ROOT, 'docs/architecture/packages.
 const ROOTS = MANIFEST.packages
   .filter((p) => p.componentRoot && existsSync(join(ROOT, p.dir, p.componentRoot)))
   .map((p) => ({
-    key: p.role === 'umbrella' ? 'components' : p.role,
+    key: p.componentRoot.replace(/\\/g, '/'),
+    componentRoot: p.componentRoot.replace(/\\/g, '/'),
     dir: join(ROOT, p.dir, p.componentRoot),
     listName: p.listName,
     label: `${p.name}（${p.role}${p.domain ? `/${p.domain}` : ''}）`
@@ -103,13 +104,13 @@ function collectComponents(dir) {
   return { components, problems }
 }
 
-function render({ components, key, listName, label }) {
+function render({ components, componentRoot, listName, label }) {
   const lines = []
 
   lines.push('/*')
   lines.push(' * ⚠️ 本文件由 scripts/gen-index.mjs 自动生成，请勿手动编辑。')
   lines.push(' *')
-  lines.push(` * ${label}的清单单一来源：src/${key}/ 下的目录（含 <dir>.vue 与 types.ts）。`)
+  lines.push(` * ${label}的清单单一来源：${componentRoot}/ 下的目录（含 <dir>.vue 与 types.ts）。`)
   lines.push(' * 新增 / 删除组件后运行：pnpm gen:index')
   lines.push(' */')
   lines.push('')
