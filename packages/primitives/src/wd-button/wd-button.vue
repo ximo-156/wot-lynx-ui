@@ -196,6 +196,8 @@ interface HoverPress {
   step: () => void
 }
 const buttonRef = useMainThreadRef<HoverElement | null>(null)
+// Conditional nodes may have no hydrated ref object on the main thread.
+// Guard the ref itself as well as .current (solid/icon-only/text-only buttons).
 const borderRef = useMainThreadRef<HoverElement | null>(null)
 const labelRef = useMainThreadRef<HoverElement | null>(null)
 const iconRef = useMainThreadRef<HoverElement | null>(null)
@@ -211,11 +213,11 @@ const pressRef = useMainThreadRef<HoverPress | null>(null)
  */
 const handleHoverStart = () => {
   'main thread'
-  const element = buttonRef.current
-  if (!element || element.getAttribute('hover-disabled') === 'true') return
+  const element = buttonRef?.current
+  if (!element || !pressRef || element.getAttribute('hover-disabled') === 'true') return
   const previous = pressRef.current
   const press: HoverPress = {
-    element, border: borderRef.current, version: element.getAttribute('hover-version') || '',
+    element, border: borderRef?.current ?? null, version: element.getAttribute('hover-version') || '',
     started: Date.now(), released: null as number | null,
     active: !!previous && previous.element === element && previous.version === element.getAttribute('hover-version') && previous.active,
     step: () => {}
@@ -223,7 +225,7 @@ const handleHoverStart = () => {
   // MainThread.Element queries are synchronous. Query only on color transitions,
   // not while waiting each frame, and use the instance marker rather than text.
   const setTextColor = (color: string) => {
-    const label = labelRef.current
+    const label = labelRef?.current
     for (const text of label?.querySelectorAll?.(nativeTextSelector) || []) text.setStyleProperty('color', color)
   }
   const step = () => {
@@ -234,10 +236,10 @@ const handleHoverStart = () => {
       pressRef.current = null
       if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', '')
       if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', '')
-      if (labelRef.current) labelRef.current.setStyleProperty('color', '')
+      if (labelRef?.current) labelRef?.current.setStyleProperty('color', '')
       setTextColor(current.getAttribute('hover-custom-color') === 'true' ? current.getAttribute('hover-foreground') || '' : '')
-      if (iconRef.current) iconRef.current.setStyleProperty('color', current.getAttribute('hover-foreground') || '')
-      if (borderRef.current) borderRef.current.setStyleProperty('border-color', '')
+      if (iconRef?.current) iconRef?.current.setStyleProperty('color', current.getAttribute('hover-foreground') || '')
+      if (borderRef?.current) borderRef?.current.setStyleProperty('border-color', '')
       return
     }
     const now = Date.now()
@@ -248,11 +250,11 @@ const handleHoverStart = () => {
         if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', 'var(--wot-button-current-bg-active)')
         if (current.getAttribute('hover-custom-color') !== 'true') {
           current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
-          if (labelRef.current) labelRef.current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
+          if (labelRef?.current) labelRef?.current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
           setTextColor('var(--wot-button-current-text-active)')
-          if (iconRef.current) iconRef.current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
+          if (iconRef?.current) iconRef?.current.setStyleProperty('color', 'var(--wot-button-current-text-active)')
         }
-        if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', 'var(--wot-button-plain-border-active)')
+        if (press.border && borderRef?.current === press.border) press.border.setStyleProperty('border-color', 'var(--wot-button-plain-border-active)')
       }
       if (!press.active) requestAnimationFrame(() => step())
       return
@@ -264,10 +266,10 @@ const handleHoverStart = () => {
     }
     if (current.getAttribute('hover-custom-background') !== 'true') current.setStyleProperty('background-color', '')
     if (current.getAttribute('hover-custom-color') !== 'true') current.setStyleProperty('color', '')
-    if (labelRef.current) labelRef.current.setStyleProperty('color', '')
+    if (labelRef?.current) labelRef?.current.setStyleProperty('color', '')
     setTextColor(current.getAttribute('hover-custom-color') === 'true' ? current.getAttribute('hover-foreground') || '' : '')
-    if (iconRef.current) iconRef.current.setStyleProperty('color', current.getAttribute('hover-foreground') || '')
-    if (press.border && borderRef.current === press.border) press.border.setStyleProperty('border-color', '')
+    if (iconRef?.current) iconRef?.current.setStyleProperty('color', current.getAttribute('hover-foreground') || '')
+    if (press.border && borderRef?.current === press.border) press.border.setStyleProperty('border-color', '')
     pressRef.current = null
   }
   press.step = step
@@ -276,7 +278,7 @@ const handleHoverStart = () => {
 }
 const handleHoverEnd = () => {
   'main thread'
-  const press = pressRef.current
+  const press = pressRef?.current
   if (!press) return
   if (!press.active) { pressRef.current = null; return }
   press.released = Date.now()
@@ -284,16 +286,16 @@ const handleHoverEnd = () => {
 }
 const handleHoverCancel = () => {
   'main thread'
-  const element = buttonRef.current
-  if (!element) return
+  const element = buttonRef?.current
+  if (!element || !pressRef) return
   pressRef.current = null
   if (element.getAttribute('hover-custom-background') !== 'true') element.setStyleProperty('background-color', '')
   if (element.getAttribute('hover-custom-color') !== 'true') element.setStyleProperty('color', '')
-  if (labelRef.current) labelRef.current.setStyleProperty('color', '')
+  if (labelRef?.current) labelRef?.current.setStyleProperty('color', '')
   const color = element.getAttribute('hover-custom-color') === 'true' ? element.getAttribute('hover-foreground') || '' : ''
-  for (const text of labelRef.current?.querySelectorAll?.(nativeTextSelector) || []) text.setStyleProperty('color', color)
-  if (iconRef.current) iconRef.current.setStyleProperty('color', element.getAttribute('hover-foreground') || '')
-  if (borderRef.current) borderRef.current.setStyleProperty('border-color', '')
+  for (const text of labelRef?.current?.querySelectorAll?.(nativeTextSelector) || []) text.setStyleProperty('color', color)
+  if (iconRef?.current) iconRef?.current.setStyleProperty('color', element.getAttribute('hover-foreground') || '')
+  if (borderRef?.current) borderRef?.current.setStyleProperty('border-color', '')
 }
 
 function handleClick(event: any) {

@@ -82,7 +82,7 @@ export default defineComponent({
     function control(id: string, text: string, tap: () => void, disabled = false) {
       return h('view', {
         id: `${props.idPrefix}-${id}`,
-        class: 'showcase__control',
+        class: disabled ? 'showcase__control showcase__control--disabled' : 'showcase__control',
         style: { ...controlStyle, opacity: disabled ? '0.4' : '1' },
         'accessibility-role': 'button',
         'accessibility-label': text,

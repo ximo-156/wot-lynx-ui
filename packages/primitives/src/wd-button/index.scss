@@ -295,7 +295,17 @@ $button-variants: (
   margin-right: initial;
   border-radius: $button-radius-main;
 
+  // Animate the content only: root custom transforms and geometry stay intact.
+  &.is-disabled:active .wd-button__content,
+  &.is-loading:active .wd-button__content {
+    transform: none;
+  }
+  &:active .wd-button__content {
+    transform: scale(0.96);
+  }
+
   @include e(content) {
+    transition: transform 120ms ease-out;
     display: flex;
     flex-direction: row;
     justify-content: center;

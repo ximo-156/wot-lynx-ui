@@ -1,0 +1,33 @@
+/* Shared native press feedback for the two demo entry points. */
+.showcase__control,
+.showcase__directory-item,
+.showcase__check-row,
+.checklist__item,
+.mode,
+.progress__reset,
+.demo-icon-action {
+  transition: transform 120ms ease-out, opacity 120ms ease-out;
+}
+.showcase__control:active,
+.showcase__directory-item:active,
+.showcase__check-row:active,
+.checklist__item:active,
+.mode:active,
+.progress__reset:active,
+.demo-icon-action:active {
+  transform: scale(0.97);
+  opacity: 0.72;
+}
+.showcase__control--disabled:active {
+  transform: none;
+}
+.demo-icon-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+}
+.demo-icon-action:active {
+  background-color: var(--wot-filled-bottom);
+}

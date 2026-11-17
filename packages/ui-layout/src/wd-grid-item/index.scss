@@ -111,7 +111,10 @@ $grid-item-text-spacing: var(--wot-grid-item-text-spacing, $spacing-super-tight)
        :active + CSS 变量驱动（bgColor 经 --wot-grid-item-bg 下发），
        按压背景由更具特异性的 :active 规则胜出 */
     @include m(hover) {
+      transition: transform 120ms ease-out, opacity 120ms ease-out;
       &:active {
+        transform: scale(0.97);
+        opacity: 0.78;
         background-color: $grid-item-hover-bg;
       }
     }

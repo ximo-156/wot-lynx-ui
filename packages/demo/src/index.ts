@@ -5,5 +5,6 @@ import App from './App.vue'
 
 // 引入 wot-lynx-ui 设计令牌（--wot-*）
 import 'wot-lynx-ui/theme'
+import './interaction.css'
 
 createApp(App).use(wotLynxUI).mount()

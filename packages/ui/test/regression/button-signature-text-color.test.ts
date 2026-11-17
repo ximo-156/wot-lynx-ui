@@ -199,6 +199,25 @@ describe('Button direct native text foreground', () => {
 })
 
 describe('Button native text hover transitions', () => {
+  it('keeps icon-only pagination buttons interactive across conditional label/border changes', async () => {
+    const clicked = vi.fn()
+    const mounted = mount({ icon: 'right', hoverStartTime: 0, hoverStayTime: 0, onTap: clicked })
+    const button = mounted.button()
+    expect(button.querySelector('.wd-button__text')).toBeNull()
+    expect(button.querySelector('.wd-button__border')).toBeNull()
+    for (const values of [{}, { text: '下一页', variant: 'plain' }, { icon: '', text: '下一页', variant: 'base' }, { icon: 'right', text: '', variant: 'base' }]) {
+      Object.assign(mounted.local.value, values)
+      await nextTick()
+      hover(button, 'touchstart')
+      hover(button, 'touchend')
+      fireEvent.tap(button)
+      hover(button, 'touchstart')
+      hover(button, 'touchcancel')
+      expect(button.style.backgroundColor).toBe('')
+    }
+    expect(clicked).toHaveBeenCalledTimes(4)
+  })
+
   it.each(['light', 'dark'] as const)('%s keeps all type/variant text colors correct while pressed and after release', (theme) => {
     const themeVars = {
       buttonPrimaryColorActive: '#440088', buttonSuccessColorActive: '#115533', buttonInfoColorActive: '#445566',

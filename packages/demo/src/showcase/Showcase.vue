@@ -172,6 +172,7 @@ const allIcons = listIcons()
 const iconPageSize = 30
 const iconTotalPage = Math.ceil(allIcons.length / iconPageSize)
 const iconPage = ref(1)
+const selectedIcon = ref('')
 const pagedIcons = computed(() => allIcons.slice((iconPage.value - 1) * iconPageSize, iconPage.value * iconPageSize))
 
 function showDemoDialog() {
@@ -612,15 +613,18 @@ function resetTransientDemos() {
         <view class="demo-panel">
           <text class="demo-panel__label">内置图标（{{ allIcons.length }} 个，wd-pagination 分页展示）</text>
           <wd-grid :column="5">
-            <wd-grid-item v-for="name in pagedIcons" :key="name" :icon="name" :text="name" ellipsis />
+            <wd-grid-item v-for="name in pagedIcons" :key="name" :icon="name" :text="name" ellipsis @click="selectedIcon = name" />
           </wd-grid>
           <view class="demo-row" :style="{ 'justify-content': 'center', 'margin-top': '4px' }">
             <wd-pagination v-model="iconPage" :total-page="iconTotalPage" show-icon />
           </view>
           <text class="demo-panel__label">size / color 实时生效</text>
           <view class="demo-row">
-            <wd-icon v-for="s in iconSizes" :key="s" name="setting" :size="s + 'px'" color="#755ffe" />
+            <view v-for="s in iconSizes" :key="s" class="demo-icon-action" accessibility-role="button" :accessibility-label="'设置图标 ' + s + 'px'" @tap="selectedIcon = 'setting · ' + s + 'px'">
+              <wd-icon name="setting" :size="s + 'px'" color="#755ffe" />
+            </view>
           </view>
+          <text class="demo-panel__label">{{ selectedIcon ? '已点击：' + selectedIcon : '点击图标查看名称' }}</text>
         </view>
       </view>
       </DemoSection>
