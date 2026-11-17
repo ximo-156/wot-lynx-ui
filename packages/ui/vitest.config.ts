@@ -131,6 +131,7 @@ const PURE_TESTS = [
   'test/unit/api-diff.test.ts',
   'test/unit/code128.test.ts',
   'test/unit/codemod.test.ts',
+  'test/unit/conditional-worklet-refs.test.ts',
   'test/unit/format-date.test.ts',
   'test/unit/generated-css-device-guards.test.ts',
   'test/unit/interceptor.test.ts',

@@ -161,7 +161,8 @@ const onTouchMoveMt = (event: any) => {
   const distance = Math.min(head * 2, raw <= head ? raw : head + (raw - head) * 0.5)
   el.setStyleProperty('transition', 'none')
   el.setStyleProperty('transform', `translateY(${distance}px)`)
-  const pulling = pullingRef.current, loosing = loosingRef.current
+  // Loading/success replace these conditional nodes; hydration may omit the ref itself.
+  const pulling = pullingRef?.current, loosing = loosingRef?.current
   if (pulling) pulling.setStyleProperty('display', distance >= head ? 'none' : 'flex')
   if (loosing) loosing.setStyleProperty('display', distance >= head ? 'flex' : 'none')
 }
