@@ -32,7 +32,11 @@ export default defineConfig({
       enableCSSInheritance: true,
       enableCSSInlineVariables: true,
       // npm 安装的包也必须进入主线程 worklet 依赖图
-      includeWorkletPackages: ['wot-lynx-ui']
+      includeWorkletPackages: [
+        'wot-lynx-ui', '@wot-lynx/core', '@wot-lynx/primitives',
+        '@wot-lynx/ui-layout', '@wot-lynx/ui-display', '@wot-lynx/ui-nav',
+        '@wot-lynx/ui-form', '@wot-lynx/ui-feedback', '@wot-lynx/ui-picker'
+      ]
     })
   ],
   source: { include: [/wot-lynx-ui/] },

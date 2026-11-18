@@ -22,7 +22,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 /** 组件源码根 = 全部组件包的 src（ADR-023 多包，packages.json 为单一来源） */
-const MANIFEST_PATH = path.resolve(__dirname, '../../../..', 'docs/architecture/packages.json')
+const ROOT = path.resolve(__dirname, '../../../..')
+const MANIFEST_PATH = path.join(ROOT, 'docs/architecture/packages.json')
 const SRC_DIRS = (JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')).packages as Array<{ dir: string; componentRoot: string | null }>)
   .filter((p) => p.componentRoot)
   .map((p) => path.resolve(__dirname, '../../../..', p.dir, p.componentRoot))
@@ -58,6 +59,18 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
 ]
 
 describe('组件库 MTS 使用规范（声明式允许，命令式禁止）', () => {
+  it('消费配置包含全部拆分包，防止 npm 安装后 MT loader 丢弃域包依赖', () => {
+    const root = path.resolve(__dirname, '../../../..')
+    const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'))
+    const names = manifest.packages.map((pkg: { dir: string }) =>
+      JSON.parse(readFileSync(path.join(root, pkg.dir, 'package.json'), 'utf8')).name as string)
+    for (const file of ['packages/demo/lynx.config.ts', 'README.md', 'docs/guide/quick-start.md']) {
+      const source = readFileSync(path.join(root, file), 'utf8')
+      const included = source.match(/includeWorkletPackages:\s*\[([\s\S]*?)\]/)?.[1] ?? ''
+      for (const name of names) expect(included, `${file} 缺少 ${name}`).toContain(`'${name}'`)
+    }
+  })
+
   const files = SRC_DIRS.flatMap((dir) => collectSourceFiles(dir))
 
   // 读盘 + 去注释**只做一次**并缓存到 describe 作用域（旧实现每用例重读全库，
@@ -92,7 +105,7 @@ describe('组件库 MTS 使用规范（声明式允许，命令式禁止）', ()
           pattern.lastIndex = 0
           return pattern.test(code)
         })
-        .map(({ file }) => path.relative(SRC_DIR, file))
+        .map(({ file }) => path.relative(ROOT, file))
       expect(offenders).toEqual([])
     }
   )
@@ -105,7 +118,7 @@ describe('组件库 MTS 使用规范（声明式允许，命令式禁止）', ()
         const hasBinding = /main-thread-bind/.test(code)
         return hasDirective && !hasBinding
       })
-      .map(({ file }) => path.relative(SRC_DIR, file))
+      .map(({ file }) => path.relative(ROOT, file))
     expect(offenders).toEqual([])
   })
 })

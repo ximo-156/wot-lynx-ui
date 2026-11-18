@@ -7,8 +7,6 @@ import { pluginQRCode } from '@lynx-js/qrcode-rsbuild-plugin'
 import { pluginVueLynx } from 'vue-lynx/plugin'
 import { pluginWotLynxTags, pluginWotLynxWebFonts, pluginWotLynxWebViewport } from 'wot-lynx-ui/plugin'
 
-/** 组件库源码内文件（相对 packages/ui/src 的路径）的绝对路径 */
-const uiSrc = (p: string) => fileURLToPath(new URL(`../ui/src/${p}`, import.meta.url))
 /** @wot-lynx/core 的 src（主题/scss load-path 住处，ADR-023） */
 const coreSrc = (p: string) => fileURLToPath(new URL(`../core/src/${p}`, import.meta.url))
 
@@ -99,7 +97,12 @@ export default defineConfig({
       // （项目源码 worklet-repro 页 2/2 正常，差异即「源码直连 vs 经 node_modules
       // 解析的包」）。注意：单加白名单实测仍不够——保住的 import 会被第二道
       // 闸门（sideEffects tree-shaking）剪掉，见 tools.rspack 内注释。
-      includeWorkletPackages: ['wot-lynx-ui']
+      // 拆分后的包会分别经过 MT loader，主包许可不会传递给依赖。
+      includeWorkletPackages: [
+        'wot-lynx-ui', '@wot-lynx/core', '@wot-lynx/primitives',
+        '@wot-lynx/ui-layout', '@wot-lynx/ui-display', '@wot-lynx/ui-nav',
+        '@wot-lynx/ui-form', '@wot-lynx/ui-feedback', '@wot-lynx/ui-picker'
+      ]
     })
   ],
   server: {

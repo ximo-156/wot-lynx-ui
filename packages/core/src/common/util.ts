@@ -581,19 +581,6 @@ export function isBase64Image(url: string) {
 }
 
 /**
- * 对象转 style 字符串
- */
-export function objToStyle(styles: Record<string, any> | Record<string, any>[]): string {
-  if (isArray(styles)) {
-    return styles.map((item) => objToStyle(item)).join(';')
-  }
-  return Object.keys(styles)
-    .filter((key) => styles[key] !== undefined && styles[key] !== null && styles[key] !== '')
-    .map((key) => `${kebabCase(key)}:${styles[key]}`)
-    .join(';')
-}
-
-/**
  * style 字符串解析为对象（CONVENTIONS §19）。
  *
  * vue-lynx 的 patchProp 对 `style` 只处理对象/数组（内部走
@@ -905,11 +892,6 @@ export function closest(arr: number[], target: number): number | undefined {
   if (arr.length === 0) return undefined
   return arr.reduce((prev, curr) => (Math.abs(curr - target) < Math.abs(prev - target) ? curr : prev))
 }
-
-/**
- * 是否 H5 环境（Lynx 中恒为 false，Web 端由 Lynx Web 渲染层处理）
- */
-export const isH5 = false
 
 export interface SystemInfo {
   /** 窗口宽度（px） */

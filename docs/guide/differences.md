@@ -14,6 +14,13 @@ wot-lynx-ui 以 wot-ui 2.3.2 的 API、交互和度量为参考，在 Lynx 原�
 | 主题引入 | `@import '@/uni_modules/wot-ui/styles/theme/index.scss'` | `import 'wot-lynx-ui/theme'` |
 | 样式定制 | SCSS 变量覆盖 | CSS 变量覆盖（`--wot-*` 令牌体系，与 wot-ui 同源同值） |
 
+## 废弃工具导出移除
+
+原生实现清理移除了 `isH5` 与 `objToStyle`，主包和 `@wot-lynx/core/common/util` 均不再导出这两个工具。仓库内已无调用者，但外部项目若仍有导入，需要同步迁移：
+
+- `isH5` 原本恒为 `false`，不能用于判断宿主能力；按实际需求使用原生能力或宿主适配接口。
+- `objToStyle` 将对象转换为字符串并过滤空值，不适用于 Lynx 原生内联样式。直接使用样式对象，并显式复位需要清除的键；消费者传入的 `customStyle` 字符串仍由组件解析。
+
 ## 页面滚动（应用骨架必读）
 
 Lynx 页面默认不可滚动，长页面需自建 `scroll-view`，且**高度链路必须逐级确定**：

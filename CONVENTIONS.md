@@ -279,7 +279,9 @@ const onTouchMove = (e: any) => {
    `TypeError: cannot read property 'bind' of undefined`（2026-10-25 真机）。
    - **闸门一（loader 剔除）**：worklet-loader-mt 会把解析后落在 node_modules
      里的 import 从 MT 依赖图中剔除——workspace 源码直连不受影响，**npm 实装
-     消费者必须** `pluginVueLynx({ includeWorkletPackages: ['wot-lynx-ui'] })`；
+     消费者必须**配置 `includeWorkletPackages`，覆盖 `wot-lynx-ui` 与其全部
+      `@wot-lynx/*` 域包（完整清单见快速开始）；白名单按包名精确匹配，主包
+      许可不会传递给依赖，不能只包含门面包；
    - **闸门二（tree-shaking 剪树，主因）**：MT 桩里组件依赖只剩 bare import，
      而 wot-lynx-ui 的 `sideEffects` 白名单只有 css/scss/ttf（BG 按需体积的
      正确声明），rspack 会把「无被消费导出」的 bare import 连同组件子树整树
