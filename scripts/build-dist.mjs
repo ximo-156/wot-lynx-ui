@@ -11,11 +11,11 @@
  *
  * ## 它实际做什么
  *
- * 生成**子路径解析垫片**。`wot-lynx-ui/primitives/wd-button` 这个子路径需要
+ * 生成**子路径解析垫片**。`@wot-lynx/primitives/wd-button` 这个子路径需要
  * 落到一个具体文件上，而组件目录里没有 `index.ts`，所以必须有：
  *
- *   dist/primitives/wd-button/index.mjs
- *     → export { default } from '../../../src/primitives/wd-button/wd-button.vue'
+ *   packages/primitives/dist/wd-button/index.mjs
+ *     → export { default } from '../../src/wd-button/wd-button.vue'
  *
  * 消费方的构建器（Rspeedy / Vite / webpack）顺着这条 re-export 找到源码并编译。
  * 换句话说：**dist 是路径别名，不是编译产物**。
@@ -24,10 +24,14 @@
  *   dist/
  *   ├── index.mjs / index.d.ts     — 主入口（re-export src/index.ts）
  *   ├── theme/index.css            — 主题 CSS（从 @wot-lynx/core 的产物复制，仅门面）
- *   └── <组件根>/
- *       └── wd-xxx/
- *           ├── index.mjs          — 组件入口桥接
- *           └── index.d.ts         — 类型桥接
+ *   └── wd-xxx/                    — 组件入口桥接（组件根即 src 时平铺）
+ *       ├── index.mjs
+ *       └── index.d.ts
+ *
+ * 门面的组件根是 `src/components`（保留 `wot-lynx-ui/components/*` 子路径），
+ * 因此它的桥接多一层目录，回退层数也随之不同：
+ *   packages/ui/dist/components/wot-ui/index.mjs
+ *     → export { default } from '../../../src/components/wot-ui/wot-ui.vue'
  *
  * ## 因此 dist 的能力边界
  *
@@ -92,10 +96,13 @@ function pkgContext(pkg) {
   const pkgDir = join(ROOT, pkg.dir)
   const srcDir = join(pkgDir, pkg.componentRoot)
   const distDir = join(pkgDir, 'dist')
-  // dist 侧的组件子目录：src → ''，src/components → 'components'（与 exports 对齐）
+  // dist 侧的组件子目录：src → ''（平铺），src/components → 'components'（与 exports 对齐）
   const distSub = relative('src', pkg.componentRoot)
-  // 从 dist/<sub>/<comp>/ 回退到包根的层数
-  const up = distSub ? '../../../..' : '../../..'
+  // 从 dist/<sub>/<comp>/ 回退到**包根**的层数：平铺是 dist/<comp>（两层），
+  // 带子目录是 dist/<sub>/<comp>（三层）。ADR-023 拆包时这里多写了一层，
+  // 导致每条 re-export 都指向不存在的 packages/src/...（CI 的
+  // `check-exports.mjs --built` 报 533 处「dist 桥接失效」）。
+  const up = distSub ? '../../..' : '../..'
   return { pkg, pkgDir, srcDir, distDir, distSub, up }
 }
 

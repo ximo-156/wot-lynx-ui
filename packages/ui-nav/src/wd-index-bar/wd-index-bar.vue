@@ -37,6 +37,7 @@ const { linkChildren, children } = useChildren(indexBarInjectionKey)
 const childRevision = ref(0)
 const offsetTop = ref(0)
 let measureVersion = 0
+let measureQueued = false
 let endTimer: ReturnType<typeof setTimeout> | undefined
 let scrollTimer: ReturnType<typeof setTimeout> | undefined
 let scrollTargetUid: number | null = null
@@ -92,7 +93,12 @@ async function measure() {
 }
 function requestMeasure() {
   measureVersion++
-  void nextTick(measure)
+  if (measureQueued) return
+  measureQueued = true
+  void nextTick(() => {
+    measureQueued = false
+    if (isAlive()) void measure()
+  })
 }
 function handleLayoutChange(event: any) {
   emit('layoutchange', event)
@@ -111,14 +117,15 @@ function anchorTop(child: any): number | null {
   return Number.isFinite(top) ? top : null
 }
 function updateActiveByScroll(scrollTop: number) {
-  const entries = children.map((child) => ({ child, top: anchorTop(child) })).filter((entry) => entry.top !== null)
-  if (!entries.length) return
-  let active = entries[0].child
-  for (const entry of entries) {
-    if (entry.top! - offsetTop.value > scrollTop) break
-    active = entry.child
+  let active: (typeof children)[number] | undefined
+  for (const child of children) {
+    const top = anchorTop(child)
+    if (top === null) continue
+    active ??= child
+    if (top - offsetTop.value > scrollTop) break
+    active = child
   }
-  activate(active)
+  if (active) activate(active)
 }
 function clearScrollTarget() {
   clearTimeout(scrollTimer)

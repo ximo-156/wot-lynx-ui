@@ -7,6 +7,7 @@ import { fireEvent } from '../fire-event'
 import Signature from '@wot-lynx/ui-form/wd-signature'
 import { configureHost } from '@wot-lynx/core/common/host'
 import { getStrokeSegments, segmentStyle } from '../../../ui-form/src/wd-signature/stroke'
+import * as strokeGeometry from '../../../ui-form/src/wd-signature/stroke'
 import type { Line } from '@wot-lynx/ui-form/wd-signature/types'
 
 const RECT = { id: '', left: 10, top: 20, right: 310, bottom: 220, width: 300, height: 200 }
@@ -84,6 +85,31 @@ function acknowledge(stroke: Element) {
 afterEach(() => { cleanup(); restores.splice(0).reverse().forEach(restore => restore()) })
 
 describe('wd-signature continuous MTS drawing', () => {
+  it('samples only the new stroke when appending, and reuses completed geometry after undo/redo', async () => {
+    installRects()
+    const sample = vi.spyOn(strokeGeometry, 'getStrokeSegments')
+    try {
+      const mounted = mount({ enableHistory: true })
+      await frames()
+      await drawStroke(mounted.container, [[30, 40], [60, 80], [90, 50]])
+      expect(strokes(mounted.container)).toHaveLength(1)
+      sample.mockClear()
+      await drawStroke(mounted.container, [[100, 60], [130, 90], [160, 60]])
+      expect(strokes(mounted.container)).toHaveLength(2)
+      expect(sample).toHaveBeenCalledTimes(1)
+      const calls = sample.mock.calls.length
+      mounted.instance().revoke()
+      await frames()
+      expect(strokes(mounted.container)).toHaveLength(1)
+      mounted.instance().restore()
+      await frames()
+      expect(strokes(mounted.container)).toHaveLength(2)
+      expect(sample).toHaveBeenCalledTimes(calls)
+    } finally {
+      sample.mockRestore()
+    }
+  })
+
   it('draws a true round-capped curve and a live tip without a background render erasing it', async () => {
     installRects()
     const mounted = mount()

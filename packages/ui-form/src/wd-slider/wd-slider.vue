@@ -505,11 +505,12 @@ function calcByStep(value: number): number {
 
 /** 统一更新滑块值并触发事件。 */
 function updateValue(value: SliderValue) {
-  let newValue: SliderValue = deepClone(value)
-  if (props.range && isArray(newValue)) {
-    newValue = normalizeRangeValues(newValue as number[]).map((v) => calcByStep(v)) as [number, number]
+  let newValue: SliderValue
+  if (props.range && isArray(value)) {
+    const [left, right] = normalizeRangeValues(value as number[])
+    newValue = [calcByStep(left), calcByStep(right)]
   } else {
-    newValue = calcByStep(newValue as number)
+    newValue = calcByStep(value as number)
   }
   if (!isEqual(newValue, modelValue.value)) {
     if (isDragging.value || isSettling.value) pendingModelEchoes.add(JSON.stringify(newValue))

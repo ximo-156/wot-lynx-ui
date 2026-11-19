@@ -107,6 +107,21 @@ describe('wd-tabs indicator line geometry', () => {
     expect(native.calls.length).toBe(settled)
   })
 
+  it('shares item and nav measurements between indicator and centering on one switch', async () => {
+    const native = stubNativeQuery(geometry([96, 84, 110]))
+    const value = ref('province')
+    const { container } = render({ setup: () => () => h(Tabs, { modelValue: value.value }, panels) })
+    await flush()
+    native.calls.length = 0
+    value.value = 'district'
+    await flush()
+    expect(anchor(container).style.transform).toBe('translateX(180px)')
+    expect(native.calls.filter(call => call.selector.endsWith('-nav'))).toHaveLength(1)
+    for (let index = 0; index < 3; index++) {
+      expect(native.calls.filter(call => call.selector.endsWith(`-item-${index}`))).toHaveLength(1)
+    }
+  })
+
   it('stops retrying after unmount and does not mutate a detached anchor', async () => {
     vi.useFakeTimers()
     stubNativeQuery(() => empty)

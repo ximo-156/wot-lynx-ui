@@ -115,9 +115,20 @@ function markMaterialized(line: StrokeLine) {
     if (!disposed && isAlive() && ownsStroke(line)) line.materialized = true
   })
 }
+// 每笔独立缓存：追加、撤销和恢复不重新采样其余已完成笔迹。
+// computed 仍追踪该笔 points/颜色/宽度，迟到的坐标校正会使对应缓存失效。
+const strokeStyleCache = new WeakMap<StrokeLine, { readonly value: Record<string, string>[] }>()
+function strokeStyles(line: StrokeLine) {
+  let cached = strokeStyleCache.get(line)
+  if (!cached) {
+    cached = computed(() => getStrokeSegments(line).map(segment => segmentStyle(segment, line.color)))
+    strokeStyleCache.set(line, cached)
+  }
+  return cached.value
+}
 const renderedLines = computed(() => lines.value.filter(line => line.ready && !line.pending).map(line => ({
   line,
-  segments: getStrokeSegments(line).map(segment => segmentStyle(segment, line.color))
+  segments: strokeStyles(line)
 })))
 
 /** Stable while MTS owns the pool; explicit cancellation alone replaces it. */

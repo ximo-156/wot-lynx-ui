@@ -125,6 +125,21 @@ describe('wot parity — slider 与尺寸状态', () => {
     expect(update).toHaveBeenLastCalledWith([0, 20])
   })
 
+  it('range 小数步长更新不修改输入数组，保留精确的未拖动端', async () => {
+    installRects()
+    const input = Object.freeze([0.2, 0.8])
+    const update = vi.fn()
+    const { container } = mount(Slider, { modelValue: input, range: true, min: 0, max: 1, step: 0.1, 'onUpdate:modelValue': update })
+    await pause(30)
+    const dots = container.querySelectorAll('.wd-slider__dot')
+    fireEvent.touchstart(dots[1], { touches: [{ clientX: 160, clientY: 0 }] })
+    fireEvent.touchend(dots[1], { changedTouches: [{ clientX: 180, clientY: 0 }], touches: [] })
+    await nextTick()
+    expect(input).toEqual([0.2, 0.8])
+    expect(update).toHaveBeenLastCalledWith([0.2, 0.9])
+    expect(update.mock.lastCall![0]).not.toBe(input)
+  })
+
   it('非整除 step 的最大值不会在舍入后越界', async () => {
     installRects()
     const update = vi.fn()

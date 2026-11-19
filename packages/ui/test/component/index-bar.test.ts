@@ -150,6 +150,27 @@ describe('WdIndexBar / WdIndexAnchor', () => {
     mock = null
   })
 
+  it('同一轮布局事件只测量一组锚点，滚动期间不重新查询几何', async () => {
+    mock = mockGeometry()
+    const { container } = await renderIndexBar4()
+    await pause(30)
+    mock.calls.length = 0
+    const root = container.querySelector('.wd-index-bar')!
+    const content = container.querySelector('.wd-index-bar__content')!
+    for (let i = 0; i < 20; i++) fireEvent.layoutchange(root)
+    await pause(30)
+    const measurements = mock.calls.filter((call) => call.params.method === 'boundingClientRect')
+    expect(measurements).toHaveLength(6) // bar + sidebar + A/B/C/D
+    mock.calls.length = 0
+    for (const scrollTop of [0, 50, 100, 200, 300, 200, 100, 0]) {
+      fireEvent.scroll(content, { detail: { scrollTop } })
+      await nextTick()
+      expect(container.querySelector('.wd-index-bar__index.is-active')?.textContent)
+        .toBe(['A', 'B', 'C', 'D'][Math.floor(scrollTop / 100)])
+    }
+    expect(mock.calls).toHaveLength(0)
+  })
+
   it('子组件注册后索引条渲染全部索引', async () => {
     const { container } = await renderIndexBar()
     const items = Array.from(container.querySelectorAll('.wd-index-bar__index'))

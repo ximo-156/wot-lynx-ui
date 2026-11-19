@@ -374,12 +374,10 @@ describe('controlled controls, official continuous gestures and instance isolati
     })
     await flush()
     const root = node(mounted.container, '.wd-rate'), item = node(root, '.wd-rate__item')
-    fireEvent.touchstart(item, { touches: [{ clientX: 5 }] })
-    fireEvent.touchstart(root, { touches: [{ clientX: 5 }] })
+    fireEvent.touchstart(item, { touches: [{ clientX: 5 }], bubbles: true })
     await flush()
     for (const clientX of [35, 65, 65, 28]) {
-      fireEvent.touchmove(item, { touches: [{ clientX }] })
-      fireEvent.touchmove(root, { touches: [{ clientX }] })
+      fireEvent.touchmove(item, { touches: [{ clientX }], bubbles: true })
       await flush()
     }
     expect(order).toEqual([['update', 2], ['change', { value: 2 }], ['update', 3], ['change', { value: 3 }], ['update', 3], ['change', { value: 3 }]])

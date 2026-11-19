@@ -55,6 +55,37 @@ function installRects() {
 describe('wd-rate MTS 跟手', () => {
   afterEach(() => cleanup())
 
+  it('pending geometry shares one request and commits only the latest move', async () => {
+    const restore = installRects()
+    const runtime = (globalThis as any).lynxTestingEnv.backgroundThread.globalThis.lynx
+    const factory = runtime.createSelectorQuery
+    const pending: any[] = []
+    runtime.createSelectorQuery = () => ({
+      selectAll: () => ({ invoke: (options: any) => { pending.push(options); return { exec() {} } } }),
+      exec() {}
+    })
+    try {
+      const updates: number[] = []
+      const mounted = render({ setup: () => () => h(Rate, {
+        modelValue: 0, 'onUpdate:modelValue': (value: number) => updates.push(value)
+      }) })
+      await pause(10)
+      const root = mounted.container.querySelector('.wd-rate')!
+      fireEvent.touchstart(root, { touches: [{ clientX: 5 }] })
+      const count = pending.length
+      fireEvent.touchmove(root, { touches: [{ clientX: 35 }] })
+      fireEvent.touchmove(root, { touches: [{ clientX: 65 }] })
+      expect(pending).toHaveLength(count)
+      for (const options of pending) options.success?.(Array.from({ length: NUM }, (_, i) => rectOf(i)))
+      await pause(10)
+      expect(updates).toEqual([3])
+      mounted.unmount()
+    } finally {
+      runtime.createSelectorQuery = factory
+      restore()
+    }
+  })
+
   it('touchmove 经主线程 worklet 直改星星颜色；touchend 后台落定 commit', async () => {
     const restore = installRects()
     const updates: any[] = []

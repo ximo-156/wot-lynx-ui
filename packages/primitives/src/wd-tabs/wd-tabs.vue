@@ -310,8 +310,9 @@ const updateActive = (value: number | string = 0, init: boolean = false, setScro
   if (!children[value] || children[value].disabled) return
   state.activeIndex = value
   if (setScroll) {
-    updateLineStyle(init === false)
-    scrollIntoView()
+    const geometry = measureNavGeometry()
+    void updateLineStyle(init === false, 0, geometry)
+    scrollIntoView(geometry)
   }
   setActiveTab()
 }
@@ -427,7 +428,16 @@ function toggleMap() {
 }
 
 /** Measure placement separately from the marker's CSS/theme-owned size. */
-async function updateLineStyle(animation: boolean = true, attempt: number = 0) {
+// 一次切换的指示线和导航居中共享几何；独立刷新、重试仍获取新快照。
+function measureNavGeometry() {
+  return Promise.all([
+    getRect($item, true, navItems().map((_, index) => `#${tabsId}-item-${index}`)),
+    getRect($container)
+  ])
+}
+type NavGeometry = ReturnType<typeof measureNavGeometry>
+
+async function updateLineStyle(animation: boolean = true, attempt: number = 0, geometry?: NavGeometry) {
   const request = ++lineRequest
   if (lineRetryTimer) {
     clearTimeout(lineRetryTimer)
@@ -445,10 +455,9 @@ async function updateLineStyle(animation: boolean = true, attempt: number = 0) {
     }, LINE_RETRY_DELAY)
   }
   try {
-    const [rects, textRects, navRect] = await Promise.all([
-      getRect($item, true, navItems().map((_, index) => `#${tabsId}-item-${index}`)),
-      !isDef(lineWidth) && lineTheme === 'text' ? getRect($itemText, true, navItems().map((_, index) => `#${tabsId}-text-${index}`)) : Promise.resolve([]),
-      getRect($container)
+    const [[rects, navRect], textRects] = await Promise.all([
+      geometry ?? measureNavGeometry(),
+      !isDef(lineWidth) && lineTheme === 'text' ? getRect($itemText, true, navItems().map((_, index) => `#${tabsId}-text-${index}`)) : Promise.resolve([])
     ])
     if (!current()) return
     const rect = rects[activeIndex]
@@ -503,11 +512,11 @@ function setActiveTab() {
 /**
  * 滚动到视图
  */
-function scrollIntoView() {
+function scrollIntoView(geometry?: NavGeometry) {
   const request = ++scrollRequest
   if (!state.inited || !isAlive()) return
   const activeIndex = state.activeIndex
-  Promise.all([getRect($item, true, navItems().map((_, index) => `#${tabsId}-item-${index}`)), getRect($container)]).then(([navItemsRects, navRect]) => {
+  ;(geometry ?? measureNavGeometry()).then(([navItemsRects, navRect]) => {
     if (!isAlive() || request !== scrollRequest || activeIndex !== state.activeIndex) return
     const selectItem = navItemsRects[activeIndex]
     if (!selectItem) return

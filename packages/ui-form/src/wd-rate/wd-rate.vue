@@ -348,18 +348,18 @@ function valueFromRects(clientX: number, rects: Array<{ left: number; right: num
 }
 
 /**
- * 根 view 触摸移动（后台）：仅转发原生事件。
+ * 根 view 触摸移动（后台）：转发原生事件并实时提交评分。
  *
- * 跟手改样式已由星星项上的主线程 worklet 完成（零线程跨越），后台不再
- * 回传值；值模型与 wd-slider 一致——拖动期间只跟手、@touchend 才落定。
+ * 主线程 worklet 负责即时颜色反馈；后台保留每次 move 的 update/change
+ * 契约（包括相同评分的重复事件）。缓存就绪时同步计算，不创建 Promise。
  * 声明并转发 'touchmove' 供消费方监听（CONVENTIONS §14：根绑 touch 的
  * 组件必须把事件名声明为 emit 并转发，避免消费方监听穿透 $attrs 与根
  * 元素同名监听合并击穿事件注册表）。
  */
-async function onTouchMove(event: any) {
+function onTouchMove(event: any) {
   emit('touchmove', event)
   gestureMoved = true
-  await commitFromEvent(event)
+  void commitFromEvent(event)
 }
 
 /**
@@ -390,13 +390,14 @@ async function onTouchCancel(event: any) {
 
 /** 触摸落定：同一包含域公式由 changedTouches 坐标重算终值并 commit。
  *  @returns 是否真的提交过值（供 tap 抑制判断） */
-async function commitFromEvent(event: any): Promise<boolean> {
+function commitFromEvent(event: any): boolean | Promise<boolean> {
   if (props.readonly || isDisabled.value) return false
   const request = ++interactionRequest
   const clientX = Number(event.changedTouches?.[0]?.clientX ?? event.touches?.[0]?.clientX ?? event.detail?.x ?? 0)
-  if (!itemRects.value.length) {
-    await refreshRects()
-  }
+  if (!itemRects.value.length) return refreshRects().then(() => commitMeasuredValue(clientX, request))
+  return commitMeasuredValue(clientX, request)
+}
+function commitMeasuredValue(clientX: number, request: number): boolean {
   if (!isAlive() || props.readonly || isDisabled.value || request !== interactionRequest || !Number.isFinite(clientX)) return false
   const value = valueFromRects(clientX, itemRects.value)
   if (value !== null) {

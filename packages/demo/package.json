@@ -8,7 +8,10 @@
     "preview": "rspeedy preview",
     "dev:device-test": "rspeedy dev -c lynx.config.device-test.ts",
     "build:device-test": "rspeedy build -c lynx.config.device-test.ts",
-    "dev:worklet-repro": "rspeedy dev -c lynx.config.worklet-repro.ts"
+    "dev:worklet-repro": "rspeedy dev -c lynx.config.worklet-repro.ts",
+    "dev:perf": "rspeedy dev -c lynx.config.perf.ts",
+    "build:perf": "rspeedy build -c lynx.config.perf.ts",
+    "preview:perf": "rspeedy preview -c lynx.config.perf.ts"
   },
   "dependencies": {
     "@wot-lynx/primitives": "workspace:*",

@@ -189,9 +189,15 @@ describe('tabs and panels', () => {
     second.value.updateLineStyle()
     // Each request measures headers, text and its own native nav container.
     expect(rects.pending).toHaveLength(9); expect(rects.pending[0].selector).not.toBe(rects.pending[6].selector)
-    rects.pending[3].deliver([{ ...RECT, width: 100 }]); rects.pending[4].deliver([{ ...RECT, width: 55 }]); rects.pending[5].deliver(RECT); await newer; await frames(1)
-    rects.pending[0].deliver([{ ...RECT, width: 100 }]); rects.pending[1].deliver([{ ...RECT, width: 12 }]); rects.pending[2].deliver(RECT)
-    rects.pending[6].deliver([{ ...RECT, width: 100 }]); rects.pending[7].deliver([{ ...RECT, width: 20 }]); rects.pending[8].deliver(RECT)
+    const deliverGeometry = (start: number, textWidth: number) => {
+      for (const request of rects.pending.slice(start, start + 3)) {
+        request.deliver(request.selector.endsWith('-nav') ? RECT
+          : [{ ...RECT, width: request.selector.includes('-text') ? textWidth : 100 }])
+      }
+    }
+    deliverGeometry(3, 55); await newer; await frames(1)
+    deliverGeometry(0, 12)
+    deliverGeometry(6, 20)
     await older; await frames()
     expect(node(container, '.wd-tabs__line-anchor > .wd-tabs__line').style.width).toBe('55px')
   })
